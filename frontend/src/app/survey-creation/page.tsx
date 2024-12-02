@@ -5,21 +5,26 @@ import {
   Box,
   Typography,
   Button,
+  TextField,
+  MenuItem,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  MenuItem,
-  TextField,
-  IconButton,
   RadioGroup,
   FormControlLabel,
   Radio,
   Checkbox,
+  Switch,
+  Select,
   Slider,
   Rating,
-  Select,
 } from "@mui/material";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { ChromePicker } from "react-color";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -30,12 +35,13 @@ type Question = {
   type: string;
   text: string;
   options?: string[];
-  media?: string; // URL or file path of the media
+  media?: string;
 };
 
 type FormData = {
   title: string;
   description: string;
+  demographicEnabled: boolean;
   questions: Question[];
 };
 
@@ -46,42 +52,18 @@ const questionTypes = [
   { value: "yes-no", label: "Yes/No" },
   { value: "slider", label: "Slider" },
   { value: "rating", label: "Rating (Stars)" },
+  { value: "date", label: "Date Picker" },
   { value: "file-upload", label: "File Upload" },
-  { value: "matrix", label: "Matrix (Rows and Columns)" },
-  { value: "number", label: "Number Input" },
+  { value: "color-picker", label: "Color Picker" },
 ];
 
-const templates = [
-  {
-    title: "Customer Feedback",
-    description: "A simple customer feedback survey.",
-    questions: [
-      {
-        id: "1",
-        type: "rating",
-        text: "How satisfied are you with our service?",
-        options: [],
-      },
-      {
-        id: "2",
-        type: "text",
-        text: "What could we improve?",
-        options: [],
-      },
-    ],
-  },
-  {
-    title: "Employee Engagement",
-    description: "A survey to measure employee engagement.",
-    questions: [
-      {
-        id: "1",
-        type: "multiple-choice",
-        text: "How do you feel about your work environment?",
-        options: ["Very Positive", "Positive", "Neutral", "Negative", "Very Negative"],
-      },
-    ],
-  },
+const cityOptions = ["Tel Aviv", "Jerusalem", "Haifa", "Ashdod", "Eilat", "Be'er Sheva"];
+const educationOptions = [
+  "High School",
+  "Bachelor's",
+  "Master's",
+  "Doctorate",
+  "Other",
 ];
 
 const SurveyCreationPage: React.FC = () => {
@@ -89,6 +71,7 @@ const SurveyCreationPage: React.FC = () => {
     defaultValues: {
       title: "",
       description: "",
+      demographicEnabled: false,
       questions: [],
     },
   });
@@ -98,122 +81,159 @@ const SurveyCreationPage: React.FC = () => {
     name: "questions",
   });
 
-  const [responseMessage, setResponseMessage] = useState<string | null>(null);
-  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [localOptions, setLocalOptions] = useState<{ [key: string]: string[] }>({});
   const [showPreview, setShowPreview] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedTemplate, setSelectedTemplate] = useState<FormData | null>(null);
-  const [isCreatingNewSurvey, setIsCreatingNewSurvey] = useState(false);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const handleUseTemplate = (template: FormData) => {
-    reset({
-      title: template.title,
-      description: template.description,
-      questions: template.questions,
-    });
-    setSelectedTemplate(template);
-    setShowTemplateDialog(false);
-  };
+  const demographicEnabled = watch("demographicEnabled");
 
   const handleAddQuestion = () => {
-    append({ id: Date.now().toString(), type: "text", text: "", options: [], media: "" });
+    const id = Date.now().toString();
+    append({ id, type: "text", text: "", options: [], media: "" });
+    setLocalOptions((prev) => ({ ...prev, [id]: [] }));
   };
 
   const handleDeleteQuestion = (index: number) => {
+    const questionId = fields[index].id;
     remove(index);
+    setLocalOptions((prev) => {
+      const updated = { ...prev };
+      delete updated[questionId];
+      return updated;
+    });
   };
 
   const handleQuestionTypeChange = (index: number, newType: string) => {
     const updatedQuestions = [...fields];
+
+    const currentText = updatedQuestions[index].text;
+
     updatedQuestions[index] = {
       ...updatedQuestions[index],
       type: newType,
+      text: currentText,
       options: newType === "multiple-choice" || newType === "dropdown" ? [""] : [],
     };
-    update(index, updatedQuestions[index]);
-  };
 
-  const handleAddOption = (index: number) => {
-    const updatedQuestions = [...fields];
-    if (!updatedQuestions[index].options) {
-      updatedQuestions[index].options = [];
+    const questionId = fields[index].id;
+
+    if (newType === "multiple-choice" || newType === "dropdown") {
+      setLocalOptions((prev) => ({ ...prev, [questionId]: prev[questionId] || [""] }));
+    } else {
+      setLocalOptions((prev) => {
+        const updated = { ...prev };
+        delete updated[questionId];
+        return updated;
+      });
     }
-    updatedQuestions[index].options!.push("");
+
     update(index, updatedQuestions[index]);
   };
 
-  const handleOptionChange = (index: number, optionIndex: number, value: string) => {
-    setValue(`questions.${index}.options.${optionIndex}`, value, { shouldValidate: true });
+  const handleAddOption = (questionId: string) => {
+    setLocalOptions((prev) => ({
+      ...prev,
+      [questionId]: [...(prev[questionId] || []), ""],
+    }));
   };
 
-  const handleDeleteOption = (questionIndex: number, optionIndex: number) => {
-    const updatedQuestions = [...fields];
-    updatedQuestions[questionIndex].options!.splice(optionIndex, 1);
-    update(questionIndex, updatedQuestions[questionIndex]);
+  const handleOptionChange = (questionId: string, optionIndex: number, value: string) => {
+    setLocalOptions((prev) => {
+      const updatedOptions = [...(prev[questionId] || [])];
+      updatedOptions[optionIndex] = value;
+      return { ...prev, [questionId]: updatedOptions };
+    });
   };
 
-  const handleMediaUpload = (index: number, file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const updatedQuestions = [...fields];
-      updatedQuestions[index].media = reader.result as string;
-      update(index, updatedQuestions[index]);
-    };
-    reader.readAsDataURL(file);
+  const handleResetSurvey = () => {
+    reset({
+      title: "",
+      description: "",
+      demographicEnabled: false,
+      questions: [],
+    });
+    setLocalOptions({});
   };
 
   const onSubmit = async (data: FormData) => {
+    const questionsWithUpdatedOptions = data.questions.map((question) => ({
+      ...question,
+      options: localOptions[question.id] || [],
+    }));
+
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       if (!token) {
-        setResponseMessage("You must be logged in to create a survey.");
-        return;
+        throw new Error("No authentication token found.");
       }
-      const response = await createSurvey(data, token);
-      setResponseMessage(response.message || "Survey created successfully!");
-    } catch (error: any) {
-      setResponseMessage(error.response?.data?.message || "Failed to create survey.");
+      await createSurvey({ ...data, questions: questionsWithUpdatedOptions }, token);
+      alert("Survey saved successfully!");
+    } catch (error) {
+      console.error("Error saving survey:", error);
+      alert("Failed to save survey. Check the console for details.");
     }
   };
 
-  const surveyTitle = watch("title");
-  const surveyQuestions = watch("questions");
-
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < surveyQuestions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
-    }
-  };
+  const renderDemographicPreview = () => (
+    <Box sx={{ mt: 2, p: 2, border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Demographic Information
+      </Typography>
+      <RadioGroup>
+        <FormControlLabel value="male" control={<Radio />} label="Male" />
+        <FormControlLabel value="female" control={<Radio />} label="Female" />
+        <FormControlLabel value="other" control={<Radio />} label="Other" />
+      </RadioGroup>
+      <TextField fullWidth sx={{ mt: 2 }} label="Date of Birth" placeholder="MM/DD/YYYY" variant="outlined" />
+      <Select fullWidth sx={{ mt: 2 }} displayEmpty defaultValue="">
+        <MenuItem value="" disabled>
+          Select education level
+        </MenuItem>
+        {educationOptions.map((level, index) => (
+          <MenuItem key={index} value={level}>
+            {level}
+          </MenuItem>
+        ))}
+      </Select>
+      <Select fullWidth sx={{ mt: 2 }} displayEmpty defaultValue="">
+        <MenuItem value="" disabled>
+          Select your city
+        </MenuItem>
+        {cityOptions.map((city, index) => (
+          <MenuItem key={index} value={city}>
+            {city}
+          </MenuItem>
+        ))}
+      </Select>
+    </Box>
+  );
 
   const renderPreviewQuestion = () => {
-    const question = surveyQuestions[currentQuestionIndex];
+    if (currentPreviewIndex === 0 && demographicEnabled) {
+      return renderDemographicPreview();
+    }
+
+    const question = fields[currentPreviewIndex - (demographicEnabled ? 1 : 0)];
     if (!question) return null;
 
     return (
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="h6">{question.text}</Typography>
-        {question.media && (
-          <Box sx={{ mt: 2 }}>
-            <img src={question.media} alt="Media" style={{ maxWidth: "100%", borderRadius: "8px" }} />
-          </Box>
-        )}
+      <Box sx={{ mt: 2, p: 2, border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          {question.text}
+        </Typography>
         {question.type === "multiple-choice" && (
           <RadioGroup>
-            {question.options?.map((option, index) => (
+            {localOptions[question.id]?.map((option, index) => (
               <FormControlLabel key={index} value={option} control={<Radio />} label={option} />
             ))}
           </RadioGroup>
         )}
-        {question.type === "text" && <TextField fullWidth variant="outlined" />}
+        {question.type === "text" && <TextField fullWidth variant="outlined" placeholder="Your answer" />}
         {question.type === "dropdown" && (
           <Select fullWidth>
-            {question.options?.map((option, index) => (
+            {localOptions[question.id]?.map((option, index) => (
               <MenuItem key={index} value={option}>
                 {option}
               </MenuItem>
@@ -228,6 +248,37 @@ const SurveyCreationPage: React.FC = () => {
             <FormControlLabel value="no" control={<Radio />} label="No" />
           </RadioGroup>
         )}
+        {question.type === "date" && (
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Select a date"
+              value={selectedDate}
+              onChange={(newDate) => setSelectedDate(newDate)}
+              renderInput={(params) => <TextField {...params} />}
+            />
+          </LocalizationProvider>
+        )}
+        {question.type === "file-upload" && (
+          <Button variant="outlined" component="label">
+            Upload File
+            <input
+              type="file"
+              hidden
+              onChange={(e) => e.target.files && setUploadedFile(e.target.files[0])}
+            />
+          </Button>
+        )}
+        {uploadedFile && (
+          <Typography sx={{ mt: 2 }} variant="body2">
+            Uploaded file: {uploadedFile.name}
+          </Typography>
+        )}
+        {question.type === "color-picker" && (
+          <ChromePicker
+            color="#000"
+            onChangeComplete={(color) => console.log("Selected color:", color.hex)}
+          />
+        )}
       </Box>
     );
   };
@@ -238,219 +289,145 @@ const SurveyCreationPage: React.FC = () => {
         Survey Creation
       </Typography>
 
-      {responseMessage && (
-        <Typography
-          variant="subtitle1"
-          sx={{ mb: 3, color: responseMessage.includes("successfully") ? "green" : "red" }}
-        >
-          {responseMessage}
-        </Typography>
-      )}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Controller
+          name="title"
+          control={control}
+          render={({ field }) => (
+            <TextField {...field} label="Survey Title" fullWidth sx={{ mb: 2 }} variant="outlined" />
+          )}
+        />
+        <Controller
+          name="description"
+          control={control}
+          render={({ field }) => (
+            <TextField {...field} label="Survey Description" fullWidth sx={{ mb: 2 }} variant="outlined" />
+          )}
+        />
 
-      {!isCreatingNewSurvey && !selectedTemplate && (
-        <Box sx={{ mb: 3, display: "flex", gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setIsCreatingNewSurvey(true)}
-          >
-            Create Survey
-          </Button>
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={() => setShowTemplateDialog(true)}
-          >
-            Use Template
-          </Button>
-        </Box>
-      )}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={demographicEnabled}
+              onChange={(e) => setValue("demographicEnabled", e.target.checked)}
+            />
+          }
+          label="Include Demographic Questions"
+        />
 
-      <Dialog
-        open={showTemplateDialog}
-        onClose={() => setShowTemplateDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Select a Template</DialogTitle>
-        <DialogContent>
-          {templates.map((template, index) => (
-            <Button
-              key={index}
-              variant="contained"
-              onClick={() => handleUseTemplate(template)}
+        {fields.map((field, index) => (
+          <Box key={field.id} sx={{ mb: 3, borderBottom: "1px solid lightgray", pb: 3 }}>
+            <Controller
+              name={`questions.${index}.text`}
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} label={`Question ${index + 1}`} fullWidth sx={{ mb: 2 }} />
+              )}
+            />
+
+            <TextField
+              select
+              label="Question Type"
+              fullWidth
               sx={{ mb: 2 }}
+              value={field.type}
+              onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
             >
-              {template.title}
-            </Button>
-          ))}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowTemplateDialog(false)} color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+              {questionTypes.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </TextField>
 
-      {(isCreatingNewSurvey || selectedTemplate) && (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Survey Title"
-                fullWidth
-                sx={{ mb: 2 }}
-                variant="outlined"
-              />
-            )}
-          />
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Survey Description"
-                fullWidth
-                sx={{ mb: 2 }}
-                variant="outlined"
-              />
-            )}
-          />
-
-          {fields.map((field, index) => (
-            <Box key={field.id} sx={{ mb: 3, borderBottom: "1px solid lightgray", pb: 3 }}>
-              <Controller
-                name={`questions.${index}.text`}
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label={`Question ${index + 1}`}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                    variant="outlined"
-                  />
-                )}
-              />
-
-              <TextField
-                select
-                label="Question Type"
-                fullWidth
-                sx={{ mb: 2 }}
-                value={field.type}
-                onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-              >
-                {questionTypes.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
-                    {type.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              {["multiple-choice", "dropdown"].includes(field.type) && (
-                <Box sx={{ mb: 2 }}>
-                  {field.options?.map((option, optionIndex) => (
-                    <Box
-                      key={optionIndex}
-                      sx={{ display: "flex", alignItems: "center", mb: 1 }}
+            {["multiple-choice", "dropdown"].includes(field.type) && (
+              <Box sx={{ mb: 2 }}>
+                {localOptions[field.id]?.map((option, optionIndex) => (
+                  <Box key={optionIndex} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <TextField
+                      value={option}
+                      onChange={(e) => handleOptionChange(field.id, optionIndex, e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <IconButton
+                      onClick={() =>
+                        setLocalOptions((prev) => {
+                          const updated = [...(prev[field.id] || [])];
+                          updated.splice(optionIndex, 1);
+                          return { ...prev, [field.id]: updated };
+                        })
+                      }
                     >
-                      <TextField
-                        value={option}
-                        onChange={(e) =>
-                          handleOptionChange(index, optionIndex, e.target.value)
-                        }
-                        fullWidth
-                        variant="outlined"
-                      />
-                      <IconButton
-                        onClick={() => handleDeleteOption(index, optionIndex)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  ))}
-                  <Button
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleAddOption(index)}
-                  >
-                    Add Option
-                  </Button>
-                </Box>
-              )}
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                ))}
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleAddOption(field.id)}
+                >
+                  Add Option
+                </Button>
+              </Box>
+            )}
 
-              <Button
-                variant="outlined"
-                component="label"
-                sx={{ mb: 2 }}
-              >
-                Upload Image/Video
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  hidden
-                  onChange={(e) =>
-                    e.target.files && handleMediaUpload(index, e.target.files[0])
-                  }
-                />
-              </Button>
+            <Button
+              onClick={() => handleDeleteQuestion(index)}
+              startIcon={<DeleteIcon />}
+              color="secondary"
+            >
+              Delete Question
+            </Button>
+          </Box>
+        ))}
 
-              {field.media && (
-                <Typography variant="body2" color="textSecondary">
-                  Uploaded Media: {field.media}
-                </Typography>
-              )}
-
-              <Button
-                onClick={() => handleDeleteQuestion(index)}
-                startIcon={<DeleteIcon />}
-                color="secondary"
-              >
-                Delete Question
-              </Button>
-            </Box>
-          ))}
-
-          <Button variant="outlined" onClick={handleAddQuestion} sx={{ mb: 3 }}>
-            Add Question
-          </Button>
-          <Button type="submit" variant="contained" color="primary">
-            Save Survey
-          </Button>
-          <Button
-            onClick={() => setShowPreview(true)}
-            variant="contained"
-            color="info"
-            sx={{ ml: 2 }}
-          >
-            Preview
-          </Button>
-        </form>
-      )}
+        <Button onClick={handleAddQuestion} variant="outlined">
+          Add Question
+        </Button>
+        <Button type="submit" variant="contained" color="primary" sx={{ ml: 2 }}>
+          Save Survey
+        </Button>
+        <Button onClick={handleResetSurvey} variant="contained" color="secondary" sx={{ ml: 2 }}>
+          Reset Survey
+        </Button>
+        <Button
+          onClick={() => setShowPreview(true)}
+          variant="outlined"
+          color="info"
+          sx={{ ml: 2 }}
+        >
+          Preview
+        </Button>
+      </form>
 
       {showPreview && (
         <Dialog open={showPreview} onClose={() => setShowPreview(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ textAlign: "center" }}>
-            {surveyTitle} - Preview
-          </DialogTitle>
+          <DialogTitle sx={{ textAlign: "center" }}>Preview Survey</DialogTitle>
           <DialogContent>
+            <Typography variant="h5" sx={{ mb: 2 }}>
+              {watch("title")}
+            </Typography>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Total Questions: {fields.length + (demographicEnabled ? 1 : 0)}
+            </Typography>
             {renderPreviewQuestion()}
           </DialogContent>
           <DialogActions>
             <Button
-              onClick={handlePreviousQuestion}
-              disabled={currentQuestionIndex === 0}
+              onClick={() => setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))}
+              disabled={currentPreviewIndex === 0}
             >
               Previous
             </Button>
             <Button
-              onClick={handleNextQuestion}
-              disabled={currentQuestionIndex === surveyQuestions.length - 1}
+              onClick={() =>
+                setCurrentPreviewIndex((prev) =>
+                  Math.min(prev + 1, fields.length + (demographicEnabled ? 1 : 0) - 1)
+                )
+              }
+              disabled={currentPreviewIndex === fields.length + (demographicEnabled ? 1 : 0) - 1}
             >
               Next
             </Button>

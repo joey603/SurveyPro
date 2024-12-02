@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void; // Correction ici
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 };
@@ -13,31 +12,31 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Correction ici
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
+  // Check for token in localStorage on initial load
   useEffect(() => {
-    // Vérifie si un token est présent dans le localStorage pour définir l'état initial
     const token = localStorage.getItem("accessToken");
-    setIsAuthenticated(!!token); // Correction ici
+    setIsAuthenticated(!!token);
   }, []);
 
   const login = (accessToken: string, refreshToken: string) => {
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
-    setIsAuthenticated(true); // Correction ici
-    router.push("/profile"); // Redirige vers la page après connexion
+    setIsAuthenticated(true);
+    router.push("/profile"); // Redirect after login
   };
 
   const logout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    setIsAuthenticated(false); // Correction ici
-    router.push("/login"); // Redirige vers la page de connexion
+    setIsAuthenticated(false);
+    router.push("/login"); // Redirect to login
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

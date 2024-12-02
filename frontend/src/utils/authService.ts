@@ -1,46 +1,36 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE = 'http://localhost:5041/api/auth';
-
-export const registerUser = async (data: { username: string; email: string; password: string }) => {
-  return axios.post(`${API_BASE}/register`, data);
+// Helper function to get the access token
+const getAccessToken = () => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in.");
+  }
+  return token;
 };
 
-export const verifyEmail = async (data: { email: string; verificationCode: string }) => {
-  return axios.post(`${API_BASE}/verify-email`, data);
-};
+// Create a survey with authentication
+export const createSurvey = async (surveyData: any) => {
+  const token = getAccessToken(); // Get token from localStorage
 
-export const loginUser = async (data: { email: string; password: string }) => {
-  return axios.post(`${API_BASE}/login`, data);
-};
-
-export const getUserProfile = async (accessToken: string) => {
-  return axios.get(`${API_BASE}/profile`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  const response = await axios.post("http://localhost:5041/api/surveys", surveyData, {
+    headers: {
+      Authorization: `Bearer ${token}`, // Attach token
+    },
   });
+
+  return response.data; // Return the API response
 };
 
-export const refreshAccessToken = async (refreshToken: string) => {
-  return axios.post(`${API_BASE}/refresh-token`, { refreshToken });
+// Example: Fetch surveys
+export const fetchSurveys = async () => {
+  const token = getAccessToken(); // Get token from localStorage
+
+  const response = await axios.get("http://localhost:5041/api/surveys", {
+    headers: {
+      Authorization: `Bearer ${token}`, // Attach token
+    },
+  });
+
+  return response.data; // Return the API response
 };
-
-export const logoutUser = async (refreshToken: string) => {
-  return axios.post(`${API_BASE}/logout`, { refreshToken });
-};
-
-// utils/authService.ts
-
-// Efface les tokens d'accès et de rafraîchissement du stockage local
-export const clearTokens = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-  };
-  
-  
-  // Récupère le token d'accès depuis le stockage local
-  export const getAccessToken = () => {
-    return localStorage.getItem("accessToken");
-  };
-  
- 
-  

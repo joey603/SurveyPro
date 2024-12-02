@@ -14,17 +14,19 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     try {
       const response = await axios.post("http://localhost:5041/api/auth/login", {
         email,
         password,
       });
-
+  
       const { accessToken, refreshToken } = response.data;
-      login(accessToken, refreshToken); // Met à jour le contexte
+      console.log("Login successful, tokens received:", { accessToken, refreshToken }); // Debug log
+      login(accessToken, refreshToken); // Update context
     } catch (err: any) {
       setError(err.response?.data?.message || "An error occurred");
+      console.error("Login failed:", err.response || err.message); // Debug log
     }
   };
 
