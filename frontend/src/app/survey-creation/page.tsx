@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -21,6 +21,7 @@ import {
   Slider,
   Rating,
 } from "@mui/material";
+import ReactPlayer from "react-player";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -29,6 +30,11 @@ import { useForm, Controller, useFieldArray } from "react-hook-form";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { createSurvey } from "../../utils/surveyService";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import VisibilityIcon from "@mui/icons-material/Visibility"; // Ajouté pour le bouton Preview
+
+
 
 type Question = {
   id: string;
@@ -36,6 +42,8 @@ type Question = {
   text: string;
   options?: string[];
   media?: string;
+  selectedDate?: Date | null; // Ajout de cette propriété
+
 };
 
 type FormData = {
@@ -44,6 +52,17 @@ type FormData = {
   demographicEnabled: boolean;
   questions: Question[];
 };
+
+
+const isValidMediaURL = (url: string): boolean => {
+  // Vérifiez si c'est une URL Blob
+  if (url.startsWith("blob:")) {
+    return true;
+  }
+  // Vérifiez les extensions classiques
+  return /\.(mp4|mov|jpg|jpeg|png)$/i.test(url);
+};
+
 
 const questionTypes = [
   { value: "multiple-choice", label: "Multiple Choice" },
@@ -56,6 +75,8 @@ const questionTypes = [
   { value: "file-upload", label: "File Upload" },
   { value: "color-picker", label: "Color Picker" },
 ];
+
+
 
 const cityOptions = ["Tel Aviv", "Jerusalem", "Haifa", "Ashdod", "Eilat", "Be'er Sheva"];
 const educationOptions = [
@@ -84,15 +105,95 @@ const SurveyCreationPage: React.FC = () => {
   const [localOptions, setLocalOptions] = useState<{ [key: string]: string[] }>({});
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null); 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  const [selectedColors, setSelectedColors] = useState<{ [key: string]: { color: string; alpha: number } }>({});
+
+  const questions = watch("questions"); // Surveille toutes les questions
+
+  const [cities, setCities] = useState<string[]>([]); // Liste des villes
+  const [selectedCity, setSelectedCity] = useState(""); // Ville sélectionnée
+
+  const fetchCities = async () => {
+    try {
+      const response = await fetch(
+        "https://countriesnow.space/api/v0.1/countries/cities",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ country: "Israel" }),
+        }
+      );
+      const data = await response.json();
+
+      if (data && data.data) {
+        return data.data; // Liste des villes
+      } else {
+        console.error("Erreur : aucune donnée trouvée.");
+        return [];
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des villes :", error);
+      return [];
+    }
+  };
+
+  // Appeler `fetchCities` dans `useEffect`
+  useEffect(() => {
+    const loadCities = async () => {
+      const citiesList = await fetchCities();
+      setCities(citiesList); // Met à jour les villes
+    };
+
+    loadCities();
+  }, []);
+
+ /* const questions: Question[] = [
+    {
+      id: "1",
+      type: "video",
+      text: "Test Video",
+      media: "https://www.w3schools.com/html/mov_bbb.mp4", // URL de la vidéo
+    },
+  ];*/
 
   const demographicEnabled = watch("demographicEnabled");
 
+  const [openMedia, setOpenMedia] = useState<string | null>(null); 
+
+  useEffect(() => {
+    return () => {
+      // Nettoyez toutes les URLs Blob lorsqu'elles ne sont plus nécessaires
+      fields.forEach((field) => {
+        if (field.media?.startsWith("blob:")) {
+          URL.revokeObjectURL(field.media);
+        }
+      });
+    };
+  }, [fields]);
+  
+   // useEffect to initialize color-picker questions
+   useEffect(() => {
+    // Initialize missing color-picker entries
+    questions.forEach((question) => {
+      if (question.type === "color-picker" && !selectedColors[question.id]) {
+        setSelectedColors((prev) => ({
+          ...prev,
+          [question.id]: { color: "#000000", alpha: 1 },
+        }));
+      }
+    });
+  }, [questions]); // Trigger this effect when questions change
+
+
   const handleAddQuestion = () => {
     const id = Date.now().toString();
-    append({ id, type: "text", text: "", options: [], media: "" });
+    append({ id, type: "text", text: "", options: [], media: "" ,selectedDate: null });
     setLocalOptions((prev) => ({ ...prev, [id]: [] }));
+    setSelectedColors((prev) => ({ ...prev, [id]: { color: "#000000", alpha: 1 } }));
   };
 
   const handleDeleteQuestion = (index: number) => {
@@ -162,126 +263,281 @@ const SurveyCreationPage: React.FC = () => {
       ...question,
       options: localOptions[question.id] || [],
     }));
-
+  
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         throw new Error("No authentication token found.");
       }
       await createSurvey({ ...data, questions: questionsWithUpdatedOptions }, token);
-      alert("Survey saved successfully!");
+      alert("Survey submitted successfully!");
     } catch (error) {
-      console.error("Error saving survey:", error);
-      alert("Failed to save survey. Check the console for details.");
+      console.error("Error submitting survey:", error);
+      alert("Failed to submit survey. Check the console for details.");
     }
   };
+  
 
-  const renderDemographicPreview = () => (
-    <Box sx={{ mt: 2, p: 2, border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Demographic Information
-      </Typography>
-      <RadioGroup>
-        <FormControlLabel value="male" control={<Radio />} label="Male" />
-        <FormControlLabel value="female" control={<Radio />} label="Female" />
-        <FormControlLabel value="other" control={<Radio />} label="Other" />
-      </RadioGroup>
-      <TextField fullWidth sx={{ mt: 2 }} label="Date of Birth" placeholder="MM/DD/YYYY" variant="outlined" />
-      <Select fullWidth sx={{ mt: 2 }} displayEmpty defaultValue="">
-        <MenuItem value="" disabled>
-          Select education level
-        </MenuItem>
-        {educationOptions.map((level, index) => (
-          <MenuItem key={index} value={level}>
-            {level}
-          </MenuItem>
-        ))}
-      </Select>
-      <Select fullWidth sx={{ mt: 2 }} displayEmpty defaultValue="">
-        <MenuItem value="" disabled>
-          Select your city
-        </MenuItem>
-        {cityOptions.map((city, index) => (
-          <MenuItem key={index} value={city}>
-            {city}
-          </MenuItem>
-        ))}
-      </Select>
-    </Box>
-  );
-
-  const renderPreviewQuestion = () => {
-    if (currentPreviewIndex === 0 && demographicEnabled) {
-      return renderDemographicPreview();
-    }
-
-    const question = fields[currentPreviewIndex - (demographicEnabled ? 1 : 0)];
-    if (!question) return null;
-
+  const renderDemographicPreview = () => {
     return (
-      <Box sx={{ mt: 2, p: 2, border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
+      <Box sx={{ mt: 2, p: 3, border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#fff" }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          {question.text}
+          Demographic Information
         </Typography>
-        {question.type === "multiple-choice" && (
-          <RadioGroup>
-            {localOptions[question.id]?.map((option, index) => (
-              <FormControlLabel key={index} value={option} control={<Radio />} label={option} />
-            ))}
-          </RadioGroup>
-        )}
-        {question.type === "text" && <TextField fullWidth variant="outlined" placeholder="Your answer" />}
-        {question.type === "dropdown" && (
-          <Select fullWidth>
-            {localOptions[question.id]?.map((option, index) => (
-              <MenuItem key={index} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </Select>
-        )}
-        {question.type === "slider" && <Slider valueLabelDisplay="auto" />}
-        {question.type === "rating" && <Rating />}
-        {question.type === "yes-no" && (
-          <RadioGroup>
-            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-            <FormControlLabel value="no" control={<Radio />} label="No" />
-          </RadioGroup>
-        )}
-        {question.type === "date" && (
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Select a date"
-              value={selectedDate}
-              onChange={(newDate) => setSelectedDate(newDate)}
-              renderInput={(params) => <TextField {...params} />}
-            />
-          </LocalizationProvider>
-        )}
-        {question.type === "file-upload" && (
-          <Button variant="outlined" component="label">
-            Upload File
-            <input
-              type="file"
-              hidden
-              onChange={(e) => e.target.files && setUploadedFile(e.target.files[0])}
-            />
-          </Button>
-        )}
-        {uploadedFile && (
-          <Typography sx={{ mt: 2 }} variant="body2">
-            Uploaded file: {uploadedFile.name}
-          </Typography>
-        )}
-        {question.type === "color-picker" && (
-          <ChromePicker
-            color="#000"
-            onChangeComplete={(color) => console.log("Selected color:", color.hex)}
+        <RadioGroup sx={{ mb: 2 }}>
+          <FormControlLabel value="male" control={<Radio />} label="Male" />
+          <FormControlLabel value="female" control={<Radio />} label="Female" />
+          <FormControlLabel value="other" control={<Radio />} label="Other" />
+        </RadioGroup>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Date of Birth"
+            value={dateOfBirth}
+            onChange={(newDate) => setDateOfBirth(newDate)}
+            renderInput={(params) => <TextField {...params} fullWidth sx={{ mt: 2 }} />}
           />
-        )}
+        </LocalizationProvider>
+        <Select fullWidth sx={{ mt: 2 }} displayEmpty defaultValue="">
+          <MenuItem value="" disabled>
+            Select education level
+          </MenuItem>
+          {educationOptions.map((level, index) => (
+            <MenuItem key={index} value={level}>
+              {level}
+            </MenuItem>
+          ))}
+        </Select>
+        <Select
+  fullWidth
+  sx={{ mt: 2 }}
+  displayEmpty
+  defaultValue=""
+  value={selectedCity}
+  onChange={(e) => setSelectedCity(e.target.value)} // Mettez à jour l'état de la ville sélectionnée
+>
+  <MenuItem value="" disabled>
+    Select your city
+  </MenuItem>
+  {cities.map((city, index) => (
+    <MenuItem key={index} value={city}>
+      {city}
+    </MenuItem>
+  ))}
+</Select>
       </Box>
     );
   };
+
+
+  const renderPreviewQuestion = () => {
+    const totalQuestions = questions.length; // Exclure démographique du total
+    const adjustedIndex = demographicEnabled ? currentPreviewIndex - 1 : currentPreviewIndex;
+    const question = adjustedIndex >= 0 ? questions[adjustedIndex] : null;
+  
+    if (currentPreviewIndex === 0 && demographicEnabled) {
+      return renderDemographicPreview();
+    }
+  
+    if (!question) return null;
+  
+    return (
+      <Box
+        sx={{
+          mt: 2,
+          p: 3,
+          backgroundColor: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          position: "relative",
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 2,
+            textAlign: "center",
+            fontWeight: "bold",
+            color: "#333",
+          }}
+        >
+          {question.text || "Untitled Question"}
+        </Typography>
+  
+
+{question.media && (
+  <Box sx={{ mb: 2, textAlign: "center" }}>
+        <Box>
+  {(() => {
+    console.log("Rendering media:", question.media);
+    return null; // Renvoyez un élément valide, ici `null` pour ne rien afficher
+  })()}
+</Box>
+
+
+
+    {/* Vérifiez si le média est une vidéo ou une image */}
+    {question.media.startsWith("blob:") || question.media.endsWith(".mp4") || question.media.endsWith(".mov") ? (
+      <ReactPlayer
+        url={question.media}
+        controls
+        width="50%"
+        height="200px"
+        style={{
+          margin: "0 auto",
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+        onError={(e) => console.error("ReactPlayer error:", e)}
+      />
+    ) : question.media.match(/\.(jpg|jpeg|png)$/) ? (
+      <img
+        src={question.media}
+        alt="Uploaded Media"
+        style={{
+          maxWidth: "50%",
+          maxHeight: "200px",
+          display: "block",
+          margin: "0 auto",
+        }}
+        onError={(e) => console.error("Image rendering error:", e)}
+      />
+    ) : (
+      <Typography color="error">Invalid media format</Typography>
+    )}
+  </Box>
+)}
+
+
+
+
+
+        {/* Display the rest of the question */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center", // Centre tous les composants
+            gap: 2, // Espacement entre les composants
+          }}
+        >
+          {question.type === "multiple-choice" && (
+            <RadioGroup>
+              {localOptions[question.id]?.map((option, index) => (
+                <FormControlLabel key={index} value={option} control={<Radio />} label={option} />
+              ))}
+            </RadioGroup>
+          )}
+          {question.type === "text" && <TextField fullWidth variant="outlined" placeholder="Your answer" />}
+          {question.type === "dropdown" && (
+            <Select fullWidth>
+              {localOptions[question.id]?.map((option, index) => (
+                <MenuItem key={index} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
+          {question.type === "slider" && <Slider valueLabelDisplay="auto" />}
+          {question.type === "rating" && <Rating />}
+          {question.type === "yes-no" && (
+            <RadioGroup>
+              <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+              <FormControlLabel value="no" control={<Radio />} label="No" />
+            </RadioGroup>
+          )}
+          {question.type === "date" && (
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Select a date"
+                value={question.selectedDate || null}
+                onChange={(newDate) =>
+                  setValue(
+                    `questions`,
+                    questions.map((q) => (q.id === question.id ? { ...q, selectedDate: newDate } : q))
+                  )
+                }
+                renderInput={(params) => <TextField {...params} />}
+              />
+            </LocalizationProvider>
+          )}
+          {question.type === "file-upload" && (
+            <Button variant="outlined" component="label">
+              Upload File
+              <input
+                type="file"
+                hidden
+                onChange={(e) => e.target.files && setUploadedFile(e.target.files[0])}
+              />
+            </Button>
+          )}
+          {uploadedFile && (
+            <Typography sx={{ mt: 2 }} variant="body2">
+              Uploaded file: {uploadedFile.name}
+            </Typography>
+          )}
+          {question.type === "color-picker" && (
+            <Box>
+              <ChromePicker
+                color={{
+                  r: selectedColors[question.id]?.color
+                    ? parseInt(selectedColors[question.id].color.slice(1, 3), 16)
+                    : 0,
+                  g: selectedColors[question.id]?.color
+                    ? parseInt(selectedColors[question.id].color.slice(3, 5), 16)
+                    : 0,
+                  b: selectedColors[question.id]?.color
+                    ? parseInt(selectedColors[question.id].color.slice(5, 7), 16)
+                    : 0,
+                  a: selectedColors[question.id]?.alpha || 1,
+                }}
+                onChangeComplete={(color) => {
+                  setSelectedColors((prev) => ({
+                    ...prev,
+                    [question.id]: {
+                      color: color.hex,
+                      alpha: color.rgb.a || 1,
+                    },
+                  }));
+                }}
+                styles={{
+                  default: {
+                    picker: {
+                      width: "300px",
+                      height: "auto",
+                      boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+                      borderRadius: "10px",
+                    },
+                  },
+                }}
+              />
+              <Box
+                sx={{
+                  width: 120,
+                  height: 60,
+                  mt: 2,
+                  backgroundColor: `rgba(${parseInt(
+                    selectedColors[question.id]?.color?.slice(1, 3) || "00",
+                    16
+                  )}, 
+                                ${parseInt(selectedColors[question.id]?.color?.slice(3, 5) || "00", 16)}, 
+                                ${parseInt(selectedColors[question.id]?.color?.slice(5, 7) || "00", 16)}, 
+                                ${selectedColors[question.id]?.alpha || 1})`,
+                  border: "1px solid #ddd",
+                }}
+              />
+            </Box>
+          )}
+        </Box>
+  
+        {/* Affichage du numéro de question */}
+        <Typography variant="body2" sx={{ mt: 2, textAlign: "center", color: "gray" }}>
+          Question {adjustedIndex + 1} of {totalQuestions}
+        </Typography>
+      </Box>
+    );
+  };
+  
 
   return (
     <Box sx={{ padding: 4 }}>
@@ -290,152 +546,346 @@ const SurveyCreationPage: React.FC = () => {
       </Typography>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <Controller
-          name="title"
-          control={control}
-          render={({ field }) => (
-            <TextField {...field} label="Survey Title" fullWidth sx={{ mb: 2 }} variant="outlined" />
-          )}
-        />
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField {...field} label="Survey Description" fullWidth sx={{ mb: 2 }} variant="outlined" />
-          )}
-        />
+  <Controller
+    name="title"
+    control={control}
+    rules={{ required: "Title is required" }} // Validation
+    render={({ field, fieldState }) => (
+      <TextField
+        {...field}
+        label="Survey Title"
+        fullWidth
+        sx={{ mb: 2 }}
+        variant="outlined"
+        error={!!fieldState.error} // Afficher l'erreur
+        helperText={fieldState.error?.message} // Message d'erreur
+      />
+    )}
+  />
+  <Controller
+    name="description"
+    control={control}
+    render={({ field }) => (
+      <TextField {...field} label="Survey Description" fullWidth sx={{ mb: 2 }} variant="outlined" />
+    )}
+  />
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={demographicEnabled}
-              onChange={(e) => setValue("demographicEnabled", e.target.checked)}
-            />
-          }
-          label="Include Demographic Questions"
-        />
+  <FormControlLabel
+    control={
+      <Switch
+        checked={demographicEnabled}
+        onChange={(e) => setValue("demographicEnabled", e.target.checked)}
+      />
+    }
+    label="Include Demographic Questions"
+  />
 
-        {fields.map((field, index) => (
-          <Box key={field.id} sx={{ mb: 3, borderBottom: "1px solid lightgray", pb: 3 }}>
-            <Controller
-              name={`questions.${index}.text`}
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label={`Question ${index + 1}`} fullWidth sx={{ mb: 2 }} />
-              )}
-            />
+{fields.map((field, index) => (
+  <Box key={field.id} sx={{ mb: 3, pb: 3, borderBottom: "1px solid lightgray" }}>
+    {/* Question Text */}
 
+    
+    <Controller
+      name={`questions.${index}.text`}
+      control={control}
+      render={({ field }) => (
+        <TextField {...field} label={`Question ${index + 1}`} fullWidth sx={{ mb: 2 }} />
+      )}
+    />
+    
+    {/* Question Type */}
+    <TextField
+      select
+      label="Question Type"
+      fullWidth
+      sx={{ mb: 2 }}
+      value={field.type}
+      onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+    >
+      {questionTypes.map((type) => (
+        <MenuItem key={type.value} value={type.value}>
+          {type.label}
+        </MenuItem>
+      ))}
+    </TextField>
+    
+
+    {/* Render Options for Multiple-Choice or Dropdown */}
+    {["multiple-choice", "dropdown"].includes(field.type) && (
+      <Box sx={{ mb: 2 }}>
+        {localOptions[field.id]?.map((option, optionIndex) => (
+          <Box key={optionIndex} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
             <TextField
-              select
-              label="Question Type"
+              value={option}
+              onChange={(e) => handleOptionChange(field.id, optionIndex, e.target.value)}
               fullWidth
-              sx={{ mb: 2 }}
-              value={field.type}
-              onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+              variant="outlined"
+            />
+            <IconButton
+              onClick={() =>
+                setLocalOptions((prev) => {
+                  const updated = [...(prev[field.id] || [])];
+                  updated.splice(optionIndex, 1);
+                  return { ...prev, [field.id]: updated };
+                })
+              }
             >
-              {questionTypes.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {["multiple-choice", "dropdown"].includes(field.type) && (
-              <Box sx={{ mb: 2 }}>
-                {localOptions[field.id]?.map((option, optionIndex) => (
-                  <Box key={optionIndex} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <TextField
-                      value={option}
-                      onChange={(e) => handleOptionChange(field.id, optionIndex, e.target.value)}
-                      fullWidth
-                      variant="outlined"
-                    />
-                    <IconButton
-                      onClick={() =>
-                        setLocalOptions((prev) => {
-                          const updated = [...(prev[field.id] || [])];
-                          updated.splice(optionIndex, 1);
-                          return { ...prev, [field.id]: updated };
-                        })
-                      }
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleAddOption(field.id)}
-                >
-                  Add Option
-                </Button>
-              </Box>
-            )}
-
-            <Button
-              onClick={() => handleDeleteQuestion(index)}
-              startIcon={<DeleteIcon />}
-              color="secondary"
-            >
-              Delete Question
-            </Button>
+              <DeleteIcon />
+            </IconButton>
           </Box>
         ))}
-
-        <Button onClick={handleAddQuestion} variant="outlined">
-          Add Question
-        </Button>
-        <Button type="submit" variant="contained" color="primary" sx={{ ml: 2 }}>
-          Save Survey
-        </Button>
-        <Button onClick={handleResetSurvey} variant="contained" color="secondary" sx={{ ml: 2 }}>
-          Reset Survey
-        </Button>
         <Button
-          onClick={() => setShowPreview(true)}
           variant="outlined"
-          color="info"
-          sx={{ ml: 2 }}
+          startIcon={<AddIcon />}
+          onClick={() => handleAddOption(field.id)}
         >
-          Preview
+          Add Option
         </Button>
-      </form>
+      </Box>
+    )}
+
+   {/* Media Upload and URL Input */}
+<Box sx={{ mt: 3 }}>
+  {/* URL Input */}
+  <Controller
+  name={`questions.${index}.media`}
+  control={control}
+  render={({ field }) => (
+    <TextField
+      {...field}
+      label="Media URL"
+      placeholder="Enter a valid media URL"
+      fullWidth
+      variant="outlined"
+      onBlur={(e) => {
+        const value = e.target.value.trim();
+        if (!isValidMediaURL(value)) {
+          alert("Invalid URL. Only .mp4, .mov, .jpg, .jpeg, or .png files are supported.");
+          setValue(`questions.${index}.media`, "");
+        }
+      }}
+    />
+  )}
+/>
+
+<Button
+  variant="outlined"
+  component="label"
+  startIcon={<PhotoCameraIcon />}
+  sx={{
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    textTransform: "none",
+    mt: 2,
+  }}
+>
+  Upload Media
+  <input
+  type="file"
+  accept="video/mp4,video/mov,image/jpeg,image/png"
+  hidden
+  onChange={(e) => {
+    if (e.target.files && e.target.files[0]) {
+      const uploadedFile = e.target.files[0];
+      const fileName = uploadedFile.name.toLowerCase();
+  
+      // Vérifiez les extensions et les types MIME
+      if (
+        !fileName.match(/\.(mp4|mov)$/) ||
+        !["video/mp4", "video/quicktime"].includes(uploadedFile.type)
+      ) {
+        alert("Invalid file type. Only MP4 and MOV files are supported.");
+        return;
+      }
+  
+      // Générer une URL Blob
+      const fileURL = URL.createObjectURL(uploadedFile);
+      setValue(`questions.${index}.media`, fileURL);
+    }
+  }}
+/>
+</Button>
+
+</Box>
+
+
+    {/* Delete Question Button */}
+    <Button
+      onClick={() => handleDeleteQuestion(index)}
+      startIcon={<DeleteIcon />}
+      color="secondary"
+      sx={{ mt: 2 }}
+    >
+      Delete Question
+    </Button>
+  </Box>
+))}
+
+  {/* Bouton Add Question (avec une icône) */}
+<Box
+  sx={{
+    display: "flex",
+    justifyContent: "flex-start",
+    mt: 3,
+    mb: 2, // Espacement entre Add Question et les autres boutons
+  }}
+>
+  <Button
+    onClick={handleAddQuestion}
+    variant="outlined"
+    startIcon={<AddIcon />} // Icône de "plus" ajoutée ici
+    sx={{
+      backgroundColor: "white",
+      color: "#007bff", // Bleu pour Add Question
+      border: "1px solid #007bff",
+      borderRadius: "8px",
+      textTransform: "none",
+      padding: "10px 20px",
+      fontSize: "14px",
+      fontWeight: "500",
+      "&:hover": {
+        backgroundColor: "#e8f4ff", // Fond bleu clair sur survol
+        borderColor: "#0056b3",
+      },
+    }}
+  >
+    Add Question
+  </Button>
+</Box>
+
+{/* Section avec Reset Survey, Preview et Submit */}
+<Box
+  sx={{
+    display: "flex",
+    justifyContent: "flex-start", // Aligne tous les boutons sur une ligne
+    gap: 2, // Espacement uniforme entre les boutons
+  }}
+>
+  {/* Bouton Reset Survey (avec une icône) */}
+  <Button
+    onClick={handleResetSurvey}
+    variant="outlined"
+    startIcon={<DeleteIcon />} // Icône de "poubelle" ajoutée ici
+    sx={{
+      backgroundColor: "white",
+      color: "#dc3545", // Rouge pour Reset Survey
+      border: "1px solid #dc3545",
+      borderRadius: "8px",
+      textTransform: "none",
+      padding: "10px 20px",
+      fontSize: "14px",
+      fontWeight: "500",
+      "&:hover": {
+        backgroundColor: "#f8d7da", // Fond rouge clair sur survol
+        borderColor: "#c82333",
+        color: "#721c24",
+      },
+    }}
+  >
+    Reset Survey
+  </Button>
+
+  {/* Bouton Preview (avec une icône) */}
+  <Button
+    onClick={() => setShowPreview(true)}
+    variant="outlined"
+    startIcon={<VisibilityIcon />} // Icône d'œil ajoutée ici
+    sx={{
+      backgroundColor: "white",
+      color: "#6f42c1", // Violet pour Preview
+      border: "1px solid #6f42c1",
+      borderRadius: "8px",
+      textTransform: "none",
+      padding: "10px 20px",
+      fontSize: "14px",
+      fontWeight: "500",
+      "&:hover": {
+        backgroundColor: "#ede7f6", // Fond violet clair sur survol
+        borderColor: "#5a32a3",
+      },
+    }}
+  >
+    Preview
+  </Button>
+
+  {/* Bouton Submit (avec une icône) */}
+  <Button
+    type="submit"
+    variant="outlined"
+    startIcon={<CheckCircleIcon />} // Icône de validation ajoutée ici
+    sx={{
+      backgroundColor: "white",
+      color: "#28a745", // Vert pour Submit
+      border: "1px solid #28a745",
+      borderRadius: "8px",
+      textTransform: "none",
+      padding: "10px 20px",
+      fontSize: "14px",
+      fontWeight: "500",
+      "&:hover": {
+        backgroundColor: "#e6f7e9", // Fond vert clair sur survol
+        borderColor: "#218838",
+      },
+    }}
+  >
+    Submit
+  </Button>
+</Box>
+
+</form>
 
       {showPreview && (
         <Dialog open={showPreview} onClose={() => setShowPreview(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ textAlign: "center" }}>Preview Survey</DialogTitle>
-          <DialogContent>
-            <Typography variant="h5" sx={{ mb: 2 }}>
-              {watch("title")}
-            </Typography>
-            <Typography variant="subtitle1" sx={{ mb: 2 }}>
-              Total Questions: {fields.length + (demographicEnabled ? 1 : 0)}
-            </Typography>
-            {renderPreviewQuestion()}
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))}
-              disabled={currentPreviewIndex === 0}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() =>
-                setCurrentPreviewIndex((prev) =>
-                  Math.min(prev + 1, fields.length + (demographicEnabled ? 1 : 0) - 1)
-                )
-              }
-              disabled={currentPreviewIndex === fields.length + (demographicEnabled ? 1 : 0) - 1}
-            >
-              Next
-            </Button>
-            <Button onClick={() => setShowPreview(false)} color="primary">
-              Close
-            </Button>
-          </DialogActions>
-        </Dialog>
+        <DialogTitle sx={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "#444" }}>
+          Survey Preview
+        </DialogTitle>
+        <DialogContent sx={{ backgroundColor: "#f7f9fc", padding: "24px" }}>
+          <Typography variant="h5" sx={{ mb: 2, textAlign: "center", color: "#555" }}>
+            {watch("title") || "Untitled Survey"}
+          </Typography>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              mb: 4,
+              textAlign: "center",
+              fontStyle: "italic",
+              color: "#777",
+              borderBottom: "1px solid #ddd",
+              paddingBottom: "12px",
+            }}
+          >
+            {watch("description") || "No description provided."}
+          </Typography>
+          {renderPreviewQuestion()}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "space-between", padding: "16px 24px" }}>
+          <Button
+            onClick={() => setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))}
+            disabled={currentPreviewIndex === 0}
+            variant="outlined"
+            color="primary"
+          >
+            Previous
+          </Button>
+          <Button
+            onClick={() =>
+              setCurrentPreviewIndex((prev) =>
+                Math.min(prev + 1, questions.length + (demographicEnabled ? 1 : 0) - 1)
+              )
+            }
+            disabled={currentPreviewIndex === questions.length + (demographicEnabled ? 1 : 0) - 1}
+            variant="outlined"
+            color="primary"
+          >
+            Next
+          </Button>
+          <Button onClick={() => setShowPreview(false)} variant="contained" color="secondary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
       )}
     </Box>
   );
