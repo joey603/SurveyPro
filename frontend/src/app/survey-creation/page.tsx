@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import React, { useState, useEffect } from "react";
 import {
@@ -55,11 +55,6 @@ type FormData = {
 
 
 const isValidMediaURL = (url: string): boolean => {
-  // Vérifiez si c'est une URL Blob
-  if (url.startsWith("blob:")) {
-    return true;
-  }
-  // Vérifiez les extensions classiques
   return /\.(mp4|mov|jpg|jpeg|png)$/i.test(url);
 };
 
@@ -78,7 +73,6 @@ const questionTypes = [
 
 
 
-const cityOptions = ["Tel Aviv", "Jerusalem", "Haifa", "Ashdod", "Eilat", "Be'er Sheva"];
 const educationOptions = [
   "High School",
   "Bachelor's",
@@ -88,7 +82,7 @@ const educationOptions = [
 ];
 
 const SurveyCreationPage: React.FC = () => {
-  const { control, handleSubmit, setValue, reset, watch } = useForm<FormData>({
+  const { control, handleSubmit, setValue,getValues, reset, watch } = useForm<FormData>({
     defaultValues: {
       title: "",
       description: "",
@@ -162,7 +156,6 @@ const SurveyCreationPage: React.FC = () => {
 
   const demographicEnabled = watch("demographicEnabled");
 
-  const [openMedia, setOpenMedia] = useState<string | null>(null); 
 
   useEffect(() => {
     return () => {
@@ -258,11 +251,59 @@ const SurveyCreationPage: React.FC = () => {
     setLocalOptions({});
   };
 
+  
+
+  const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    try {
+      const response = await fetch("http://localhost:5041/api/surveys/upload-media", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const result = await response.json();
+      console.log("Upload response:", result);
+  
+      if (response.ok && result.url) {
+        console.log(`Updating media URL for question ${questionId} with URL: ${result.url}`);
+        fields.forEach((field, index) => {
+          if (field.id === questionId) {
+            update(index, { ...field, media: result.url });
+          }
+        });
+        console.log("Questions after update:", getValues("questions"));
+      } else {
+        console.error("Failed to upload media:", result);
+        alert("Failed to upload media. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      alert("An error occurred while uploading the media.");
+    }
+  };
+  
+  const [localQuestions, setLocalQuestions] = useState<Question[]>([]);
+  
+  useEffect(() => {
+    setLocalQuestions(getValues("questions"));
+  }, [watch("questions")]);
+  
+  
+  
+  
+  
+  
+  
+  
   const onSubmit = async (data: FormData) => {
     const questionsWithUpdatedOptions = data.questions.map((question) => ({
       ...question,
       options: localOptions[question.id] || [],
     }));
+
+
   
     try {
       const token = localStorage.getItem("accessToken");
@@ -407,10 +448,6 @@ const SurveyCreationPage: React.FC = () => {
     )}
   </Box>
 )}
-
-
-
-
 
         {/* Display the rest of the question */}
         <Box
@@ -645,69 +682,51 @@ const SurveyCreationPage: React.FC = () => {
     )}
 
    {/* Media Upload and URL Input */}
-<Box sx={{ mt: 3 }}>
-  {/* URL Input */}
-  <Controller
+   <Box sx={{ mt: 3 }}>
+   <Controller
   name={`questions.${index}.media`}
   control={control}
-  render={({ field }) => (
-    <TextField
-      {...field}
-      label="Media URL"
-      placeholder="Enter a valid media URL"
-      fullWidth
-      variant="outlined"
-      onBlur={(e) => {
-        const value = e.target.value.trim();
-        if (!isValidMediaURL(value)) {
-          alert("Invalid URL. Only .mp4, .mov, .jpg, .jpeg, or .png files are supported.");
-          setValue(`questions.${index}.media`, "");
+  render={({ field }) => {
+    console.log(`Rendering media for question ${fields[index].id}:`, field.value);
+    return (
+      <TextField
+        {...field}
+        label="Media URL"
+        placeholder="Enter a valid media URL or upload a file"
+        fullWidth
+      />
+    );
+  }}
+/>
+
+
+
+  <Button
+    variant="outlined"
+    component="label"
+    startIcon={<PhotoCameraIcon />}
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      textTransform: "none",
+      mt: 2,
+    }}
+  >
+    Upload File
+    <input
+      type="file"
+      hidden
+      onChange={(e) => {
+        if (e.target.files?.[0]) {
+          const file = e.target.files[0];
+          handleFileUpload(file, field.id); // Passe l'ID de la question
         }
       }}
     />
-  )}
-/>
-
-<Button
-  variant="outlined"
-  component="label"
-  startIcon={<PhotoCameraIcon />}
-  sx={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    textTransform: "none",
-    mt: 2,
-  }}
->
-  Upload Media
-  <input
-  type="file"
-  accept="video/mp4,video/mov,image/jpeg,image/png"
-  hidden
-  onChange={(e) => {
-    if (e.target.files && e.target.files[0]) {
-      const uploadedFile = e.target.files[0];
-      const fileName = uploadedFile.name.toLowerCase();
-  
-      // Vérifiez les extensions et les types MIME
-      if (
-        !fileName.match(/\.(mp4|mov)$/) ||
-        !["video/mp4", "video/quicktime"].includes(uploadedFile.type)
-      ) {
-        alert("Invalid file type. Only MP4 and MOV files are supported.");
-        return;
-      }
-  
-      // Générer une URL Blob
-      const fileURL = URL.createObjectURL(uploadedFile);
-      setValue(`questions.${index}.media`, fileURL);
-    }
-  }}
-/>
-</Button>
-
+  </Button>
 </Box>
+
 
 
     {/* Delete Question Button */}

@@ -1,8 +1,4 @@
-// cloudinaryConfig.js
 const cloudinary = require('cloudinary').v2;
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-require('dotenv').config();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,14 +6,18 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'survey_media', // Folder name in Cloudinary
-    allowed_formats: ['jpg', 'png', 'jpeg', 'mp4', 'mov'], // Allowed file formats
-  },
-});
+const uploadFileToCloudinary = async (filePath, folder = "uploads") => {
+  try {
+      const result = await cloudinary.uploader.upload(filePath, {
+          folder: folder,
+          resource_type: "auto", // Permet de gérer automatiquement les types de fichiers, y compris les vidéos
 
-const upload = multer({ storage: storage });
+      });
+      return result;
+  } catch (error) {
+      console.error("Cloudinary upload error:", error.message);
+      throw new Error("Failed to upload to Cloudinary.");
+  }
+};
 
-module.exports = { cloudinary, upload };
+module.exports = { cloudinary, uploadFileToCloudinary };
