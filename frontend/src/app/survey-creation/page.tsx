@@ -226,21 +226,6 @@ const SurveyCreationPage: React.FC = () => {
     }
   };
 
-  const handleAddOption = (questionId: string) => {
-    setLocalOptions((prev) => ({
-      ...prev,
-      [questionId]: [...(prev[questionId] || []), ""],
-    }));
-  };
-
-  const handleOptionChange = (questionId: string, optionIndex: number, value: string) => {
-    setLocalOptions((prev) => {
-      const updatedOptions = [...(prev[questionId] || [])];
-      updatedOptions[optionIndex] = value;
-      return { ...prev, [questionId]: updatedOptions };
-    });
-  };
-
   const handleResetSurvey = () => {
     reset({
       title: "",
@@ -289,6 +274,9 @@ const SurveyCreationPage: React.FC = () => {
   useEffect(() => {
     setLocalQuestions(getValues("questions"));
   }, [watch("questions")]);
+  
+  
+  
   
   
   
@@ -371,7 +359,7 @@ const SurveyCreationPage: React.FC = () => {
 
 
   const renderPreviewQuestion = () => {
-    const totalQuestions = questions.length; // Exclure démographique du total
+    const totalQuestions = questions.length;
     const adjustedIndex = demographicEnabled ? currentPreviewIndex - 1 : currentPreviewIndex;
     const question = adjustedIndex >= 0 ? questions[adjustedIndex] : null;
   
@@ -417,7 +405,7 @@ const SurveyCreationPage: React.FC = () => {
 
 
 
-    {/* Vérifiez si le média est une vidéo ou une image */}
+    {/* Vérifiez si le m��dia est une vidéo ou une image */}
     {question.media.startsWith("blob:") || question.media.endsWith(".mp4") || question.media.endsWith(".mov") ? (
       <ReactPlayer
         url={question.media}
@@ -460,15 +448,20 @@ const SurveyCreationPage: React.FC = () => {
         >
           {question.type === "multiple-choice" && (
             <RadioGroup>
-              {localOptions[question.id]?.map((option, index) => (
-                <FormControlLabel key={index} value={option} control={<Radio />} label={option} />
+              {question.options?.map((option, index) => (
+                <FormControlLabel 
+                  key={index} 
+                  value={option} 
+                  control={<Radio />} 
+                  label={option} 
+                />
               ))}
             </RadioGroup>
           )}
           {question.type === "text" && <TextField fullWidth variant="outlined" placeholder="Your answer" />}
           {question.type === "dropdown" && (
             <Select fullWidth>
-              {localOptions[question.id]?.map((option, index) => (
+              {question.options?.map((option, index) => (
                 <MenuItem key={index} value={option}>
                   {option}
                 </MenuItem>
@@ -576,6 +569,16 @@ const SurveyCreationPage: React.FC = () => {
   };
   
 
+  const handleAddOption = (index: number) => {
+    const currentQuestion = fields[index];
+    const currentOptions = currentQuestion.options || [];
+    
+    update(index, {
+      ...currentQuestion,
+      options: [...currentOptions, ""]
+    });
+  };
+
   return (
     <Box sx={{ padding: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
@@ -656,22 +659,29 @@ const SurveyCreationPage: React.FC = () => {
     {/* Render Options for Multiple-Choice or Dropdown */}
     {["multiple-choice", "dropdown"].includes(field.type) && (
       <Box sx={{ mb: 2 }}>
-        {localOptions[field.id]?.map((option, optionIndex) => (
+        {field.options?.map((option, optionIndex) => (
           <Box key={optionIndex} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <TextField
-              value={option}
-              onChange={(e) => handleOptionChange(field.id, optionIndex, e.target.value)}
-              fullWidth
-              variant="outlined"
+            <Controller
+              name={`questions.${index}.options.${optionIndex}`}
+              control={control}
+              defaultValue={option}
+              render={({ field: optionField }) => (
+                <TextField
+                  {...optionField}
+                  fullWidth
+                  variant="outlined"
+                />
+              )}
             />
             <IconButton
-              onClick={() =>
-                setLocalOptions((prev) => {
-                  const updated = [...(prev[field.id] || [])];
-                  updated.splice(optionIndex, 1);
-                  return { ...prev, [field.id]: updated };
-                })
-              }
+              onClick={() => {
+                const newOptions = [...(field.options || [])];
+                newOptions.splice(optionIndex, 1);
+                update(index, {
+                  ...field,
+                  options: newOptions
+                });
+              }}
             >
               <DeleteIcon />
             </IconButton>
@@ -680,7 +690,7 @@ const SurveyCreationPage: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<AddIcon />}
-          onClick={() => handleAddOption(field.id)}
+          onClick={() => handleAddOption(index)}
         >
           Add Option
         </Button>
