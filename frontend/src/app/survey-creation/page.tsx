@@ -200,19 +200,21 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   const handleQuestionTypeChange = (index: number, newType: string) => {
-    const updatedQuestions = [...fields];
-
-    const currentText = updatedQuestions[index].text;
-
-    updatedQuestions[index] = {
-      ...updatedQuestions[index],
-      type: newType,
-      text: currentText,
-      options: newType === "multiple-choice" || newType === "dropdown" ? [""] : [],
-    };
-
+    // Récupérer la valeur actuelle du texte via getValues
+    const currentText = getValues(`questions.${index}.text`);
     const questionId = fields[index].id;
 
+    // Mettre à jour la question en préservant le texte actuel
+    update(index, {
+      id: questionId,
+      type: newType,
+      text: currentText, // Utiliser la valeur actuelle du texte
+      options: newType === "multiple-choice" || newType === "dropdown" ? [""] : [],
+      media: fields[index].media || "",
+      selectedDate: fields[index].selectedDate || null,
+    });
+
+    // Mettre à jour les options locales si nécessaire
     if (newType === "multiple-choice" || newType === "dropdown") {
       setLocalOptions((prev) => ({ ...prev, [questionId]: prev[questionId] || [""] }));
     } else {
@@ -222,8 +224,6 @@ const SurveyCreationPage: React.FC = () => {
         return updated;
       });
     }
-
-    update(index, updatedQuestions[index]);
   };
 
   const handleAddOption = (questionId: string) => {
@@ -620,13 +620,19 @@ const SurveyCreationPage: React.FC = () => {
 {fields.map((field, index) => (
   <Box key={field.id} sx={{ mb: 3, pb: 3, borderBottom: "1px solid lightgray" }}>
     {/* Question Text */}
-
-    
     <Controller
       name={`questions.${index}.text`}
       control={control}
-      render={({ field }) => (
-        <TextField {...field} label={`Question ${index + 1}`} fullWidth sx={{ mb: 2 }} />
+      render={({ field: { onChange, value } }) => (
+        <TextField 
+          value={value || ''}
+          onChange={(e) => {
+            onChange(e.target.value);  // Modification ici
+          }}
+          label={`Question ${index + 1}`} 
+          fullWidth 
+          sx={{ mb: 2 }} 
+        />
       )}
     />
     
