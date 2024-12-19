@@ -1797,85 +1797,95 @@ const ResultsPage: React.FC = () => {
         </Dialog>
 
         {selectedSurvey?.demographicEnabled && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mt: 2, 
-            mb: 2 
-          }}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowDemographic(!showDemographic)}
-              startIcon={showDemographic ? <VisibilityOffIcon /> : <VisibilityIcon />}
-            >
-              {showDemographic ? 'Hide Demographic Stats' : 'Show Demographic Stats'}
-            </Button>
-
-            <Box sx={{ display: 'flex', gap: 2 }}>
+          <>
+            {/* Première Box pour les boutons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mt: 2, 
+              mb: 2 
+            }}>
               <Button
                 variant="outlined"
-                startIcon={<TableViewIcon />}
-                onClick={() => {
-                  // Préparer toutes les réponses avec les données démographiques
-                  const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
-                    respondent: {
-                      username: answer.respondent.userId.username,
-                      email: answer.respondent.userId.email,
-                      demographic: answer.respondent.demographic || {},
-                    },
-                    answers: selectedSurvey.questions.map(question => {
-                      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
-                      return {
-                        question: question.text,
-                        answer: questionAnswer?.answer || 'Non répondu'
-                      };
-                    }),
-                    submittedAt: answer.submittedAt
-                  }));
-
-                  // Export CSV
-                  const blob = new Blob([JSON.stringify(allData)], { type: 'text/csv;charset=utf-8;' });
-                  const link = document.createElement('a');
-                  link.href = URL.createObjectURL(blob);
-                  link.download = `survey_responses_complete_${selectedSurvey._id}.csv`;
-                  link.click();
-                }}
+                onClick={() => setShowDemographic(!showDemographic)}
+                startIcon={showDemographic ? <VisibilityOffIcon /> : <VisibilityIcon />}
               >
-                Export CSV Complet
+                {showDemographic ? 'Masquer les statistiques démographiques' : 'Afficher les statistiques démographiques'}
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<CodeIcon />}
-                onClick={() => {
-                  // Même données mais en JSON
-                  const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
-                    respondent: {
-                      username: answer.respondent.userId.username,
-                      email: answer.respondent.userId.email,
-                      demographic: answer.respondent.demographic || {},
-                    },
-                    answers: selectedSurvey.questions.map(question => {
-                      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
-                      return {
-                        question: question.text,
-                        answer: questionAnswer?.answer || 'Non répondu'
-                      };
-                    }),
-                    submittedAt: answer.submittedAt
-                  }));
 
-                  const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-                  const link = document.createElement('a');
-                  link.href = URL.createObjectURL(blob);
-                  link.download = `survey_responses_complete_${selectedSurvey._id}.json`;
-                  link.click();
-                }}
-              >
-                Export JSON Complet
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<TableViewIcon />}
+                  onClick={() => {
+                    // Préparer toutes les réponses avec les données démographiques
+                    const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
+                      respondent: {
+                        username: answer.respondent.userId.username,
+                        email: answer.respondent.userId.email,
+                        demographic: answer.respondent.demographic || {},
+                      },
+                      answers: selectedSurvey.questions.map(question => {
+                        const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+                        return {
+                          question: question.text,
+                          answer: questionAnswer?.answer || 'Non répondu'
+                        };
+                      }),
+                      submittedAt: answer.submittedAt
+                    }));
+
+                    // Export CSV
+                    const blob = new Blob([JSON.stringify(allData)], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `survey_responses_complete_${selectedSurvey._id}.csv`;
+                    link.click();
+                  }}
+                >
+                  Export CSV Complet
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<CodeIcon />}
+                  onClick={() => {
+                    // Même données mais en JSON
+                    const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
+                      respondent: {
+                        username: answer.respondent.userId.username,
+                        email: answer.respondent.userId.email,
+                        demographic: answer.respondent.demographic || {},
+                      },
+                      answers: selectedSurvey.questions.map(question => {
+                        const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+                        return {
+                          question: question.text,
+                          answer: questionAnswer?.answer || 'Non répondu'
+                        };
+                      }),
+                      submittedAt: answer.submittedAt
+                    }));
+
+                    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `survey_responses_complete_${selectedSurvey._id}.json`;
+                    link.click();
+                  }}
+                >
+                  Export JSON Complet
+                </Button>
+              </Box>
             </Box>
-          </Box>
+
+            {/* Deuxième Box pour les graphiques statistiques */}
+            {showDemographic && (
+              <Box sx={{ mt: 3, mb: 4 }}>
+                {renderDemographicStats()}
+              </Box>
+            )}
+          </>
         )}
       </Box>
     );
