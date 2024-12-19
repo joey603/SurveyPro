@@ -20,4 +20,14 @@ const uploadFileToCloudinary = async (filePath, folder = "uploads") => {
   }
 };
 
-module.exports = { cloudinary, uploadFileToCloudinary };
+const deleteFileFromCloudinary = async (publicId) => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+    console.log(`Deleted media with publicId: ${publicId}`);
+  } catch (error) {
+    console.error(`Error deleting media with publicId ${publicId}:`, error.message);
+  }
+};
+
+
+module.exports = { cloudinary,deleteFileFromCloudinary, uploadFileToCloudinary };

@@ -1,33 +1,27 @@
-//controllers/surveyControllers.js
 const Survey = require("../models/Survey");
-const { uploadFileToCloudinary } = require("../cloudinaryConfig");
+const { uploadFileToCloudinary, deleteFileFromCloudinary } = require("../cloudinaryConfig");
+const fs = require("fs");
 
-// Create a new survey
 exports.createSurvey = async (req, res) => {
   try {
-    console.log("Incoming request body:", req.body);
-
     const { title, questions, demographicEnabled, demographicData } = req.body;
 
-    // Validate the request body
+    // Vérification des entrées
     if (!title || !questions || questions.length === 0) {
-      console.error("Validation failed: Title or questions are missing.");
       return res.status(400).json({ message: "Title and questions are required." });
     }
 
     const processedQuestions = [];
-    for (const question of questions) {
-      console.log("Validating question:", question);
+    const newMediaIds = []; // Liste des médias à conserver
 
-      // Validate question ID
-      if (!question.id.match(/^[a-zA-Z0-9-_]+$/)) {
-        console.error(`Invalid question ID: ${question.id}`);
-        return res.status(400).json({
-          message: `Invalid question ID: ${question.id}. Must match /^[a-zA-Z0-9-_]+$/.`,
-        });
+    // Traitement des questions et des médias associés
+    for (const question of questions) {
+      // Validation des IDs de question
+      if (!question.id || !question.id.match(/^[a-zA-Z0-9-_]+$/)) {
+        return res.status(400).json({ message: `Invalid question ID: ${question.id}` });
       }
 
-      // Validate question type
+      // Validation du type de question
       if (
         ![
           "multiple-choice",
@@ -41,42 +35,56 @@ exports.createSurvey = async (req, res) => {
           "color-picker",
         ].includes(question.type)
       ) {
-        console.error(`Invalid question type: ${question.type}`);
-        return res.status(400).json({
-          message: `Invalid question type: ${question.type}. Allowed types: multiple-choice, text, dropdown, slider, rating, yes-no, date, file-upload, color-picker.`,
-        });
+        return res.status(400).json({ message: `Invalid question type: ${question.type}` });
       }
 
-      // Validate question text
+      // Validation du texte de la question
       if (!question.text) {
-        console.error(`Missing text in question: ${JSON.stringify(question)}`);
-        return res.status(400).json({
-          message: `Question text is required. Invalid question: ${JSON.stringify(question)}`,
-        });
+        return res.status(400).json({ message: "Question text is required." });
       }
 
-      if (question.media.startsWith("http")) {
-        console.log(`Using external URL for media: ${question.media}`);
+      // Traitement du média (si présent)
+      if (question.media?.startsWith("http")) {
+        // Média externe
         question.media = {
           url: question.media,
           type: question.media.match(/\.(mp4|mov)$/i) ? "video" : "image",
         };
-      } else if (question.media.startsWith("data:") || req.files?.[question.id]) {
-        // Traitement des fichiers uploadés
-        const file = req.files?.[question.id]?.tempFilePath || question.media;
+      } else if (req.files?.[question.id]) {
+        // Média uploadé
+        const file = req.files[question.id].tempFilePath;
         const uploadResult = await uploadFileToCloudinary(file);
         question.media = {
           url: uploadResult.secure_url,
           type: uploadResult.resource_type,
+          public_id: uploadResult.public_id,
         };
-      } else {
-        console.error("Invalid media format or no media provided.");
+        newMediaIds.push(uploadResult.public_id); // Ajouter l'ID public aux médias à conserver
+        fs.unlinkSync(file); // Supprimer le fichier temporaire
       }
 
       processedQuestions.push(question);
     }
 
-        console.log("Processed questions:", processedQuestions);
+    // Nettoyage des médias inutilisés (pour les mises à jour)
+    if (req.body.id) {
+      const previousSurvey = await Survey.findById(req.body.id);
+      if (previousSurvey) {
+        const oldMediaIds = previousSurvey.questions
+          .map((q) => q.media?.public_id)
+          .filter(Boolean);
+        const unusedMediaIds = oldMediaIds.filter((id) => !newMediaIds.includes(id));
+
+        console.log("Unused media to delete:", unusedMediaIds);
+
+        // Suppression des médias inutilisés sur Cloudinary
+        for (const id of unusedMediaIds) {
+          await deleteFileFromCloudinary(id);
+        }
+      }
+    }
+
+    // Création ou mise à jour du sondage
     const survey = new Survey({
       title,
       questions: processedQuestions,
@@ -84,11 +92,8 @@ exports.createSurvey = async (req, res) => {
       demographicData,
       createdBy: req.user?.id,
     });
-    console.log("Survey to save:", survey);
+
     await survey.save();
-
-    console.log("Survey saved successfully:", survey);
-
     res.status(201).json({ message: "Survey created successfully!", survey });
   } catch (error) {
     console.error("Error creating survey:", error.message);
@@ -96,28 +101,22 @@ exports.createSurvey = async (req, res) => {
   }
 };
 
-// Upload media file to Cloudinary
-const fs = require("fs"); // Nécessaire pour supprimer les fichiers temporaires
 
+// Upload media file
 exports.uploadMedia = async (req, res) => {
   try {
-    const file = req.file; // Assurez-vous qu'un fichier est attaché
-    if (!file) {
+    if (!req.file) {
       return res.status(400).json({ message: "No file uploaded." });
     }
 
-    // Téléchargez le fichier sur Cloudinary
-    const result = await uploadFileToCloudinary(file.path, "uploads");
+    const uploadResult = await uploadFileToCloudinary(req.file.path, "uploads");
+    fs.unlinkSync(req.file.path); // Remove temp file
 
-    // Supprimez le fichier temporaire après son upload
-    fs.unlink(file.path, (err) => {
-      if (err) {
-        console.error("Error deleting temp file:", err);
-      }
+    res.status(200).json({
+      message: "File uploaded successfully!",
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
     });
-
-    // Répondez avec l'URL du fichier
-    res.status(200).json({ url: result.secure_url });
   } catch (error) {
     console.error("Error uploading media:", error.message);
     res.status(500).json({ message: "Media upload failed.", error: error.message });
@@ -127,14 +126,10 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    console.log("Fetching surveys for user:", req.user.id);
-
     const surveys = await Survey.find({ createdBy: req.user.id });
-
     if (!surveys.length) {
       return res.status(404).json({ message: "No surveys found." });
     }
-
     res.status(200).json(surveys);
   } catch (error) {
     console.error("Error fetching surveys:", error.message);
@@ -145,14 +140,10 @@ exports.getSurveys = async (req, res) => {
 // Get a survey by ID
 exports.getSurveyById = async (req, res) => {
   try {
-    console.log("Fetching survey with ID:", req.params.id);
-
     const survey = await Survey.findById(req.params.id);
-
     if (!survey) {
       return res.status(404).json({ message: "Survey not found." });
     }
-
     res.status(200).json(survey);
   } catch (error) {
     console.error("Error fetching survey details:", error.message);
@@ -160,22 +151,37 @@ exports.getSurveyById = async (req, res) => {
   }
 };
 
-
-const { deleteFileFromCloudinary } = require("../cloudinaryConfig");
-
-// Fonction pour supprimer un fichier de Cloudinary
+// Delete unused media by public ID
 exports.deleteMedia = async (req, res) => {
   try {
     const { publicId } = req.body;
-
     if (!publicId) {
       return res.status(400).json({ message: "Public ID is required." });
     }
-
     await deleteFileFromCloudinary(publicId);
     res.status(200).json({ message: "File deleted successfully." });
   } catch (error) {
     console.error("Error deleting media:", error.message);
     res.status(500).json({ message: "Failed to delete media.", error: error.message });
+  }
+};
+
+// Clean up unused media (optional endpoint for periodic cleanup)
+exports.cleanupUnusedMedia = async (req, res) => {
+  try {
+    const surveys = await Survey.find();
+    const usedPublicIds = surveys.flatMap(s => s.questions.map(q => q.media?.public_id).filter(Boolean));
+
+    const allMedia = await cloudinary.api.resources({ type: "upload", prefix: "uploads/" });
+    const unusedMedia = allMedia.resources.filter(media => !usedPublicIds.includes(media.public_id));
+
+    for (const media of unusedMedia) {
+      await deleteFileFromCloudinary(media.public_id);
+    }
+
+    res.status(200).json({ message: "Unused media cleaned up successfully." });
+  } catch (error) {
+    console.error("Error cleaning up unused media:", error.message);
+    res.status(500).json({ message: "Failed to clean up unused media.", error: error.message });
   }
 };

@@ -1,13 +1,16 @@
+//models/Survey.js
+
 const mongoose = require("mongoose");
 
 const questionSchema = new mongoose.Schema({
-  id: { type: String, required: true }, // Identifiant unique
-  type: { type: String, required: true }, // Type de question
-  text: { type: String, required: true }, // Texte de la question
-  options: { type: [String], default: [] }, // Options pour les questions multiples
+  id: { type: String, required: true },
+  type: { type: String, required: true },
+  text: { type: String, required: true },
+  options: { type: [String], default: [] },
   media: { 
-    url: { type: String, default: null }, // URL du fichier média
-    type: { type: String, enum: ["image", "video", null], default: null } // Type de média
+    url: { type: String, default: null },
+    type: { type: String, enum: ["image", "video", null], default: null },
+    public_id: { type: String, default: null }, // Ajout du public_id
   },
 });
 

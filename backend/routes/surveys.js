@@ -1,10 +1,11 @@
 //routes/survey.js
 const express = require("express");
-const { createSurvey, getSurveys, getSurveyById, uploadMedia, deleteMedia } = require("../controllers/surveyController");
+const { createSurvey, getSurveys, getSurveyById, uploadMedia, } = require("../controllers/surveyController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer"); // For handling file uploads
 const { uploadFileToCloudinary } = require("../cloudinaryConfig");
+const { deleteFileFromCloudinary } = require("../cloudinaryConfig");
 
 const router = express.Router();
 
@@ -20,6 +21,8 @@ router.get("/", authMiddleware, getSurveys);
 
 // Route pour récupérer un sondage par ID
 router.get("/:id", authMiddleware, getSurveyById);
+
+const { deleteMedia } = require("../controllers/surveyController");
 
 router.post("/delete-media", authMiddleware, deleteMedia);
 
@@ -79,6 +82,24 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
         message: "Media upload failed.",
         error: error.message,
       });
+    }
+  });
+
+  router.post("/cleanup-test", async (req, res) => {
+    try {
+      const { publicIds } = req.body; // Passe les `public_id` à supprimer dans la requête
+      if (!publicIds || !Array.isArray(publicIds)) {
+        return res.status(400).json({ message: "Invalid publicIds array" });
+      }
+  
+      for (const publicId of publicIds) {
+        await deleteFileFromCloudinary(publicId);
+      }
+  
+      res.status(200).json({ message: "Cleanup test successful" });
+    } catch (error) {
+      console.error("Cleanup test error:", error.message);
+      res.status(500).json({ message: "Cleanup test failed", error: error.message });
     }
   });
     

@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const surveyRoutes = require("./routes/surveys");
+const surveyAnswerRoutes = require("./routes/surveyAnswers");
 require("dotenv").config();
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/api/surveys", (req, res, next) => {
   console.log("Surveys route hit"); // Log to verify the route is hit
   next();
 }, surveyRoutes);
+app.use("/api/survey-answers", surveyAnswerRoutes);
 
 const PORT = process.env.PORT || 5041;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

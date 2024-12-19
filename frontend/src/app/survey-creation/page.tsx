@@ -200,19 +200,21 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   const handleQuestionTypeChange = (index: number, newType: string) => {
-    const updatedQuestions = [...fields];
-
-    const currentText = updatedQuestions[index].text;
-
-    updatedQuestions[index] = {
-      ...updatedQuestions[index],
-      type: newType,
-      text: currentText,
-      options: newType === "multiple-choice" || newType === "dropdown" ? [""] : [],
-    };
-
+    // Récupérer la valeur actuelle du texte via getValues
+    const currentText = getValues(`questions.${index}.text`);
     const questionId = fields[index].id;
 
+    // Mettre à jour la question en préservant le texte actuel
+    update(index, {
+      id: questionId,
+      type: newType,
+      text: currentText, // Utiliser la valeur actuelle du texte
+      options: newType === "multiple-choice" || newType === "dropdown" ? [""] : [],
+      media: fields[index].media || "",
+      selectedDate: fields[index].selectedDate || null,
+    });
+
+    // Mettre à jour les options locales si nécessaire
     if (newType === "multiple-choice" || newType === "dropdown") {
       setLocalOptions((prev) => ({ ...prev, [questionId]: prev[questionId] || [""] }));
     } else {
@@ -222,23 +224,6 @@ const SurveyCreationPage: React.FC = () => {
         return updated;
       });
     }
-
-    update(index, updatedQuestions[index]);
-  };
-
-  const handleAddOption = (questionId: string) => {
-    setLocalOptions((prev) => ({
-      ...prev,
-      [questionId]: [...(prev[questionId] || []), ""],
-    }));
-  };
-
-  const handleOptionChange = (questionId: string, optionIndex: number, value: string) => {
-    setLocalOptions((prev) => {
-      const updatedOptions = [...(prev[questionId] || [])];
-      updatedOptions[optionIndex] = value;
-      return { ...prev, [questionId]: updatedOptions };
-    });
   };
 
   const handleResetSurvey = () => {
@@ -249,6 +234,10 @@ const SurveyCreationPage: React.FC = () => {
       questions: [],
     });
     setLocalOptions({});
+    setTitleError(false);
+    setErrorIndices([]);
+    setOptionErrors({});
+    setTypeErrors([]);
   };
 
   
@@ -297,26 +286,83 @@ const SurveyCreationPage: React.FC = () => {
   
   
   
-  const onSubmit = async (data: FormData) => {
-    const questionsWithUpdatedOptions = data.questions.map((question) => ({
-      ...question,
-      options: localOptions[question.id] || [],
-    }));
-
-
   
+  const [titleError, setTitleError] = useState<boolean>(false);
+  const [errorIndices, setErrorIndices] = useState<number[]>([]);
+  const [optionErrors, setOptionErrors] = useState<{ [key: number]: number[] }>({});
+  const [typeErrors, setTypeErrors] = useState<number[]>([]);
+    
+  const onSubmit = async (data: FormData) => {
+    // Réinitialiser tous les états d'erreur au début
+    const newErrorIndices: number[] = [];
+    const newOptionErrors: { [key: number]: number[] } = {};
+    const newTypeErrors: number[] = [];
+    let newTitleError = false;
+  
+    // Vérifier le titre
+    if (!data.title || data.title.trim() === "") {
+      newTitleError = true;
+    }
+  
+    // Vérifier toutes les questions en une seule passe
+    data.questions.forEach((question, index) => {
+      // Vérifier le texte de la question
+      if (!question.text || question.text.trim() === "") {
+        newErrorIndices.push(index);
+      }
+  
+      // Vérifier le type de question
+      if (!question.type || question.type.trim() === "") {
+        newTypeErrors.push(index);
+      }
+  
+      // Vérifier les options pour les questions à choix multiples et dropdown
+      if (["multiple-choice", "dropdown"].includes(question.type) && question.options) {
+        const emptyOptions = question.options
+          .map((option, optIndex) => (!option || option.trim() === "" ? optIndex : -1))
+          .filter(optIndex => optIndex !== -1);
+  
+        if (emptyOptions.length > 0) {
+          newOptionErrors[index] = emptyOptions;
+        }
+      }
+    });
+  
+    // Mettre à jour tous les états d'erreur simultanément
+    setTitleError(newTitleError);
+    setErrorIndices(newErrorIndices);
+    setOptionErrors(newOptionErrors);
+    setTypeErrors(newTypeErrors);
+  
+    // Vérifier s'il y a des erreurs
+    const hasErrors = newTitleError || 
+                     newErrorIndices.length > 0 || 
+                     Object.keys(newOptionErrors).length > 0 || 
+                     newTypeErrors.length > 0;
+  
+    if (hasErrors) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+  
+    // Si pas d'erreurs, continuer avec la soumission
     try {
       const token = localStorage.getItem("accessToken");
-      if (!token) {
-        throw new Error("No authentication token found.");
-      }
-      await createSurvey({ ...data, questions: questionsWithUpdatedOptions }, token);
+      if (!token) throw new Error("No authentication token found.");
+      await createSurvey(data, token);
       alert("Survey submitted successfully!");
+      
+      // Réinitialiser les états d'erreur
+      setTitleError(false);
+      setErrorIndices([]);
+      setOptionErrors({});
+      setTypeErrors([]);
     } catch (error) {
       console.error("Error submitting survey:", error);
-      alert("Failed to submit survey. Check the console for details.");
+      alert("Failed to submit survey.");
     }
   };
+  
   
 
   const renderDemographicPreview = () => {
@@ -371,7 +417,7 @@ const SurveyCreationPage: React.FC = () => {
 
 
   const renderPreviewQuestion = () => {
-    const totalQuestions = questions.length; // Exclure démographique du total
+    const totalQuestions = questions.length;
     const adjustedIndex = demographicEnabled ? currentPreviewIndex - 1 : currentPreviewIndex;
     const question = adjustedIndex >= 0 ? questions[adjustedIndex] : null;
   
@@ -417,7 +463,7 @@ const SurveyCreationPage: React.FC = () => {
 
 
 
-    {/* Vérifiez si le média est une vidéo ou une image */}
+    {/* Vérifiez si le mdia est une vidéo ou une image */}
     {question.media.startsWith("blob:") || question.media.endsWith(".mp4") || question.media.endsWith(".mov") ? (
       <ReactPlayer
         url={question.media}
@@ -460,15 +506,20 @@ const SurveyCreationPage: React.FC = () => {
         >
           {question.type === "multiple-choice" && (
             <RadioGroup>
-              {localOptions[question.id]?.map((option, index) => (
-                <FormControlLabel key={index} value={option} control={<Radio />} label={option} />
+              {question.options?.map((option, index) => (
+                <FormControlLabel 
+                  key={index} 
+                  value={option} 
+                  control={<Radio />} 
+                  label={option} 
+                />
               ))}
             </RadioGroup>
           )}
           {question.type === "text" && <TextField fullWidth variant="outlined" placeholder="Your answer" />}
           {question.type === "dropdown" && (
             <Select fullWidth>
-              {localOptions[question.id]?.map((option, index) => (
+              {question.options?.map((option, index) => (
                 <MenuItem key={index} value={option}>
                   {option}
                 </MenuItem>
@@ -576,6 +627,43 @@ const SurveyCreationPage: React.FC = () => {
   };
   
 
+  const handleAddOption = (index: number) => {
+    const currentQuestion = fields[index];
+    const currentOptions = currentQuestion.options || [];
+    
+    update(index, {
+      ...currentQuestion,
+      options: [...currentOptions, ""]
+    });
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value.trim() !== "") {
+      setTitleError(false);
+    }
+  };
+
+  const handleQuestionTextChange = (index: number, value: string) => {
+    if (value.trim() !== "") {
+      setErrorIndices(prev => prev.filter(i => i !== index));
+    }
+  };
+
+  const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
+    if (value.trim() !== "") {
+      setOptionErrors(prev => {
+        const newErrors = { ...prev };
+        if (newErrors[questionIndex]) {
+          newErrors[questionIndex] = newErrors[questionIndex].filter(i => i !== optionIndex);
+          if (newErrors[questionIndex].length === 0) {
+            delete newErrors[questionIndex];
+          }
+        }
+        return newErrors;
+      });
+    }
+  };
+
   return (
     <Box sx={{ padding: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
@@ -586,16 +674,25 @@ const SurveyCreationPage: React.FC = () => {
   <Controller
     name="title"
     control={control}
-    rules={{ required: "Title is required" }} // Validation
-    render={({ field, fieldState }) => (
+    render={({ field }) => (
       <TextField
         {...field}
         label="Survey Title"
         fullWidth
-        sx={{ mb: 2 }}
-        variant="outlined"
-        error={!!fieldState.error} // Afficher l'erreur
-        helperText={fieldState.error?.message} // Message d'erreur
+        error={titleError}
+        helperText={titleError ? "Title is required" : ""}
+        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+          field.onChange(e);
+          handleTitleChange(e as React.ChangeEvent<HTMLInputElement>);
+        }}
+        sx={{
+          mb: 2,
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: titleError ? "red" : "",
+            },
+          },
+        }}
       />
     )}
   />
@@ -620,24 +717,54 @@ const SurveyCreationPage: React.FC = () => {
 {fields.map((field, index) => (
   <Box key={field.id} sx={{ mb: 3, pb: 3, borderBottom: "1px solid lightgray" }}>
     {/* Question Text */}
-
-    
     <Controller
-      name={`questions.${index}.text`}
-      control={control}
-      render={({ field }) => (
-        <TextField {...field} label={`Question ${index + 1}`} fullWidth sx={{ mb: 2 }} />
-      )}
+  name={`questions.${index}.text`}
+  control={control}
+  render={({ field: questionField }) => (
+    <TextField
+      {...questionField}
+      label={`Question ${index + 1}`}
+      fullWidth
+      error={errorIndices.includes(index)}
+      helperText={errorIndices.includes(index) ? "Question is required" : ""}
+      onChange={(e) => {
+        questionField.onChange(e);
+        handleQuestionTextChange(index, e.target.value);
+      }}
+      sx={{
+        mb: 2,
+        "& .MuiOutlinedInput-root": {
+          "& fieldset": {
+            borderColor: errorIndices.includes(index) ? "red" : "",
+          },
+        },
+      }}
     />
+  )}
+/>
     
     {/* Question Type */}
     <TextField
       select
       label="Question Type"
       fullWidth
-      sx={{ mb: 2 }}
       value={field.type}
-      onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+      onChange={(e) => {
+        handleQuestionTypeChange(index, e.target.value);
+        if (e.target.value) {
+          setTypeErrors(prev => prev.filter(i => i !== index));
+        }
+      }}
+      error={typeErrors.includes(index)}
+      helperText={typeErrors.includes(index) ? "Question type is required" : ""}
+      sx={{
+        mb: 2,
+        "& .MuiOutlinedInput-root": {
+          "& fieldset": {
+            borderColor: typeErrors.includes(index) ? "red" : "",
+          },
+        },
+      }}
     >
       {questionTypes.map((type) => (
         <MenuItem key={type.value} value={type.value}>
@@ -650,31 +777,40 @@ const SurveyCreationPage: React.FC = () => {
     {/* Render Options for Multiple-Choice or Dropdown */}
     {["multiple-choice", "dropdown"].includes(field.type) && (
       <Box sx={{ mb: 2 }}>
-        {localOptions[field.id]?.map((option, optionIndex) => (
-          <Box key={optionIndex} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <TextField
-              value={option}
-              onChange={(e) => handleOptionChange(field.id, optionIndex, e.target.value)}
-              fullWidth
-              variant="outlined"
-            />
-            <IconButton
-              onClick={() =>
-                setLocalOptions((prev) => {
-                  const updated = [...(prev[field.id] || [])];
-                  updated.splice(optionIndex, 1);
-                  return { ...prev, [field.id]: updated };
-                })
-              }
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
+        {field.options?.map((option, optionIndex) => (
+          <Controller
+            key={optionIndex}
+            name={`questions.${index}.options.${optionIndex}`}
+            control={control}
+            render={({ field: optionField }) => (
+              <TextField
+                {...optionField}
+                fullWidth
+                error={optionErrors[index]?.includes(optionIndex)}
+                helperText={optionErrors[index]?.includes(optionIndex) ? "Option is required" : ""}
+                onChange={(e) => {
+                  optionField.onChange(e);
+                  handleOptionChange(index, optionIndex, e.target.value);
+                }}
+                sx={{
+                  mb: 1,
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderColor: optionErrors[index]?.includes(optionIndex) ? "red" : "",
+                    },
+                  },
+                }}
+              />
+            )}
+          />
         ))}
+        {/* Bouton pour ajouter une option */}
         <Button
-          variant="outlined"
+          onClick={() => handleAddOption(index)}
           startIcon={<AddIcon />}
-          onClick={() => handleAddOption(field.id)}
+          variant="outlined"
+          size="small"
+          sx={{ mt: 1 }}
         >
           Add Option
         </Button>
