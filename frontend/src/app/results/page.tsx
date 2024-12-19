@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -25,8 +25,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Slider
+  Slider,
+  // Supprimer Tooltip de cet import
 } from '@mui/material';
+import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { fetchSurveys, getSurveyAnswers } from '@/utils/surveyService';
@@ -63,6 +65,8 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { ChromePicker } from 'react-color';
 import { Chart, ChartTypeRegistry } from 'chart.js';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import TableViewIcon from '@mui/icons-material/TableView';
+import CodeIcon from '@mui/icons-material/Code';
 
 // Enregistrer tous les composants ChartJS
 ChartJS.register(
@@ -74,17 +78,11 @@ ChartJS.register(
   Legend,
   ArcElement,
   PointElement,
-  LineElement
+  LineElement,
+  RadialLinearScale
 );
 
-type ChartType = 
-  | 'bar' 
-  | 'line' 
-  | 'scatter' 
-  | 'bubble' 
-  | 'pie' 
-  | 'doughnut' 
-  | 'radar';
+type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter';
 
 interface Answer {
   questionId: string;
@@ -189,6 +187,160 @@ interface ChartContainerProps {
 // Modifier le type ChartRefType pour utiliser les types valides de Chart.js
 type ChartRefType = Chart<keyof ChartTypeRegistry>;
 
+// Créer un nouveau composant pour le graphique
+const ChartView = memo(({ data, question }: { 
+  data: any; 
+  question: Partial<Question> & { text: string; type: string; }
+}) => {
+  // Obtenir les types de graphiques disponibles avant de définir l'état
+  const getAvailableChartTypes = (questionType: string): ChartType[] => {
+    switch (questionType) {
+      case "multiple-choice":
+        return ['bar', 'pie', 'doughnut', 'radar'];
+      case "text":
+        return ['bar']; // Toujours inclure au moins 'bar'
+      case "dropdown":
+        return ['bar', 'pie', 'doughnut'];
+      case "yes-no":
+        return ['pie', 'doughnut', 'bar'];
+      case "slider":
+        return ['bar', 'line', 'scatter'];
+      case "rating":
+        return ['bar', 'line', 'radar'];
+      case "date":
+        return ['line', 'scatter', 'bar'];
+      case "file-upload":
+        return ['bar']; // Toujours inclure au moins 'bar'
+      case "color-picker":
+        return ['pie', 'doughnut', 'bar'];
+      default:
+        return ['bar'];
+    }
+  };
+
+  const availableChartTypes = getAvailableChartTypes(question.type);
+  
+  // Définir le type de graphique initial en fonction des types disponibles
+  const [chartType, setChartType] = useState<ChartType>(() => {
+    // Si 'bar' est disponible, l'utiliser par défaut
+    if (availableChartTypes.includes('bar')) {
+      return 'bar';
+    }
+    // Sinon, utiliser le premier type disponible
+    return availableChartTypes[0] || 'bar';
+  });
+
+  // S'assurer que le type de graphique actuel est valide
+  useEffect(() => {
+    if (!availableChartTypes.includes(chartType)) {
+      setChartType(availableChartTypes[0] || 'bar');
+    }
+  }, [question.type, availableChartTypes, chartType]);
+
+  if (!data || Object.keys(data).length === 0) {
+    return <Typography>Aucune donnée disponible</Typography>;
+  }
+
+  const chartData = {
+    labels: Object.keys(data),
+    datasets: [{
+      label: question.text,
+      data: Object.values(data),
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.5)',
+        'rgba(54, 162, 235, 0.5)',
+        'rgba(255, 206, 86, 0.5)',
+        'rgba(75, 192, 192, 0.5)',
+        'rgba(153, 102, 255, 0.5)',
+      ],
+      borderColor: [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+      ],
+      borderWidth: 1
+    }]
+  };
+
+  const renderChart = () => {
+    switch (chartType) {
+      case 'bar':
+        return <Bar data={chartData} options={commonChartOptions} />;
+      case 'line':
+        return <Line data={chartData} options={commonChartOptions} />;
+      case 'pie':
+        return <Pie data={chartData} options={pieOptions} />;
+      case 'doughnut':
+        return <Doughnut data={chartData} options={pieOptions} />;
+      case 'radar':
+        return <Radar data={chartData} options={commonChartOptions} />;
+      case 'scatter':
+        return <Scatter data={chartData} options={commonChartOptions} />;
+      default:
+        return <Bar data={chartData} options={commonChartOptions} />;
+    }
+  };
+
+  const getChartIcon = (type: ChartType) => {
+    switch (type) {
+      case 'bar':
+        return <BarChartIcon />;
+      case 'line':
+        return <ShowChartIcon />;
+      case 'pie':
+        return <PieChartIcon />;
+      case 'doughnut':
+        return <DonutLargeIcon />;
+      case 'radar':
+        return <RadarIcon />;
+      case 'scatter':
+        return <ScatterPlotIcon />;
+      default:
+        return <BarChartIcon />;
+    }
+  };
+
+  return (
+    <Box sx={{ 
+      height: '500px',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #ddd',
+      p: 2,
+      bgcolor: 'white',
+    }}>
+      <Box sx={{ 
+        flex: 1,
+        width: '100%',
+        height: '400px',
+        position: 'relative',
+      }}>
+        {renderChart()}
+      </Box>
+      
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+        {availableChartTypes.length > 0 ? (
+          availableChartTypes.map((type) => (
+            <Button
+              key={type}
+              startIcon={getChartIcon(type)}
+              onClick={() => setChartType(type)}
+              variant={chartType === type ? 'contained' : 'outlined'}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </Button>
+          ))
+        ) : (
+          <Typography>Aucun graphique disponible pour ce type de question</Typography>
+        )}
+      </Box>
+    </Box>
+  );
+});
+
 const ResultsPage: React.FC = () => {
   // États existants
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -246,6 +398,10 @@ const ResultsPage: React.FC = () => {
 
   // Déplacer l'état du dialogue vers le haut du composant
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Nouveaux états
+  const [currentView, setCurrentView] = useState<'list' | 'chart'>('list');
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
 
   // Fonctions
   const downloadChart = useCallback((fileName: string) => {
@@ -1090,119 +1246,144 @@ const ResultsPage: React.FC = () => {
     }));
   };
 
-  const exportResponses = (format: 'csv' | 'json', questionId: string) => {
-    if (!selectedSurvey) return;
+  // Fonction pour préparer les données d'export
+  const prepareExportData = useCallback((answers: SurveyAnswer[]) => {
+    if (!selectedQuestion || !selectedSurvey) return [];
+    
+    return answers.map(answer => {
+      const questionAnswer = answer.answers.find(
+        a => a.questionId === selectedQuestion.questionId
+      );
 
-    const question = selectedSurvey.questions.find(q => q.id === questionId);
-    if (!question) return;
-
-    const answers = surveyAnswers[selectedSurvey._id] || [];
-    const data = answers.map(answer => {
-      const questionAnswer = answer.answers.find(a => a.questionId === questionId);
       return {
-        respondent: answer.respondent?.userId?.username || 'Anonymous',
-        answer: questionAnswer?.answer || '',
+        question: selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId)?.text,
+        answer: questionAnswer?.answer,
+        username: answer.respondent.userId.username,
+        email: answer.respondent.userId.email,
+        demographic: answer.respondent.demographic ? {
+          gender: answer.respondent.demographic.gender,
+          dateOfBirth: answer.respondent.demographic.dateOfBirth,
+          educationLevel: answer.respondent.demographic.educationLevel,
+          city: answer.respondent.demographic.city
+        } : null,
         submittedAt: answer.submittedAt
       };
     });
+  }, [selectedQuestion, selectedSurvey]);
 
-    if (format === 'csv') {
-      const csvContent = [
-        ['Respondent', 'Answer', 'Submitted At'],
-        ...data.map(item => [
-          item.respondent,
-          item.answer.toString(),
-          new Date(item.submittedAt).toLocaleString()
-        ])
-      ].map(row => row.join(',')).join('\n');
+  // Fonction pour exporter en CSV
+  const exportCSV = useCallback(() => {
+    if (!selectedQuestion || !selectedSurvey) return;
 
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `question_${questionId}_responses.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } else {
-      const jsonContent = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonContent], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `question_${questionId}_responses.json`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
+    const data = prepareExportData(selectedQuestion.answers);
+    const headers = [
+      'Question',
+      'Answer',
+      'Username',
+      'Email',
+      'Gender',
+      'Date of Birth',
+      'Education Level',
+      'City',
+      'Submitted At'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...data.map(item => [
+        `"${item.question}"`,
+        `"${item.answer}"`,
+        `"${item.username}"`,
+        `"${item.email}"`,
+        `"${item.demographic?.gender || ''}"`,
+        `"${item.demographic?.dateOfBirth || ''}"`,
+        `"${item.demographic?.educationLevel || ''}"`,
+        `"${item.demographic?.city || ''}"`,
+        `"${item.submittedAt}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `question_responses_${selectedQuestion.questionId}.csv`;
+    link.click();
+  }, [selectedQuestion, selectedSurvey, prepareExportData]);
+
+  // Fonction pour exporter en JSON
+  const exportJSON = useCallback(() => {
+    if (!selectedQuestion || !selectedSurvey) return;
+
+    const data = prepareExportData(selectedQuestion.answers);
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `question_responses_${selectedQuestion.questionId}.json`;
+    link.click();
+  }, [selectedQuestion, selectedSurvey, prepareExportData]);
+
+  const handleViewChange = (newView: 'list' | 'chart') => {
+    console.log('Changing view to:', newView);
+    setCurrentView(newView);
   };
 
   const renderQuestionDetails = useCallback((questionId: string) => {
-    if (!selectedSurvey || !selectedQuestion) return null;
+    if (!selectedSurvey || !selectedQuestion) {
+      return null;
+    }
 
     const question = selectedSurvey.questions.find(q => q.id === questionId);
-    if (!question) return null;
+    if (!question) {
+      return null;
+    }
 
-    // Préparer les données pour les graphiques
-    const answerCounts: { [key: string]: number } = {};
-    selectedQuestion.answers.forEach(answer => {
-      const questionAnswer = answer.answers.find(a => a.questionId === questionId);
-      if (questionAnswer) {
-        const value = String(questionAnswer.answer || 'Sans réponse');
-        answerCounts[value] = (answerCounts[value] || 0) + 1;
-      }
-    });
+    const filterAnswers = (answers: SurveyAnswer[]): SurveyAnswer[] => {
+      return answers.filter(answer => {
+        const demographic = answer.respondent?.demographic;
+        if (!demographic) return true;
 
-    // Définir les données du graphique
-    const chartData = {
-      labels: Object.keys(answerCounts),
-      datasets: [{
-        label: 'Réponses',
-        data: Object.values(answerCounts),
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.5)',
-          'rgba(54, 162, 235, 0.5)',
-          'rgba(255, 206, 86, 0.5)',
-          'rgba(75, 192, 192, 0.5)',
-          'rgba(153, 102, 255, 0.5)',
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-        ],
-        borderWidth: 1
-      }]
-    };
-
-    // Définir les options du graphique
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top' as const,
-        },
-        title: {
-          display: true,
-          text: question.text
+        if (filters.demographic.educationLevel && 
+            demographic.educationLevel !== filters.demographic.educationLevel) {
+          return false;
         }
-      }
+
+        if (filters.demographic.city && 
+            demographic.city !== filters.demographic.city) {
+          return false;
+        }
+
+        if (filters.demographic.age && demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        }
+
+        return true;
+      });
     };
 
-    console.log('chartType:', chartType);
-    console.log('currentView:', dialogViews[selectedQuestion.questionId]);
-    console.log('chartData:', chartData);
-
-    const currentView = dialogViews[selectedQuestion.questionId] || 'list';
+    const getFilteredAnswerCounts = () => {
+      const filteredAnswers = filterAnswers(selectedQuestion.answers);
+      const answerCounts: { [key: string]: number } = {};
+      
+      filteredAnswers.forEach(answer => {
+        const questionAnswer = answer.answers.find(a => a.questionId === questionId);
+        if (questionAnswer) {
+          const value = String(questionAnswer.answer || 'Sans réponse');
+          answerCounts[value] = (answerCounts[value] || 0) + 1;
+        }
+      });
+      
+      return answerCounts;
+    };
 
     return (
       <>
         <DialogTitle>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="h6">
-              {question.text}
-            </Typography>
+            <Typography variant="h6">{question.text}</Typography>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="subtitle2" color="textSecondary">
                 {selectedQuestion.answers.length} réponse(s)
@@ -1210,123 +1391,170 @@ const ResultsPage: React.FC = () => {
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs 
                   value={currentView} 
-                  onChange={(_, newValue) => setDialogViews(prev => ({
-                    ...prev,
-                    [selectedQuestion.questionId]: newValue
-                  }))}
+                  onChange={(_, newValue) => handleViewChange(newValue as 'list' | 'chart')}
                 >
                   <Tab 
                     icon={<VisibilityIcon />} 
                     label="Liste" 
                     value="list"
                   />
-                  {question.type !== 'text' && (
-                    <Tab 
-                      icon={<BarChartIcon />} 
-                      label="Graphique" 
-                      value="chart"
-                    />
-                  )}
+                  <Tab 
+                    icon={<BarChartIcon />} 
+                    label="Graphique" 
+                    value="chart"
+                  />
                 </Tabs>
               </Box>
             </Box>
           </Box>
         </DialogTitle>
         <DialogContent dividers>
-          <Box sx={{ mb: 3 }}>
-            {currentView === 'list' ? (
-              <List>
-                {selectedQuestion.answers.map((answer, index) => {
-                  const questionAnswer = answer.answers.find(a => a.questionId === questionId);
-                  return (
-                    <ListItem key={index} divider>
+          {currentView === 'list' ? (
+            <List>
+              {selectedQuestion.answers.map((answer, index) => {
+                const questionAnswer = answer.answers.find(
+                  a => a.questionId === selectedQuestion.questionId
+                );
+                const answerValue = questionAnswer?.answer?.toString() || 'Sans réponse';
+                
+                // Préparer le contenu du tooltip
+                const tooltipContent = (
+                  <Paper sx={{ p: 1.5, maxWidth: 300 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      <strong>Email:</strong> {answer.respondent.userId.email}
+                    </Typography>
+                    {answer.respondent.demographic && (
+                      <>
+                        <Typography variant="subtitle2" gutterBottom>
+                          <strong>Genre:</strong> {answer.respondent.demographic.gender || 'Non spécifié'}
+                        </Typography>
+                        <Typography variant="subtitle2" gutterBottom>
+                          <strong>Date de naissance:</strong> {
+                            answer.respondent.demographic.dateOfBirth 
+                              ? new Date(answer.respondent.demographic.dateOfBirth).toLocaleDateString()
+                              : 'Non spécifié'
+                          }
+                        </Typography>
+                        <Typography variant="subtitle2" gutterBottom>
+                          <strong>Niveau d'éducation:</strong> {
+                            answer.respondent.demographic.educationLevel || 'Non spécifié'
+                          }
+                        </Typography>
+                        <Typography variant="subtitle2">
+                          <strong>Ville:</strong> {answer.respondent.demographic.city || 'Non spécifié'}
+                        </Typography>
+                      </>
+                    )}
+                  </Paper>
+                );
+
+                return (
+                  <MuiTooltip 
+                    key={index}
+                    title={tooltipContent}
+                    placement="right-start"
+                    arrow
+                    followCursor
+                    PopperProps={{
+                      sx: {
+                        '& .MuiTooltip-tooltip': {
+                          bgcolor: 'background.paper',
+                          color: 'text.primary',
+                          boxShadow: 1,
+                          '& .MuiTooltip-arrow': {
+                            color: 'background.paper',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <ListItem divider>
                       <ListItemText
-                        primary={questionAnswer?.answer || 'Sans réponse'}
+                        primary={answerValue}
                         secondary={`Répondant: ${answer.respondent.userId.username}`}
                       />
                     </ListItem>
-                  );
-                })}
-              </List>
-            ) : (
-              <Box sx={{ 
-                height: '400px', 
-                width: '100%', 
-                position: 'relative', 
-                p: 2,
-                border: '1px solid #ddd',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <Box sx={{ 
-                  flex: 1,
-                  minHeight: '300px',
-                  width: '100%',
-                  position: 'relative'
-                }}>
-                  {chartType === 'bar' && (
-                    <Bar 
-                      data={chartData} 
-                      options={chartOptions}
-                    />
-                  )}
-                  {chartType === 'pie' && (
-                    <Pie 
-                      data={chartData} 
-                      options={chartOptions}
-                    />
-                  )}
-                  {chartType === 'line' && (
-                    <Line 
-                      data={chartData} 
-                      options={chartOptions}
-                    />
-                  )}
-                  {chartType === 'doughnut' && (
-                    <Doughnut 
-                      data={chartData} 
-                      options={chartOptions}
-                    />
-                  )}
-                </Box>
-                
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                  <Button
-                    startIcon={<BarChartIcon />}
-                    onClick={() => setChartType('bar')}
-                    variant={chartType === 'bar' ? 'contained' : 'outlined'}
-                  >
-                    Barres
-                  </Button>
-                  <Button
-                    startIcon={<PieChartIcon />}
-                    onClick={() => setChartType('pie')}
-                    variant={chartType === 'pie' ? 'contained' : 'outlined'}
-                  >
-                    Camembert
-                  </Button>
-                  <Button
-                    startIcon={<ShowChartIcon />}
-                    onClick={() => setChartType('line')}
-                    variant={chartType === 'line' ? 'contained' : 'outlined'}
-                  >
-                    Ligne
-                  </Button>
-                  <Button
-                    startIcon={<DonutLargeIcon />}
-                    onClick={() => setChartType('doughnut')}
-                    variant={chartType === 'doughnut' ? 'contained' : 'outlined'}
-                  >
-                    Anneau
-                  </Button>
-                </Box>
-              </Box>
-            )}
-          </Box>
+                  </MuiTooltip>
+                );
+              })}
+            </List>
+          ) : (
+            <Box sx={{ height: '500px', width: '100%', p: 2 }}>
+              <ChartView 
+                data={(() => {
+                  const answerCounts: { [key: string]: number } = {};
+                  const filteredAnswers = filterAnswers(selectedQuestion.answers);
+                  filteredAnswers.forEach(answer => {
+                    const questionAnswer = answer.answers.find(
+                      a => a.questionId === selectedQuestion.questionId
+                    );
+                    if (questionAnswer?.answer) {
+                      const value = questionAnswer.answer.toString();
+                      answerCounts[value] = (answerCounts[value] || 0) + 1;
+                    }
+                  });
+                  return answerCounts;
+                })()}
+                question={selectedSurvey.questions.find(
+                  q => q.id === selectedQuestion.questionId
+                ) ?? { 
+                  id: 'default',
+                  text: 'Question non trouvée',
+                  type: 'text'
+                }}
+              />
+            </Box>
+          )}
         </DialogContent>
+        <DialogActions sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          px: 3 
+        }}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<TableViewIcon />}
+              onClick={exportCSV}
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<CodeIcon />}
+              onClick={exportJSON}
+            >
+              Export JSON
+            </Button>
+          </Box>
+          <Button onClick={handleClose}>
+            Fermer
+          </Button>
+        </DialogActions>
       </>
     );
-  }, [selectedSurvey, selectedQuestion, dialogViews, chartType]);
+  }, [selectedSurvey, selectedQuestion, currentView, filters]);
+
+  // Ajout d'un useEffect pour surveiller les changements de vue
+  useEffect(() => {
+    console.log('View changed to:', currentView);
+  }, [currentView]);
+
+  // Ajoutez un useEffect au niveau du composant principal pour surveiller les changements
+  useEffect(() => {
+    console.log('Component mounted');
+    return () => {
+      console.log('Component will unmount');
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('Selected question changed:', selectedQuestion);
+  }, [selectedQuestion]);
+
+  useEffect(() => {
+    console.log('Current view changed:', currentView);
+  }, [currentView]);
 
   if (loading) {
     return (
@@ -1402,9 +1630,6 @@ const ResultsPage: React.FC = () => {
           onClose={handleClose}
           maxWidth="lg"
           fullWidth
-          TransitionProps={{
-            onExited: () => setSelectedQuestion(null)
-          }}
           PaperProps={{
             sx: {
               minHeight: '600px',
@@ -1417,123 +1642,240 @@ const ResultsPage: React.FC = () => {
           {selectedQuestion && selectedSurvey && (
             <>
               <DialogTitle>
-                Question Details
-                <>
-                  {selectedQuestion.questionId && (
-                    <Box sx={{ mt: 2, borderBottom: 1, borderColor: 'divider' }}>
-                      <Tabs
-                        value={dialogViews[selectedQuestion.questionId] || 'list'}
-                        onChange={(_, newValue) => handleDialogViewChange(selectedQuestion.questionId, newValue)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="h6">
+                    {selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId)?.text}
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      {selectedQuestion.answers.length} réponse(s)
+                    </Typography>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                      <Tabs 
+                        value={currentView} 
+                        onChange={(_, newValue) => handleViewChange(newValue as 'list' | 'chart')}
                       >
-                        <Tab label="List View" value="list" />
-                        <Tab label="Chart View" value="chart" />
+                        <Tab 
+                          icon={<VisibilityIcon />} 
+                          label="Liste" 
+                          value="list"
+                        />
+                        <Tab 
+                          icon={<BarChartIcon />} 
+                          label="Graphique" 
+                          value="chart"
+                        />
                       </Tabs>
                     </Box>
-                  )}
-                </>
+                  </Box>
+                </Box>
               </DialogTitle>
               <DialogContent dividers>
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="outlined"
-                        startIcon={<DownloadIcon />}
-                        onClick={() => exportResponses('csv', selectedQuestion.questionId)}
-                        size="small"
-                      >
-                        Export CSV
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<DownloadIcon />}
-                        onClick={() => exportResponses('json', selectedQuestion.questionId)}
-                        size="small"
-                      >
-                        Export JSON
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ mt: 3, mb: 3 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      {selectedQuestion.questionId && selectedSurvey.questions.find(
-                        q => q.id === selectedQuestion.questionId
-                      )?.text}
-                    </Typography>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Total des réponses: {selectedQuestion.answers?.length || 0}
-                    </Typography>
-                  </Box>
-
+                {currentView === 'list' ? (
                   <List>
-                    {selectedQuestion.answers?.map((answer, index) => (
-                      <ListItem 
-                        key={index}
-                        sx={{ 
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          backgroundColor: index % 2 === 0 ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
-                          borderRadius: 1,
-                          mb: 1,
-                          p: 2
-                        }}
-                      >
-                        <Box sx={{ 
-                          display: 'flex',
-                          width: '100%',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 1
-                        }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 'medium' }}>
-                            {answer?.respondent?.userId?.username || 'Anonymous'}
+                    {selectedQuestion.answers.map((answer, index) => {
+                      const questionAnswer = answer.answers.find(
+                        a => a.questionId === selectedQuestion.questionId
+                      );
+                      const answerValue = questionAnswer?.answer?.toString() || 'Sans réponse';
+                      
+                      const tooltipContent = (
+                        <Paper sx={{ p: 1.5, maxWidth: 300 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <strong>Email:</strong> {answer.respondent.userId.email}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {answer?.submittedAt ? new Date(answer.submittedAt).toLocaleString() : ''}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body1">
-                          {answer?.answers?.find(a => a.questionId === selectedQuestion.questionId)?.answer?.toString() || ''}
-                        </Typography>
-                      </ListItem>
-                    ))}
-                  </List>
-                </Box>
+                          {answer.respondent.demographic && (
+                            <>
+                              <Typography variant="subtitle2" gutterBottom>
+                                <strong>Genre:</strong> {answer.respondent.demographic.gender || 'Non spécifié'}
+                              </Typography>
+                              <Typography variant="subtitle2" gutterBottom>
+                                <strong>Date de naissance:</strong> {
+                                  answer.respondent.demographic.dateOfBirth 
+                                    ? new Date(answer.respondent.demographic.dateOfBirth).toLocaleDateString()
+                                    : 'Non spécifié'
+                                }
+                              </Typography>
+                              <Typography variant="subtitle2" gutterBottom>
+                                <strong>Niveau d'éducation:</strong> {
+                                  answer.respondent.demographic.educationLevel || 'Non spécifié'
+                                }
+                              </Typography>
+                              <Typography variant="subtitle2">
+                                <strong>Ville:</strong> {answer.respondent.demographic.city || 'Non spécifié'}
+                              </Typography>
+                            </>
+                          )}
+                        </Paper>
+                      );
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                      return (
+                        <MuiTooltip 
+                          key={index}
+                          title={tooltipContent}
+                          placement="right-start"
+                          arrow
+                          followCursor
+                          PopperProps={{
+                            sx: {
+                              '& .MuiTooltip-tooltip': {
+                                bgcolor: 'background.paper',
+                                color: 'text.primary',
+                                boxShadow: 1,
+                                '& .MuiTooltip-arrow': {
+                                  color: 'background.paper',
+                                },
+                              },
+                            },
+                          }}
+                        >
+                          <ListItem divider>
+                            <ListItemText
+                              primary={answerValue}
+                              secondary={`Répondant: ${answer.respondent.userId.username}`}
+                            />
+                          </ListItem>
+                        </MuiTooltip>
+                      );
+                    })}
+                  </List>
+                ) : (
+                  <Box sx={{ height: '500px', width: '100%', p: 2 }}>
+                    <ChartView 
+                      data={(() => {
+                        const answerCounts: { [key: string]: number } = {};
+                        const filteredAnswers = filterAnswers(selectedQuestion.answers);
+                        filteredAnswers.forEach(answer => {
+                          const questionAnswer = answer.answers.find(
+                            a => a.questionId === selectedQuestion.questionId
+                          );
+                          if (questionAnswer?.answer) {
+                            const value = questionAnswer.answer.toString();
+                            answerCounts[value] = (answerCounts[value] || 0) + 1;
+                          }
+                        });
+                        return answerCounts;
+                      })()}
+                      question={selectedSurvey.questions.find(
+                        q => q.id === selectedQuestion.questionId
+                      ) ?? { 
+                        id: 'default',
+                        text: 'Question non trouvée',
+                        type: 'text'
+                      }}
+                    />
+                  </Box>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                px: 3 
+              }}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
                     variant="outlined"
-                    color="error"
-                    onClick={handleClose}
-                    size="small"
+                    startIcon={<TableViewIcon />}
+                    onClick={exportCSV}
                   >
-                    Close
+                    Export CSV
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<CodeIcon />}
+                    onClick={exportJSON}
+                  >
+                    Export JSON
                   </Button>
                 </Box>
-              </DialogContent>
+                <Button onClick={handleClose}>
+                  Fermer
+                </Button>
+              </DialogActions>
             </>
           )}
         </Dialog>
 
         {selectedSurvey?.demographicEnabled && (
-          <>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            mt: 2, 
+            mb: 2 
+          }}>
             <Button
               variant="outlined"
               onClick={() => setShowDemographic(!showDemographic)}
-              sx={{ mt: 2, mb: 2 }}
               startIcon={showDemographic ? <VisibilityOffIcon /> : <VisibilityIcon />}
             >
               {showDemographic ? 'Hide Demographic Stats' : 'Show Demographic Stats'}
             </Button>
-            
-            {showDemographic && (
-              <>
-                {renderDemographicStats()}
-                {renderIndividualResponses()}
-              </>
-            )}
-          </>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<TableViewIcon />}
+                onClick={() => {
+                  // Préparer toutes les réponses avec les données démographiques
+                  const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
+                    respondent: {
+                      username: answer.respondent.userId.username,
+                      email: answer.respondent.userId.email,
+                      demographic: answer.respondent.demographic || {},
+                    },
+                    answers: selectedSurvey.questions.map(question => {
+                      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+                      return {
+                        question: question.text,
+                        answer: questionAnswer?.answer || 'Non répondu'
+                      };
+                    }),
+                    submittedAt: answer.submittedAt
+                  }));
+
+                  // Export CSV
+                  const blob = new Blob([JSON.stringify(allData)], { type: 'text/csv;charset=utf-8;' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `survey_responses_complete_${selectedSurvey._id}.csv`;
+                  link.click();
+                }}
+              >
+                Export CSV Complet
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<CodeIcon />}
+                onClick={() => {
+                  // Même données mais en JSON
+                  const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
+                    respondent: {
+                      username: answer.respondent.userId.username,
+                      email: answer.respondent.userId.email,
+                      demographic: answer.respondent.demographic || {},
+                    },
+                    answers: selectedSurvey.questions.map(question => {
+                      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+                      return {
+                        question: question.text,
+                        answer: questionAnswer?.answer || 'Non répondu'
+                      };
+                    }),
+                    submittedAt: answer.submittedAt
+                  }));
+
+                  const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `survey_responses_complete_${selectedSurvey._id}.json`;
+                  link.click();
+                }}
+              >
+                Export JSON Complet
+              </Button>
+            </Box>
+          </Box>
         )}
       </Box>
     );
