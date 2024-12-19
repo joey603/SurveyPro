@@ -1,7 +1,9 @@
 const express = require("express");
 const { 
   submitSurveyAnswer, 
-  getSurveyAnswers 
+  getSurveyAnswers,
+  getUserSurveyResponses,
+  getUserSurveyResponseById
 } = require("../controllers/surveyAnswerController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -12,5 +14,9 @@ router.post("/submit", authMiddleware, submitSurveyAnswer);
 
 // Obtenir toutes les réponses pour un sondage spécifique
 router.get("/:surveyId", authMiddleware, getSurveyAnswers);
+
+// Nouvelles routes pour l'historique
+router.get("/responses/user", authMiddleware, getUserSurveyResponses);
+router.get("/responses/:responseId", authMiddleware, getUserSurveyResponseById);
 
 module.exports = router;

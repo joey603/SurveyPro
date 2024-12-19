@@ -54,3 +54,96 @@ exports.getSurveyAnswers = async (req, res) => {
     res.status(500).json({ message: "Error fetching survey answers", error: error.message });
   }
 };
+
+exports.getUserSurveyResponses = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log("Recherche des réponses pour l'utilisateur:", userId);
+
+    const responses = await SurveyAnswer.find({
+      'respondent.userId': userId
+    })
+    .populate({
+      path: 'surveyId',
+      select: 'title'
+    })
+    .sort({ submittedAt: -1 });
+
+    console.log("Réponses récupérées:", responses.length);
+
+    const formattedResponses = responses
+      .filter(response => response.surveyId)
+      .map(response => ({
+        _id: response._id,
+        surveyId: response.surveyId._id,
+        surveyTitle: response.surveyId.title || "Sondage supprimé",
+        completedAt: response.submittedAt,
+        demographic: response.respondent.demographic,
+        answers: response.answers
+    }));
+
+    console.log("Réponses formatées:", formattedResponses.length);
+    res.status(200).json(formattedResponses);
+  } catch (error) {
+    console.error("Erreur détaillée lors de la récupération des réponses:", {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des réponses aux sondages", 
+      error: error.message 
+    });
+  }
+};
+
+exports.getUserSurveyResponseById = async (req, res) => {
+  try {
+    const { responseId } = req.params;
+    const userId = req.user.id;
+    console.log("Recherche de la réponse:", responseId, "pour l'utilisateur:", userId);
+
+    const response = await SurveyAnswer.findOne({
+      _id: responseId,
+      'respondent.userId': userId
+    })
+    .populate({
+      path: 'surveyId',
+      select: 'title questions'
+    });
+
+    if (!response) {
+      console.log("Aucune réponse trouvée pour ces critères");
+      return res.status(404).json({ message: "Réponse non trouvée" });
+    }
+
+    if (!response.surveyId) {
+      console.log("Le sondage associé n'existe plus");
+      return res.status(404).json({ message: "Le sondage associé n'existe plus" });
+    }
+
+    const formattedResponse = {
+      _id: response._id,
+      surveyId: response.surveyId._id,
+      surveyTitle: response.surveyId.title,
+      completedAt: response.submittedAt,
+      demographic: response.respondent.demographic,
+      answers: response.answers,
+      questions: response.surveyId.questions
+    };
+
+    console.log("Réponse formatée avec succès");
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    console.error("Erreur détaillée lors de la récupération de la réponse:", {
+      message: error.message,
+      stack: error.stack,
+      responseId: req.params.responseId,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération de la réponse au sondage", 
+      error: error.message 
+    });
+  }
+};
