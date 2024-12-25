@@ -14,7 +14,7 @@ const SurveyHistoryPage: React.FC = () => {
   const router = useRouter();
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 4, backgroundColor: '#f5f5f5' }}>
       <Typography variant="h4" sx={{ mb: 3 }}>Survey History</Typography>
       <List>
         {mockHistory.map((survey) => (

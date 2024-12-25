@@ -35,7 +35,7 @@ const mockResults = {
 
 const SurveyResultsPage: React.FC = () => {
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 4, backgroundColor: '#f5f5f5' }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{mockResults.title}</Typography>
       <Typography variant="subtitle1" sx={{ mb: 4 }}>Survey Results</Typography>
 
