@@ -49,7 +49,6 @@ const NavBar = () => {
         { name: 'Survey Answer', path: '/survey-answer' },
         { name: 'Results', path: '/results' },
         { name: 'History', path: '/history' },
-        { name: 'Profile', path: '/profile' },
         { name: 'Settings', path: '/settings' },
       ];
 
