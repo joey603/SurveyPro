@@ -172,7 +172,7 @@ const NavBar = () => {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              SurveyApp
+              SurveyPro
             </Box>
           </Link>
 
