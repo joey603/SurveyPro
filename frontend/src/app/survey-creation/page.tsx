@@ -20,6 +20,8 @@ import {
   Select,
   Slider,
   Rating,
+  Paper,
+  Divider,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -206,34 +208,17 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   const handleQuestionTypeChange = (index: number, newType: string) => {
-    // Récupérer la valeur actuelle du texte via getValues
     const currentText = getValues(`questions.${index}.text`);
     const questionId = fields[index].id;
 
-    // Mettre à jour la question en préservant le texte actuel
     update(index, {
       id: questionId,
       type: newType,
-      text: currentText, // Utiliser la valeur actuelle du texte
-      options:
-        newType === 'multiple-choice' || newType === 'dropdown' ? [''] : [],
+      text: currentText,
+      options: newType === 'multiple-choice' || newType === 'dropdown' ? [''] : [],
       media: fields[index].media || '',
       selectedDate: fields[index].selectedDate || null,
     });
-
-    // Mettre à jour les options locales si nécessaire
-    if (newType === 'multiple-choice' || newType === 'dropdown') {
-      setLocalOptions((prev) => ({
-        ...prev,
-        [questionId]: prev[questionId] || [''],
-      }));
-    } else {
-      setLocalOptions((prev) => {
-        const updated = { ...prev };
-        delete updated[questionId];
-        return updated;
-      });
-    }
   };
 
   const handleResetSurvey = () => {
@@ -419,7 +404,7 @@ const SurveyCreationPage: React.FC = () => {
               })()}
             </Box>
 
-            {/* Vérifiez si le m��dia est une vidéo ou une image */}
+            {/* Vérifiez si le média est une vidéo ou une image */}
             {question.media.startsWith('blob:') ||
             question.media.endsWith('.mp4') ||
             question.media.endsWith('.mov') ? (
@@ -625,305 +610,317 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ padding: 4, backgroundColor: '#f5f5f5' }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Survey Creation
-      </Typography>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start', // Changé à flex-start pour un meilleur scroll
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '800px', // Augmenté pour plus d'espace
+          mb: 4,
+        }}
+      >
+        {/* Header avec gradient */}
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="h4" fontWeight="bold">
+            Create New Survey
+          </Typography>
+        </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Controller
-          name="title"
-          control={control}
-          rules={{ required: 'Title is required' }} // Validation
-          render={({ field, fieldState }) => (
-            <TextField
-              {...field}
-              label="Survey Title"
-              fullWidth
-              sx={{ mb: 2 }}
-              variant="outlined"
-              error={!!fieldState.error} // Afficher l'erreur
-              helperText={fieldState.error?.message} // Message d'erreur
-            />
-          )}
-        />
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Survey Description"
-              fullWidth
-              sx={{ mb: 2 }}
-              variant="outlined"
-            />
-          )}
-        />
+        {/* Contenu du formulaire */}
+        <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Section des informations de base */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Basic Information
+            </Typography>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={demographicEnabled}
-              onChange={(e) => setValue('demographicEnabled', e.target.checked)}
-            />
-          }
-          label="Include Demographic Questions"
-        />
-
-        {fields.map((field, index) => (
-          <Box
-            key={field.id}
-            sx={{ mb: 3, pb: 3, borderBottom: '1px solid lightgray' }}
-          >
-            {/* Question Text */}
             <Controller
-              name={`questions.${index}.text`}
+              name="title"
               control={control}
-              render={({ field: { onChange, value } }) => (
+              defaultValue=""
+              render={({ field }) => (
                 <TextField
-                  value={value || ''}
-                  onChange={(e) => {
-                    onChange(e.target.value); // Modification ici
-                  }}
-                  label={`Question ${index + 1}`}
+                  {...field}
+                  label="Survey Title"
                   fullWidth
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 3 }}
+                  variant="outlined"
                 />
               )}
             />
 
-            {/* Question Type */}
-            <TextField
-              select
-              label="Question Type"
-              fullWidth
-              sx={{ mb: 2 }}
-              value={field.type}
-              onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-            >
-              {questionTypes.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {/* Render Options for Multiple-Choice or Dropdown */}
-            {['multiple-choice', 'dropdown'].includes(field.type) && (
-              <Box sx={{ mb: 2 }}>
-                {field.options?.map((option, optionIndex) => (
-                  <Box
-                    key={optionIndex}
-                    sx={{ display: 'flex', alignItems: 'center', mb: 1 }}
-                  >
-                    <Controller
-                      name={`questions.${index}.options.${optionIndex}`}
-                      control={control}
-                      defaultValue={option}
-                      render={({ field: optionField }) => (
-                        <TextField
-                          {...optionField}
-                          fullWidth
-                          variant="outlined"
-                        />
-                      )}
-                    />
-                    <IconButton
-                      onClick={() => {
-                        const newOptions = [...(field.options || [])];
-                        newOptions.splice(optionIndex, 1);
-                        update(index, {
-                          ...field,
-                          options: newOptions,
-                        });
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
+            <Controller
+              name="description"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Survey Description"
+                  fullWidth
+                  multiline
+                  rows={3}
+                  sx={{ mb: 3 }}
                   variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleAddOption(index)}
-                >
-                  Add Option
-                </Button>
-              </Box>
-            )}
+                />
+              )}
+            />
 
-            {/* Media Upload and URL Input */}
-            <Box sx={{ mt: 3 }}>
-              <Controller
-                name={`questions.${index}.media`}
-                control={control}
-                render={({ field }) => {
-                  console.log(
-                    `Rendering media for question ${fields[index].id}:`,
-                    field.value
-                  );
-                  return (
-                    <TextField
-                      {...field}
-                      label="Media URL"
-                      placeholder="Enter a valid media URL or upload a file"
-                      fullWidth
+            <Controller
+              name="demographicEnabled"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={field.value}
+                      onChange={field.onChange}
+                      color="primary"
                     />
-                  );
-                }}
-              />
+                  }
+                  label="Enable Demographic Questions"
+                  sx={{ mb: 3 }}
+                />
+              )}
+            />
 
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<PhotoCameraIcon />}
+            <Divider sx={{ my: 4 }} />
+
+            {/* Section des questions */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Survey Questions
+            </Typography>
+
+            {/* Liste des questions */}
+            {fields.map((field, index) => (
+              <Paper
+                key={field.id}
+                elevation={1}
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  textTransform: 'none',
-                  mt: 2,
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
                 }}
               >
-                Upload File
-                <input
-                  type="file"
-                  hidden
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      const file = e.target.files[0];
-                      handleFileUpload(file, field.id); // Passe l'ID de la question
-                    }
-                  }}
-                />
+                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                  <Controller
+                    name={`questions.${index}.type`}
+                    control={control}
+                    render={({ field: typeField }) => (
+                      <TextField
+                        select
+                        label="Question Type"
+                        {...typeField}
+                        onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+                        sx={{ minWidth: 200 }}
+                      >
+                        {questionTypes.map((type) => (
+                          <MenuItem key={type.value} value={type.value}>
+                            {type.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
+                  />
+
+                  <Controller
+                    name={`questions.${index}.text`}
+                    control={control}
+                    render={({ field: textField }) => (
+                      <TextField
+                        {...textField}
+                        label="Question Text"
+                        fullWidth
+                        variant="outlined"
+                      />
+                    )}
+                  />
+                </Box>
+
+                {/* Options pour les questions à choix multiples */}
+                {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
+                  <Box sx={{ ml: 2, mb: 2 }}>
+                    {field.options?.map((option, optionIndex) => (
+                      <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                        <Controller
+                          name={`questions.${index}.options.${optionIndex}`}
+                          control={control}
+                          defaultValue={option}
+                          render={({ field: optionField }) => (
+                            <TextField
+                              {...optionField}
+                              label={`Option ${optionIndex + 1}`}
+                              fullWidth
+                              variant="outlined"
+                              size="small"
+                            />
+                          )}
+                        />
+                        <IconButton
+                          onClick={() => {
+                            const newOptions = field.options.filter((_, i) => i !== optionIndex);
+                            update(index, {
+                              ...field,
+                              options: newOptions,
+                            });
+                          }}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    ))}
+                    <Button
+                      onClick={() => handleAddOption(index)}
+                      startIcon={<AddIcon />}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    >
+                      Add Option
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Media Upload Section */}
+                {field.type !== 'color-picker' && (
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<PhotoCameraIcon />}
+                      sx={{ mr: 2 }}
+                    >
+                      Upload Media
+                      <input
+                        type="file"
+                        hidden
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            const file = e.target.files[0];
+                            handleFileUpload(file, field.id);
+                          }
+                        }}
+                      />
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Delete Question Button */}
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={() => handleDeleteQuestion(index)}
+                    startIcon={<DeleteIcon />}
+                    color="error"
+                    variant="outlined"
+                    size="small"
+                  >
+                    Delete Question
+                  </Button>
+                </Box>
+              </Paper>
+            ))}
+
+            {/* Bouton Add Question */}
+            <Button
+              onClick={handleAddQuestion}
+              variant="outlined"
+              startIcon={<AddIcon />}
+              sx={{
+                mb: 4,
+                color: '#667eea',
+                borderColor: '#667eea',
+                '&:hover': {
+                  borderColor: '#764ba2',
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                },
+              }}
+            >
+              Add Question
+            </Button>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Actions finales */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Button
+                onClick={handleResetSurvey}
+                variant="outlined"
+                startIcon={<DeleteIcon />}
+                sx={{
+                  color: '#ef4444',
+                  borderColor: '#ef4444',
+                  '&:hover': {
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: '#ef4444',
+                  },
+                }}
+              >
+                Reset
+              </Button>
+
+              <Button
+                onClick={() => setShowPreview(true)}
+                variant="outlined"
+                startIcon={<VisibilityIcon />}
+                sx={{
+                  color: '#667eea',
+                  borderColor: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#667eea',
+                  },
+                }}
+              >
+                Preview
+              </Button>
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<CheckCircleIcon />}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                }}
+              >
+                Create Survey
               </Button>
             </Box>
-
-            {/* Delete Question Button */}
-            <Button
-              onClick={() => handleDeleteQuestion(index)}
-              startIcon={<DeleteIcon />}
-              color="secondary"
-              sx={{ mt: 2 }}
-            >
-              Delete Question
-            </Button>
-          </Box>
-        ))}
-
-        {/* Bouton Add Question (avec une icône) */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-start',
-            mt: 3,
-            mb: 2, // Espacement entre Add Question et les autres boutons
-          }}
-        >
-          <Button
-            onClick={handleAddQuestion}
-            variant="outlined"
-            startIcon={<AddIcon />} // Icône de "plus" ajoutée ici
-            sx={{
-              backgroundColor: 'white',
-              color: '#007bff', // Bleu pour Add Question
-              border: '1px solid #007bff',
-              borderRadius: '8px',
-              textTransform: 'none',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              '&:hover': {
-                backgroundColor: '#e8f4ff', // Fond bleu clair sur survol
-                borderColor: '#0056b3',
-              },
-            }}
-          >
-            Add Question
-          </Button>
+          </form>
         </Box>
+      </Paper>
 
-        {/* Section avec Reset Survey, Preview et Submit */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-start', // Aligne tous les boutons sur une ligne
-            gap: 2, // Espacement uniforme entre les boutons
-          }}
-        >
-          {/* Bouton Reset Survey (avec une icône) */}
-          <Button
-            onClick={handleResetSurvey}
-            variant="outlined"
-            startIcon={<DeleteIcon />} // Icône de "poubelle" ajoutée ici
-            sx={{
-              backgroundColor: 'white',
-              color: '#dc3545', // Rouge pour Reset Survey
-              border: '1px solid #dc3545',
-              borderRadius: '8px',
-              textTransform: 'none',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              '&:hover': {
-                backgroundColor: '#f8d7da', // Fond rouge clair sur survol
-                borderColor: '#c82333',
-                color: '#721c24',
-              },
-            }}
-          >
-            Reset Survey
-          </Button>
-
-          {/* Bouton Preview (avec une icône) */}
-          <Button
-            onClick={() => setShowPreview(true)}
-            variant="outlined"
-            startIcon={<VisibilityIcon />} // Icône d'œil ajoutée ici
-            sx={{
-              backgroundColor: 'white',
-              color: '#6f42c1', // Violet pour Preview
-              border: '1px solid #6f42c1',
-              borderRadius: '8px',
-              textTransform: 'none',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              '&:hover': {
-                backgroundColor: '#ede7f6', // Fond violet clair sur survol
-                borderColor: '#5a32a3',
-              },
-            }}
-          >
-            Preview
-          </Button>
-
-          {/* Bouton Submit (avec une icône) */}
-          <Button
-            type="submit"
-            variant="outlined"
-            startIcon={<CheckCircleIcon />} // Icône de validation ajoutée ici
-            sx={{
-              backgroundColor: 'white',
-              color: '#28a745', // Vert pour Submit
-              border: '1px solid #28a745',
-              borderRadius: '8px',
-              textTransform: 'none',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              '&:hover': {
-                backgroundColor: '#e6f7e9', // Fond vert clair sur survol
-                borderColor: '#218838',
-              },
-            }}
-          >
-            Submit
-          </Button>
-        </Box>
-      </form>
-
+      {/* La modal de prévisualisation reste la même */}
       {showPreview && (
         <Dialog
           open={showPreview}
