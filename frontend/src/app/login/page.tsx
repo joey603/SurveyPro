@@ -10,17 +10,70 @@ import {
   Box,
   Paper,
   Container,
+  Alert,
 } from '@mui/material';
 import axios from 'axios';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
 
+  const validateEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value) {
+      return "Email is required";
+    }
+    if (!emailRegex.test(value)) {
+      return "Please enter a valid email address";
+    }
+    return "";
+  };
+
+  const validatePassword = (value: string) => {
+    if (!value) {
+      return "Password is required";
+    }
+    if (value.length < 8) {
+      return "Password must contain at least 8 characters";
+    }
+    return "";
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    setEmailError(validateEmail(newEmail));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    setPasswordError(validatePassword(newPassword));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation avant soumission
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password);
+
+    if (emailValidation) {
+      setEmailError(emailValidation);
+      return;
+    }
+
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
+      return;
+    }
+
+    setError('');
+
     try {
       const response = await axios.post(
         'http://localhost:5041/api/auth/login',
@@ -32,7 +85,13 @@ const LoginPage = () => {
       const { accessToken, refreshToken } = response.data;
       login(accessToken, refreshToken);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
+      if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err.response?.status === 404) {
+        setError('Account not found');
+      } else {
+        setError(err.response?.data?.message || 'An error occurred during login');
+      }
     }
   };
 
@@ -101,14 +160,10 @@ const LoginPage = () => {
             variant="h4"
             sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
           >
-            Connexion
+            Log in
           </Typography>
 
-          {error && (
-            <Typography color="error" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
@@ -117,7 +172,9 @@ const LoginPage = () => {
               fullWidth
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
+              error={!!emailError}
+              helperText={emailError}
               sx={{
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
@@ -129,12 +186,14 @@ const LoginPage = () => {
             />
 
             <TextField
-              label="Mot de passe"
+              label="Password"
               type="password"
               fullWidth
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
+              error={!!passwordError}
+              helperText={passwordError}
               sx={{
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
@@ -162,11 +221,11 @@ const LoginPage = () => {
                 mb: 2,
               }}
             >
-              Se connecter
+              Log in
             </Button>
 
             <Typography align="center" sx={{ mt: 2 }}>
-              Pas encore de compte ?{' '}
+              Don't have an account ?{' '}
               <Button
                 href="/register"
                 sx={{
@@ -178,7 +237,7 @@ const LoginPage = () => {
                   },
                 }}
               >
-                S'inscrire
+                Sign up
               </Button>
             </Typography>
           </Box>

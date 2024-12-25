@@ -98,19 +98,19 @@ router.post('/login', async (req, res) => {
       const { email, password } = req.body;
   
       const user = await User.findOne({ email });
-      if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé.' });
+      if (!user) return res.status(400).json({ message: 'Account not found' });
   
       // Ajouter le statut de vérification dans la réponse
       const isVerified = user.isVerified;
       if (!isVerified) {
         return res.status(403).json({
-          message: 'Compte non vérifié. Veuillez vérifier votre e-mail.',
+          message: 'Account not verified. Please verify your email.',
           isVerified,
         });
       }
   
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Mot de passe incorrect.' });
+      if (!isMatch) return res.status(400).json({ message: 'Wrong password' });
   
       const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
       const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });

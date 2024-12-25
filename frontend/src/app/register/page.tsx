@@ -17,13 +17,38 @@ const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
+  const validatePassword = (value: string) => {
+    if (value.length < 8) {
+      return "Password must contain at least 8 characters";
+    }
+    if (!/\d/.test(value)) {
+      return "Password must contain at least one number";
+    }
+    if (!/[A-Z]/.test(value)) {
+      return "Password must contain at least one capital letter";
+    }
+    return "";
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    setPasswordError(validatePassword(newPassword));
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const passwordValidation = validatePassword(password);
+    if (passwordValidation) {
+      setError(passwordValidation);
+      return;
+    }
     setLoading(true);
     setMessage('');
     setError('');
@@ -36,14 +61,14 @@ const RegisterPage = () => {
       });
 
       setMessage(
-        'Inscription réussie ! Vérifiez votre email pour le code de vérification.'
+        'Registration successful! Check your email for verification code.'
       );
       localStorage.setItem('email', email);
       setTimeout(() => {
         router.push('/verify');
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Échec de l'inscription.");
+      setError(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -114,7 +139,7 @@ const RegisterPage = () => {
             variant="h4"
             sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
           >
-            Inscription
+            Sign up
           </Typography>
 
           {message && (
@@ -130,7 +155,7 @@ const RegisterPage = () => {
 
           <Box component="form" onSubmit={handleRegister}>
             <TextField
-              label="Nom d'utilisateur"
+              label="Username"
               fullWidth
               required
               value={username}
@@ -163,13 +188,14 @@ const RegisterPage = () => {
             />
 
             <TextField
-              label="Mot de passe"
+              label="Password"
               type="password"
               fullWidth
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              helperText="8 caractères min. / 1 chiffre minimum"
+              onChange={handlePasswordChange}
+              error={!!passwordError}
+              helperText={passwordError || "8 characters, 1 number and 1 capital letter minimum"}
               sx={{
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
@@ -198,11 +224,11 @@ const RegisterPage = () => {
                 mb: 2,
               }}
             >
-              {loading ? <CircularProgress size={24} /> : "S'inscrire"}
+              {loading ? <CircularProgress size={24} /> : "Sign up"}
             </Button>
 
             <Typography align="center" sx={{ mt: 2 }}>
-              Déjà un compte ?{' '}
+              Already have an account ?{' '}
               <Button
                 href="/login"
                 sx={{
@@ -214,7 +240,7 @@ const RegisterPage = () => {
                   },
                 }}
               >
-                Se connecter
+                Log in
               </Button>
             </Typography>
           </Box>
