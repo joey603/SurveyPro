@@ -8,7 +8,12 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Paper,
+  Avatar,
+  Divider,
 } from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
 
 type User = {
   username: string;
@@ -47,74 +52,130 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <Container
-        maxWidth="sm"
-        style={{
+      <Box
+        sx={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '100vh',
+          minHeight: '100vh',
+          backgroundColor: '#f5f5f5',
         }}
       >
-        <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container
-        maxWidth="sm"
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <Alert severity="error">{error}</Alert>
-      </Container>
+        <CircularProgress sx={{ color: '#667eea' }} />
+      </Box>
     );
   }
 
   return (
-    <Container
-      maxWidth="sm"
-      style={{
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
+        padding: { xs: 2, sm: 4 },
       }}
     >
-      <Box
-        sx={{
-          boxShadow: 3,
-          padding: 4,
-          borderRadius: 2,
-          backgroundColor: '#fff',
-          width: '100%',
-        }}
-      >
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          textAlign="center"
-          fontWeight="bold"
-        >
-          User Profile
-        </Typography>
+      <Container maxWidth="sm">
+        {error ? (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              backgroundColor: 'white',
+              borderRadius: 2,
+            }}
+          >
+            {error}
+          </Alert>
+        ) : (
+          <Paper
+            elevation={3}
+            sx={{
+              borderRadius: 3,
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            {/* Header avec Avatar */}
+            <Box
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                py: 4,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                color: 'white',
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: 100,
+                  height: 100,
+                  bgcolor: 'white',
+                  color: '#667eea',
+                  mb: 2,
+                }}
+              >
+                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </Avatar>
+              <Typography variant="h4" fontWeight="bold">
+                {user?.username}
+              </Typography>
+            </Box>
 
-        <Typography variant="body1">
-          <strong>Username:</strong> {user?.username}
-        </Typography>
-        <Typography variant="body1">
-          <strong>Email:</strong> {user?.email}
-        </Typography>
-      </Box>
-    </Container>
+            {/* Contenu du profil */}
+            <Box sx={{ p: 4, backgroundColor: 'white' }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="textSecondary"
+                  sx={{ mb: 1 }}
+                >
+                  USERNAME
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'rgba(102, 126, 234, 0.1)',
+                    borderRadius: 1,
+                  }}
+                >
+                  <PersonIcon sx={{ color: '#667eea' }} />
+                  <Typography variant="body1">{user?.username}</Typography>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  color="textSecondary"
+                  sx={{ mb: 1 }}
+                >
+                  EMAIL ADDRESS
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'rgba(102, 126, 234, 0.1)',
+                    borderRadius: 1,
+                  }}
+                >
+                  <EmailIcon sx={{ color: '#667eea' }} />
+                  <Typography variant="body1">{user?.email}</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Paper>
+        )}
+      </Container>
+    </Box>
   );
 };
 
