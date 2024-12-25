@@ -1,36 +1,46 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { Box, TextField, Button, Typography, Alert, CircularProgress, Container } from "@mui/material";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  CircularProgress,
+  Container,
+} from '@mui/material';
 
 const RegisterPage = () => {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
-    setError("");
+    setMessage('');
+    setError('');
 
     try {
-      await axios.post("http://localhost:5041/api/auth/register", {
+      await axios.post('http://localhost:5041/api/auth/register', {
         username,
         email,
         password,
       });
 
-      setMessage("Inscription réussie ! Vérifiez votre email pour le code de vérification.");
-      localStorage.setItem("email", email);
+      setMessage(
+        'Inscription réussie ! Vérifiez votre email pour le code de vérification.'
+      );
+      localStorage.setItem('email', email);
       setTimeout(() => {
-        router.push("/verify");
+        router.push('/verify');
       }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.message || "Échec de l'inscription.");
@@ -52,7 +62,7 @@ const RegisterPage = () => {
       <Box
         sx={{
           width: '50%',
-          background: `url('/votre-image.jpg')`,
+          background: `url('/images/login.avif')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: { xs: 'none', md: 'block' },
@@ -72,14 +82,17 @@ const RegisterPage = () => {
             justifyContent: 'center',
             alignItems: 'center',
             padding: 4,
-            color: 'white'
+            color: 'white',
           }}
         >
           <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
-            Rejoignez-nous
+            Join us !
           </Typography>
-          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
-            Créez votre compte pour accéder à toutes nos fonctionnalités
+          <Typography
+            variant="h6"
+            sx={{ textAlign: 'center', maxWidth: '80%' }}
+          >
+            Create your account to access all our features
           </Typography>
         </Box>
       </Box>
@@ -93,16 +106,27 @@ const RegisterPage = () => {
           justifyContent: 'center',
           backgroundColor: 'white',
           padding: 4,
-          overflow: 'auto'
+          overflow: 'auto',
         }}
       >
         <Container maxWidth="sm">
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
+          >
             Inscription
           </Typography>
 
-          {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {message && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {message}
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleRegister}>
             <TextField
@@ -162,15 +186,16 @@ const RegisterPage = () => {
               variant="contained"
               disabled={loading}
               sx={{
-                padding: "12px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                padding: '12px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
-                  background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                  background:
+                    'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                 },
-                textTransform: "none",
-                fontSize: "1.1rem",
+                textTransform: 'none',
+                fontSize: '1.1rem',
                 fontWeight: 600,
-                mb: 2
+                mb: 2,
               }}
             >
               {loading ? <CircularProgress size={24} /> : "S'inscrire"}
@@ -185,8 +210,8 @@ const RegisterPage = () => {
                   color: '#667eea',
                   '&:hover': {
                     backgroundColor: 'transparent',
-                    textDecoration: 'underline'
-                  }
+                    textDecoration: 'underline',
+                  },
                 }}
               >
                 Se connecter

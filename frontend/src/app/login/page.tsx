@@ -1,28 +1,38 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useAuth } from "../../utils/AuthContext";
-import { useRouter } from "next/navigation";
-import { TextField, Button, Typography, Box, Paper, Container } from "@mui/material";
-import axios from "axios";
+import React, { useState } from 'react';
+import { useAuth } from '../../utils/AuthContext';
+import { useRouter } from 'next/navigation';
+import {
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Paper,
+  Container,
+} from '@mui/material';
+import axios from 'axios';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:5041/api/auth/login", {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        'http://localhost:5041/api/auth/login',
+        {
+          email,
+          password,
+        }
+      );
       const { accessToken, refreshToken } = response.data;
       login(accessToken, refreshToken);
     } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred");
+      setError(err.response?.data?.message || 'An error occurred');
     }
   };
 
@@ -39,7 +49,7 @@ const LoginPage = () => {
       <Box
         sx={{
           width: '50%',
-          background: `url('/votre-image.jpg')`,
+          background: `url('/images/login.avif')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: { xs: 'none', md: 'block' },
@@ -59,14 +69,17 @@ const LoginPage = () => {
             justifyContent: 'center',
             alignItems: 'center',
             padding: 4,
-            color: 'white'
+            color: 'white',
           }}
         >
           <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
-            Bienvenue
+            Welcome
           </Typography>
-          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
-            Connectez-vous pour accéder à votre espace personnel
+          <Typography
+            variant="h6"
+            sx={{ textAlign: 'center', maxWidth: '80%' }}
+          >
+            Log in to access your personal space
           </Typography>
         </Box>
       </Box>
@@ -80,11 +93,14 @@ const LoginPage = () => {
           justifyContent: 'center',
           backgroundColor: 'white',
           padding: 4,
-          overflow: 'auto'
+          overflow: 'auto',
         }}
       >
         <Container maxWidth="sm">
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
+          >
             Connexion
           </Typography>
 
@@ -134,15 +150,16 @@ const LoginPage = () => {
               fullWidth
               variant="contained"
               sx={{
-                padding: "12px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                padding: '12px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
-                  background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                  background:
+                    'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                 },
-                textTransform: "none",
-                fontSize: "1.1rem",
+                textTransform: 'none',
+                fontSize: '1.1rem',
                 fontWeight: 600,
-                mb: 2
+                mb: 2,
               }}
             >
               Se connecter
@@ -157,8 +174,8 @@ const LoginPage = () => {
                   color: '#667eea',
                   '&:hover': {
                     backgroundColor: 'transparent',
-                    textDecoration: 'underline'
-                  }
+                    textDecoration: 'underline',
+                  },
                 }}
               >
                 S'inscrire
