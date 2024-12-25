@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Box, TextField, Button, Typography, Alert, CircularProgress } from "@mui/material";
+import { Box, TextField, Button, Typography, Alert, CircularProgress, Container } from "@mui/material";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
@@ -14,7 +14,8 @@ const RegisterPage = () => {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleRegister = async () => {
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setMessage("");
     setError("");
@@ -26,13 +27,13 @@ const RegisterPage = () => {
         password,
       });
 
-      setMessage("Registration successful! Check your email for the verification code.");
-      localStorage.setItem("email", email); // Stocker l'email pour la vérification
+      setMessage("Inscription réussie ! Vérifiez votre email pour le code de vérification.");
+      localStorage.setItem("email", email);
       setTimeout(() => {
-        router.push("/verify"); // Rediriger vers Verify
+        router.push("/verify");
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed.");
+      setError(err.response?.data?.message || "Échec de l'inscription.");
     } finally {
       setLoading(false);
     }
@@ -41,62 +42,158 @@ const RegisterPage = () => {
   return (
     <Box
       sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        backgroundColor: "#f5f5f5",
-        padding: 3,
+        display: 'flex',
+        minHeight: '100vh',
+        width: '100%',
+        overflow: 'hidden',
       }}
     >
+      {/* Partie gauche avec l'image */}
       <Box
         sx={{
-          backgroundColor: "white",
-          padding: 4,
-          borderRadius: 2,
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-          maxWidth: 400,
-          width: "100%",
+          width: '50%',
+          background: `url('/votre-image.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: { xs: 'none', md: 'block' },
+          position: 'relative',
         }}
       >
-        <Typography variant="h4" gutterBottom align="center">
-          Register
-        </Typography>
-        {message && <Alert severity="success" sx={{ marginBottom: 2 }}>{message}</Alert>}
-        {error && <Alert severity="error" sx={{ marginBottom: 2 }}>{error}</Alert>}
-        <TextField
-          fullWidth
-          label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          margin="normal"
-          type="password"
-        />
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          onClick={handleRegister}
-          disabled={loading}
-          sx={{ marginTop: 2 }}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 4,
+            color: 'white'
+          }}
         >
-          {loading ? <CircularProgress size={24} /> : "Register"}
-        </Button>
+          <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
+            Rejoignez-nous
+          </Typography>
+          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
+            Créez votre compte pour accéder à toutes nos fonctionnalités
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Partie droite avec le formulaire */}
+      <Box
+        sx={{
+          width: { xs: '100%', md: '50%' },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          backgroundColor: 'white',
+          padding: 4,
+          overflow: 'auto'
+        }}
+      >
+        <Container maxWidth="sm">
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}>
+            Inscription
+          </Typography>
+
+          {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+          <Box component="form" onSubmit={handleRegister}>
+            <TextField
+              label="Nom d'utilisateur"
+              fullWidth
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                  },
+                },
+              }}
+            />
+
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                  },
+                },
+              }}
+            />
+
+            <TextField
+              label="Mot de passe"
+              type="password"
+              fullWidth
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              helperText="8 caractères min. / 1 chiffre minimum"
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                  },
+                },
+              }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                padding: "12px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                '&:hover': {
+                  background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                },
+                textTransform: "none",
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                mb: 2
+              }}
+            >
+              {loading ? <CircularProgress size={24} /> : "S'inscrire"}
+            </Button>
+
+            <Typography align="center" sx={{ mt: 2 }}>
+              Déjà un compte ?{' '}
+              <Button
+                href="/login"
+                sx={{
+                  textTransform: 'none',
+                  color: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline'
+                  }
+                }}
+              >
+                Se connecter
+              </Button>
+            </Typography>
+          </Box>
+        </Container>
       </Box>
     </Box>
   );

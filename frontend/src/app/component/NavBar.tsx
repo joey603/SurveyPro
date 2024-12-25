@@ -6,9 +6,19 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Button from "@mui/material/Button";
 import { useAuth } from "../../utils/AuthContext";
+import { usePathname } from 'next/navigation';
 
 const NavBar = () => {
   const { isAuthenticated, logout } = useAuth();
+  const pathname = usePathname();
+  
+  // Liste des routes où la navbar ne doit pas apparaître
+  const noNavbarRoutes = ['/login', '/register'];
+  
+  // Si la route actuelle est dans la liste, on ne rend pas la navbar
+  if (noNavbarRoutes.includes(pathname)) {
+    return null;
+  }
 
   return (
     <AppBar position="static" color="primary">
