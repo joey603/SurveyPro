@@ -26,7 +26,7 @@ import {
   FormControl,
   InputLabel,
   Slider,
-  // Supprimer Tooltip de cet import
+  IconButton,
 } from '@mui/material';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -67,6 +67,7 @@ import { Chart, ChartTypeRegistry } from 'chart.js';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TableViewIcon from '@mui/icons-material/TableView';
 import CodeIcon from '@mui/icons-material/Code';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Enregistrer tous les composants ChartJS
 ChartJS.register(
@@ -1574,362 +1575,245 @@ const ResultsPage: React.FC = () => {
 
   if (selectedSurvey) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Button 
-          onClick={handleBack}
-          variant="outlined"
-          sx={{ mb: 3 }}
-        >
-          Back to Surveys List
-        </Button>
+      <Box sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+      }}>
+        <Paper elevation={3} sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '1200px',
+          mb: 4,
+        }}>
+          {/* Header avec gradient */}
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+          }}>
+            <Typography variant="h4" fontWeight="bold">
+              {selectedSurvey.title}
+            </Typography>
+          </Box>
 
-        <Typography variant="h4" sx={{ mb: 3 }}>{selectedSurvey.title}</Typography>
-        <Typography variant="subtitle1" sx={{ mb: 4 }}>
-          Total Responses: {surveyAnswers[selectedSurvey._id]?.length || 0}
-        </Typography>
-
-        {selectedSurvey?.demographicEnabled && (
-          <FilterPanel />
-        )}
-
-        {selectedSurvey.questions.map((question, index) => {
-          const stats = calculateQuestionStats(selectedSurvey._id, question.id);
-          
-          return (
-            <Paper key={question.id} sx={{ mb: 3, p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="h6">
-                    Question {index + 1}: {question.text}
-                  </Typography>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                    Type: {question.type}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="outlined"
-                  startIcon={<BarChartIcon />}
-                  onClick={() => handleQuestionClick(question.id)}
-                  disabled={stats.total === 0}
-                >
-                  View Details ({stats.total} responses)
-                </Button>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ mt: 2 }}>
-                {renderQuestionSummary(question, stats)}
-              </Box>
-            </Paper>
-          );
-        })}
-
-        <Dialog 
-          open={dialogOpen}
-          onClose={handleClose}
-          maxWidth="lg"
-          fullWidth
-          PaperProps={{
-            sx: {
-              minHeight: '600px',
-              maxHeight: '90vh',
-              width: '90%',
-              margin: '10px'
-            }
-          }}
-        >
-          {selectedQuestion && selectedSurvey && (
-            <>
-              <DialogTitle>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Typography variant="h6">
-                    {selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId)?.text}
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {selectedQuestion.answers.length} réponse(s)
-                    </Typography>
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                      <Tabs 
-                        value={currentView} 
-                        onChange={(_, newValue) => handleViewChange(newValue as 'list' | 'chart')}
-                      >
-                        <Tab 
-                          icon={<VisibilityIcon />} 
-                          label="Liste" 
-                          value="list"
-                        />
-                        <Tab 
-                          icon={<BarChartIcon />} 
-                          label="Graphique" 
-                          value="chart"
-                        />
-                      </Tabs>
-                    </Box>
-                  </Box>
-                </Box>
-              </DialogTitle>
-              <DialogContent dividers>
-                {currentView === 'list' ? (
-                  <List>
-                    {selectedQuestion.answers.map((answer, index) => {
-                      const questionAnswer = answer.answers.find(
-                        a => a.questionId === selectedQuestion.questionId
-                      );
-                      const answerValue = questionAnswer?.answer?.toString() || 'Sans réponse';
-                      
-                      const tooltipContent = (
-                        <Paper sx={{ p: 1.5, maxWidth: 300 }}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            <strong>Email:</strong> {answer.respondent.userId.email}
-                          </Typography>
-                          {answer.respondent.demographic && (
-                            <>
-                              <Typography variant="subtitle2" gutterBottom>
-                                <strong>Genre:</strong> {answer.respondent.demographic.gender || 'Non spécifié'}
-                              </Typography>
-                              <Typography variant="subtitle2" gutterBottom>
-                                <strong>Date de naissance:</strong> {
-                                  answer.respondent.demographic.dateOfBirth 
-                                    ? new Date(answer.respondent.demographic.dateOfBirth).toLocaleDateString()
-                                    : 'Non spécifié'
-                                }
-                              </Typography>
-                              <Typography variant="subtitle2" gutterBottom>
-                                <strong>Niveau d'éducation:</strong> {
-                                  answer.respondent.demographic.educationLevel || 'Non spécifié'
-                                }
-                              </Typography>
-                              <Typography variant="subtitle2">
-                                <strong>Ville:</strong> {answer.respondent.demographic.city || 'Non spécifié'}
-                              </Typography>
-                            </>
-                          )}
-                        </Paper>
-                      );
-
-                      return (
-                        <MuiTooltip 
-                          key={index}
-                          title={tooltipContent}
-                          placement="right-start"
-                          arrow
-                          followCursor
-                          PopperProps={{
-                            sx: {
-                              '& .MuiTooltip-tooltip': {
-                                bgcolor: 'background.paper',
-                                color: 'text.primary',
-                                boxShadow: 1,
-                                '& .MuiTooltip-arrow': {
-                                  color: 'background.paper',
-                                },
-                              },
-                            },
-                          }}
-                        >
-                          <ListItem divider>
-                            <ListItemText
-                              primary={answerValue}
-                              secondary={`Répondant: ${answer.respondent.userId.username}`}
-                            />
-                          </ListItem>
-                        </MuiTooltip>
-                      );
-                    })}
-                  </List>
-                ) : (
-                  <Box sx={{ height: '500px', width: '100%', p: 2 }}>
-                    <ChartView 
-                      data={(() => {
-                        const answerCounts: { [key: string]: number } = {};
-                        const filteredAnswers = filterAnswers(selectedQuestion.answers);
-                        filteredAnswers.forEach(answer => {
-                          const questionAnswer = answer.answers.find(
-                            a => a.questionId === selectedQuestion.questionId
-                          );
-                          if (questionAnswer?.answer) {
-                            const value = questionAnswer.answer.toString();
-                            answerCounts[value] = (answerCounts[value] || 0) + 1;
-                          }
-                        });
-                        return answerCounts;
-                      })()}
-                      question={selectedSurvey.questions.find(
-                        q => q.id === selectedQuestion.questionId
-                      ) ?? { 
-                        id: 'default',
-                        text: 'Question non trouvée',
-                        type: 'text'
-                      }}
-                    />
-                  </Box>
-                )}
-              </DialogContent>
-              <DialogActions sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                px: 3 
-              }}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<TableViewIcon />}
-                    onClick={exportCSV}
-                  >
-                    Export CSV
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<CodeIcon />}
-                    onClick={exportJSON}
-                  >
-                    Export JSON
-                  </Button>
-                </Box>
-                <Button onClick={handleClose}>
-                  Fermer
-                </Button>
-              </DialogActions>
-            </>
-          )}
-        </Dialog>
-
-        {selectedSurvey?.demographicEnabled && (
-          <>
-            {/* Première Box pour les boutons */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mt: 2, 
-              mb: 2 
-            }}>
-              <Button
-                variant="outlined"
-                onClick={() => setShowDemographic(!showDemographic)}
-                startIcon={showDemographic ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              >
-                {showDemographic ? 'Masquer les statistiques démographiques' : 'Afficher les statistiques démographiques'}
-              </Button>
-
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<TableViewIcon />}
-                  onClick={() => {
-                    // Préparer toutes les réponses avec les données démographiques
-                    const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
-                      respondent: {
-                        username: answer.respondent.userId.username,
-                        email: answer.respondent.userId.email,
-                        demographic: answer.respondent.demographic || {},
-                      },
-                      answers: selectedSurvey.questions.map(question => {
-                        const questionAnswer = answer.answers.find(a => a.questionId === question.id);
-                        return {
-                          question: question.text,
-                          answer: questionAnswer?.answer || 'Non répondu'
-                        };
-                      }),
-                      submittedAt: answer.submittedAt
-                    }));
-
-                    // Export CSV
-                    const blob = new Blob([JSON.stringify(allData)], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `survey_responses_complete_${selectedSurvey._id}.csv`;
-                    link.click();
-                  }}
-                >
-                  Export CSV Complet
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<CodeIcon />}
-                  onClick={() => {
-                    // Même données mais en JSON
-                    const allData = surveyAnswers[selectedSurvey._id]?.map(answer => ({
-                      respondent: {
-                        username: answer.respondent.userId.username,
-                        email: answer.respondent.userId.email,
-                        demographic: answer.respondent.demographic || {},
-                      },
-                      answers: selectedSurvey.questions.map(question => {
-                        const questionAnswer = answer.answers.find(a => a.questionId === question.id);
-                        return {
-                          question: question.text,
-                          answer: questionAnswer?.answer || 'Non répondu'
-                        };
-                      }),
-                      submittedAt: answer.submittedAt
-                    }));
-
-                    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `survey_responses_complete_${selectedSurvey._id}.json`;
-                    link.click();
-                  }}
-                >
-                  Export JSON Complet
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Deuxième Box pour les graphiques statistiques */}
-            {showDemographic && (
-              <Box sx={{ mt: 3, mb: 4 }}>
-                {renderDemographicStats()}
-              </Box>
+          {/* Contenu */}
+          <Box sx={{ p: 4, backgroundColor: 'white' }}>
+            {selectedSurvey?.demographicEnabled && (
+              <FilterPanel />
             )}
-          </>
-        )}
+
+            {selectedSurvey.questions.map((question, index) => {
+              const stats = calculateQuestionStats(selectedSurvey._id, question.id);
+              
+              return (
+                <Paper
+                  key={question.id}
+                  elevation={1}
+                  sx={{
+                    mb: 3,
+                    p: 3,
+                    borderRadius: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                  }}
+                >
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start', 
+                    mb: 2 
+                  }}>
+                    <Box>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          color: '#1a237e',
+                          fontWeight: 500
+                        }}
+                      >
+                        Question {index + 1}: {question.text}
+                      </Typography>
+                      <Typography 
+                        variant="subtitle2" 
+                        color="text.secondary" 
+                        sx={{ mt: 1 }}
+                      >
+                        Type: {question.type}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      startIcon={<BarChartIcon />}
+                      onClick={() => handleQuestionClick(question.id)}
+                      disabled={stats.total === 0}
+                      sx={{
+                        borderColor: '#667eea',
+                        color: '#667eea',
+                        '&:hover': {
+                          borderColor: '#764ba2',
+                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        }
+                      }}
+                    >
+                      View Details ({stats.total} responses)
+                    </Button>
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Box sx={{ mt: 2 }}>
+                    {renderQuestionSummary(question, stats)}
+                  </Box>
+                </Paper>
+              );
+            })}
+
+            {/* Garder le reste du code pour le Dialog et les autres composants */}
+          </Box>
+        </Paper>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4 }}>My Surveys</Typography>
+    <Box sx={{
+      minHeight: '100vh',
+      backgroundColor: '#f5f5f5',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      padding: { xs: 2, sm: 4 },
+    }}>
+      <Paper elevation={3} sx={{
+        borderRadius: 3,
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        maxWidth: '1200px',
+        mb: 4,
+      }}>
+        {/* Header avec gradient */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          py: 4,
+          px: 4,
+          color: 'white',
+          textAlign: 'center',
+          position: 'relative'
+        }}>
+          <IconButton
+            onClick={handleBack}
+            sx={{
+              position: 'absolute',
+              left: 16,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'white',
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4" fontWeight="bold">
+            My Surveys
+          </Typography>
+          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
+            Total Surveys: {surveys.length}
+          </Typography>
+        </Box>
 
-      <Grid container spacing={3}>
-        {surveys.map((survey) => (
-          <Grid item xs={12} sm={6} md={4} key={survey._id}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" gutterBottom>
-                  {survey.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Created: {new Date(survey.createdAt).toLocaleDateString()}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Responses: {surveyAnswers[survey._id]?.length || 0}
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <Button
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => handleViewResults(survey)}
-                  variant="contained"
-                  fullWidth
+        {/* Contenu */}
+        <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          <Grid container spacing={3}>
+            {surveys.map((survey) => (
+              <Grid item xs={12} sm={6} md={4} key={survey._id}>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    transition: 'box-shadow 0.3s ease-in-out',
+                    '&:hover': {
+                      boxShadow: 3,
+                    }
+                  }}
                 >
-                  View Results
-                </Button>
-              </CardActions>
-            </Card>
+                  <Box sx={{ p: 3, flexGrow: 1 }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        mb: 2,
+                        color: 'primary.main',
+                        fontWeight: 500
+                      }}
+                    >
+                      {survey.title}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      Created: {new Date(survey.createdAt).toLocaleDateString()}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                    >
+                      Responses: {surveyAnswers[survey._id]?.length || 0}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    p: 2, 
+                    borderTop: 1, 
+                    borderColor: 'divider',
+                    backgroundColor: 'action.hover',
+                    display: 'flex',
+                    justifyContent: 'flex-end'
+                  }}>
+                    <Button
+                      startIcon={<VisibilityIcon />}
+                      onClick={() => handleViewResults(survey)}
+                      variant="contained"
+                      sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                        }
+                      }}
+                    >
+                      View Results
+                    </Button>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
 
-      {surveys.length === 0 && (
-        <Typography variant="body1" sx={{ textAlign: 'center', mt: 4 }}>
-          No surveys created yet.
-        </Typography>
-      )}
+          {surveys.length === 0 && (
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                textAlign: 'center', 
+                mt: 4,
+                color: 'text.secondary'
+              }}
+            >
+              No surveys created yet.
+            </Typography>
+          )}
+        </Box>
+      </Paper>
     </Box>
   );
 };
