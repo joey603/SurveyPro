@@ -16,6 +16,7 @@ import PollIcon from '@mui/icons-material/Poll';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import { useAuth } from '../utils/AuthContext';
+import Avatar from '@mui/material/Avatar';
 
 const Home = () => {
   const router = useRouter();
@@ -27,18 +28,36 @@ const Home = () => {
       title: 'Create Surveys',
       description: 'Design professional surveys with our intuitive survey builder',
       delay: 500,
+      link: '/survey-creation'
     },
     {
       icon: <AnalyticsIcon sx={{ fontSize: 40, color: '#667eea' }} />,
       title: 'Gather Insights',
       description: 'Collect and analyze responses in real-time',
       delay: 1000,
+      link: '/survey-answer'
     },
     {
       icon: <TimelineIcon sx={{ fontSize: 40, color: '#667eea' }} />,
       title: 'Track Progress',
       description: 'Monitor survey performance with detailed analytics',
       delay: 1500,
+      link: '/results'
+    },
+  ];
+
+  const leaders = [
+    {
+      name: 'Rudy Haddad',
+      role: 'Co-Founder & CEO',
+      description: 'Visionary leader with expertise in survey solutions and data analytics',
+      delay: 500,
+    },
+    {
+      name: 'Yoeli Barthel',
+      role: 'Co-Founder & CTO',
+      description: 'Technical innovator specializing in software architecture and user experience',
+      delay: 1000,
     },
   ];
 
@@ -128,14 +147,17 @@ const Home = () => {
               >
                 <Paper
                   elevation={0}
+                  onClick={() => isAuthenticated ? router.push(feature.link) : router.push('/login')}
                   sx={{
                     p: 4,
                     height: '100%',
                     backgroundColor: 'white',
                     borderRadius: 2,
-                    transition: 'transform 0.3s ease-in-out',
+                    transition: 'all 0.3s ease-in-out',
+                    cursor: 'pointer',
                     '&:hover': {
                       transform: 'translateY(-8px)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                     },
                   }}
                 >
@@ -164,6 +186,101 @@ const Home = () => {
           ))}
         </Grid>
       </Container>
+
+      {/* Leadership Section */}
+      <Box
+        sx={{
+          py: 8,
+          background: 'linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%)',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Fade in timeout={1000}>
+            <Typography
+              variant="h3"
+              sx={{
+                textAlign: 'center',
+                mb: 6,
+                color: '#1a237e',
+                fontWeight: 600,
+              }}
+            >
+              Our Leadership
+            </Typography>
+          </Fade>
+          <Grid container spacing={4} justifyContent="center">
+            {leaders.map((leader, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <Slide
+                  direction="up"
+                  in
+                  timeout={leader.delay}
+                  style={{ transitionDelay: `${leader.delay}ms` }}
+                >
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 4,
+                      height: '100%',
+                      backgroundColor: 'white',
+                      borderRadius: 2,
+                      transition: 'all 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                      },
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        mb: 2,
+                        bgcolor: '#667eea',
+                        fontSize: '2.5rem',
+                      }}
+                    >
+                      {leader.name.charAt(0)}
+                    </Avatar>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        mb: 1,
+                        color: '#1a237e',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {leader.name}
+                    </Typography>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        mb: 2,
+                        color: '#667eea',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {leader.role}
+                    </Typography>
+                    <Typography
+                      color="text.secondary"
+                      sx={{
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {leader.description}
+                    </Typography>
+                  </Paper>
+                </Slide>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
 
       {/* Call to Action Section */}
       <Box
