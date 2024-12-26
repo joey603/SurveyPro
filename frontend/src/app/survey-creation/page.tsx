@@ -22,6 +22,7 @@ import {
   Rating,
   Paper,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -42,7 +43,8 @@ type Question = {
   text: string;
   options?: string[];
   media?: string;
-  selectedDate?: Date | null; // Ajout de cette propriété
+  mediaUrl?: string;
+  selectedDate?: Date | null;
 };
 
 type FormData = {
@@ -53,7 +55,12 @@ type FormData = {
 };
 
 const isValidMediaURL = (url: string): boolean => {
-  return /\.(mp4|mov|jpg|jpeg|png)$/i.test(url);
+  try {
+    new URL(url); // Vérifie simplement si c'est une URL valide
+    return true;  // Accepte toutes les URLs valides
+  } catch {
+    return false; // Retourne false uniquement si ce n'est pas une URL valide
+  }
 };
 
 const questionTypes = [
@@ -108,6 +115,8 @@ const SurveyCreationPage: React.FC = () => {
 
   const [cities, setCities] = useState<string[]>([]); // Liste des villes
   const [selectedCity, setSelectedCity] = useState(''); // Ville sélectionnée
+
+  const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
 
   const fetchCities = async () => {
     try {
@@ -235,10 +244,11 @@ const SurveyCreationPage: React.FC = () => {
     file: File,
     questionId: string
   ): Promise<void> => {
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+      setIsUploading((prev) => ({ ...prev, [questionId]: true }));
+      const formData = new FormData();
+      formData.append('file', file);
+
       const response = await fetch(
         'http://localhost:5041/api/surveys/upload-media',
         {
@@ -248,18 +258,16 @@ const SurveyCreationPage: React.FC = () => {
       );
 
       const result = await response.json();
-      console.log('Upload response:', result);
 
       if (response.ok && result.url) {
-        console.log(
-          `Updating media URL for question ${questionId} with URL: ${result.url}`
-        );
         fields.forEach((field, index) => {
           if (field.id === questionId) {
-            update(index, { ...field, media: result.url });
+            update(index, { 
+              ...field, 
+              media: result.url,
+            });
           }
         });
-        console.log('Questions after update:', getValues('questions'));
       } else {
         console.error('Failed to upload media:', result);
         alert('Failed to upload media. Please try again.');
@@ -267,6 +275,8 @@ const SurveyCreationPage: React.FC = () => {
     } catch (error) {
       console.error('Error uploading media:', error);
       alert('An error occurred while uploading the media.');
+    } finally {
+      setIsUploading((prev) => ({ ...prev, [questionId]: false }));
     }
   };
 
@@ -601,7 +611,7 @@ const SurveyCreationPage: React.FC = () => {
 
   const handleAddOption = (index: number) => {
     const currentQuestion = fields[index];
-    const currentOptions = currentQuestion.options || [];
+    const currentOptions = currentQuestion.options ?? [];
 
     update(index, {
       ...currentQuestion,
@@ -779,10 +789,10 @@ const SurveyCreationPage: React.FC = () => {
                         />
                         <IconButton
                           onClick={() => {
-                            const newOptions = field.options.filter((_, i) => i !== optionIndex);
+                            const newOptions = field.options ?? [];
                             update(index, {
                               ...field,
-                              options: newOptions,
+                              options: newOptions.filter((_, i) => i !== optionIndex),
                             });
                           }}
                           color="error"
@@ -806,24 +816,111 @@ const SurveyCreationPage: React.FC = () => {
                 {/* Media Upload Section */}
                 {field.type !== 'color-picker' && (
                   <Box sx={{ mt: 2 }}>
-                    <Button
-                      component="label"
-                      variant="outlined"
-                      startIcon={<PhotoCameraIcon />}
-                      sx={{ mr: 2 }}
-                    >
-                      Upload Media
-                      <input
-                        type="file"
-                        hidden
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <Button
+                        component="label"
+                        variant="outlined"
+                        startIcon={<PhotoCameraIcon />}
+                        sx={{
+                          color: '#667eea',
+                          borderColor: '#667eea',
+                          '&:hover': {
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          },
+                        }}
+                      >
+                        Upload Media
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*,video/*"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              const file = e.target.files[0];
+                              handleFileUpload(file, field.id);
+                            }
+                          }}
+                        />
+                      </Button>
+                      <Typography variant="body2" color="text.secondary">
+                        or
+                      </Typography>
+                      <TextField
+                        value={field.mediaUrl || ''}
                         onChange={(e) => {
-                          if (e.target.files?.[0]) {
-                            const file = e.target.files[0];
-                            handleFileUpload(file, field.id);
-                          }
+                          const url = e.target.value;
+                          update(index, { 
+                            ...field, 
+                            mediaUrl: url,
+                            media: url
+                          });
+                        }}
+                        placeholder="Enter media URL"
+                        size="small"
+                        fullWidth
+                        sx={{
+                          maxWidth: '400px',
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover fieldset': {
+                              borderColor: '#667eea',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#667eea',
+                            },
+                          },
+                        }}
+                        InputProps={{
+                          endAdornment: field.mediaUrl && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                update(index, { 
+                                  ...field, 
+                                  mediaUrl: '',
+                                  media: ''
+                                });
+                              }}
+                              sx={{ color: '#ef4444' }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          ),
                         }}
                       />
-                    </Button>
+                    </Box>
+                    {field.media && (
+                      <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                        {isUploading[field.id] ? (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              height: '100px',
+                              width: '100%',
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                              borderRadius: '8px',
+                            }}
+                          >
+                            <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                          </Box>
+                        ) : (
+                          <img
+                            src={field.media}
+                            alt="Question media"
+                            style={{
+                              maxWidth: '100%',
+                              height: 'auto',
+                              borderRadius: '8px',
+                            }}
+                            onError={(e) => {
+                              console.error('Error loading image:', e);
+                            }}
+                          />
+                        )}
+                      </Box>
+                    )}
                   </Box>
                 )}
 
