@@ -52,12 +52,16 @@ const Home = () => {
       role: 'Co-Founder & CEO',
       description: 'Visionary leader with expertise in survey solutions and data analytics',
       delay: 500,
+      image: '/images/rudy.jpeg',
+      linkedin: 'https://www.linkedin.com/in/rudy-haddad/'
     },
     {
       name: 'Yoeli Barthel',
       role: 'Co-Founder & CTO',
       description: 'Technical innovator specializing in software architecture and user experience',
       delay: 1000,
+      image: '/images/yoeli.jpeg',
+      linkedin: 'https://www.linkedin.com/in/yoeli-barthel/'
     },
   ];
 
@@ -219,12 +223,14 @@ const Home = () => {
                 >
                   <Paper
                     elevation={0}
+                    onClick={() => window.open(leader.linkedin, '_blank')}
                     sx={{
                       p: 4,
                       height: '100%',
                       backgroundColor: 'white',
                       borderRadius: 2,
                       transition: 'all 0.3s ease-in-out',
+                      cursor: 'pointer',
                       '&:hover': {
                         transform: 'translateY(-8px)',
                         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -236,12 +242,13 @@ const Home = () => {
                     }}
                   >
                     <Avatar
+                      src={leader.image}
                       sx={{
                         width: 120,
                         height: 120,
                         mb: 2,
-                        bgcolor: '#667eea',
-                        fontSize: '2.5rem',
+                        border: '4px solid #667eea',
+                        boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
                       }}
                     >
                       {leader.name.charAt(0)}
