@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
     setIsAuthenticated(true);
-    router.push("/settings"); // Redirect after login
+    router.push("/"); // Redirect after login
   };
 
   const logout = () => {
