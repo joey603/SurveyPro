@@ -24,6 +24,7 @@ import {
   Stack,
   CircularProgress,
   Rating,
+  Paper,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -195,8 +196,8 @@ const SurveyAnswerPage: React.FC = () => {
   }, [selectedSurvey]);
 
   const filteredSurveys = surveys.filter(survey => {
-    const matchesSearch = survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         survey.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                         (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
     if (dateRange.start && dateRange.end) {
       const surveyDate = new Date(survey.createdAt);
@@ -500,189 +501,299 @@ const SurveyAnswerPage: React.FC = () => {
 
   if (!selectedSurvey) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Typography variant="h4" sx={{ mb: 3 }}>Available Surveys</Typography>
-        
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search surveys by title or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={clearFilters}
-                    edge="end"
-                  >
-                    <ClearIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+      <Box sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+      }}>
+        <Paper elevation={3} sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '800px',
+          mb: 4,
+        }}>
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+          }}>
+            <Typography variant="h4" fontWeight="bold">
+              Available Surveys
+            </Typography>
+          </Box>
 
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-            <Chip
-              icon={<FilterListIcon />}
-              label="Date Filter"
-              onClick={() => setShowDateFilter(!showDateFilter)}
-              color={showDateFilter ? "primary" : "default"}
-              variant={showDateFilter ? "filled" : "outlined"}
-            />
-            {(dateRange.start || dateRange.end) && (
-              <Typography variant="body2" color="text.secondary">
-                Active date filter
-              </Typography>
-            )}
-          </Stack>
+          <Box sx={{ p: 4, backgroundColor: 'white' }}>
+            <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search surveys by title or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={clearFilters}>
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-          {showDateFilter && (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                <DatePicker
-                  label="Start Date"
-                  value={dateRange.start}
-                  onChange={(newValue) => setDateRange(prev => ({ ...prev, start: newValue }))}
-                  renderInput={(params) => (
-                    <TextField {...params} sx={{ width: '200px' }} />
-                  )}
-                />
-                <DatePicker
-                  label="End Date"
-                  value={dateRange.end}
-                  onChange={(newValue) => setDateRange(prev => ({ ...prev, end: newValue }))}
-                  renderInput={(params) => (
-                    <TextField {...params} sx={{ width: '200px' }} />
-                  )}
-                  minDate={dateRange.start || undefined}
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Chip
+                  icon={<FilterListIcon />}
+                  label="Date Filter"
+                  onClick={() => setShowDateFilter(!showDateFilter)}
+                  color={showDateFilter ? "primary" : "default"}
+                  variant={showDateFilter ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
                 />
               </Stack>
-            </LocalizationProvider>
-          )}
-        </Box>
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
-            {error}
-          </Typography>
-        ) : (
-          <>
-            <List>
-              {filteredSurveys.map((survey) => (
-                <ListItem
-                  key={survey._id}
-                  disablePadding
-                  sx={{
-                    mb: 2,
-                    backgroundColor: 'white',
-                    borderRadius: 1,
-                    boxShadow: 1,
-                  }}
-                >
-                  <ListItemButton onClick={() => setSelectedSurvey(survey)}>
-                    <Box sx={{ flex: 1 }}>
-                      <ListItemText
-                        primary={survey.title}
-                        secondary={
-                          <React.Fragment>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {survey.description}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="caption" color="text.secondary">
-                              Created on {new Date(survey.createdAt).toLocaleDateString('en-US')}
-                            </Typography>
-                          </React.Fragment>
-                        }
-                      />
-                    </Box>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      size="small"
-                      sx={{ ml: 2 }}
-                    >
-                      Answer
-                    </Button>
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
+              {showDateFilter && (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                    <DatePicker
+                      label="Start Date"
+                      value={dateRange.start}
+                      onChange={(newValue) => setDateRange(prev => ({ ...prev, start: newValue }))}
+                      renderInput={(params) => <TextField {...params} size="small" />}
+                    />
+                    <DatePicker
+                      label="End Date"
+                      value={dateRange.end}
+                      onChange={(newValue) => setDateRange(prev => ({ ...prev, end: newValue }))}
+                      renderInput={(params) => <TextField {...params} size="small" />}
+                      minDate={dateRange.start || undefined}
+                    />
+                  </Stack>
+                </LocalizationProvider>
+              )}
+            </Box>
 
-            {filteredSurveys.length === 0 && (
-              <Typography
-                variant="body1"
-                sx={{
-                  textAlign: 'center',
-                  mt: 4,
-                  color: 'text.secondary',
-                }}
-              >
-                No surveys available
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                <CircularProgress sx={{ color: '#667eea' }} />
+              </Box>
+            ) : error ? (
+              <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+                {error}
               </Typography>
+            ) : (
+              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+                {filteredSurveys.map((survey) => (
+                  <Paper
+                    key={survey._id}
+                    elevation={1}
+                    sx={{
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      transition: 'box-shadow 0.3s ease-in-out',
+                      '&:hover': {
+                        boxShadow: 3,
+                      }
+                    }}
+                  >
+                    <Box sx={{ p: 3 }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          mb: 2,
+                          color: 'primary.main',
+                          fontWeight: 500
+                        }}
+                      >
+                        {survey.title}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ mb: 2 }}
+                      >
+                        {survey.description}
+                      </Typography>
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{ display: 'block', mb: 2 }}
+                      >
+                        Created on {new Date(survey.createdAt).toLocaleDateString('en-US')}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      p: 2, 
+                      borderTop: 1, 
+                      borderColor: 'divider',
+                      backgroundColor: 'action.hover',
+                      display: 'flex',
+                      justifyContent: 'flex-end'
+                    }}>
+                      <Button
+                        onClick={() => setSelectedSurvey(survey)}
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        Answer Survey
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
             )}
-          </>
-        )}
+          </Box>
+        </Paper>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Button 
-        onClick={() => setSelectedSurvey(null)} 
-        sx={{ mb: 2 }}
-        variant="outlined"
-        startIcon={<ArrowBackIcon />}
-      >
-        Back to list
-      </Button>
-      
-      <Typography variant="h4" sx={{ mb: 3 }}>{selectedSurvey.title}</Typography>
-      <Typography variant="subtitle1" sx={{ mb: 4 }}>{selectedSurvey.description}</Typography>
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-        {selectedSurvey.demographicEnabled && renderDemographicFields()}
-
-        {selectedSurvey.questions.map((question: Question) => (
-          <Box key={question.id} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>{question.text}</Typography>
-            
-            {question.media && renderQuestionMedia(question.media)}
-
-            {renderQuestionInput(question)}
-          </Box>
-        ))}
-
-        {submitError && (
-          <Typography color="error" sx={{ mt: 2, mb: 2 }}>
-            {submitError}
+    <Box sx={{
+      minHeight: '100vh',
+      backgroundColor: '#f5f5f5',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      padding: { xs: 2, sm: 4 },
+    }}>
+      <Paper elevation={3} sx={{
+        borderRadius: 3,
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        maxWidth: '800px',
+        mb: 4,
+      }}>
+        <Box sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          py: 4,
+          px: 4,
+          color: 'white',
+          textAlign: 'center',
+          position: 'relative'
+        }}>
+          <IconButton
+            onClick={() => setSelectedSurvey(null)}
+            sx={{
+              position: 'absolute',
+              left: 16,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'white',
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4" fontWeight="bold">
+            {selectedSurvey.title}
           </Typography>
-        )}
+          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
+            {selectedSurvey.description}
+          </Typography>
+        </Box>
 
-        <Button 
-          type="submit" 
-          variant="contained" 
-          color="primary"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </Button>
-      </form>
+        <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {selectedSurvey.demographicEnabled && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                  Demographic Information
+                </Typography>
+                {renderDemographicFields()}
+              </Box>
+            )}
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Survey Questions
+              </Typography>
+              {selectedSurvey.questions.map((question: Question) => (
+                <Paper
+                  key={question.id}
+                  elevation={1}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    {question.text}
+                  </Typography>
+                  
+                  {question.media && renderQuestionMedia(question.media)}
+
+                  <Box sx={{ mt: 2 }}>
+                    {renderQuestionInput(question)}
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+
+            {submitError && (
+              <Typography color="error" sx={{ mt: 2, mb: 2 }}>
+                {submitError}
+              </Typography>
+            )}
+
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end',
+              mt: 4,
+              pt: 4,
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+            }}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isSubmitting}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                  minWidth: 200
+                }}
+              >
+                {isSubmitting ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} sx={{ color: 'white' }} />
+                    <span>Submitting...</span>
+                  </Box>
+                ) : (
+                  'Submit Survey'
+                )}
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Paper>
     </Box>
   );
 };
