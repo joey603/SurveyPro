@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -22,27 +22,67 @@ const Home = () => {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
 
+  // États pour chaque section
+  const [isHeroVisible, setIsHeroVisible] = useState(false);
+  const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
+  const [isLeadershipVisible, setIsLeadershipVisible] = useState(false);
+  const [isCtaVisible, setIsCtaVisible] = useState(false);
+
+  // Refs pour chaque section
+  const heroRef = useRef(null);
+  const featuresRef = useRef(null);
+  const leadershipRef = useRef(null);
+  const ctaRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const createObserver = (setVisibility: (visible: boolean) => void) => {
+      return new IntersectionObserver(
+        ([entry]) => {
+          setVisibility(entry.isIntersecting);
+        },
+        { threshold: 0.1 }
+      );
+    };
+
+    const observers = [
+      { ref: heroRef, setVisibility: setIsHeroVisible },
+      { ref: featuresRef, setVisibility: setIsFeaturesVisible },
+      { ref: leadershipRef, setVisibility: setIsLeadershipVisible },
+      { ref: ctaRef, setVisibility: setIsCtaVisible },
+    ].map(({ ref, setVisibility }) => {
+      const observer = createObserver(setVisibility);
+      if (ref.current) {
+        observer.observe(ref.current);
+      }
+      return observer;
+    });
+
+    return () => observers.forEach((observer) => observer.disconnect());
+  }, []);
+
   const features = [
     {
       icon: <PollIcon sx={{ fontSize: 40, color: '#667eea' }} />,
       title: 'Create Surveys',
-      description: 'Design professional surveys with our intuitive survey builder',
+      description:
+        'Design professional surveys with our intuitive survey builder',
       delay: 500,
-      link: '/survey-creation'
+      link: '/survey-creation',
     },
     {
       icon: <AnalyticsIcon sx={{ fontSize: 40, color: '#667eea' }} />,
       title: 'Gather Insights',
       description: 'Collect and analyze responses in real-time',
       delay: 1000,
-      link: '/survey-answer'
+      link: '/survey-answer',
     },
     {
       icon: <TimelineIcon sx={{ fontSize: 40, color: '#667eea' }} />,
       title: 'Track Progress',
       description: 'Monitor survey performance with detailed analytics',
       delay: 1500,
-      link: '/results'
+      link: '/results',
     },
   ];
 
@@ -50,25 +90,113 @@ const Home = () => {
     {
       name: 'Rudy Haddad',
       role: 'Co-Founder & CEO',
-      description: 'Visionary leader with expertise in survey solutions and data analytics',
+      description:
+        'Visionary leader with expertise in survey solutions and data analytics',
       delay: 500,
       image: '/images/rudy.jpeg',
-      linkedin: 'https://www.linkedin.com/in/rudy-haddad/'
+      linkedin: 'https://www.linkedin.com/in/rudy-haddad/',
     },
     {
       name: 'Yoeli Barthel',
       role: 'Co-Founder & CTO',
-      description: 'Technical innovator specializing in software architecture and user experience',
-      delay: 1000,
+      description:
+        'Technical innovator specializing in software architecture and user experience',
+      delay: 800,
       image: '/images/yoeli.jpeg',
-      linkedin: 'https://www.linkedin.com/in/yoeli-barthel/'
+      linkedin: 'https://www.linkedin.com/in/yoeli-barthel/',
     },
   ];
 
+  const renderLeaderCard = (leader: any, index: number) => {
+    const content = (
+      <Paper
+        elevation={0}
+        onClick={() => window.open(leader.linkedin, '_blank')}
+        sx={{
+          p: 4,
+          height: '100%',
+          backgroundColor: 'white',
+          borderRadius: 2,
+          transition: 'all 0.3s ease-in-out',
+          cursor: 'pointer',
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          },
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+        }}
+      >
+        <Avatar
+          src={leader.image}
+          sx={{
+            width: 120,
+            height: 120,
+            mb: 2,
+            border: '4px solid #667eea',
+            boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
+          }}
+        >
+          {leader.name.charAt(0)}
+        </Avatar>
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 1,
+            color: '#1a237e',
+            fontWeight: 600,
+          }}
+        >
+          {leader.name}
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            mb: 2,
+            color: '#667eea',
+            fontWeight: 500,
+          }}
+        >
+          {leader.role}
+        </Typography>
+        <Typography
+          color="text.secondary"
+          sx={{
+            lineHeight: 1.6,
+          }}
+        >
+          {leader.description}
+        </Typography>
+      </Paper>
+    );
+
+    return (
+      <Grid item xs={12} md={6} key={index}>
+        <Box sx={{ position: 'relative' }}>
+          <Fade in={isLeadershipVisible} timeout={1000}>
+            <Box>
+              <Slide
+                direction="up"
+                in={isLeadershipVisible}
+                timeout={1000}
+                container={containerRef.current}
+              >
+                <Box>{content}</Box>
+              </Slide>
+            </Box>
+          </Fade>
+        </Box>
+      </Grid>
+    );
+  };
+
   return (
-    <Box sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box ref={containerRef} sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       {/* Hero Section */}
       <Box
+        ref={heroRef}
         sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
@@ -80,7 +208,7 @@ const Home = () => {
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Fade in timeout={1000}>
+              <Fade in={isHeroVisible} timeout={1000}>
                 <Box>
                   <Typography
                     variant="h2"
@@ -139,19 +267,27 @@ const Home = () => {
       </Box>
 
       {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Container ref={featuresRef} maxWidth="lg" sx={{ py: 8 }}>
         <Grid container spacing={4}>
           {features.map((feature, index) => (
             <Grid item xs={12} md={4} key={index}>
               <Slide
                 direction="up"
-                in
+                in={isFeaturesVisible}
                 timeout={feature.delay}
-                style={{ transitionDelay: `${feature.delay}ms` }}
+                style={{
+                  transitionDelay: isFeaturesVisible
+                    ? `${feature.delay}ms`
+                    : '0ms',
+                }}
               >
                 <Paper
                   elevation={0}
-                  onClick={() => isAuthenticated ? router.push(feature.link) : router.push('/login')}
+                  onClick={() =>
+                    isAuthenticated
+                      ? router.push(feature.link)
+                      : router.push('/login')
+                  }
                   sx={{
                     p: 4,
                     height: '100%',
@@ -193,13 +329,14 @@ const Home = () => {
 
       {/* Leadership Section */}
       <Box
+        ref={leadershipRef}
         sx={{
           py: 8,
           background: 'linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%)',
         }}
       >
         <Container maxWidth="lg">
-          <Fade in timeout={1000}>
+          <Fade in={isLeadershipVisible} timeout={800}>
             <Typography
               variant="h3"
               sx={{
@@ -213,84 +350,14 @@ const Home = () => {
             </Typography>
           </Fade>
           <Grid container spacing={4} justifyContent="center">
-            {leaders.map((leader, index) => (
-              <Grid item xs={12} md={6} key={index}>
-                <Slide
-                  direction="up"
-                  in
-                  timeout={leader.delay}
-                  style={{ transitionDelay: `${leader.delay}ms` }}
-                >
-                  <Paper
-                    elevation={0}
-                    onClick={() => window.open(leader.linkedin, '_blank')}
-                    sx={{
-                      p: 4,
-                      height: '100%',
-                      backgroundColor: 'white',
-                      borderRadius: 2,
-                      transition: 'all 0.3s ease-in-out',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                      },
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <Avatar
-                      src={leader.image}
-                      sx={{
-                        width: 120,
-                        height: 120,
-                        mb: 2,
-                        border: '4px solid #667eea',
-                        boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
-                      }}
-                    >
-                      {leader.name.charAt(0)}
-                    </Avatar>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        mb: 1,
-                        color: '#1a237e',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {leader.name}
-                    </Typography>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        mb: 2,
-                        color: '#667eea',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {leader.role}
-                    </Typography>
-                    <Typography
-                      color="text.secondary"
-                      sx={{
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {leader.description}
-                    </Typography>
-                  </Paper>
-                </Slide>
-              </Grid>
-            ))}
+            {leaders.map((leader, index) => renderLeaderCard(leader, index))}
           </Grid>
         </Container>
       </Box>
 
       {/* Call to Action Section */}
       <Box
+        ref={ctaRef}
         sx={{
           backgroundColor: 'white',
           py: 8,
@@ -298,15 +365,12 @@ const Home = () => {
         }}
       >
         <Container maxWidth="md">
-          <Fade in timeout={2000}>
+          <Fade in={isCtaVisible} timeout={2000}>
             <Box>
               <Typography variant="h3" sx={{ mb: 3, color: '#1a237e' }}>
                 Ready to Get Started?
               </Typography>
-              <Typography
-                variant="h6"
-                sx={{ mb: 4, color: 'text.secondary' }}
-              >
+              <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
                 Join thousands of users who are already creating amazing surveys
               </Typography>
               {!isAuthenticated && (
@@ -315,9 +379,11 @@ const Home = () => {
                   size="large"
                   onClick={() => router.push('/register')}
                   sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background:
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                      background:
+                        'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                     },
                     px: 4,
                     py: 1.5,
@@ -333,5 +399,4 @@ const Home = () => {
     </Box>
   );
 };
-
 export default Home;
