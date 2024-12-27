@@ -29,6 +29,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// Ajouter ce middleware juste avant vos routes
+app.use((req, res, next) => {
+  console.log(`[DEBUG] ${req.method} ${req.path}`);
+  console.log('[DEBUG] Headers:', req.headers);
+  next();
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/surveys", surveyRoutes);
