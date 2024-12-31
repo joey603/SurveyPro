@@ -112,7 +112,7 @@ router.post('/login', async (req, res) => {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return res.status(400).json({ message: 'Wrong password' });
   
-      const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+      const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '4h' });
       const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
   
       // Mettre à jour les tokens dans la base de données
@@ -143,7 +143,7 @@ router.post('/refresh-token', async (req, res) => {
       return res.status(403).json({ message: 'Token de rafraîchissement invalide.' });
     }
 
-    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     user.accessToken = newAccessToken;
     await user.save();
 
