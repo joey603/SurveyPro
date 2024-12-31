@@ -185,3 +185,55 @@ exports.cleanupUnusedMedia = async (req, res) => {
     res.status(500).json({ message: "Failed to clean up unused media.", error: error.message });
   }
 };
+
+// Get all surveys available for answering
+exports.getAllSurveysForAnswering = async (req, res) => {
+  console.log('getAllSurveysForAnswering appelé');
+  console.log('User dans la requête:', req.user);
+  
+  try {
+    console.log('Début de la recherche des sondages');
+    
+    // Ajout de plus de logs pour le debugging
+    const query = Survey.find({})
+      .select('_id title description questions demographicEnabled createdAt')
+      .sort({ createdAt: -1 });
+    
+    console.log('Query MongoDB:', query.getFilter());
+    
+    const surveys = await query;
+    console.log('Résultat brut de MongoDB:', surveys);
+    console.log('Nombre de sondages trouvés:', surveys ? surveys.length : 0);
+    
+    if (!surveys || !surveys.length) {
+      console.log('Aucun sondage trouvé');
+      return res.status(404).json({ 
+        message: "Aucun sondage disponible.",
+        debug: {
+          query: query.getFilter(),
+          modelName: Survey.modelName,
+          collectionName: Survey.collection.name
+        }
+      });
+    }
+
+    console.log('Envoi des sondages au client');
+    res.status(200).json(surveys);
+  } catch (error) {
+    console.error("Erreur détaillée:", error);
+    console.error("Stack trace:", error.stack);
+    console.error("Nom du modèle:", Survey.modelName);
+    console.error("Nom de la collection:", Survey.collection.name);
+    
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des sondages.",
+      error: error.message,
+      debug: {
+        modelName: Survey.modelName,
+        collectionName: Survey.collection.name,
+        errorName: error.name,
+        errorStack: error.stack
+      }
+    });
+  }
+};

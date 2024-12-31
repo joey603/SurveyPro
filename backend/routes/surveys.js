@@ -1,6 +1,6 @@
 //routes/survey.js
 const express = require("express");
-const { createSurvey, getSurveys, getSurveyById, uploadMedia, } = require("../controllers/surveyController");
+const { createSurvey, getSurveys, getSurveyById, uploadMedia, getAllSurveysForAnswering, deleteMedia } = require("../controllers/surveyController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer"); // For handling file uploads
@@ -13,16 +13,13 @@ const router = express.Router();
 const storage = multer.diskStorage({});
 const upload = multer({ dest: "uploads/" }); // Destination temporaire des fichiers
 
-// Route pour créer un nouveau sondage avec média
+// IMPORTANT: Placer la route /available AVANT toutes les autres routes
+router.get("/available", authMiddleware, getAllSurveysForAnswering);
+
+// Autres routes
 router.post("/", authMiddleware, upload.any(), createSurvey);
-
-// Route pour récupérer tous les sondages créés par l'utilisateur
 router.get("/", authMiddleware, getSurveys);
-
-// Route pour récupérer un sondage par ID
 router.get("/:id", authMiddleware, getSurveyById);
-
-const { deleteMedia } = require("../controllers/surveyController");
 
 router.post("/delete-media", authMiddleware, deleteMedia);
 
@@ -102,5 +99,5 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
       res.status(500).json({ message: "Cleanup test failed", error: error.message });
     }
   });
-    
+
 module.exports = router;

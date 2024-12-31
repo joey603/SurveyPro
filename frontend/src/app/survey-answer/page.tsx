@@ -34,7 +34,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { fetchSurveys, submitSurveyAnswer } from "@/utils/surveyService";
+import { fetchAvailableSurveys, submitSurveyAnswer } from "@/utils/surveyService";
 import { useAuth } from '@/utils/AuthContext';
 import Image from 'next/image';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -157,17 +157,36 @@ const SurveyAnswerPage: React.FC = () => {
 
   useEffect(() => {
     const loadSurveys = async () => {
+      console.log('Début du chargement des sondages');
+      
       try {
         setLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('accessToken');
+        console.log('Token récupéré:', token ? 'Token présent' : 'Pas de token');
+        
         if (!token) {
-          throw new Error('No authentication token found');
+          throw new Error('Aucun token d\'authentification trouvé');
         }
-        const data = await fetchSurveys(token);
+
+        console.log('Appel de fetchAvailableSurveys');
+        const data = await fetchAvailableSurveys(token);
+        console.log('Données reçues:', data);
+        
+        if (!Array.isArray(data)) {
+          console.error('Format de données invalide:', data);
+          throw new Error('Format de données invalide reçu du serveur');
+        }
+
+        console.log('Mise à jour des sondages:', data.length, 'sondages trouvés');
         setSurveys(data);
       } catch (error: any) {
-        console.error('Error loading surveys:', error);
-        setError(error.message || 'Failed to load surveys');
+        console.error('Erreur complète:', error);
+        console.error('Type d\'erreur:', typeof error);
+        console.error('Message d\'erreur:', error.message);
+        console.error('Stack trace:', error.stack);
+        setError(error.message || 'Échec du chargement des sondages');
       } finally {
         setLoading(false);
       }

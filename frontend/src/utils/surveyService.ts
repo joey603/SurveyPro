@@ -135,3 +135,41 @@ export const fetchCities = async (token: string): Promise<string[]> => {
     return DEFAULT_CITIES;
   }
 };
+
+export const fetchAvailableSurveys = async (token: string): Promise<any> => {
+  console.log('Début fetchAvailableSurveys avec token:', token ? 'Token présent' : 'Pas de token');
+  
+  try {
+    if (!token) {
+      throw new Error('Token d\'authentification requis');
+    }
+
+    console.log('Envoi de la requête à:', `${BASE_URL}/api/surveys/available`);
+    
+    const response = await axios.get(`${BASE_URL}/api/surveys/available`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('Réponse reçue:', response);
+    console.log('Données reçues:', response.data);
+
+    if (!response.data) {
+      throw new Error('Aucune donnée reçue du serveur');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Erreur complète:", error);
+    console.error("Message d'erreur:", error.message);
+    console.error("Réponse d'erreur:", error.response);
+    console.error("Données d'erreur:", error.response?.data);
+    
+    if (error.response?.data) {
+      throw error.response.data;
+    }
+    throw new Error(error.message || 'Erreur lors de la récupération des sondages');
+  }
+};

@@ -1,25 +1,35 @@
 const jwt = require("jsonwebtoken");
 
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(" ")[1]; // Extract the token
-
-  if (!token) {
-    console.error("Access denied. No token provided.");
-    return res.status(401).json({ message: "Access denied. No token provided." });
-  }
-
+  console.log('authMiddleware appelé');
+  console.log('Headers reçus:', req.headers);
+  
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify the token
-    req.user = decoded; // Attach the decoded token to the request
+    const authHeader = req.headers.authorization;
+    console.log('Authorization header:', authHeader);
 
-    // Log the authenticated user
-    console.log("Authenticated user:", req.user);
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Pas de token Bearer trouvé');
+      return res.status(401).json({ message: 'Token d\'authentification manquant' });
+    }
 
-    next(); // Proceed to the next middleware
+    const token = authHeader.split(' ')[1];
+    console.log('Token extrait:', token ? 'Token présent' : 'Pas de token');
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token décodé:', decoded);
+
+    req.user = decoded;
+    console.log('User ajouté à la requête:', req.user);
+
+    next();
   } catch (error) {
-    console.error("Authentication error:", error.message);
-    res.status(401).json({ message: "Invalid token." });
+    console.error('Erreur dans authMiddleware:', error);
+    res.status(401).json({ 
+      message: 'Token invalide',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
