@@ -19,47 +19,46 @@ const DEFAULT_CITIES = [
   "Bnei Brak"
 ];
 
-// Helper function to get the access token
-const getAccessToken = () => {
-  const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Authentication token not found. Please log in.");
-  }
-  return token;
-};
+export const uploadMedia = async (file: File, token: string): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
 
-export const createSurvey = async (data: any, token: string): Promise<any> => {
   try {
-    const response = await axios.post(`${BASE_URL}/api/surveys`, data, {
+    const response = await fetch(`${BASE_URL}/api/surveys/upload-media`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Authorization': `Bearer ${token}`,
       },
+      body: formData,
     });
-    return response.data;
+
+    if (!response.ok) {
+      throw new Error(`Upload failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.url;
   } catch (error) {
-    console.error("Error creating survey:", error);
+    console.error('Error uploading media:', error);
     throw error;
   }
 };
 
-export const uploadMedia = async (file: File, token: string) => {
+export const createSurvey = async (data: any, token: string): Promise<any> => {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
+    console.log('Sending survey data:', data);
 
-    const response = await axios.post(
-      `${BASE_URL}/api/surveys/upload`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+    const response = await axios.post(`${BASE_URL}/api/surveys`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-    );
+    });
+    
     return response.data;
   } catch (error: any) {
-    throw error.response?.data || error.message;
+    console.error("Error creating survey:", error.response?.data || error);
+    throw error.response?.data || error;
   }
 };
 
@@ -171,5 +170,28 @@ export const fetchAvailableSurveys = async (token: string): Promise<any> => {
       throw error.response.data;
     }
     throw new Error(error.message || 'Erreur lors de la récupération des sondages');
+  }
+};
+
+export const getSurveyById = async (id: string, token: string): Promise<any> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/surveys/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    // Log pour déboguer
+    console.log('Retrieved survey data:', response.data);
+    
+    // Vérifier que les médias sont présents
+    response.data.questions.forEach((question: any) => {
+      console.log('Question media:', question.media);
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching survey:", error);
+    throw error;
   }
 };

@@ -2,56 +2,50 @@
 
 const mongoose = require("mongoose");
 
+const questionSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: [
+      'multiple-choice',
+      'text',
+      'dropdown',
+      'yes-no',
+      'slider',
+      'rating',
+      'date',
+      'file-upload',
+      'color-picker'
+    ]
+  },
+  text: {
+    type: String,
+    required: true
+  },
+  options: [String],
+  media: String,
+  selectedDate: Date
+});
+
 const surveySchema = new mongoose.Schema({
   title: {
     type: String,
     required: true
   },
   description: String,
-  questions: [{
-    id: {
-      type: String,
-      required: true
-    },
-    text: {
-      type: String,
-      required: true
-    },
-    type: {
-      type: String,
-      required: true,
-      enum: [
-        'multiple-choice',
-        'text',
-        'dropdown',
-        'slider',
-        'rating',
-        'yes-no',
-        'date',
-        'file-upload',
-        'color-picker'
-      ]
-    },
-    options: [String],
-    media: {
-      url: String,
-      type: String,
-      public_id: String
-    }
-  }],
   demographicEnabled: {
     type: Boolean,
     default: false
   },
-  demographicData: {
-    gender: String,
-    dateOfBirth: Date,
-    educationLevel: String,
-    city: String
-  },
-  createdBy: {
+  questions: [questionSchema],
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true
   },
   createdAt: {
     type: Date,

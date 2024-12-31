@@ -32,7 +32,7 @@ import { ChromePicker } from 'react-color';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { createSurvey } from '../../utils/surveyService';
+import { createSurvey, uploadMedia } from '../../utils/surveyService';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility'; // Ajouté pour le bouton Preview
@@ -240,38 +240,28 @@ const SurveyCreationPage: React.FC = () => {
     setLocalOptions({});
   };
 
-  const handleFileUpload = async (
-    file: File,
-    questionId: string
-  ): Promise<void> => {
+  const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
     try {
       setIsUploading((prev) => ({ ...prev, [questionId]: true }));
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(
-        'http://localhost:5041/api/surveys/upload-media',
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (response.ok && result.url) {
-        fields.forEach((field, index) => {
-          if (field.id === questionId) {
-            update(index, { 
-              ...field, 
-              media: result.url,
-            });
-          }
-        });
-      } else {
-        console.error('Failed to upload media:', result);
-        alert('Failed to upload media. Please try again.');
+      
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
+
+      const mediaUrl = await uploadMedia(file, token);
+      console.log('Media uploaded successfully:', mediaUrl); // Debug log
+      
+      // Mettre à jour le champ media directement avec l'URL
+      fields.forEach((field, index) => {
+        if (field.id === questionId) {
+          update(index, {
+            ...field,
+            media: mediaUrl // Utiliser directement l'URL comme valeur de media
+          });
+        }
+      });
+
     } catch (error) {
       console.error('Error uploading media:', error);
       alert('An error occurred while uploading the media.');
@@ -287,24 +277,43 @@ const SurveyCreationPage: React.FC = () => {
   }, [watch('questions')]);
 
   const onSubmit = async (data: FormData) => {
-    const questionsWithUpdatedOptions = data.questions.map((question) => ({
-      ...question,
-      options: localOptions[question.id] || [],
-    }));
-
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        throw new Error('No authentication token found.');
+        throw new Error('No authentication token found');
       }
-      await createSurvey(
-        { ...data, questions: questionsWithUpdatedOptions },
-        token
-      );
+
+      // Préparer les questions avec leurs médias
+      const questionsWithMedia = data.questions.map(question => {
+        console.log('Processing question:', question); // Debug log
+        return {
+          id: question.id,
+          type: question.type,
+          text: question.text,
+          options: localOptions[question.id] || [],
+          media: question.media || '', // Utiliser directement le champ media
+          selectedDate: question.selectedDate
+        };
+      });
+
+      const surveyData = {
+        title: data.title,
+        description: data.description,
+        demographicEnabled: data.demographicEnabled,
+        questions: questionsWithMedia
+      };
+
+      console.log('Submitting survey data:', surveyData); // Debug log
+
+      const result = await createSurvey(surveyData, token);
+      console.log('Survey created successfully:', result);
+      
       alert('Survey submitted successfully!');
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Error submitting survey:', error);
-      alert('Failed to submit survey. Check the console for details.');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to submit survey';
+      alert(errorMessage);
     }
   };
 

@@ -4,100 +4,49 @@ const fs = require("fs");
 
 exports.createSurvey = async (req, res) => {
   try {
-    const { title, questions, demographicEnabled, demographicData } = req.body;
-
-    // Vérification des entrées
-    if (!title || !questions || questions.length === 0) {
-      return res.status(400).json({ message: "Title and questions are required." });
+    console.log('Received survey data:', JSON.stringify(req.body, null, 2));
+    
+    if (!req.body.title) {
+      return res.status(400).json({ message: 'Survey title is required' });
     }
 
-    const processedQuestions = [];
-    const newMediaIds = []; // Liste des médias à conserver
-
-    // Traitement des questions et des médias associés
-    for (const question of questions) {
-      // Validation des IDs de question
-      if (!question.id || !question.id.match(/^[a-zA-Z0-9-_]+$/)) {
-        return res.status(400).json({ message: `Invalid question ID: ${question.id}` });
-      }
-
-      // Validation du type de question
-      if (
-        ![
-          "multiple-choice",
-          "text",
-          "dropdown",
-          "slider",
-          "rating",
-          "yes-no",
-          "date",
-          "file-upload",
-          "color-picker",
-        ].includes(question.type)
-      ) {
-        return res.status(400).json({ message: `Invalid question type: ${question.type}` });
-      }
-
-      // Validation du texte de la question
-      if (!question.text) {
-        return res.status(400).json({ message: "Question text is required." });
-      }
-
-      // Traitement du média (si présent)
-      if (question.media?.startsWith("http")) {
-        // Média externe
-        question.media = {
-          url: question.media,
-          type: question.media.match(/\.(mp4|mov)$/i) ? "video" : "image",
-        };
-      } else if (req.files?.[question.id]) {
-        // Média uploadé
-        const file = req.files[question.id].tempFilePath;
-        const uploadResult = await uploadFileToCloudinary(file);
-        question.media = {
-          url: uploadResult.secure_url,
-          type: uploadResult.resource_type,
-          public_id: uploadResult.public_id,
-        };
-        newMediaIds.push(uploadResult.public_id); // Ajouter l'ID public aux médias à conserver
-        fs.unlinkSync(file); // Supprimer le fichier temporaire
-      }
-
-      processedQuestions.push(question);
+    if (!Array.isArray(req.body.questions)) {
+      return res.status(400).json({ message: 'Questions must be an array' });
     }
 
-    // Nettoyage des médias inutilisés (pour les mises à jour)
-    if (req.body.id) {
-      const previousSurvey = await Survey.findById(req.body.id);
-      if (previousSurvey) {
-        const oldMediaIds = previousSurvey.questions
-          .map((q) => q.media?.public_id)
-          .filter(Boolean);
-        const unusedMediaIds = oldMediaIds.filter((id) => !newMediaIds.includes(id));
-
-        console.log("Unused media to delete:", unusedMediaIds);
-
-        // Suppression des médias inutilisés sur Cloudinary
-        for (const id of unusedMediaIds) {
-          await deleteFileFromCloudinary(id);
-        }
+    // Valider chaque question
+    const processedQuestions = req.body.questions.map(question => {
+      console.log('Processing question:', question); // Debug log
+      
+      if (!question.id || !question.type || !question.text) {
+        throw new Error('Each question must have id, type, and text');
       }
-    }
 
-    // Création ou mise à jour du sondage
-    const survey = new Survey({
-      title,
-      questions: processedQuestions,
-      demographicEnabled,
-      demographicData,
-      createdBy: req.user?.id,
+      return {
+        ...question,
+        media: question.media || '' // S'assurer que media est une chaîne
+      };
     });
 
-    await survey.save();
-    res.status(201).json({ message: "Survey created successfully!", survey });
+    const survey = new Survey({
+      title: req.body.title,
+      description: req.body.description,
+      demographicEnabled: req.body.demographicEnabled,
+      questions: processedQuestions,
+      userId: req.user.id,
+      createdAt: new Date()
+    });
+
+    const savedSurvey = await survey.save();
+    console.log('Saved survey:', JSON.stringify(savedSurvey, null, 2));
+
+    res.status(201).json(savedSurvey);
   } catch (error) {
-    console.error("Error creating survey:", error.message);
-    res.status(500).json({ message: "Error creating survey.", error: error.message });
+    console.error('Error in createSurvey:', error);
+    res.status(500).json({
+      message: 'Error creating survey',
+      error: error.message
+    });
   }
 };
 
@@ -126,13 +75,27 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    const surveys = await Survey.find({ createdBy: req.user.id });
+    const surveys = await Survey.find({ createdBy: req.user.id })
+      .select('title description questions demographicEnabled createdAt')
+      .lean();
+
+    // Log pour déboguer
+    console.log('Retrieved surveys:', JSON.stringify(surveys, null, 2));
+
     if (!surveys.length) {
       return res.status(404).json({ message: "No surveys found." });
     }
+
+    // Vérifier que les médias sont bien présents
+    surveys.forEach(survey => {
+      survey.questions.forEach(question => {
+        console.log('Question media:', question.media);
+      });
+    });
+
     res.status(200).json(surveys);
   } catch (error) {
-    console.error("Error fetching surveys:", error.message);
+    console.error("Error fetching surveys:", error);
     res.status(500).json({ message: "Error fetching surveys.", error: error.message });
   }
 };
@@ -140,14 +103,26 @@ exports.getSurveys = async (req, res) => {
 // Get a survey by ID
 exports.getSurveyById = async (req, res) => {
   try {
-    const survey = await Survey.findById(req.params.id);
+    const survey = await Survey.findById(req.params.id)
+      .select('title description questions demographicEnabled createdAt')
+      .lean();
+
     if (!survey) {
       return res.status(404).json({ message: "Survey not found." });
     }
+
+    // Log pour déboguer
+    console.log('Retrieved survey:', JSON.stringify(survey, null, 2));
+    
+    // Vérifier les médias
+    survey.questions.forEach(question => {
+      console.log('Question media:', question.media);
+    });
+
     res.status(200).json(survey);
   } catch (error) {
-    console.error("Error fetching survey details:", error.message);
-    res.status(500).json({ message: "Error fetching survey details.", error: error.message });
+    console.error("Error fetching survey:", error);
+    res.status(500).json({ message: "Error fetching survey.", error: error.message });
   }
 };
 

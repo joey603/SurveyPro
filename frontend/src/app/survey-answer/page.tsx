@@ -39,6 +39,7 @@ import { useAuth } from '@/utils/AuthContext';
 import Image from 'next/image';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { ChromePicker, ColorResult } from 'react-color';
+import ReactPlayer from 'react-player';
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -273,37 +274,40 @@ const SurveyAnswerPage: React.FC = () => {
     }
   };
 
-  const renderQuestionMedia = (media: { url: string; type: string }) => {
+  const renderQuestionMedia = (media: string) => {
+    console.log('Rendering media:', media);
+
     if (!media) return null;
 
-    if (media.type === "video") {
+    if (media.match(/\.(mp4|mov)$/i)) {
       return (
-        <Box sx={{ mb: 2, maxWidth: '100%', height: 'auto' }}>
-          <video
+        <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+          <ReactPlayer
+            url={media}
             controls
-            style={{ maxWidth: '100%', height: 'auto' }}
-            src={media.url}
-          >
-            Your browser does not support the video tag.
-          </video>
+            width="100%"
+            height="auto"
+            style={{ borderRadius: '8px' }}
+          />
         </Box>
       );
-    } else if (media.type === "image") {
+    } else if (media.match(/\.(jpg|jpeg|png|gif)$/i)) {
       return (
-        <Box sx={{ mb: 2, position: 'relative', width: '100%', maxHeight: '400px', height: 'auto' }}>
+        <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
           <img
-            src={media.url}
+            src={media}
             alt="Question media"
-            style={{ 
+            style={{
               width: '100%',
               height: 'auto',
-              maxHeight: '400px',
+              borderRadius: '8px',
               objectFit: 'contain'
             }}
           />
         </Box>
       );
     }
+
     return null;
   };
 
