@@ -23,6 +23,7 @@ import {
   Paper,
   Divider,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -117,6 +118,16 @@ const SurveyCreationPage: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState(''); // Ville sélectionnée
 
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
+
+  const [notification, setNotification] = useState<{
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+    open: boolean;
+  }>({
+    message: '',
+    severity: 'info',
+    open: false
+  });
 
   const fetchCities = async () => {
     try {
@@ -230,7 +241,7 @@ const SurveyCreationPage: React.FC = () => {
     });
   };
 
-  const handleResetSurvey = () => {
+  const handleResetSurvey = (showNotification: boolean = true) => {
     reset({
       title: '',
       description: '',
@@ -238,6 +249,14 @@ const SurveyCreationPage: React.FC = () => {
       questions: [],
     });
     setLocalOptions({});
+    
+    if (showNotification) {
+      setNotification({
+        message: 'Form has been reset',
+        severity: 'info',
+        open: true
+      });
+    }
   };
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
@@ -250,21 +269,29 @@ const SurveyCreationPage: React.FC = () => {
       }
 
       const mediaUrl = await uploadMedia(file, token);
-      console.log('Media uploaded successfully:', mediaUrl); // Debug log
       
-      // Mettre à jour le champ media directement avec l'URL
       fields.forEach((field, index) => {
         if (field.id === questionId) {
           update(index, {
             ...field,
-            media: mediaUrl // Utiliser directement l'URL comme valeur de media
+            media: mediaUrl
           });
         }
       });
 
+      setNotification({
+        message: 'Media uploaded successfully',
+        severity: 'success',
+        open: true
+      });
+
     } catch (error) {
       console.error('Error uploading media:', error);
-      alert('An error occurred while uploading the media.');
+      setNotification({
+        message: 'Error uploading media',
+        severity: 'error',
+        open: true
+      });
     } finally {
       setIsUploading((prev) => ({ ...prev, [questionId]: false }));
     }
@@ -283,39 +310,45 @@ const SurveyCreationPage: React.FC = () => {
         throw new Error('No authentication token found');
       }
 
-      // Préparer les questions avec leurs médias
-      const questionsWithMedia = data.questions.map(question => {
-        console.log('Processing question:', question); // Debug log
-        return {
-          id: question.id,
-          type: question.type,
-          text: question.text,
-          options: localOptions[question.id] || [],
-          media: question.media || '', // Utiliser directement le champ media
-          selectedDate: question.selectedDate
-        };
-      });
-
       const surveyData = {
         title: data.title,
         description: data.description,
         demographicEnabled: data.demographicEnabled,
-        questions: questionsWithMedia
+        questions: data.questions
       };
-
-      console.log('Submitting survey data:', surveyData); // Debug log
 
       const result = await createSurvey(surveyData, token);
       console.log('Survey created successfully:', result);
       
-      alert('Survey submitted successfully!');
+      setNotification({
+        message: 'Survey created successfully!',
+        severity: 'success',
+        open: true
+      });
+
+      setTimeout(() => {
+        handleResetSurvey(false);
+      }, 2000);
       
     } catch (error: any) {
       console.error('Error submitting survey:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to submit survey';
-      alert(errorMessage);
+      setNotification({
+        message: error.message || 'Error creating survey',
+        severity: 'error',
+        open: true
+      });
     }
   };
+
+  useEffect(() => {
+    if (notification.open) {
+      const timer = setTimeout(() => {
+        setNotification(prev => ({ ...prev, open: false }));
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [notification.open]);
 
   const renderDemographicPreview = () => {
     return (
@@ -1106,6 +1139,30 @@ const SurveyCreationPage: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+
+      {/* Ajout du composant de notification */}
+      {notification.open && (
+        <Box sx={{
+          position: 'fixed',
+          top: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          minWidth: 300
+        }}>
+          <Alert 
+            severity={notification.severity}
+            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+            sx={{ 
+              backgroundColor: 'white',
+              boxShadow: 3,
+              borderRadius: 2
+            }}
+          >
+            {notification.message}
+          </Alert>
+        </Box>
       )}
     </Box>
   );

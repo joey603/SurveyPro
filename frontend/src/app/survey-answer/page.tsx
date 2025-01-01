@@ -25,6 +25,7 @@ import {
   CircularProgress,
   Rating,
   Paper,
+  Alert,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -131,6 +132,15 @@ const SurveyAnswerPage: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [notification, setNotification] = useState<{
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+    open: boolean;
+  }>({
+    message: '',
+    severity: 'info',
+    open: false
+  });
 
   const fetchCities = async () => {
     try {
@@ -264,11 +274,23 @@ const SurveyAnswerPage: React.FC = () => {
 
       await submitSurveyAnswer(selectedSurvey._id, submissionData, token);
 
-      alert("Thank you for your answers!");
-      setSelectedSurvey(null);
+      setNotification({
+        message: "Merci pour vos réponses !",
+        severity: 'success',
+        open: true
+      });
+      
+      setTimeout(() => {
+        setSelectedSurvey(null);
+      }, 2000);
+
     } catch (error: any) {
       console.error('Error submitting survey:', error);
-      setSubmitError(error.message || 'An error occurred while submitting your answers');
+      setNotification({
+        message: error.message || 'Une erreur est survenue lors de la soumission de vos réponses',
+        severity: 'error',
+        open: true
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -521,6 +543,16 @@ const SurveyAnswerPage: React.FC = () => {
       </Box>
     );
   };
+
+  useEffect(() => {
+    if (notification.open) {
+      const timer = setTimeout(() => {
+        setNotification(prev => ({ ...prev, open: false }));
+      }, 5000); // Disparaît après 5 secondes
+
+      return () => clearTimeout(timer);
+    }
+  }, [notification.open]);
 
   if (!selectedSurvey) {
     return (
@@ -817,6 +849,28 @@ const SurveyAnswerPage: React.FC = () => {
           </form>
         </Box>
       </Paper>
+      {notification.open && (
+        <Box sx={{
+          position: 'fixed',
+          top: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          minWidth: 300
+        }}>
+          <Alert 
+            severity={notification.severity}
+            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+            sx={{ 
+              backgroundColor: 'white',
+              boxShadow: 3,
+              borderRadius: 2
+            }}
+          >
+            {notification.message}
+          </Alert>
+        </Box>
+      )}
     </Box>
   );
 };
