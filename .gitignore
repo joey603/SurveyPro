@@ -3,4 +3,7 @@ node_modules/
 dist/
 build/
 *.log
+<<<<<<< HEAD
 backend/uploads/
+=======
+>>>>>>> 02bb909 (Add in survey answer the possibility for the user to answer juste one time. Add the verification for answwer to survey.)
