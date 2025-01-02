@@ -72,7 +72,6 @@ const questionTypes = [
   { value: 'slider', label: 'Slider' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'date', label: 'Date Picker' },
-  { value: 'file-upload', label: 'File Upload' },
   { value: 'color-picker', label: 'Color Picker' },
 ];
 
