@@ -26,7 +26,9 @@ import {
   FormControl,
   InputLabel,
   Slider,
-  IconButton,
+  Stack,
+  Alert,
+  // Supprimer Tooltip de cet import
 } from '@mui/material';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -35,19 +37,16 @@ import { fetchSurveys, getSurveyAnswers } from '@/utils/surveyService';
 import { Bar, Line, Pie, Doughnut, Radar, Scatter, Bubble } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
+  ArcElement,
   CategoryScale,
   LinearScale,
-  BarElement,
+  PointElement,
+  LineElement,
+  BarElement,  // Ajout de BarElement
   Title,
   Tooltip,
   Legend,
-  ArcElement,
-  PointElement,
-  LineElement,
-  RadialLinearScale,
-  Filler,
-  ScatterController,
-  BubbleController
+  ChartOptions
 } from 'chart.js';
 import { ResponsiveRadar } from '@nivo/radar';
 import PieChartIcon from '@mui/icons-material/PieChart';
@@ -68,19 +67,20 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TableViewIcon from '@mui/icons-material/TableView';
 import CodeIcon from '@mui/icons-material/Code';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import IconButton from '@mui/material/IconButton';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
-// Enregistrer tous les composants ChartJS
+// Enregistrer les éléments nécessaires
 ChartJS.register(
+  ArcElement,
   CategoryScale,
   LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
   PointElement,
   LineElement,
-  RadialLinearScale
+  BarElement,  // Ajout de BarElement
+  Title,
+  Tooltip,
+  Legend
 );
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter';
@@ -239,7 +239,7 @@ const ChartView = memo(({ data, question }: {
   }, [question.type, availableChartTypes, chartType]);
 
   if (!data || Object.keys(data).length === 0) {
-    return <Typography>Aucune donnée disponible</Typography>;
+    return <Typography>No data available</Typography>;
   }
 
   const chartData = {
@@ -248,39 +248,144 @@ const ChartView = memo(({ data, question }: {
       label: question.text,
       data: Object.values(data),
       backgroundColor: [
-        'rgba(255, 99, 132, 0.5)',
-        'rgba(54, 162, 235, 0.5)',
-        'rgba(255, 206, 86, 0.5)',
-        'rgba(75, 192, 192, 0.5)',
-        'rgba(153, 102, 255, 0.5)',
+        'rgba(102, 126, 234, 0.6)',  // Bleu principal
+        'rgba(118, 75, 162, 0.6)',   // Violet
+        'rgba(79, 99, 196, 0.6)',    // Bleu foncé
+        'rgba(142, 94, 189, 0.6)',   // Violet clair
+        'rgba(133, 152, 236, 0.6)',  // Bleu clair
+        'rgba(155, 120, 190, 0.6)',  // Violet moyen
+        'rgba(90, 112, 208, 0.6)',   // Bleu moyen
+        'rgba(129, 83, 175, 0.6)',   // Violet foncé
       ],
       borderColor: [
-        'rgba(255, 99, 132, 1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 206, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
+        'rgba(102, 126, 234, 1)',    // Bleu principal
+        'rgba(118, 75, 162, 1)',     // Violet
+        'rgba(79, 99, 196, 1)',      // Bleu foncé
+        'rgba(142, 94, 189, 1)',     // Violet clair
+        'rgba(133, 152, 236, 1)',    // Bleu clair
+        'rgba(155, 120, 190, 1)',    // Violet moyen
+        'rgba(90, 112, 208, 1)',     // Bleu moyen
+        'rgba(129, 83, 175, 1)',     // Violet foncé
       ],
-      borderWidth: 1
+      borderWidth: 2,
+      hoverBackgroundColor: [
+        'rgba(102, 126, 234, 0.8)',
+        'rgba(118, 75, 162, 0.8)',
+        'rgba(79, 99, 196, 0.8)',
+        'rgba(142, 94, 189, 0.8)',
+        'rgba(133, 152, 236, 0.8)',
+        'rgba(155, 120, 190, 0.8)',
+        'rgba(90, 112, 208, 0.8)',
+        'rgba(129, 83, 175, 0.8)',
+      ],
+      hoverBorderColor: [
+        'rgba(102, 126, 234, 1)',
+        'rgba(118, 75, 162, 1)',
+        'rgba(79, 99, 196, 1)',
+        'rgba(142, 94, 189, 1)',
+        'rgba(133, 152, 236, 1)',
+        'rgba(155, 120, 190, 1)',
+        'rgba(90, 112, 208, 1)',
+        'rgba(129, 83, 175, 1)',
+      ],
     }]
   };
+
+  // Modifier les options communes pour les graphiques
+  const chartOptions = {
+    ...commonChartOptions,
+    plugins: {
+      ...commonChartOptions.plugins,
+      legend: {
+        ...commonChartOptions.plugins.legend,
+        labels: {
+          ...commonChartOptions.plugins.legend.labels,
+          color: '#4a5568',
+          font: {
+            size: 12,
+            weight: 500
+          },
+          padding: 15,
+        }
+      },
+      title: {
+        ...commonChartOptions.plugins.title,
+        color: '#2d3748',
+        font: {
+          size: 16,
+          weight: 'bold' as const,
+          family: "'Inter', sans-serif"
+        },
+        padding: {
+          top: 20,
+          bottom: 20
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(102, 126, 234, 0.1)',
+          display: false
+        },
+        ticks: {
+          color: '#4a5568',
+          font: {
+            size: 11,
+            weight: 400
+          }
+        }
+      },
+      y: {
+        grid: {
+          color: 'rgba(102, 126, 234, 0.1)',
+          display: false
+        },
+        ticks: {
+          color: '#4a5568',
+          font: {
+            size: 11,
+            weight: 400
+          }
+        }
+      }
+    }
+  } as const;
 
   const renderChart = () => {
     switch (chartType) {
       case 'bar':
-        return <Bar data={chartData} options={commonChartOptions} />;
+        return <Bar data={chartData} options={chartOptions} />;
       case 'line':
-        return <Line data={chartData} options={commonChartOptions} />;
+        return <Line data={chartData} options={chartOptions} />;
       case 'pie':
-        return <Pie data={chartData} options={pieOptions} />;
+        return <Pie data={chartData} options={{
+          ...chartOptions,
+          plugins: {
+            ...chartOptions.plugins,
+            legend: {
+              ...chartOptions.plugins.legend,
+              position: 'right' as const
+            }
+          }
+        }} />;
       case 'doughnut':
-        return <Doughnut data={chartData} options={pieOptions} />;
+        return <Doughnut data={chartData} options={{
+          ...chartOptions,
+          plugins: {
+            ...chartOptions.plugins,
+            legend: {
+              ...chartOptions.plugins.legend,
+              position: 'right' as const
+            }
+          }
+        }} />;
       case 'radar':
-        return <Radar data={chartData} options={commonChartOptions} />;
+        return <Radar data={chartData} options={chartOptions} />;
       case 'scatter':
-        return <Scatter data={chartData} options={commonChartOptions} />;
+        return <Scatter data={chartData} options={chartOptions} />;
       default:
-        return <Bar data={chartData} options={commonChartOptions} />;
+        return <Bar data={chartData} options={chartOptions} />;
     }
   };
 
@@ -322,20 +427,59 @@ const ChartView = memo(({ data, question }: {
         {renderChart()}
       </Box>
       
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
         {availableChartTypes.length > 0 ? (
           availableChartTypes.map((type) => (
             <Button
               key={type}
-              startIcon={getChartIcon(type)}
               onClick={() => setChartType(type)}
               variant={chartType === type ? 'contained' : 'outlined'}
+              sx={{
+                ...(chartType === type ? {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  borderColor: 'transparent',
+                  px: 3,
+                  py: 1,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                  },
+                } : {
+                  color: '#667eea',
+                  borderColor: 'rgba(102, 126, 234, 0.5)',
+                  px: 3,
+                  py: 1,
+                  '&:hover': {
+                    borderColor: '#667eea',
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(102, 126, 234, 0.15)'
+                  },
+                }),
+                transition: 'all 0.2s ease',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '8px',
+                minWidth: '120px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              <Stack direction="row" spacing={1} alignItems="center">
+                {getChartIcon(type)}
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Typography>
+              </Stack>
             </Button>
           ))
         ) : (
-          <Typography>Aucun graphique disponible pour ce type de question</Typography>
+          <Typography variant="body2" color="text.secondary">
+            No chart available for this question type
+          </Typography>
         )}
       </Box>
     </Box>
@@ -357,19 +501,19 @@ const ResultsPage: React.FC = () => {
 
   // Nouveaux états
   const [chartColors, setChartColors] = useState({
-    backgroundColor: [
-      'rgba(54, 162, 235, 0.5)',
-      'rgba(255, 99, 132, 0.5)',
-      'rgba(75, 192, 192, 0.5)',
-      'rgba(255, 206, 86, 0.5)',
-      'rgba(153, 102, 255, 0.5)',
+    backgrounds: [
+      'rgba(102, 126, 234, 0.6)', // Bleu principal
+      'rgba(118, 75, 162, 0.6)',  // Violet
+      'rgba(75, 192, 192, 0.6)',  // Turquoise
+      'rgba(255, 159, 64, 0.6)',  // Orange
+      'rgba(255, 99, 132, 0.6)',  // Rose
     ],
-    borderColor: [
-      'rgba(54, 162, 235, 1)',
-      'rgba(255, 99, 132, 1)',
+    borders: [
+      'rgba(102, 126, 234, 1)',
+      'rgba(118, 75, 162, 1)',
       'rgba(75, 192, 192, 1)',
-      'rgba(255, 206, 86, 1)',
-      'rgba(153, 102, 255, 1)',
+      'rgba(255, 159, 64, 1)',
+      'rgba(255, 99, 132, 1)',
     ]
   });
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -381,6 +525,7 @@ const ResultsPage: React.FC = () => {
   // Nouveaux états
   const [filters, setFilters] = useState<{
     demographic: {
+      gender?: string;
       educationLevel?: string;
       city?: string;
       age?: [number, number];
@@ -389,7 +534,12 @@ const ResultsPage: React.FC = () => {
       [questionId: string]: string | number | boolean;
     };
   }>({
-    demographic: {},
+    demographic: {
+      gender: undefined,
+      educationLevel: undefined,
+      city: undefined,
+      age: undefined
+    },
     answers: {}
   });
 
@@ -403,6 +553,18 @@ const ResultsPage: React.FC = () => {
   // Nouveaux états
   const [currentView, setCurrentView] = useState<'list' | 'chart'>('list');
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+
+  // Ajouter ces nouveaux états
+  const [filteredStats, setFilteredStats] = useState<DemographicStats | null>(null);
+  const [stats, setStats] = useState<DemographicStats>({
+    gender: {},
+    education: {},
+    city: {},
+    ageDistribution: []
+  });
+
+  // Au début du composant, assurez-vous d'avoir cet état
+  const [showDemographic, setShowDemographic] = useState(true);
 
   // Fonctions
   const downloadChart = useCallback((fileName: string) => {
@@ -454,8 +616,8 @@ const ResultsPage: React.FC = () => {
       labels: Object.keys(stats.answers),
       datasets: [{
         data: Object.values(stats.answers),
-        backgroundColor: chartColors.backgroundColor,
-        borderColor: chartColors.borderColor,
+        backgroundColor: chartColors.backgrounds,
+        borderColor: chartColors.borders,
         borderWidth: 1
       }]
     };
@@ -543,27 +705,44 @@ const ResultsPage: React.FC = () => {
 
   // Ajouter la fonction de filtrage
   const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
-    return answers.filter(answer => {
-      const demographic = answer.respondent?.demographic;
-      if (!demographic) return true;
+    // Si tous les filtres sont vides, retourner toutes les réponses
+    const hasActiveFilters = Object.values(filters.demographic).some(value => 
+      value !== undefined && value !== "" && 
+      !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
+    );
 
-      // Filtre par niveau d'éducation
+    if (!hasActiveFilters) {
+      return answers;
+    }
+
+    return answers.filter(answer => {
+      // Si pas de données démographiques, inclure la réponse
+      if (!answer.respondent?.demographic) {
+        return true;
+      }
+
+      const demographic = answer.respondent.demographic;
+
+      // Appliquer les filtres seulement si les données démographiques existent
       if (filters.demographic.educationLevel && 
+          filters.demographic.educationLevel !== "" && 
           demographic.educationLevel !== filters.demographic.educationLevel) {
         return false;
       }
 
-      // Filtre par ville
       if (filters.demographic.city && 
+          filters.demographic.city !== "" && 
           demographic.city !== filters.demographic.city) {
         return false;
       }
 
-      // Filtre par tranche d'âge
-      if (filters.demographic.age && demographic.dateOfBirth) {
-        const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-          return false;
+      if (filters.demographic.age && 
+          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+        if (demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
         }
       }
 
@@ -571,44 +750,17 @@ const ResultsPage: React.FC = () => {
     });
   }, [filters]);
 
-  // Modifier la fonction calculateQuestionStats pour utiliser le filtrage
+  // Modifier la fonction calculateQuestionStats pour inclure toutes les réponses
   const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats => {
     const allAnswers = surveyAnswers[surveyId] || [];
     
-    // Appliquer les filtres démographiques
-    const filteredAnswers = allAnswers.filter((answer: SurveyAnswer) => {
-      const demographic = answer.respondent?.demographic;
-      if (!demographic) return true;
-
-      // Filtre par niveau d'éducation
-      if (filters.demographic.educationLevel && 
-          demographic.educationLevel !== filters.demographic.educationLevel) {
-        return false;
-      }
-
-      // Filtre par ville
-      if (filters.demographic.city && 
-          demographic.city !== filters.demographic.city) {
-        return false;
-      }
-
-      // Filtre par tranche d'âge
-      if (filters.demographic.age && demographic.dateOfBirth) {
-        const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
+    // Ne pas filtrer les réponses basées sur les données démographiques
     const stats: QuestionStats = {
       total: 0,
       answers: {}
     };
 
-    filteredAnswers.forEach((answer: SurveyAnswer) => {
+    allAnswers.forEach((answer: SurveyAnswer) => {
       const questionAnswer = answer.answers.find((a: Answer) => a.questionId === questionId);
       if (questionAnswer && questionAnswer.answer != null) {
         const value = questionAnswer.answer.toString();
@@ -618,45 +770,25 @@ const ResultsPage: React.FC = () => {
     });
 
     return stats;
-  }, [surveyAnswers, filters]);
+  }, [surveyAnswers]);
 
   // Modifier la fonction handleViewQuestionDetails
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
 
-    // Filtrer les réponses avant de les stocker
-    const allAnswers = surveyAnswers[selectedSurvey._id] || [];
-    const filteredAnswers = allAnswers.filter((answer: SurveyAnswer) => {
-      const demographic = answer.respondent?.demographic;
-      if (!demographic) return false;
+    const question = selectedSurvey.questions.find(q => q.id === questionId);
+    if (!question) return;
 
-      // Appliquer les filtres démographiques
-      if (filters.demographic.educationLevel && 
-          demographic.educationLevel !== filters.demographic.educationLevel) {
-        return false;
-      }
-
-      if (filters.demographic.city && 
-          demographic.city !== filters.demographic.city) {
-        return false;
-      }
-
-      if (filters.demographic.age && demographic.dateOfBirth) {
-        const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
+    const answers = surveyAnswers[selectedSurvey._id] || [];
+    
+    // Supprimer le filtrage des réponses ici
     setSelectedQuestion({
       questionId,
-      answers: filteredAnswers // Stocker uniquement les réponses filtrées
+      answers: answers // Utiliser toutes les réponses sans filtrage
     });
     setDialogOpen(true);
-  }, [selectedSurvey, surveyAnswers, filters]);
+    setCurrentView('list');
+  }, [selectedSurvey, surveyAnswers]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -671,7 +803,7 @@ const ResultsPage: React.FC = () => {
       <Box>
         {Object.entries(stats.answers).map(([answer, count], index) => (
           <Typography key={index}>
-            {answer}: {count} réponses ({Math.round((count / stats.total) * 100)}%)
+            {answer}: {count} responses ({Math.round((count / stats.total) * 100)}%)
           </Typography>
         ))}
       </Box>
@@ -763,6 +895,13 @@ const ResultsPage: React.FC = () => {
     }
   }, [selectedSurvey]);
 
+  // Ajouter cette constante avec les autres constantes
+  const genderOptions = [
+    "male",
+    "female",
+    "other"
+  ];
+
   const FilterPanel = () => {
     const [cities, setCities] = useState<string[]>([]);
     const [ageRange, setAgeRange] = useState<[number, number]>(
@@ -780,6 +919,9 @@ const ResultsPage: React.FC = () => {
           age: newRange
         }
       }));
+      
+      // Appliquer les filtres automatiquement
+      applyDemographicFilters();
     };
 
     const fetchCities = async () => {
@@ -821,22 +963,75 @@ const ResultsPage: React.FC = () => {
 
     return (
       <Box sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-        <Typography variant="h6" gutterBottom>
-          Demographic Filters
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Demographic Filters
+          </Typography>
+          <Button
+            color="primary"
+            size="small"
+            onClick={() => {
+              setFilteredStats(null);
+              setFilters({
+                demographic: {},
+                answers: {}
+              });
+            }}
+            sx={{
+              color: '#667eea',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.05)'
+              }
+            }}
+          >
+            Reset Filters
+          </Button>
+        </Box>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
+          {/* Ajouter le filtre de genre */}
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Gender</InputLabel>
+              <Select
+                value={filters.demographic.gender || ''}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      gender: e.target.value.toLowerCase() // Stocker en minuscules
+                    }
+                  }));
+                  // Appliquer les filtres automatiquement
+                  applyDemographicFilters();
+                }}
+              >
+                <MenuItem value="">All</MenuItem>
+                {genderOptions.map((gender) => (
+                  <MenuItem key={gender} value={gender}>
+                    {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Ajuster la taille des autres éléments */}
+          <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
               <InputLabel>Education Level</InputLabel>
               <Select
                 value={filters.demographic.educationLevel || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  demographic: {
-                    ...prev.demographic,
-                    educationLevel: e.target.value
-                  }
-                }))}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      educationLevel: e.target.value
+                    }
+                  }));
+                  applyDemographicFilters();
+                }}
               >
                 <MenuItem value="">All</MenuItem>
                 {educationLevels.map((level) => (
@@ -846,18 +1041,21 @@ const ResultsPage: React.FC = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
               <InputLabel>City</InputLabel>
               <Select
                 value={filters.demographic.city || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  demographic: {
-                    ...prev.demographic,
-                    city: e.target.value
-                  }
-                }))}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      city: e.target.value
+                    }
+                  }));
+                  applyDemographicFilters();
+                }}
               >
                 <MenuItem value="">All Cities</MenuItem>
                 {cities.map((city) => (
@@ -867,9 +1065,9 @@ const ResultsPage: React.FC = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ width: '100%', px: 2 }}>
-              <Typography gutterBottom>
+          <Grid item xs={12} sm={3}>
+            <Box sx={{ width: '100%', px: 1 }}> {/* Réduit le padding horizontal */}
+              <Typography gutterBottom sx={{ color: '#1a237e' }}>
                 Age Range: {ageRange[0]} - {ageRange[1]} years
               </Typography>
               <Slider
@@ -878,6 +1076,28 @@ const ResultsPage: React.FC = () => {
                 valueLabelDisplay="auto"
                 min={0}
                 max={100}
+                sx={{
+                  width: '90%', // Réduit légèrement la largeur
+                  ml: 1, // Ajoute une marge à gauche
+                  '& .MuiSlider-rail': {
+                    background: 'rgba(118, 75, 162, 0.2)',
+                  },
+                  '& .MuiSlider-track': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  },
+                  '& .MuiSlider-thumb': {
+                    backgroundColor: '#764ba2',
+                    '&:hover, &.Mui-focusVisible': {
+                      boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
+                    },
+                  },
+                  '& .MuiSlider-valueLabel': {
+                    backgroundColor: '#764ba2',
+                  },
+                  '& .MuiSlider-mark': {
+                    backgroundColor: '#667eea',
+                  },
+                }}
                 marks={[
                   { value: 0, label: '0' },
                   { value: 20, label: '20' },
@@ -935,149 +1155,84 @@ const ResultsPage: React.FC = () => {
     return stats;
   }, [surveyAnswers]);
 
-  const [showDemographic, setShowDemographic] = useState(false);
-
   const renderDemographicStats = useCallback(() => {
     if (!selectedSurvey) return null;
 
     return (
-      <DemographicStatsContent 
-        selectedSurvey={selectedSurvey}
-        surveyAnswers={surveyAnswers}
-        filters={filters}
-        calculateDemographicStats={calculateDemographicStats}
-      />
-    );
-  }, [selectedSurvey, surveyAnswers, filters]);
-
-  // Créer un sous-composant pour gérer les états
-  const DemographicStatsContent: React.FC<{
-    selectedSurvey: Survey;
-    surveyAnswers: Record<string, SurveyAnswer[]>;
-    filters: any;
-    calculateDemographicStats: (surveyId: string) => DemographicStats;
-  }> = ({ selectedSurvey, surveyAnswers, filters, calculateDemographicStats }) => {
-    const [filteredStats, setFilteredStats] = useState<DemographicStats | null>(null);
-
-    const applyDemographicFilters = useCallback(() => {
-      const answers = surveyAnswers[selectedSurvey._id] || [];
-      
-      const filteredAnswers = answers.filter((answer: SurveyAnswer) => {
-        const demographic = answer.respondent?.demographic;
-        if (!demographic) return false;
-
-        if (filters.demographic.educationLevel && 
-            demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        if (filters.demographic.city && 
-            demographic.city !== filters.demographic.city) {
-          return false;
-        }
-
-        if (filters.demographic.age && demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      const newStats = {
-        gender: {},
-        education: {},
-        city: {},
-        ageDistribution: Array(121).fill(0)
-      } as DemographicStats;
-
-      filteredAnswers.forEach((answer: SurveyAnswer) => {
-        const demographic = answer.respondent?.demographic;
-        if (demographic) {
-          if (demographic.gender) {
-            newStats.gender[demographic.gender] = (newStats.gender[demographic.gender] || 0) + 1;
-          }
-          if (demographic.educationLevel) {
-            newStats.education[demographic.educationLevel] = 
-              (newStats.education[demographic.educationLevel] || 0) + 1;
-          }
-          if (demographic.city) {
-            newStats.city[demographic.city] = (newStats.city[demographic.city] || 0) + 1;
-          }
-          if (demographic.dateOfBirth) {
-            const age = calculateAge(new Date(demographic.dateOfBirth));
-            if (age >= 0 && age <= 120) {
-              newStats.ageDistribution[age]++;
-            }
-          }
-        }
-      });
-
-      setFilteredStats(newStats);
-    }, [selectedSurvey, surveyAnswers, filters]);
-
-    const stats = filteredStats || calculateDemographicStats(selectedSurvey._id);
-
-    return (
-      <Box sx={{ mt: 4, p: 3, border: '1px solid #ddd', borderRadius: 2, bgcolor: '#fff' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            Statistiques Démographiques
+      <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3,
+          pb: 2,
+          borderBottom: '1px solid rgba(0,0,0,0.1)'
+        }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            Demographic Statistics
           </Typography>
-          <Box>
-            <Button
-              variant="contained"
-              onClick={applyDemographicFilters}
-              sx={{ mr: 2 }}
-            >
-              Appliquer les filtres
-            </Button>
-            {filteredStats && (
-              <Button
-                variant="text"
-                onClick={() => setFilteredStats(null)}
-              >
-                Réinitialiser
-              </Button>
-            )}
-          </Box>
         </Box>
 
-        {filteredStats && (
-          <Typography variant="subtitle1" sx={{ mb: 2, color: 'primary.main' }}>
-            Résultats filtrés : {Object.values(filteredStats.gender).reduce((a, b) => a + b, 0)} réponses
-          </Typography>
-        )}
-
-        <Grid container spacing={4}>
+        <Grid container spacing={4} sx={{ 
+          justifyContent: 'center', // Centrer les éléments de la grille
+          alignItems: 'stretch'     // Étirer les éléments à la même hauteur
+        }}>
           {/* Genre */}
           <Grid item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, height: '400px' }}>
-              <Typography variant="subtitle1" gutterBottom align="center" sx={{ fontWeight: 'medium' }}>
-                Distribution par Genre
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              display: 'flex',           // Ajout de flexbox
+              flexDirection: 'column',   // Organisation verticale
+              alignItems: 'center',      // Centrage horizontal
+              justifyContent: 'center',  // Centrage vertical
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
+                }}
+              >
+                Distribution by Gender
               </Typography>
-              <Box sx={{ height: 'calc(100% - 40px)' }}>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',           // Utiliser toute la largeur disponible
+                display: 'flex',         // Ajout de flexbox
+                justifyContent: 'center',// Centrage horizontal
+                alignItems: 'center'     // Centrage vertical
+              }}>
                 <Pie
                   data={{
-                    labels: Object.keys(stats.gender),
+                    labels: Object.keys(filteredStats?.gender || stats.gender),
                     datasets: [{
-                      data: Object.values(stats.gender),
-                      backgroundColor: [
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(75, 192, 192, 0.8)'
-                      ],
-                      borderColor: [
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(75, 192, 192, 1)'
-                      ],
-                      borderWidth: 2
+                      data: Object.values(filteredStats?.gender || stats.gender),
+                      backgroundColor: chartColors.backgrounds,
+                      borderColor: chartColors.borders,
+                      borderWidth: 1
                     }]
                   }}
-                  options={commonChartOptions}
+                  options={{
+                    ...pieOptions,
+                    responsive: true,
+                    maintainAspectRatio: true
+                  }}
                 />
               </Box>
             </Paper>
@@ -1085,24 +1240,133 @@ const ResultsPage: React.FC = () => {
 
           {/* Niveau d'éducation */}
           <Grid item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, height: '400px' }}>
-              <Typography variant="subtitle1" gutterBottom align="center" sx={{ fontWeight: 'medium' }}>
-                Distribution par Niveau d'Éducation
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
+                }}
+              >
+                Distribution by Education Level
               </Typography>
-              <Box sx={{ height: 'calc(100% - 40px)' }}>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',           // Utiliser toute la largeur disponible
+                display: 'flex',         // Ajout de flexbox
+                justifyContent: 'center',// Centrage horizontal
+                alignItems: 'center'     // Centrage vertical
+              }}>
                 <Bar
                   data={{
-                    labels: Object.keys(stats.education),
+                    labels: Object.keys(filteredStats?.education || stats.education),
                     datasets: [{
-                      label: 'Participants',
-                      data: Object.values(stats.education),
-                      backgroundColor: 'rgba(75, 192, 192, 0.8)',
-                      borderColor: 'rgba(75, 192, 192, 1)',
-                      borderWidth: 2,
-                      borderRadius: 5
+                      data: Object.values(filteredStats?.education || stats.education),
+                      backgroundColor: chartColors.backgrounds,
+                      borderColor: chartColors.borders,
+                      borderWidth: 1,
+                      hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
+                      hoverBorderColor: chartColors.borders,
+                      hoverBorderWidth: 2,
                     }]
                   }}
-                  options={commonChartOptions}
+                  options={{
+                    ...commonChartOptions,
+                    plugins: {
+                      ...commonChartOptions.plugins,
+                      title: {
+                        ...commonChartOptions.plugins.title,
+                        display: false, // Changé de true à false pour supprimer le titre redondant
+                        text: 'Distribution by Education Level'
+                      },
+                      legend: {
+                        display: true,
+                        position: 'top' as const,
+                        onClick: (e: any, legendItem: any, legend: any) => {
+                          const index = legendItem.index;
+                          const ci = legend.chart;
+                          
+                          // Toggle la visibilité du dataset
+                          const meta = ci.getDatasetMeta(0);
+                          const alreadyHidden = meta.data[index].hidden;
+                          meta.data[index].hidden = !alreadyHidden;
+
+                          // Met à jour le graphique
+                          ci.update();
+                        },
+                        labels: {
+                          generateLabels: function(chart: any) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                              return data.labels.map((label: string, index: number) => {
+                                const meta = chart.getDatasetMeta(0);
+                                const hidden = meta.data[index]?.hidden || false;
+                                
+                                return {
+                                  text: label,
+                                  fillStyle: chartColors.backgrounds[index % chartColors.backgrounds.length],
+                                  strokeStyle: chartColors.borders[index % chartColors.borders.length],
+                                  lineWidth: 1,
+                                  hidden: hidden,
+                                  index: index
+                                };
+                              });
+                            }
+                            return [];
+                          }
+                        }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart',
+                    },
+                    transitions: {
+                      active: {
+                        animation: {
+                          duration: 400
+                        }
+                      }
+                    },
+                    hover: {
+                      mode: 'index',
+                      intersect: false
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          stepSize: 1
+                        },
+                        grid: {
+                          color: 'rgba(102, 126, 234, 0.1)',
+                          display: true
+                        }
+                      },
+                      x: {
+                        grid: {
+                          display: false
+                        }
+                      }
+                    }
+                  }}
                 />
               </Box>
             </Paper>
@@ -1110,57 +1374,84 @@ const ResultsPage: React.FC = () => {
 
           {/* Distribution des âges */}
           <Grid item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, height: '400px' }}>
-              <Typography variant="subtitle1" gutterBottom align="center" sx={{ fontWeight: 'medium' }}>
-                Distribution des Âges
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
+                }}
+              >
+                Age Distribution
               </Typography>
-              <Box sx={{ height: 'calc(100% - 40px)' }}>
-                <Line
-                  data={{
-                    labels: Array.from({ length: 121 }, (_, i) => i.toString()),
-                    datasets: [{
-                      label: 'Participants',
-                      data: stats.ageDistribution,
-                      backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                      borderColor: 'rgba(54, 162, 235, 1)',
-                      borderWidth: 2,
-                      pointRadius: 3,
-                      pointHoverRadius: 5,
-                      pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                      fill: true,
-                      tension: 0.3
-                    }]
-                  }}
-                  options={commonChartOptions}
-                />
+              <Box sx={{ height: 'calc(100% - 60px)' }}>
+                {renderAgeChart(filteredStats?.ageDistribution || stats.ageDistribution)}
               </Box>
             </Paper>
           </Grid>
 
           {/* Villes */}
           <Grid item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, height: '400px' }}>
-              <Typography variant="subtitle1" gutterBottom align="center" sx={{ fontWeight: 'medium' }}>
-                Distribution par Ville
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
+                }}
+              >
+                Distribution by City
               </Typography>
-              <Box sx={{ height: 'calc(100% - 40px)' }}>
+              <Box sx={{ height: 'calc(100% - 60px)' }}>
                 <Doughnut
                   data={{
-                    labels: Object.keys(stats.city),
+                    labels: Object.keys(filteredStats?.city || stats.city),
                     datasets: [{
-                      data: Object.values(stats.city),
+                      data: Object.values(filteredStats?.city || stats.city),
                       backgroundColor: [
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 206, 86, 0.8)',
-                        'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)',
-                        'rgba(255, 159, 64, 0.8)'
+                        'rgba(102, 126, 234, 0.6)',
+                        'rgba(118, 75, 162, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(255, 99, 132, 0.6)',
                       ],
-                      borderWidth: 2
+                      borderColor: [
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 99, 132, 1)',
+                      ],
+                      borderWidth: 1
                     }]
                   }}
-                  options={commonChartOptions}
+                  options={pieOptions}
                 />
               </Box>
             </Paper>
@@ -1168,7 +1459,7 @@ const ResultsPage: React.FC = () => {
         </Grid>
       </Box>
     );
-  };
+  }, [selectedSurvey, surveyAnswers, filters.demographic, chartColors, filteredStats, stats]);
 
   const renderIndividualResponses = useCallback(() => {
     if (!selectedSurvey) return null;
@@ -1189,7 +1480,7 @@ const ResultsPage: React.FC = () => {
             {answer.respondent?.demographic && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" color="primary">
-                  Demographic Information:
+                  User Information:
                 </Typography>
                 <List dense>
                   {answer.respondent.demographic.gender && (
@@ -1339,113 +1630,179 @@ const ResultsPage: React.FC = () => {
       return null;
     }
 
-    const filterAnswers = (answers: SurveyAnswer[]): SurveyAnswer[] => {
-      return answers.filter(answer => {
-        const demographic = answer.respondent?.demographic;
-        if (!demographic) return true;
-
-        if (filters.demographic.educationLevel && 
-            demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        if (filters.demographic.city && 
-            demographic.city !== filters.demographic.city) {
-          return false;
-        }
-
-        if (filters.demographic.age && demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-    };
-
-    const getFilteredAnswerCounts = () => {
-      const filteredAnswers = filterAnswers(selectedQuestion.answers);
-      const answerCounts: { [key: string]: number } = {};
-      
-      filteredAnswers.forEach(answer => {
-        const questionAnswer = answer.answers.find(a => a.questionId === questionId);
-        if (questionAnswer) {
-          const value = String(questionAnswer.answer || 'Sans réponse');
-          answerCounts[value] = (answerCounts[value] || 0) + 1;
-        }
-      });
-      
-      return answerCounts;
+    // Modifier cette partie pour utiliser calculateQuestionStats directement
+    const getQuestionData = () => {
+      const stats = calculateQuestionStats(selectedSurvey._id, questionId);
+      return stats.answers;
     };
 
     return (
       <>
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          pb: 3
+        }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="h6">{question.text}</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle2" color="textSecondary">
-                {selectedQuestion.answers.length} réponse(s)
-              </Typography>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              {question.text}
+            </Typography>
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              gap: 2,
+              mt: 2 
+            }}>
+              <Stack direction="row" spacing={2}>
+                <Box sx={{ 
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  px: 3,
+                  py: 1.5,
+                  borderRadius: 2,
+                  minWidth: '150px'
+                }}>
+                  <Typography variant="overline" sx={{ opacity: 0.9, display: 'block' }}>
+                    Total Responses
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {selectedQuestion.answers.length}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ 
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  px: 3,
+                  py: 1.5,
+                  borderRadius: 2,
+                  minWidth: '200px'
+                }}>
+                  <Typography variant="overline" sx={{ opacity: 0.9, display: 'block' }}>
+                    Most Common Answer
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {(() => {
+                      const answerCounts: { [key: string]: number } = {};
+                      selectedQuestion.answers.forEach(answer => {
+                        const questionAnswer = answer.answers.find(
+                          a => a.questionId === selectedQuestion.questionId
+                        );
+                        if (questionAnswer?.answer) {
+                          const value = questionAnswer.answer.toString();
+                          answerCounts[value] = (answerCounts[value] || 0) + 1;
+                        }
+                      });
+                      
+                      const mostCommon = Object.entries(answerCounts)
+                        .sort(([,a], [,b]) => b - a)[0];
+                      
+                      return mostCommon 
+                        ? `${mostCommon[0]} (${mostCommon[1]} times)`
+                        : 'No response';
+                    })()}
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Box sx={{ 
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 3,
+                p: 0.5
+              }}>
                 <Tabs 
                   value={currentView} 
                   onChange={(_, newValue) => handleViewChange(newValue as 'list' | 'chart')}
+                  sx={{
+                    '& .MuiTab-root': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      '&.Mui-selected': {
+                        color: 'white',
+                      }
+                    },
+                    '& .MuiTabs-indicator': {
+                      backgroundColor: 'white',
+                    }
+                  }}
                 >
                   <Tab 
                     icon={<VisibilityIcon />} 
-                    label="Liste" 
+                    label="List" 
                     value="list"
+                    sx={{ minHeight: 'auto', py: 1 }}
                   />
                   <Tab 
                     icon={<BarChartIcon />} 
-                    label="Graphique" 
+                    label="Graph" 
                     value="chart"
+                    sx={{ minHeight: 'auto', py: 1 }}
                   />
                 </Tabs>
               </Box>
             </Box>
           </Box>
         </DialogTitle>
-        <DialogContent dividers>
+
+        <DialogContent 
+          dividers 
+          sx={{ 
+            bgcolor: '#f5f7ff',
+            p: 0
+          }}
+        >
           {currentView === 'list' ? (
-            <List>
+            <List sx={{ p: 0 }}>
               {selectedQuestion.answers.map((answer, index) => {
                 const questionAnswer = answer.answers.find(
                   a => a.questionId === selectedQuestion.questionId
                 );
-                const answerValue = questionAnswer?.answer?.toString() || 'Sans réponse';
+                const answerValue = questionAnswer?.answer?.toString() || 'No response';
                 
-                // Préparer le contenu du tooltip
                 const tooltipContent = (
-                  <Paper sx={{ p: 1.5, maxWidth: 300 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      <strong>Email:</strong> {answer.respondent.userId.email}
-                    </Typography>
-                    {answer.respondent.demographic && (
-                      <>
-                        <Typography variant="subtitle2" gutterBottom>
-                          <strong>Genre:</strong> {answer.respondent.demographic.gender || 'Non spécifié'}
+                  <Paper sx={{ 
+                    p: 2.5,
+                    maxWidth: 300,
+                    borderRadius: 2,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+                  }}>
+                    <Stack spacing={1.5}>
+                      <Box>
+                        <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                          User Information
                         </Typography>
-                        <Typography variant="subtitle2" gutterBottom>
-                          <strong>Date de naissance:</strong> {
-                            answer.respondent.demographic.dateOfBirth 
-                              ? new Date(answer.respondent.demographic.dateOfBirth).toLocaleDateString()
-                              : 'Non spécifié'
-                          }
+                        <Typography variant="body2">
+                          <strong>Email:</strong> {answer.respondent.userId.email}
                         </Typography>
-                        <Typography variant="subtitle2" gutterBottom>
-                          <strong>Niveau d'éducation:</strong> {
-                            answer.respondent.demographic.educationLevel || 'Non spécifié'
-                          }
-                        </Typography>
-                        <Typography variant="subtitle2">
-                          <strong>Ville:</strong> {answer.respondent.demographic.city || 'Non spécifié'}
-                        </Typography>
-                      </>
-                    )}
+                      </Box>
+                      
+                      {answer.respondent.demographic && (
+                        <Box>
+                          <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                            Demographic Data
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            <Typography variant="body2">
+                              <strong>Gender:</strong> {answer.respondent.demographic.gender || 'Not specified'}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Date of Birth:</strong> {
+                                answer.respondent.demographic.dateOfBirth 
+                                  ? new Date(answer.respondent.demographic.dateOfBirth).toLocaleDateString()
+                                  : 'Not specified'
+                              }
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Education Level:</strong> {
+                                answer.respondent.demographic.educationLevel || 'Not specified'
+                              }
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>City:</strong> {answer.respondent.demographic.city || 'Not specified'}
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      )}
+                    </Stack>
                   </Paper>
                 );
 
@@ -1453,7 +1810,7 @@ const ResultsPage: React.FC = () => {
                   <MuiTooltip 
                     key={index}
                     title={tooltipContent}
-                    placement="right-start"
+                    placement="right"
                     arrow
                     followCursor
                     PopperProps={{
@@ -1461,7 +1818,7 @@ const ResultsPage: React.FC = () => {
                         '& .MuiTooltip-tooltip': {
                           bgcolor: 'background.paper',
                           color: 'text.primary',
-                          boxShadow: 1,
+                          boxShadow: 3,
                           '& .MuiTooltip-arrow': {
                             color: 'background.paper',
                           },
@@ -1469,72 +1826,151 @@ const ResultsPage: React.FC = () => {
                       },
                     }}
                   >
-                    <ListItem divider>
-                      <ListItemText
-                        primary={answerValue}
-                        secondary={`Répondant: ${answer.respondent.userId.username}`}
-                      />
+                    <ListItem 
+                      divider
+                      sx={{
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: 'rgba(102, 126, 234, 0.05)',
+                          transform: 'translateX(5px)'
+                        },
+                        p: 2
+                      }}
+                    >
+                      <Box sx={{ width: '100%' }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          mb: 0.5
+                        }}>
+                          <Typography 
+                            variant="body1" 
+                            sx={{ 
+                              fontWeight: 500,
+                              color: '#2d3748'
+                            }}
+                          >
+                            {answerValue}
+                          </Typography>
+                          <Typography 
+                            variant="caption"
+                            sx={{ 
+                              color: 'text.secondary',
+                              bgcolor: 'rgba(102, 126, 234, 0.1)',
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1
+                            }}
+                          >
+                            Response #{index + 1}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <span>By</span>
+                          <Typography 
+                            component="span"
+                            sx={{ 
+                              color: 'primary.main',
+                              fontWeight: 500
+                            }}
+                          >
+                            {answer.respondent.userId.username}
+                          </Typography>
+                        </Typography>
+                      </Box>
                     </ListItem>
                   </MuiTooltip>
                 );
               })}
             </List>
           ) : (
-            <Box sx={{ height: '500px', width: '100%', p: 2 }}>
+            <Box sx={{ height: '500px', width: '100%', p: 3 }}>
               <ChartView 
-                data={(() => {
-                  const answerCounts: { [key: string]: number } = {};
-                  const filteredAnswers = filterAnswers(selectedQuestion.answers);
-                  filteredAnswers.forEach(answer => {
-                    const questionAnswer = answer.answers.find(
-                      a => a.questionId === selectedQuestion.questionId
-                    );
-                    if (questionAnswer?.answer) {
-                      const value = questionAnswer.answer.toString();
-                      answerCounts[value] = (answerCounts[value] || 0) + 1;
-                    }
-                  });
-                  return answerCounts;
-                })()}
-                question={selectedSurvey.questions.find(
-                  q => q.id === selectedQuestion.questionId
-                ) ?? { 
-                  id: 'default',
-                  text: 'Question non trouvée',
-                  type: 'text'
-                }}
+                data={getQuestionData()} // Utiliser la nouvelle fonction
+                question={question}
               />
             </Box>
           )}
         </DialogContent>
+
         <DialogActions sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
-          px: 3 
+          px: 3,
+          py: 2,
+          bgcolor: 'white',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)'
         }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Stack direction="row" spacing={2}>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<TableViewIcon />}
               onClick={exportCSV}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                px: 3,
+                py: 1,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                },
+                transition: 'all 0.2s ease',
+                textTransform: 'none',
+                fontWeight: 500
+              }}
             >
               Export CSV
             </Button>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<CodeIcon />}
               onClick={exportJSON}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                px: 3,
+                py: 1,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                },
+                transition: 'all 0.2s ease',
+                textTransform: 'none',
+                fontWeight: 500
+              }}
             >
               Export JSON
             </Button>
-          </Box>
-          <Button onClick={handleClose}>
-            Fermer
+          </Stack>
+          <Button 
+            onClick={handleClose}
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              px: 3,
+              py: 1,
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+              },
+              transition: 'all 0.2s ease',
+              textTransform: 'none',
+              fontWeight: 500
+            }}
+          >
+            Close
           </Button>
         </DialogActions>
       </>
     );
-  }, [selectedSurvey, selectedQuestion, currentView, filters]);
+  }, [selectedSurvey, selectedQuestion, currentView, calculateQuestionStats]); // Ajouter calculateQuestionStats aux dépendances
 
   // Ajout d'un useEffect pour surveiller les changements de vue
   useEffect(() => {
@@ -1557,18 +1993,427 @@ const ResultsPage: React.FC = () => {
     console.log('Current view changed:', currentView);
   }, [currentView]);
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
+  // Ajoutez ces nouvelles fonctions pour l'export global
+  const prepareAllQuestionsData = useCallback(() => {
+    if (!selectedSurvey || !surveyAnswers[selectedSurvey._id]) return [];
+
+    const answers = surveyAnswers[selectedSurvey._id];
+    return answers.map(answer => {
+      const questionAnswers = selectedSurvey.questions.reduce((acc: any, question) => {
+        const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+        acc[question.text] = questionAnswer?.answer || 'No answer';
+        return acc;
+      }, {});
+
+      return {
+        respondentId: answer.respondent.userId._id,
+        username: answer.respondent.userId.username,
+        email: answer.respondent.userId.email,
+        submittedAt: answer.submittedAt,
+        demographic: answer.respondent.demographic ? {
+          gender: answer.respondent.demographic.gender,
+          dateOfBirth: answer.respondent.demographic.dateOfBirth,
+          educationLevel: answer.respondent.demographic.educationLevel,
+          city: answer.respondent.demographic.city
+        } : null,
+        ...questionAnswers
+      };
+    });
+  }, [selectedSurvey, surveyAnswers]);
+
+  const exportAllToCSV = useCallback(() => {
+    if (!selectedSurvey) return;
+
+    const data = prepareAllQuestionsData();
+    if (data.length === 0) return;
+
+    // Créer les en-têtes
+    const headers = [
+      'Respondent ID',
+      'Username',
+      'Email',
+      'Submitted At',
+      'Gender',
+      'Date of Birth',
+      'Education Level',
+      'City',
+      ...selectedSurvey.questions.map(q => q.text)
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...data.map(item => [
+        item.respondentId,
+        item.username,
+        item.email,
+        item.submittedAt,
+        item.demographic?.gender || '',
+        item.demographic?.dateOfBirth || '',
+        item.demographic?.educationLevel || '',
+        item.demographic?.city || '',
+        ...selectedSurvey.questions.map(q => `"${item[q.text]}"`)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `survey_results_${selectedSurvey._id}.csv`;
+    link.click();
+  }, [selectedSurvey, prepareAllQuestionsData]);
+
+  const exportAllToJSON = useCallback(() => {
+    if (!selectedSurvey) return;
+
+    const data = prepareAllQuestionsData();
+    if (data.length === 0) return;
+
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `survey_results_${selectedSurvey._id}.json`;
+    link.click();
+  }, [selectedSurvey, prepareAllQuestionsData]);
+
+  // Ajoutez ces interfaces au début du fichier
+  interface DemographicFilters {
+    gender?: string;
+    educationLevel?: string;
+    city?: string;
+    age?: [number, number];
   }
 
-  if (error) {
+  // Modifiez la fonction d'application des filtres
+  const applyDemographicFilters = useCallback(() => {
+    if (!selectedSurvey) return;
+
+    const answers = surveyAnswers[selectedSurvey._id] || [];
+    
+    console.log('Current filters:', filters.demographic);
+    
+    const filteredAnswers = answers.filter(answer => {
+      const demographic = answer.respondent?.demographic;
+      if (!demographic) return false;
+
+      // Debug logs
+      console.log('Checking answer:', {
+        answerGender: demographic.gender,
+        filterGender: filters.demographic.gender?.toLowerCase(), // Convertir en minuscules
+        matches: !filters.demographic.gender || 
+                demographic.gender === filters.demographic.gender?.toLowerCase()
+      });
+
+      // Filtre par genre - Comparaison insensible à la casse
+      if (filters.demographic.gender && filters.demographic.gender !== '') {
+        if (!demographic.gender || 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Reste des filtres inchangé...
+      if (filters.demographic.educationLevel && 
+          filters.demographic.educationLevel !== "" && 
+          demographic.educationLevel !== filters.demographic.educationLevel) {
+        return false;
+      }
+
+      if (filters.demographic.city && 
+          filters.demographic.city !== "" && 
+          demographic.city !== filters.demographic.city) {
+        return false;
+      }
+
+      if (filters.demographic.age && 
+          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+        if (demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+
+    console.log('Filtered answers:', filteredAnswers);
+
+    const newStats: DemographicStats = {
+      gender: {},
+      education: {},
+      city: {},
+      ageDistribution: Array(121).fill(0)
+    };
+
+    filteredAnswers.forEach(answer => {
+      const demographic = answer.respondent?.demographic;
+      if (demographic) {
+        if (demographic.gender) {
+          newStats.gender[demographic.gender] = (newStats.gender[demographic.gender] || 0) + 1;
+        }
+
+        if (demographic.educationLevel) {
+          newStats.education[demographic.educationLevel] = 
+            (newStats.education[demographic.educationLevel] || 0) + 1;
+        }
+
+        if (demographic.city) {
+          newStats.city[demographic.city] = (newStats.city[demographic.city] || 0) + 1;
+        }
+
+        if (demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age >= 0 && age <= 120) {
+            newStats.ageDistribution[age]++;
+          }
+        }
+      }
+    });
+
+    console.log('New stats:', newStats);
+    setFilteredStats(newStats);
+  }, [selectedSurvey, surveyAnswers, filters.demographic, calculateDemographicStats]);
+
+  // Ajouter un useEffect pour appliquer les filtres lorsqu'ils changent
+  useEffect(() => {
+    if (selectedSurvey) {
+      applyDemographicFilters();
+    }
+  }, [filters.demographic, selectedSurvey, applyDemographicFilters]);
+
+  useEffect(() => {
+    if (selectedSurvey && surveyAnswers[selectedSurvey._id]) {
+      // Calculer les stats initiales avec toutes les réponses
+      const initialStats = calculateDemographicStats(selectedSurvey._id);
+      setStats(initialStats);
+      // Important : initialiser aussi filteredStats avec les mêmes données
+      setFilteredStats(initialStats);
+    }
+  }, [selectedSurvey, surveyAnswers]);
+
+  // Ajouter cette fonction pour préparer les données JSON
+  const prepareAllQuestionsJSON = useCallback(() => {
+    if (!selectedSurvey) return null;
+    
+    const allData = selectedSurvey.questions.reduce((acc: any, question) => {
+      const stats = calculateQuestionStats(selectedSurvey._id, question.id);
+      acc[question.text] = stats.answers;
+      return acc;
+    }, {});
+
+    return JSON.stringify(allData, null, 2);
+  }, [selectedSurvey, calculateQuestionStats]);
+
+  // Ajouter cette fonction pour préparer les données CSV
+  const prepareAllQuestionsCSV = useCallback(() => {
+    if (!selectedSurvey) return [];
+    
+    const csvData: any[] = [];
+    
+    // En-tête
+    csvData.push(['Question', 'Option', 'Count', 'Percentage']);
+    
+    // Données pour chaque question
+    selectedSurvey.questions.forEach(question => {
+      const stats = calculateQuestionStats(selectedSurvey._id, question.id);
+      Object.entries(stats.answers).forEach(([answer, count]) => {
+        csvData.push([
+          question.text,
+          answer,
+          count,
+          `${Math.round((count / stats.total) * 100)}%`
+        ]);
+      });
+    });
+    
+    return csvData;
+  }, [selectedSurvey, calculateQuestionStats]);
+
+  // Modifier la fonction renderAgeChart
+  const renderAgeChart = (data: number[]) => {
+    // Filtrer les points pour exclure les 0 participants et les 0 ans
+    const points = data
+      .map((value, age) => ({
+        x: age,
+        y: value,
+        hidden: false // État de visibilité initial
+      }))
+      .filter(point => point.x > 0 && point.y > 0);
+
+    // Créer un tableau de couleurs différentes pour chaque point
+    const generateColors = (index: number) => {
+      const colors = [
+        { bg: 'rgba(102, 126, 234, 0.6)', border: 'rgba(102, 126, 234, 1)' },
+        { bg: 'rgba(118, 75, 162, 0.6)', border: 'rgba(118, 75, 162, 1)' },
+        { bg: 'rgba(237, 100, 166, 0.6)', border: 'rgba(237, 100, 166, 1)' },
+        { bg: 'rgba(39, 187, 245, 0.6)', border: 'rgba(39, 187, 245, 1)' },
+        { bg: 'rgba(146, 100, 237, 0.6)', border: 'rgba(146, 100, 237, 1)' },
+        { bg: 'rgba(245, 101, 101, 0.6)', border: 'rgba(245, 101, 101, 1)' },
+        { bg: 'rgba(72, 187, 120, 0.6)', border: 'rgba(72, 187, 120, 1)' },
+        { bg: 'rgba(246, 173, 85, 0.6)', border: 'rgba(246, 173, 85, 1)' },
+      ];
+      return colors[index % colors.length];
+    };
+
+    const chartData = {
+      datasets: [{
+        label: 'Nombre de participants',
+        data: points,
+        backgroundColor: points.map((_, index) => generateColors(index).bg),
+        borderColor: points.map((_, index) => generateColors(index).border),
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: points.map((_, index) => generateColors(index).bg),
+        pointBorderColor: points.map((_, index) => generateColors(index).border),
+        pointHoverBackgroundColor: points.map((_, index) => generateColors(index).bg.replace('0.6', '0.8')),
+        pointHoverBorderColor: points.map((_, index) => generateColors(index).border),
+        showLine: true,
+        tension: 0.3,
+        parsing: {
+          xAxisKey: 'x',
+          yAxisKey: 'y'
+        }
+      }]
+    };
+
+    // Ajouter cette interface pour les éléments du graphique
+    interface ChartDataElement {
+      hidden?: boolean;
+      _datasetIndex?: number;
+      _index?: number;
+    }
+
+    // Dans la fonction renderAgeChart, modifier le cast des éléments
+    const options: ChartOptions<'scatter'> = {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'right' as const,
+          align: 'start' as const,
+          onClick: function(e, legendItem, legend) {
+            if (!legend || !legend.chart) return;
+            
+            const index = legendItem.index;
+            if (index !== undefined) {
+              const chart = legend.chart;
+              const meta = chart.getDatasetMeta(0);
+              
+              // Utiliser le nouveau type pour le cast
+              const element = meta.data[index] as unknown as ChartDataElement;
+              if (element) {
+                element.hidden = !element.hidden;
+                
+                // Mettre à jour l'état dans notre tableau de points
+                points[index].hidden = element.hidden || false;
+                
+                // Forcer la mise à jour du graphique
+                chart.update();
+              }
+            }
+          },
+          labels: {
+            generateLabels: function(chart) {
+              const dataset = chart.data.datasets[0];
+              return points.map((point, index) => {
+                // Utiliser le nouveau type pour le cast
+                const element = chart.getDatasetMeta(0).data[index] as unknown as ChartDataElement;
+                return {
+                  text: `${point.x}`, // Suppression de " ans"
+                  fillStyle: generateColors(index).bg,
+                  strokeStyle: generateColors(index).border,
+                  lineWidth: 1,
+                  hidden: element?.hidden || false,
+                  datasetIndex: 0,
+                  index: index
+                };
+              });
+            }
+          }
+        },
+        title: {
+          display: false, // Changé de true à false pour supprimer le titre redondant
+          text: 'Distribution des âges',
+          font: {
+            size: 16,
+            weight: 'bold'
+          },
+          padding: 20
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context: any) {
+              return `${context.parsed.y} participant${context.parsed.y > 1 ? 's' : ''} de ${context.parsed.x} ans`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          position: 'bottom',
+          min: 1,
+          max: 100,
+          ticks: {
+            stepSize: 5,
+            callback: function(value) {
+              return value.toString();
+            }
+          },
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)',
+            display: true
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          },
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)',
+            display: true
+          }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'nearest'
+      }
+    };
+
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">{error}</Typography>
+      <Box sx={{ 
+        height: '400px', 
+        width: '100%',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'scale(1.01)',
+          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)'
+        },
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center'
+      }}>
+        <Scatter data={chartData} options={options} />
+      </Box>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <CircularProgress sx={{ color: '#667eea' }} />
       </Box>
     );
   }
@@ -1588,100 +2433,202 @@ const ResultsPage: React.FC = () => {
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
-          maxWidth: '1200px',
+          maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
           mb: 4,
         }}>
-          {/* Header avec gradient */}
           <Box sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             py: 4,
             px: 4,
             color: 'white',
             textAlign: 'center',
+            position: 'relative'
           }}>
+            <IconButton
+              onClick={handleBack}
+              sx={{
+                position: 'absolute',
+                left: 16,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'white',
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
             <Typography variant="h4" fontWeight="bold">
               {selectedSurvey.title}
             </Typography>
+            <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
+              Total Responses: {surveyAnswers[selectedSurvey._id]?.length || 0}
+            </Typography>
           </Box>
 
-          {/* Contenu */}
-          <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          <Box sx={{ p: 3 }}>
             {selectedSurvey?.demographicEnabled && (
               <FilterPanel />
             )}
 
-            {selectedSurvey.questions.map((question, index) => {
-              const stats = calculateQuestionStats(selectedSurvey._id, question.id);
-              
-              return (
-                <Paper
-                  key={question.id}
-                  elevation={1}
-                  sx={{
-                    mb: 3,
-                    p: 3,
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start', 
-                    mb: 2 
-                  }}>
-                    <Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: '#1a237e',
-                          fontWeight: 500
+            {/* Questions section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 3, 
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                  display: 'inline-block', // Ajout de cette ligne
+                  '&::before': {          // Ajout de cette ligne
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    background: 'inherit',
+                    zIndex: -1
+                  }
+                }}
+              >
+                Survey Questions
+              </Typography>
+              {selectedSurvey.questions.map((question, index) => {
+                const stats = calculateQuestionStats(selectedSurvey._id, question.id);
+                
+                return (
+                  <Paper 
+                    key={question.id} 
+                    elevation={1}
+                    sx={{
+                      mb: 3,
+                      p: 3,
+                      borderRadius: 2,
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      mb: 2 
+                    }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                          Question {index + 1}: {question.text}
+                        </Typography>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                          Type: {question.type}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        startIcon={<BarChartIcon />}
+                        onClick={() => handleQuestionClick(question.id)}
+                        disabled={stats.total === 0} // Désactivé uniquement s'il n'y a pas de réponses
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          },
+                          '&.Mui-disabled': {
+                            background: 'rgba(0, 0, 0, 0.12)',
+                            color: 'rgba(0, 0, 0, 0.26)'
+                          }
                         }}
                       >
-                        Question {index + 1}: {question.text}
-                      </Typography>
-                      <Typography 
-                        variant="subtitle2" 
-                        color="text.secondary" 
-                        sx={{ mt: 1 }}
-                      >
-                        Type: {question.type}
-                      </Typography>
+                        View Details ({stats.total} responses)
+                      </Button>
                     </Box>
-                    <Button
-                      variant="outlined"
-                      startIcon={<BarChartIcon />}
-                      onClick={() => handleQuestionClick(question.id)}
-                      disabled={stats.total === 0}
-                      sx={{
-                        borderColor: '#667eea',
-                        color: '#667eea',
-                        '&:hover': {
-                          borderColor: '#764ba2',
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        }
-                      }}
-                    >
-                      View Details ({stats.total} responses)
-                    </Button>
-                  </Box>
 
-                  <Divider sx={{ my: 2 }} />
+                    <Divider sx={{ my: 2 }} />
 
-                  <Box sx={{ mt: 2 }}>
-                    {renderQuestionSummary(question, stats)}
-                  </Box>
-                </Paper>
-              );
-            })}
+                    <Box sx={{ mt: 2 }}>
+                      {renderQuestionSummary(question, stats)}
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Box>
 
-            {/* Garder le reste du code pour le Dialog et les autres composants */}
+            {/* Export Buttons */}
+            <Box sx={{ 
+              mt: 6, 
+              pt: 4, 
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  startIcon={<TableViewIcon />}
+                  onClick={exportAllToCSV}
+                  sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    }
+                  }}
+                >
+                  Export All to CSV
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<CodeIcon />}
+                  onClick={exportAllToJSON}
+                  sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    }
+                  }}
+                >
+                  Export All to JSON
+                </Button>
+              </Stack>
+            </Box>
+
+            {/* Demographic Stats Button and Content */}
+            {selectedSurvey?.demographicEnabled && (
+              <>
+                <Box sx={{ 
+                  mt: 6, 
+                  pt: 4, 
+                  borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}>
+                  {renderDemographicStats()}
+                </Box>
+              </>
+            )}
           </Box>
         </Paper>
+
+        <Dialog
+          open={dialogOpen}
+          onClose={handleClose}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: '90vh'
+            }
+          }}
+        >
+          {selectedQuestion && renderQuestionDetails(selectedQuestion.questionId)}
+        </Dialog>
       </Box>
     );
   }
 
+  // Liste des sondages
   return (
     <Box sx={{
       minHeight: '100vh',
@@ -1696,49 +2643,33 @@ const ResultsPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
         mb: 4,
       }}>
-        {/* Header avec gradient */}
         <Box sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           py: 4,
           px: 4,
           color: 'white',
           textAlign: 'center',
-          position: 'relative'
         }}>
-          <IconButton
-            onClick={handleBack}
-            sx={{
-              position: 'absolute',
-              left: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'white',
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
           <Typography variant="h4" fontWeight="bold">
             My Surveys
           </Typography>
-          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-            Total Surveys: {surveys.length}
-          </Typography>
         </Box>
 
-        {/* Contenu */}
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <Grid container spacing={3}>
-            {surveys.map((survey) => (
-              <Grid item xs={12} sm={6} md={4} key={survey._id}>
+          {error ? (
+            <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+              {error}
+            </Typography>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              {surveys.map((survey) => (
                 <Paper
+                  key={survey._id}
                   elevation={1}
                   sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
                     borderRadius: 2,
                     overflow: 'hidden',
                     transition: 'box-shadow 0.3s ease-in-out',
@@ -1747,7 +2678,7 @@ const ResultsPage: React.FC = () => {
                     }
                   }}
                 >
-                  <Box sx={{ p: 3, flexGrow: 1 }}>
+                  <Box sx={{ p: 3 }}>
                     <Typography 
                       variant="h6" 
                       sx={{ 
@@ -1763,13 +2694,7 @@ const ResultsPage: React.FC = () => {
                       color="text.secondary"
                       sx={{ mb: 2 }}
                     >
-                      Created: {new Date(survey.createdAt).toLocaleDateString()}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                    >
-                      Responses: {surveyAnswers[survey._id]?.length || 0}
+                      {survey.description}
                     </Typography>
                   </Box>
                   
@@ -1782,9 +2707,9 @@ const ResultsPage: React.FC = () => {
                     justifyContent: 'flex-end'
                   }}>
                     <Button
-                      startIcon={<VisibilityIcon />}
                       onClick={() => handleViewResults(survey)}
                       variant="contained"
+                      size="small"
                       sx={{
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         '&:hover': {
@@ -1796,21 +2721,8 @@ const ResultsPage: React.FC = () => {
                     </Button>
                   </Box>
                 </Paper>
-              </Grid>
-            ))}
-          </Grid>
-
-          {surveys.length === 0 && (
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                textAlign: 'center', 
-                mt: 4,
-                color: 'text.secondary'
-              }}
-            >
-              No surveys created yet.
-            </Typography>
+              ))}
+            </Box>
           )}
         </Box>
       </Paper>

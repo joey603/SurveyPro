@@ -75,28 +75,27 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    const surveys = await Survey.find({ createdBy: req.user.id })
+    console.log('Fetching surveys for user:', req.user.id);
+    
+    // Modifier la requête pour chercher par userId au lieu de createdBy
+    const surveys = await Survey.find({ userId: req.user.id })
       .select('title description questions demographicEnabled createdAt')
       .lean();
 
-    // Log pour déboguer
-    console.log('Retrieved surveys:', JSON.stringify(surveys, null, 2));
+    console.log('Found surveys:', surveys.length);
 
+    // Ne pas retourner 404 si aucun sondage n'est trouvé
     if (!surveys.length) {
-      return res.status(404).json({ message: "No surveys found." });
+      return res.status(200).json([]); // Retourner un tableau vide au lieu d'une erreur
     }
-
-    // Vérifier que les médias sont bien présents
-    surveys.forEach(survey => {
-      survey.questions.forEach(question => {
-        console.log('Question media:', question.media);
-      });
-    });
 
     res.status(200).json(surveys);
   } catch (error) {
     console.error("Error fetching surveys:", error);
-    res.status(500).json({ message: "Error fetching surveys.", error: error.message });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des sondages", 
+      error: error.message 
+    });
   }
 };
 
