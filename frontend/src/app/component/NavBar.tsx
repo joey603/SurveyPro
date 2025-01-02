@@ -45,10 +45,10 @@ const NavBar = () => {
         { name: 'Register', path: '/register' },
       ]
     : [
-        { name: 'Survey Creation', path: '/survey-creation' },
-        { name: 'Survey Answer', path: '/survey-answer' },
-        { name: 'Results', path: '/results' },
-        { name: 'History', path: '/history' },
+        { name: 'New Survey', path: '/survey-creation' },
+        { name: 'Explore', path: '/survey-answer' },
+        { name: 'Analytics', path: '/results' },
+        { name: 'Activity Log', path: '/history' },
         { name: 'Settings', path: '/settings' },
       ];
 
