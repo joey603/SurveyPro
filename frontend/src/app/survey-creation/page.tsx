@@ -260,7 +260,7 @@ const SurveyCreationPage: React.FC = () => {
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
     try {
-      setIsUploading((prev) => ({ ...prev, [questionId]: true }));
+      setIsUploading(prev => ({ ...prev, [questionId]: true }));
       
       const token = localStorage.getItem('accessToken');
       if (!token) {
@@ -292,7 +292,7 @@ const SurveyCreationPage: React.FC = () => {
         open: true
       });
     } finally {
-      setIsUploading((prev) => ({ ...prev, [questionId]: false }));
+      setIsUploading(prev => ({ ...prev, [questionId]: false }));
     }
   };
 
@@ -932,7 +932,7 @@ const SurveyCreationPage: React.FC = () => {
                     </Box>
                     {field.media && (
                       <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                        {isUploading[field.id] ? (
+                        {isUploading[field.id] === true ? (
                           <Box
                             sx={{
                               display: 'flex',
@@ -947,18 +947,28 @@ const SurveyCreationPage: React.FC = () => {
                             <CircularProgress size={40} sx={{ color: '#667eea' }} />
                           </Box>
                         ) : (
-                          <img
-                            src={field.media}
-                            alt="Question media"
-                            style={{
-                              maxWidth: '100%',
-                              height: 'auto',
-                              borderRadius: '8px',
-                            }}
-                            onError={(e) => {
-                              console.error('Error loading image:', e);
-                            }}
-                          />
+                          field.media.match(/\.(mp4|mov)$/i) ? (
+                            <ReactPlayer
+                              url={field.media}
+                              controls
+                              width="100%"
+                              height="auto"
+                              style={{ borderRadius: '8px' }}
+                            />
+                          ) : (
+                            <img
+                              src={field.media}
+                              alt="Question media"
+                              style={{
+                                maxWidth: '100%',
+                                height: 'auto',
+                                borderRadius: '8px',
+                              }}
+                              onError={(e) => {
+                                console.error('Error loading media:', e);
+                              }}
+                            />
+                          )
                         )}
                       </Box>
                     )}
