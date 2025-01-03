@@ -26,6 +26,8 @@ import {
   Rating,
   Paper,
   Alert,
+  FormHelperText,
+  TextFieldProps,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -60,7 +62,7 @@ interface Question {
   text: string;
   type: 'multiple-choice' | 'text' | 'slider' | 'rating' | 'dropdown' | 'yes-no' | 'date' | 'file-upload' | 'color-picker';
   options?: string[];
-  media?: { url: string; type: string };
+  media?: string;
   selectedDate?: Date | null;
 }
 
@@ -108,7 +110,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit } = useForm<FormData>({
+  const { control, handleSubmit, watch } = useForm<FormData>({
     defaultValues: {
       demographic: {
         gender: '',
@@ -141,6 +143,8 @@ const SurveyAnswerPage: React.FC = () => {
     severity: 'info',
     open: false
   });
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [answeredSurveys, setAnsweredSurveys] = useState<string[]>([]);
 
   const fetchCities = async () => {
     try {
@@ -244,9 +248,47 @@ const SurveyAnswerPage: React.FC = () => {
     setDateRange({ start: null, end: null });
   };
 
-  const onSubmit = async (data: any) => {
+  const validateForm = (data: FormData): boolean => {
+    const errors: { [key: string]: string } = {};
+    
+    if (selectedSurvey?.demographicEnabled) {
+      if (!data.demographic.gender) {
+        errors['demographic.gender'] = 'Please select your gender';
+      }
+      if (!data.demographic.dateOfBirth) {
+        errors['demographic.dateOfBirth'] = 'Please select your date of birth';
+      }
+      if (!data.demographic.educationLevel) {
+        errors['demographic.educationLevel'] = 'Please select your education level';
+      }
+      if (!data.demographic.city) {
+        errors['demographic.city'] = 'Please select your city';
+      }
+    }
+
+    selectedSurvey?.questions.forEach(question => {
+      const answer = data.answers[question.id];
+      if (answer === undefined || answer === '' || answer === null) {
+        errors[`answers.${question.id}`] = 'This question requires an answer';
+      }
+    });
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const onSubmit = async (data: FormData) => {
     if (!selectedSurvey) return;
     
+    if (!validateForm(data)) {
+      setNotification({
+        message: "Please fill in all required fields",
+        severity: 'error',
+        open: true
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -274,8 +316,10 @@ const SurveyAnswerPage: React.FC = () => {
 
       await submitSurveyAnswer(selectedSurvey._id, submissionData, token);
 
+      setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+
       setNotification({
-        message: "Merci pour vos réponses !",
+        message: "Thank you for your responses!",
         severity: 'success',
         open: true
       });
@@ -287,7 +331,7 @@ const SurveyAnswerPage: React.FC = () => {
     } catch (error: any) {
       console.error('Error submitting survey:', error);
       setNotification({
-        message: error.message || 'Une erreur est survenue lors de la soumission de vos réponses',
+        message: error.message || 'An error occurred while submitting your responses',
         severity: 'error',
         open: true
       });
@@ -301,30 +345,60 @@ const SurveyAnswerPage: React.FC = () => {
 
     if (!media) return null;
 
-    if (media.match(/\.(mp4|mov)$/i)) {
+    // Utiliser directement l'URL Cloudinary
+    const fullUrl = media;
+    console.log('Full media URL:', fullUrl);
+
+    // Déterminer le type de média basé sur l'extension du fichier
+    const isVideo = fullUrl.match(/\.(mp4|mov|webm)$/i);
+    const isImage = fullUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+
+    if (isVideo) {
       return (
         <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
           <ReactPlayer
-            url={media}
+            url={fullUrl}
             controls
             width="100%"
             height="auto"
             style={{ borderRadius: '8px' }}
+            config={{
+              file: {
+                attributes: {
+                  controlsList: 'nodownload',
+                  onContextMenu: (e: React.MouseEvent) => e.preventDefault()
+                }
+              }
+            }}
+            onError={(e) => console.error('Erreur de chargement vidéo:', e)}
+            onReady={() => console.log('Vidéo prête à être lue')}
           />
         </Box>
       );
-    } else if (media.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    } 
+    
+    if (isImage) {
       return (
         <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
-          <img
-            src={media}
+          <Box
+            component="img"
+            src={fullUrl}
             alt="Question media"
-            style={{
+            sx={{
               width: '100%',
               height: 'auto',
               borderRadius: '8px',
-              objectFit: 'contain'
+              objectFit: 'contain',
+              maxHeight: '400px',
+              backgroundColor: 'background.paper',
+              boxShadow: 1
             }}
+            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+              console.error('Erreur de chargement image:', e);
+              console.log('URL qui a échoué:', fullUrl);
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+            onLoad={() => console.log('Image chargée avec succès')}
           />
         </Box>
       );
@@ -333,216 +407,383 @@ const SurveyAnswerPage: React.FC = () => {
     return null;
   };
 
+  const clearError = (fieldPath: string) => {
+    setFormErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldPath];
+      return newErrors;
+    });
+  };
+
+  const validateField = (fieldPath: string, value: any) => {
+    if (fieldPath.startsWith('demographic.')) {
+      if (value) {
+        clearError(fieldPath);
+      }
+    } else if (fieldPath.startsWith('answers.')) {
+      if (value !== undefined && value !== '' && value !== null) {
+        clearError(fieldPath);
+      }
+    }
+  };
+
   const renderQuestionInput = (question: Question) => (
     <Controller
       name={`answers.${question.id}` as FieldPath}
       control={control}
       defaultValue=""
       render={({ field }) => {
-        switch (question.type) {
-          case "text":
-            return <TextField {...field} fullWidth />;
-          case "multiple-choice":
-            return (
-              <RadioGroup {...field}>
-                {question.options?.map((option, index) => (
-                  <FormControlLabel
-                    key={index}
-                    value={option}
-                    control={<Radio />}
-                    label={option}
-                  />
-                ))}
-              </RadioGroup>
-            );
-          case "slider":
-            return (
-              <Slider
-                {...field}
-                min={1}
-                max={10}
-                valueLabelDisplay="auto"
-                onChange={(_, value) => field.onChange(value)}
-                value={typeof field.value === 'number' ? field.value : 0}
-              />
-            );
-          case "rating":
-            return (
-              <Rating
-                {...field}
-                precision={1}
-                size="large"
-                onChange={(_, value) => field.onChange(value)}
-                value={typeof field.value === 'number' ? field.value : 0}
-              />
-            );
-          case "dropdown":
-            return (
-              <TextField
-                {...field}
-                select
-                fullWidth
-              >
-                {question.options?.map((option, index) => (
-                  <MenuItem key={index} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </TextField>
-            );
-          case "date":
-            return (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Box sx={{ width: '100%' }}>
-                  <DatePicker
-                    label="Select date"
-                    value={field.value || null}
-                    onChange={(newValue) => field.onChange(newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        variant="outlined"
-                      />
-                    )}
-                  />
-                </Box>
-              </LocalizationProvider>
-            );
-          case "color-picker":
-            return (
-              <Box sx={{ 
-                width: '300px', 
-                p: 2, 
-                border: '1px solid #ddd', 
-                borderRadius: 1,
-                backgroundColor: '#fff'
-              }}>
-                <ChromePicker
-                  color={field.value || '#000000'}
-                  onChange={(color: ColorResult) => field.onChange(color.hex)}
-                  styles={{
-                    default: {
-                      picker: {
-                        width: '100%',
-                        boxShadow: 'none'
-                      }
-                    }
+        const component = (() => {
+          switch (question.type) {
+            case "text":
+              return (
+                <TextField 
+                  {...field}
+                  fullWidth 
+                  error={!!formErrors[`answers.${question.id}`]}
+                  helperText={formErrors[`answers.${question.id}`]}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    validateField(`answers.${question.id}`, e.target.value);
                   }}
                 />
-                <Box sx={{ 
-                  mt: 1, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 1 
-                }}>
-                  <Box 
-                    sx={{ 
-                      width: 24, 
-                      height: 24, 
-                      backgroundColor: field.value,
-                      border: '1px solid #ddd',
-                      borderRadius: 1
-                    }} 
-                  />
-                  <Typography variant="body2">{field.value}</Typography>
+              );
+
+            case "multiple-choice":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <RadioGroup 
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      validateField(`answers.${question.id}`, e.target.value);
+                    }}
+                  >
+                    {question.options?.map((option, index) => (
+                      <FormControlLabel
+                        key={index}
+                        value={option}
+                        control={<Radio />}
+                        label={option}
+                      />
+                    ))}
+                  </RadioGroup>
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
                 </Box>
-              </Box>
-            );
-          default:
-            return <TextField {...field} fullWidth />;
-        }
+              );
+
+            case "dropdown":
+              return (
+                <FormControl 
+                  fullWidth 
+                  error={!!formErrors[`answers.${question.id}`]}
+                >
+                  <InputLabel>{question.text}</InputLabel>
+                  <Select
+                    {...field}
+                    label={question.text}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      validateField(`answers.${question.id}`, e.target.value);
+                    }}
+                  >
+                    {question.options?.map((option, index) => (
+                      <MenuItem key={index} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors[`answers.${question.id}`] && (
+                    <FormHelperText error>
+                      {formErrors[`answers.${question.id}`]}
+                    </FormHelperText>
+                  )}
+                </FormControl>
+              );
+
+            case "yes-no":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <RadioGroup 
+                    {...field} 
+                    row
+                    onChange={(e) => {
+                      field.onChange(e);
+                      validateField(`answers.${question.id}`, e.target.value);
+                    }}
+                  >
+                    <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                    <FormControlLabel value="no" control={<Radio />} label="No" />
+                  </RadioGroup>
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
+            case "rating":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Rating
+                    {...field}
+                    precision={1}
+                    size="large"
+                    onChange={(_, value) => {
+                      field.onChange(value);
+                      validateField(`answers.${question.id}`, value);
+                    }}
+                    value={typeof field.value === 'number' ? field.value : 0}
+                    sx={{ 
+                      '& .MuiRating-icon': { 
+                        fontSize: '2rem' 
+                      }
+                    }}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography 
+                      color="error" 
+                      variant="caption" 
+                      sx={{ mt: 0.5, display: 'block' }}
+                    >
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
+            case "slider":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Slider
+                    {...field}
+                    min={1}
+                    max={10}
+                    valueLabelDisplay="auto"
+                    onChange={(_, value) => {
+                      field.onChange(value);
+                      validateField(`answers.${question.id}`, value);
+                    }}
+                    value={typeof field.value === 'number' ? field.value : 0}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
+            case "date":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Select date"
+                      value={field.value || null}
+                      onChange={(newValue) => {
+                        field.onChange(newValue);
+                        validateField(`answers.${question.id}`, newValue);
+                      }}
+                      renderInput={(params: TextFieldProps) => (
+                        <TextField
+                          {...params}
+                          fullWidth
+                          error={!!formErrors[`answers.${question.id}`]}
+                          helperText={formErrors[`answers.${question.id}`]}
+                        />
+                      )}
+                    />
+                  </LocalizationProvider>
+                </Box>
+              );
+
+            default:
+              return (
+                <TextField 
+                  {...field} 
+                  fullWidth 
+                  error={!!formErrors[`answers.${question.id}`]}
+                  helperText={formErrors[`answers.${question.id}`]}
+                />
+              );
+          }
+        })();
+
+        return (
+          <Box sx={{ width: '100%' }}>
+            {component}
+          </Box>
+        );
       }}
     />
   );
 
-  const renderDemographicFields = () => {
-    console.log("Rendering demographic fields with cities:", cities);
-    
-    return (
-      <Box sx={{ mb: 4, p: 3, border: "1px solid #ddd", borderRadius: "8px" }}>
-        <Typography variant="h5" sx={{ mb: 3 }}>Demographic Information</Typography>
-        
-        <Controller
-          name="demographic.gender"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Gender</Typography>
-              <RadioGroup {...field} row>
-                <FormControlLabel value="male" control={<Radio />} label="Male" />
-                <FormControlLabel value="female" control={<Radio />} label="Female" />
-                <FormControlLabel value="other" control={<Radio />} label="Other" />
-              </RadioGroup>
-            </Box>
-          )}
-        />
+  const renderDemographicFields = () => (
+    <Box sx={{ mb: 4, p: 3, border: "1px solid #ddd", borderRadius: "8px" }}>
+      <Typography variant="h5" sx={{ mb: 3 }}>Demographic Information</Typography>
+      
+      <Controller
+        name="demographic.gender"
+        control={control}
+        defaultValue=""
+        render={({ field }) => (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>Gender</Typography>
+            <RadioGroup 
+              {...field}
+              onChange={(e) => {
+                field.onChange(e);
+                validateField('demographic.gender', e.target.value);
+              }}
+              row
+            >
+              <FormControlLabel value="male" control={<Radio />} label="Male" />
+              <FormControlLabel value="female" control={<Radio />} label="Female" />
+              <FormControlLabel value="other" control={<Radio />} label="Other" />
+            </RadioGroup>
+            {formErrors['demographic.gender'] && (
+              <Typography color="error" variant="caption">
+                {formErrors['demographic.gender']}
+              </Typography>
+            )}
+          </Box>
+        )}
+      />
 
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <Controller
-            name="demographic.dateOfBirth"
-            control={control}
-            render={({ field }) => (
+      <Controller
+        name="demographic.dateOfBirth"
+        control={control}
+        render={({ field }) => (
+          <Box sx={{ mb: 3, width: '100%' }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Date of Birth"
-                value={field.value}
-                onChange={field.onChange}
-                renderInput={(params) => 
-                  <TextField {...params} fullWidth sx={{ mb: 3 }} />
-                }
+                value={field.value || null}
+                onChange={(newValue) => {
+                  field.onChange(newValue);
+                  validateField('demographic.dateOfBirth', newValue);
+                }}
+                renderInput={(params: TextFieldProps) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    error={!!formErrors['demographic.dateOfBirth']}
+                    helperText={formErrors['demographic.dateOfBirth']}
+                  />
+                )}
               />
-            )}
-          />
-        </LocalizationProvider>
+            </LocalizationProvider>
+          </Box>
+        )}
+      />
 
-        <Controller
-          name="demographic.educationLevel"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <TextField
-              {...field}
-              select
+      <Controller
+        name="demographic.educationLevel"
+        control={control}
+        defaultValue=""
+        render={({ field }) => (
+          <Box sx={{ mb: 3 }}>
+            <FormControl 
               fullWidth
-              label="Education Level"
-              sx={{ mb: 3 }}
+              error={!!formErrors['demographic.educationLevel']}
             >
-              {educationLevels.map((level) => (
-                <MenuItem key={level} value={level}>
-                  {level}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        />
-
-        <Controller
-          name="demographic.city"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>City</InputLabel>
+              <InputLabel>Education Level</InputLabel>
               <Select
                 {...field}
-                disabled={isLoadingCities}
+                label="Education Level"
+                onChange={(e) => {
+                  field.onChange(e);
+                  validateField('demographic.educationLevel', e.target.value);
+                }}
               >
-                <MenuItem value="" disabled>
-                  {isLoadingCities ? 'Loading cities...' : 'Select your city'}
-                </MenuItem>
-                {cities.map((city) => (
-                  <MenuItem key={city} value={city}>
-                    {city}
+                {educationLevels.map((level) => (
+                  <MenuItem key={level} value={level}>
+                    {level}
                   </MenuItem>
                 ))}
               </Select>
+              {formErrors['demographic.educationLevel'] && (
+                <FormHelperText error>
+                  {formErrors['demographic.educationLevel']}
+                </FormHelperText>
+              )}
             </FormControl>
-          )}
-        />
-      </Box>
-    );
+          </Box>
+        )}
+      />
+
+      <Controller
+        name="demographic.city"
+        control={control}
+        defaultValue=""
+        render={({ field }) => (
+          <FormControl 
+            fullWidth
+            error={!!formErrors['demographic.city']}
+          >
+            <InputLabel>City</InputLabel>
+            <Select
+              {...field}
+              label="City"
+              disabled={isLoadingCities}
+              onChange={(e) => {
+                field.onChange(e);
+                validateField('demographic.city', e.target.value);
+              }}
+            >
+              <MenuItem value="" disabled>
+                {isLoadingCities ? 'Loading cities...' : 'Select your city'}
+              </MenuItem>
+              {cities.map((city) => (
+                <MenuItem key={city} value={city}>
+                  {city}
+                </MenuItem>
+              ))}
+            </Select>
+            {formErrors['demographic.city'] && (
+              <FormHelperText error>
+                {formErrors['demographic.city']}
+              </FormHelperText>
+            )}
+          </FormControl>
+        )}
+      />
+    </Box>
+  );
+
+  const fetchAnsweredSurveys = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5041/api/survey-answers/responses/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la récupération des réponses');
+
+      const data = await response.json();
+      console.log("Réponses reçues:", data);
+      const answeredIds = data.map((response: any) => response.surveyId);
+      console.log("IDs des sondages répondus:", answeredIds);
+      setAnsweredSurveys(answeredIds);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des sondages répondus:', error);
+    }
   };
+
+  useEffect(() => {
+    fetchAnsweredSurveys();
+  }, []);
 
   useEffect(() => {
     if (notification.open) {
@@ -553,6 +794,10 @@ const SurveyAnswerPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [notification.open]);
+
+  useEffect(() => {
+    console.log("État actuel des sondages répondus:", answeredSurveys);
+  }, [answeredSurveys]);
 
   if (!selectedSurvey) {
     return (
@@ -707,14 +952,22 @@ const SurveyAnswerPage: React.FC = () => {
                         onClick={() => setSelectedSurvey(survey)}
                         variant="contained"
                         size="small"
+                        disabled={answeredSurveys.includes(survey._id)}
                         sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          background: answeredSurveys.includes(survey._id)
+                            ? 'rgba(0, 0, 0, 0.12)'
+                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
-                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                          }
+                            background: answeredSurveys.includes(survey._id)
+                              ? 'rgba(0, 0, 0, 0.12)'
+                              : 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          },
+                          color: answeredSurveys.includes(survey._id) ? 'rgba(0, 0, 0, 0.26)' : 'white',
+                          pointerEvents: answeredSurveys.includes(survey._id) ? 'none' : 'auto',
+                          opacity: answeredSurveys.includes(survey._id) ? 0.6 : 1,
                         }}
                       >
-                        Answer Survey
+                        {answeredSurveys.includes(survey._id) ? 'Already Answered' : 'Answer Survey'}
                       </Button>
                     </Box>
                   </Paper>
@@ -777,7 +1030,7 @@ const SurveyAnswerPage: React.FC = () => {
             {selectedSurvey.demographicEnabled && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                  Demographic Information
+                  Informations Démographiques
                 </Typography>
                 {renderDemographicFields()}
               </Box>
@@ -876,3 +1129,4 @@ const SurveyAnswerPage: React.FC = () => {
 };
 
 export default SurveyAnswerPage;
+
