@@ -916,7 +916,7 @@ const SurveyHistoryPage: React.FC = () => {
               {viewType === 'responses' ? (
                 responses.length === 0 ? (
                   <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>
-                    <Typography>You haven't responded to any surveys yet.</Typography>
+                    <Typography>Vous n'avez répondu à aucun sondage.</Typography>
                   </Paper>
                 ) : (
                   filteredResponses.map((response) => (
@@ -1080,7 +1080,11 @@ const SurveyHistoryPage: React.FC = () => {
                             />
                             <Chip
                               size="small"
-                              label={response.demographic ? 'Demographics' : 'No Demographics'}
+                              label={response.demographic && Object.keys(response.demographic).some(key => 
+                                response.demographic && response.demographic[key as keyof Demographic]) 
+                                ? ' Demographics' 
+                                : 'No Demographics'
+                              }
                               sx={{
                                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                 color: '#667eea',
