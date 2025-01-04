@@ -146,6 +146,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [answeredSurveys, setAnsweredSurveys] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+  const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: number }>({});
 
   const fetchCities = async () => {
     try {
@@ -810,6 +811,30 @@ const SurveyAnswerPage: React.FC = () => {
     console.log("État actuel des sondages répondus:", answeredSurveys);
   }, [answeredSurveys]);
 
+  const fetchSurveyResponses = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5041/api/survey-answers/count', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSurveyResponses(data);
+      }
+    } catch (error) {
+      console.error('Error fetching survey responses:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSurveyResponses();
+  }, []);
+
   if (!selectedSurvey) {
     return (
       <Box sx={{
@@ -1044,29 +1069,42 @@ const SurveyAnswerPage: React.FC = () => {
 
                       <Stack 
                         direction="row" 
-                        spacing={2} 
-                        alignItems="center"
-                        sx={{ 
-                          mt: 'auto',
-                          position: 'relative',
-                          zIndex: 1
+                        spacing={1} 
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          '& .MuiChip-root': {
+                            margin: '0 !important'
+                          }
                         }}
                       >
-                        <Typography 
-                          variant="caption" 
-                          color="text.secondary"
-                          noWrap
-                        >
-                          Created on {new Date(survey.createdAt).toLocaleDateString('en-US')}
-                        </Typography>
                         <Chip
                           size="small"
-                          label={`${answeredSurveys.filter(id => id === survey._id).length} responses`}
+                          label={`${survey.questions?.length || 0} questions`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            fontSize: '0.75rem',
-                            flexShrink: 0
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={`${surveyResponses[survey._id] || 0} responses`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
                           }}
                         />
                       </Stack>

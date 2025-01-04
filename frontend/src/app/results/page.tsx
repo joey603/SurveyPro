@@ -2923,32 +2923,68 @@ const ResultsPage: React.FC = () => {
                     </Box>
 
                     <Stack 
-                      direction="row" 
-                      spacing={2} 
-                      alignItems="center"
+                      direction="column" 
+                      spacing={1} 
                       sx={{ 
                         mt: 'auto',
                         position: 'relative',
-                        zIndex: 1
+                        zIndex: 1,
+                        minHeight: '60px'
                       }}
                     >
                       <Typography 
                         variant="caption" 
                         color="text.secondary"
-                        noWrap
-                      >
-                        Created on {new Date(survey.createdAt).toLocaleDateString()}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={`${(surveyAnswers[survey._id] || []).length} responses`}
                         sx={{
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                          color: '#667eea',
-                          fontSize: '0.75rem',
-                          flexShrink: 0
+                          display: 'block',
+                          mb: 1,
+                          fontSize: '0.75rem'
                         }}
-                      />
+                      >
+                        Created on {formatDate(survey.createdAt)}
+                      </Typography>
+                      
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          '& .MuiChip-root': {
+                            margin: '0 !important'  // Supprime les marges automatiques
+                          }
+                        }}
+                      >
+                        <Chip
+                          size="small"
+                          label={`${survey.questions?.length || 0} questions`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={`${surveyAnswers[survey._id]?.length || 0} responses`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                      </Stack>
                     </Stack>
                   </Box>
                   
@@ -3019,6 +3055,16 @@ const calculateAge = (birthDate: Date): number => {
   }
   
   return age;
+};
+
+// Ajouter cette fonction après les imports
+const formatDate = (date: string | Date) => {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 };
 
 export default ResultsPage;

@@ -1016,22 +1016,54 @@ const SurveyHistoryPage: React.FC = () => {
                       </Box>
 
                       <Stack 
-                        direction="row" 
-                        spacing={2} 
-                        alignItems="center"
+                        direction="column" 
+                        spacing={1} 
                         sx={{ 
                           mt: 'auto',
                           position: 'relative',
-                          zIndex: 1
+                          zIndex: 1,
+                          minHeight: '60px'
                         }}
                       >
                         <Typography 
                           variant="caption" 
                           color="text.secondary"
-                          noWrap
+                          sx={{
+                            display: 'block',
+                            mb: 1,
+                            fontSize: '0.75rem'
+                          }}
                         >
                           Completed on {formatDate(response.completedAt)}
                         </Typography>
+                        
+                        <Stack 
+                          direction="row" 
+                          spacing={1} 
+                          sx={{
+                            flexWrap: 'wrap',
+                            gap: 1
+                          }}
+                        >
+                          <Chip
+                            size="small"
+                            label={`${response.answers?.length || 0} questions`}
+                            sx={{
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              height: '24px'
+                            }}
+                          />
+                          <Chip
+                            size="small"
+                            label={response.demographic ? 'Demographics' : 'No Demographics'}
+                            sx={{
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              height: '24px'
+                            }}
+                          />
+                        </Stack>
                       </Stack>
                     </Box>
                     
