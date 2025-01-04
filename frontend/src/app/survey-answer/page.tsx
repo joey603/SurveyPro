@@ -905,7 +905,7 @@ const SurveyAnswerPage: React.FC = () => {
                 />
                 <Chip
                   icon={<FilterListIcon />}
-                  label={` ${sortBy === 'date' ? 'Popular' : 'Popular'}`}
+                  label={` ${sortBy === 'date' ? 'Popularity' : 'Popular'}`}
                   onClick={(e) => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
                   color={sortBy === 'popular' ? "primary" : "default"}
                   variant={sortBy === 'popular' ? "filled" : "outlined"}
