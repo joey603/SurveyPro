@@ -34,6 +34,25 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
 
+interface Survey {
+  _id: string;
+  title: string;
+  description?: string;
+  questions: {
+    id: string;
+    type: string;
+    text: string;
+    options?: string[];
+    media?: {
+      url: string;
+      type: string;
+    };
+  }[];
+  demographicEnabled: boolean;
+  createdAt: string;
+  userId: string;
+}
+
 interface Demographic {
   gender?: string;
   dateOfBirth?: string;
@@ -84,6 +103,8 @@ const SurveyHistoryPage: React.FC = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
   const [openDetails, setOpenDetails] = useState<boolean>(false);
+  const [viewType, setViewType] = useState<'responses' | 'created'>('responses');
+  const [createdSurveys, setCreatedSurveys] = useState<Survey[]>([]);
 
   useEffect(() => {
     const fetchSurveyResponses = async () => {
@@ -136,6 +157,44 @@ const SurveyHistoryPage: React.FC = () => {
 
     fetchSurveyResponses();
   }, []);
+
+  const fetchCreatedSurveys = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Not authenticated');
+
+      console.log('Fetching created surveys...');
+      const response = await fetch('http://localhost:5041/api/surveys', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Server response:', errorData);
+        throw new Error(errorData.message || `Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Created surveys data:', data);
+      setCreatedSurveys(data);
+    } catch (err: any) {
+      console.error('Error fetching created surveys:', err);
+      setError(err.message || 'Failed to fetch created surveys');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewType === 'created') {
+      console.log('Switching to created surveys view');
+      fetchCreatedSurveys();
+    }
+  }, [viewType]);
 
   const handleExpandClick = async (responseId: string) => {
     const survey = responses.find(r => r._id === responseId);
@@ -607,6 +666,31 @@ const SurveyHistoryPage: React.FC = () => {
 
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
           <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+            <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+              <Chip
+                label="My Responses"
+                onClick={() => setViewType('responses')}
+                color={viewType === 'responses' ? "primary" : "default"}
+                variant={viewType === 'responses' ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+              <Chip
+                label="Created Surveys"
+                onClick={() => setViewType('created')}
+                color={viewType === 'created' ? "primary" : "default"}
+                variant={viewType === 'created' ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+            </Stack>
+
             <TextField
               fullWidth
               variant="outlined"
@@ -680,178 +764,393 @@ const SurveyHistoryPage: React.FC = () => {
             )}
           </Box>
 
-          {responses.length === 0 ? (
-            <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>
-              <Typography>You haven't responded to any surveys yet.</Typography>
-            </Paper>
-          ) : (
+          {viewType === 'responses' ? (
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-              {filteredResponses.map((response) => (
-                <Paper
-                  key={response._id}
-                  elevation={1}
-                  sx={{
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'all 0.3s ease-in-out',
-                    position: 'relative',
-                    '&:hover': {
-                      boxShadow: 3,
-                      zIndex: 1,
-                      '& .hover-content': {
-                        opacity: 1,
-                        visibility: 'visible',
-                        transform: 'translateY(0)',
-                      }
-                    }
-                  }}
-                >
-                  <Box sx={{ 
-                    p: 3,
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative'
-                  }}>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        mb: 2,
-                        color: 'primary.main',
-                        fontWeight: 500,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.3,
-                        height: '2.6em'
-                      }}
-                    >
-                      {response.surveyTitle}
-                    </Typography>
-
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{ 
-                        mb: 2,
-                        flex: 1,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.5,
-                        height: '4.5em'
-                      }}
-                    >
-                      {response.description || 'No description available'}
-                    </Typography>
-
-                    <Box
-                      className="hover-content"
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'white',
-                        p: 3,
-                        opacity: 0,
-                        visibility: 'hidden',
-                        transform: 'translateY(-10px)',
-                        transition: 'all 0.3s ease-in-out',
+              {responses.length === 0 ? (
+                <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>
+                  <Typography>You haven't responded to any surveys yet.</Typography>
+                </Paper>
+              ) : (
+                filteredResponses.map((response) => (
+                  <Paper
+                    key={response._id}
+                    elevation={1}
+                    sx={{
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease-in-out',
+                      position: 'relative',
+                      '&:hover': {
                         boxShadow: 3,
-                        borderRadius: 2,
-                        zIndex: 2,
-                        overflowY: 'auto',
-                        '&::-webkit-scrollbar': {
-                          width: '8px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                          background: '#f1f1f1',
-                          borderRadius: '4px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: '#888',
-                          borderRadius: '4px',
-                          '&:hover': {
-                            background: '#666',
-                          },
-                        },
-                      }}
-                    >
+                        zIndex: 1,
+                        '& .hover-content': {
+                          opacity: 1,
+                          visibility: 'visible',
+                          transform: 'translateY(0)',
+                        }
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
+                          mb: 2,
                           color: 'primary.main',
                           fontWeight: 500,
-                          mb: 2 
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3,
+                          height: '2.6em'
                         }}
                       >
                         {response.surveyTitle}
                       </Typography>
+
                       <Typography 
                         variant="body2" 
+                        color="text.secondary"
                         sx={{ 
-                          color: 'text.secondary',
                           mb: 2,
-                          lineHeight: 1.6 
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.5,
+                          height: '4.5em'
                         }}
                       >
                         {response.description || 'No description available'}
                       </Typography>
-                    </Box>
 
-                    <Stack 
-                      direction="row" 
-                      spacing={2} 
-                      alignItems="center"
-                      sx={{ 
-                        mt: 'auto',
-                        position: 'relative',
-                        zIndex: 1
-                      }}
-                    >
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        noWrap
+                      <Box
+                        className="hover-content"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'white',
+                          p: 3,
+                          opacity: 0,
+                          visibility: 'hidden',
+                          transform: 'translateY(-10px)',
+                          transition: 'all 0.3s ease-in-out',
+                          boxShadow: 3,
+                          borderRadius: 2,
+                          zIndex: 2,
+                          overflowY: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#f1f1f1',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#888',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: '#666',
+                            },
+                          },
+                        }}
                       >
-                        Completed on {formatDate(response.completedAt)}
-                      </Typography>
-                    </Stack>
-                  </Box>
-                  
-                  <Box sx={{ 
-                    p: 2, 
-                    borderTop: 1, 
-                    borderColor: 'divider',
-                    backgroundColor: 'action.hover',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    position: 'relative',
-                    zIndex: 1
-                  }}>
-                    <Button
-                      onClick={() => handleExpandClick(response._id)}
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            mb: 2 
+                          }}
+                        >
+                          {response.surveyTitle}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            mb: 2,
+                            lineHeight: 1.6 
+                          }}
+                        >
+                          {response.description || 'No description available'}
+                        </Typography>
+                      </Box>
+
+                      <Stack 
+                        direction="row" 
+                        spacing={2} 
+                        alignItems="center"
+                        sx={{ 
+                          mt: 'auto',
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          noWrap
+                        >
+                          Completed on {formatDate(response.completedAt)}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      p: 2, 
+                      borderTop: 1, 
+                      borderColor: 'divider',
+                      backgroundColor: 'action.hover',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
+                      <Button
+                        onClick={() => handleExpandClick(response._id)}
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              {createdSurveys
+                .filter(survey => 
+                  survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (survey.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .sort((a, b) => {
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                })
+                .map((survey) => (
+                  <Paper
+                    key={survey._id}
+                    elevation={1}
+                    sx={{
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      height: '100%',
+                      minHeight: '250px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease-in-out',
+                      position: 'relative',
+                      '&:hover': {
+                        boxShadow: 3,
+                        zIndex: 1,
+                        '& .hover-content': {
+                          opacity: 1,
+                          visibility: 'visible',
+                          transform: 'translateY(0)',
                         }
-                      }}
-                    >
-                      View Details
-                    </Button>
-                  </Box>
-                </Paper>
-              ))}
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative',
+                      minHeight: '180px'
+                    }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          mb: 2,
+                          color: 'primary.main',
+                          fontWeight: 500,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3,
+                          height: '2.6em',
+                          fontSize: '1.1rem'
+                        }}
+                      >
+                        {survey.title}
+                      </Typography>
+
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          mb: 2,
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.5,
+                          height: '4.5em',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {survey.description || 'No description available'}
+                      </Typography>
+
+                      <Box
+                        className="hover-content"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'white',
+                          p: 3,
+                          opacity: 0,
+                          visibility: 'hidden',
+                          transform: 'translateY(-10px)',
+                          transition: 'all 0.3s ease-in-out',
+                          boxShadow: 3,
+                          borderRadius: 2,
+                          zIndex: 2,
+                          overflowY: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#f1f1f1',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#888',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: '#666',
+                            },
+                          },
+                        }}
+                      >
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            mb: 2 
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            mb: 2,
+                            lineHeight: 1.6 
+                          }}
+                        >
+                          {survey.description || 'No description available'}
+                        </Typography>
+                      </Box>
+
+                      <Stack 
+                        direction="column" 
+                        spacing={1} 
+                        sx={{ 
+                          mt: 'auto',
+                          position: 'relative',
+                          zIndex: 1,
+                          minHeight: '60px'
+                        }}
+                      >
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{
+                            display: 'block',
+                            mb: 1,
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Created on {formatDate(survey.createdAt)}
+                        </Typography>
+                        
+                        <Stack 
+                          direction="row" 
+                          spacing={1} 
+                          sx={{
+                            flexWrap: 'wrap',
+                            gap: 1
+                          }}
+                        >
+                          <Chip
+                            size="small"
+                            label={`${survey.questions?.length || 0} questions`}
+                            sx={{
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              height: '24px'
+                            }}
+                          />
+                          <Chip
+                            size="small"
+                            label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                            sx={{
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              height: '24px'
+                            }}
+                          />
+                        </Stack>
+                      </Stack>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      p: 2, 
+                      borderTop: 1, 
+                      borderColor: 'divider',
+                      backgroundColor: 'action.hover',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
+                      <Button
+                        onClick={() => handleExpandClick(survey._id)}
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))}
             </Box>
           )}
         </Box>
