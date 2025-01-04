@@ -1,5 +1,14 @@
-backend/.env
+# Ignorer les fichiers sensibles
+.env
+
+# Ignorer les dépendances
 node_modules/
+
+# Ignorer les fichiers de logs
+logs/
+*.log
+
+# Ignorer les fichiers compilés
 dist/
 build/
-*.log
+

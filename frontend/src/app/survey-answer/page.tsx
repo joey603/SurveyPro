@@ -145,6 +145,7 @@ const SurveyAnswerPage: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [answeredSurveys, setAnsweredSurveys] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
 
   const fetchCities = async () => {
     try {
@@ -229,19 +230,29 @@ const SurveyAnswerPage: React.FC = () => {
     }
   }, [selectedSurvey]);
 
-  const filteredSurveys = surveys.filter(survey => {
-    const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+  const filteredSurveys = surveys
+    .filter(survey => {
+      const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
-    if (dateRange.start && dateRange.end) {
-      const surveyDate = new Date(survey.createdAt);
-      const isInDateRange = surveyDate >= dateRange.start && 
+      if (dateRange.start && dateRange.end) {
+        const surveyDate = new Date(survey.createdAt);
+        const isInDateRange = surveyDate >= dateRange.start && 
                            surveyDate <= new Date(dateRange.end.setHours(23, 59, 59));
-      return matchesSearch && isInDateRange;
-    }
+        return matchesSearch && isInDateRange;
+      }
 
-    return matchesSearch;
-  });
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'popular') {
+        const aResponses = answeredSurveys.filter(id => id === a._id).length;
+        const bResponses = answeredSurveys.filter(id => id === b._id).length;
+        return bResponses - aResponses;
+      } else {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -867,6 +878,18 @@ const SurveyAnswerPage: React.FC = () => {
                     }
                   }}
                 />
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={` ${sortBy === 'date' ? 'Popular' : 'Popular'}`}
+                  onClick={(e) => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                  color={sortBy === 'popular' ? "primary" : "default"}
+                  variant={sortBy === 'popular' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
               </Stack>
 
               {showDateFilter && (
@@ -907,19 +930,41 @@ const SurveyAnswerPage: React.FC = () => {
                     sx={{
                       borderRadius: 2,
                       overflow: 'hidden',
-                      transition: 'box-shadow 0.3s ease-in-out',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease-in-out',
+                      position: 'relative',
                       '&:hover': {
                         boxShadow: 3,
+                        zIndex: 1,
+                        '& .hover-content': {
+                          opacity: 1,
+                          visibility: 'visible',
+                          transform: 'translateY(0)',
+                        }
                       }
                     }}
                   >
-                    <Box sx={{ p: 3 }}>
+                    <Box sx={{ 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
                           mb: 2,
                           color: 'primary.main',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3,
+                          height: '2.6em'
                         }}
                       >
                         {survey.title}
@@ -927,17 +972,104 @@ const SurveyAnswerPage: React.FC = () => {
                       <Typography 
                         variant="body2" 
                         color="text.secondary"
-                        sx={{ mb: 2 }}
+                        sx={{ 
+                          mb: 2,
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.5,
+                          height: '4.5em'
+                        }}
                       >
-                        {survey.description}
+                        {survey.description || 'No description available'}
                       </Typography>
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        sx={{ display: 'block', mb: 2 }}
+
+                      <Box
+                        className="hover-content"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'white',
+                          p: 3,
+                          opacity: 0,
+                          visibility: 'hidden',
+                          transform: 'translateY(-10px)',
+                          transition: 'all 0.3s ease-in-out',
+                          boxShadow: 3,
+                          borderRadius: 2,
+                          zIndex: 2,
+                          overflowY: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#f1f1f1',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#888',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: '#666',
+                            },
+                          },
+                        }}
                       >
-                        Created on {new Date(survey.createdAt).toLocaleDateString('en-US')}
-                      </Typography>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            mb: 2 
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            mb: 2,
+                            lineHeight: 1.6 
+                          }}
+                        >
+                          {survey.description || 'No description available'}
+                        </Typography>
+                      </Box>
+
+                      <Stack 
+                        direction="row" 
+                        spacing={2} 
+                        alignItems="center"
+                        sx={{ 
+                          mt: 'auto',
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          noWrap
+                        >
+                          Created on {new Date(survey.createdAt).toLocaleDateString('en-US')}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={`${answeredSurveys.filter(id => id === survey._id).length} responses`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            fontSize: '0.75rem',
+                            flexShrink: 0
+                          }}
+                        />
+                      </Stack>
                     </Box>
                     
                     <Box sx={{ 
@@ -946,7 +1078,9 @@ const SurveyAnswerPage: React.FC = () => {
                       borderColor: 'divider',
                       backgroundColor: 'action.hover',
                       display: 'flex',
-                      justifyContent: 'flex-end'
+                      justifyContent: 'flex-end',
+                      position: 'relative',
+                      zIndex: 1
                     }}>
                       <Button
                         onClick={() => setSelectedSurvey(survey)}

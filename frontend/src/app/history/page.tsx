@@ -14,13 +14,24 @@ import {
   Divider,
   Grid,
   Button,
-  Rating
+  Rating,
+  TextField,
+  InputAdornment,
+  Stack,
+  Chip
 } from "@mui/material";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import Image from 'next/image';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ReactPlayer from 'react-player';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { TextFieldProps } from '@mui/material';
 
 interface Demographic {
   gender?: string;
@@ -51,6 +62,7 @@ interface SurveyResponse {
     answer: any;
   }>;
   questions?: Question[];
+  description?: string;
 }
 
 const SurveyHistoryPage: React.FC = () => {
@@ -60,6 +72,16 @@ const SurveyHistoryPage: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
   const [selectedSurvey, setSelectedSurvey] = useState<SurveyResponse | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
+    start: null,
+    end: null
+  });
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
 
   useEffect(() => {
     const fetchSurveyResponses = async () => {
@@ -68,6 +90,7 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
+        // Récupérer d'abord les réponses
         const response = await fetch('http://localhost:5041/api/survey-answers/responses/user', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -77,7 +100,31 @@ const SurveyHistoryPage: React.FC = () => {
         if (!response.ok) throw new Error('Erreur lors de la récupération des réponses');
 
         const data = await response.json();
-        setResponses(data);
+        
+        // Pour chaque réponse, récupérer les détails du sondage
+        const enhancedResponses = await Promise.all(data.map(async (response: SurveyResponse) => {
+          try {
+            const surveyResponse = await fetch(`http://localhost:5041/api/surveys/${response.surveyId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (surveyResponse.ok) {
+              const surveyData = await surveyResponse.json();
+              return {
+                ...response,
+                description: surveyData.description
+              };
+            }
+            return response;
+          } catch (error) {
+            console.warn(`Could not fetch survey details for ${response.surveyId}:`, error);
+            return response;
+          }
+        }));
+
+        setResponses(enhancedResponses);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -122,9 +169,10 @@ const SurveyHistoryPage: React.FC = () => {
           const surveyData = await mediaResponse.json();
           console.log('Survey data with media:', surveyData);
 
-          // Associer les médias aux questions si disponibles
+          // Associer les médias aux questions et ajouter la description
           const updatedSurvey = { 
             ...survey, 
+            description: surveyData.description,
             questions: detailData.questions.map((q: any) => {
               const surveyQuestion = surveyData.questions?.find((sq: any) => sq.id === q.id);
               return {
@@ -168,6 +216,28 @@ const SurveyHistoryPage: React.FC = () => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const filteredResponses = responses
+    .filter(response => {
+      const matchesSearch = (response.surveyTitle?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+
+      if (dateRange.start && dateRange.end) {
+        const responseDate = new Date(response.completedAt);
+        const isInDateRange = responseDate >= dateRange.start && 
+                           responseDate <= new Date(dateRange.end.setHours(23, 59, 59));
+        return matchesSearch && isInDateRange;
+      }
+
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+    });
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setDateRange({ start: null, end: null });
   };
 
   if (loading) {
@@ -221,70 +291,231 @@ const SurveyHistoryPage: React.FC = () => {
           px: 4,
           color: 'white',
           textAlign: 'center',
-          position: 'relative'
         }}>
-          {selectedSurvey && (
-            <IconButton
-              onClick={() => setSelectedSurvey(null)}
-              sx={{
-                position: 'absolute',
-                left: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'white',
-              }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          )}
           <Typography variant="h4" fontWeight="bold">
-            {selectedSurvey ? selectedSurvey.surveyTitle : 'Survey History'}
+            Survey History
           </Typography>
-          {selectedSurvey && (
-            <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-              Completed on {formatDate(selectedSurvey.completedAt)}
-            </Typography>
-          )}
         </Box>
 
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search surveys by title..."
+              value={searchQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={clearFilters}>
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Chip
+                icon={<FilterListIcon />}
+                label="Date Filter"
+                onClick={() => setShowDateFilter(!showDateFilter)}
+                color={showDateFilter ? "primary" : "default"}
+                variant={showDateFilter ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+            </Stack>
+
+            {showDateFilter && (
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                  <DatePicker
+                    label="Start Date"
+                    value={dateRange.start}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        start: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
+                  />
+                  <DatePicker
+                    label="End Date"
+                    value={dateRange.end}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        end: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
+                    minDate={dateRange.start || undefined}
+                  />
+                </Stack>
+              </LocalizationProvider>
+            )}
+          </Box>
+
           {responses.length === 0 ? (
             <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>
               <Typography>You haven't responded to any surveys yet.</Typography>
             </Paper>
-          ) : !selectedSurvey ? (
+          ) : (
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-              {responses.map((response) => (
+              {filteredResponses.map((response) => (
                 <Paper
                   key={response._id}
                   elevation={1}
                   sx={{
                     borderRadius: 2,
                     overflow: 'hidden',
-                    transition: 'box-shadow 0.3s ease-in-out',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'all 0.3s ease-in-out',
+                    position: 'relative',
                     '&:hover': {
                       boxShadow: 3,
+                      zIndex: 1,
+                      '& .hover-content': {
+                        opacity: 1,
+                        visibility: 'visible',
+                        transform: 'translateY(0)',
+                      }
                     }
                   }}
                 >
-                  <Box sx={{ p: 3 }}>
+                  <Box sx={{ 
+                    p: 3,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}>
                     <Typography 
                       variant="h6" 
                       sx={{ 
                         mb: 2,
                         color: 'primary.main',
-                        fontWeight: 500
+                        fontWeight: 500,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.3,
+                        height: '2.6em'
                       }}
                     >
                       {response.surveyTitle}
                     </Typography>
+
                     <Typography 
-                      variant="caption" 
+                      variant="body2" 
                       color="text.secondary"
-                      sx={{ display: 'block', mb: 2 }}
+                      sx={{ 
+                        mb: 2,
+                        flex: 1,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.5,
+                        height: '4.5em'
+                      }}
                     >
-                      Completed on {formatDate(response.completedAt)}
+                      {response.description || 'No description available'}
                     </Typography>
+
+                    <Box
+                      className="hover-content"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'white',
+                        p: 3,
+                        opacity: 0,
+                        visibility: 'hidden',
+                        transform: 'translateY(-10px)',
+                        transition: 'all 0.3s ease-in-out',
+                        boxShadow: 3,
+                        borderRadius: 2,
+                        zIndex: 2,
+                        overflowY: 'auto',
+                        '&::-webkit-scrollbar': {
+                          width: '8px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                          background: '#f1f1f1',
+                          borderRadius: '4px',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                          background: '#888',
+                          borderRadius: '4px',
+                          '&:hover': {
+                            background: '#666',
+                          },
+                        },
+                      }}
+                    >
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          color: 'primary.main',
+                          fontWeight: 500,
+                          mb: 2 
+                        }}
+                      >
+                        {response.surveyTitle}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          mb: 2,
+                          lineHeight: 1.6 
+                        }}
+                      >
+                        {response.description || 'No description available'}
+                      </Typography>
+                    </Box>
+
+                    <Stack 
+                      direction="row" 
+                      spacing={2} 
+                      alignItems="center"
+                      sx={{ 
+                        mt: 'auto',
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    >
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        noWrap
+                      >
+                        Completed on {formatDate(response.completedAt)}
+                      </Typography>
+                    </Stack>
                   </Box>
                   
                   <Box sx={{ 
@@ -293,7 +524,9 @@ const SurveyHistoryPage: React.FC = () => {
                     borderColor: 'divider',
                     backgroundColor: 'action.hover',
                     display: 'flex',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    position: 'relative',
+                    zIndex: 1
                   }}>
                     <Button
                       onClick={() => handleExpandClick(response._id)}
@@ -303,7 +536,7 @@ const SurveyHistoryPage: React.FC = () => {
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         '&:hover': {
                           background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                        },
+                        }
                       }}
                     >
                       View Details
@@ -311,235 +544,6 @@ const SurveyHistoryPage: React.FC = () => {
                   </Box>
                 </Paper>
               ))}
-            </Box>
-          ) : (
-            <Box>
-              {selectedSurvey.demographic && (
-                <Paper 
-                  elevation={1}
-                  sx={{ 
-                    p: 3, 
-                    mb: 4, 
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                    Demographic Information
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {selectedSurvey.demographic.gender && (
-                      <Grid item xs={12} sm={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle2" color="textSecondary">Gender</Typography>
-                          <Typography>{selectedSurvey.demographic.gender}</Typography>
-                        </Paper>
-                      </Grid>
-                    )}
-                    {selectedSurvey.demographic.dateOfBirth && (
-                      <Grid item xs={12} sm={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle2" color="textSecondary">Date of Birth</Typography>
-                          <Typography>
-                            {selectedSurvey.demographic.dateOfBirth ? 
-                              (() => {
-                                const date = new Date(selectedSurvey.demographic.dateOfBirth);
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const year = date.getFullYear();
-                                return `${day}/${month}/${year}`;
-                              })() : 
-                              'Not provided'
-                            }
-                          </Typography>
-                        </Paper>
-                      </Grid>
-                    )}
-                    {selectedSurvey.demographic.educationLevel && (
-                      <Grid item xs={12} sm={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle2" color="textSecondary">Education Level</Typography>
-                          <Typography>{selectedSurvey.demographic.educationLevel}</Typography>
-                        </Paper>
-                      </Grid>
-                    )}
-                    {selectedSurvey.demographic.city && (
-                      <Grid item xs={12} sm={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle2" color="textSecondary">City</Typography>
-                          <Typography>{selectedSurvey.demographic.city}</Typography>
-                        </Paper>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Paper>
-              )}
-
-              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                Survey Responses
-              </Typography>
-
-              {selectedSurvey.questions?.map((question, index) => {
-                console.log('Question media:', question.media);
-                
-                return (
-                  <Paper
-                    key={question.id}
-                    elevation={1}
-                    sx={{
-                      p: 3,
-                      mb: 3,
-                      borderRadius: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.1)',
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Question {index + 1}: {question.text}
-                      <Typography 
-                        component="span" 
-                        sx={{ 
-                          ml: 2,
-                          fontSize: '0.8em',
-                          color: 'text.secondary',
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                          padding: '4px 8px',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        {(() => {
-                          switch (question.type) {
-                            case 'text':
-                              return 'Text Response';
-                            case 'multiple-choice':
-                              return 'Multiple Choice';
-                            case 'slider':
-                              return 'Slider';
-                            case 'rating':
-                              return 'Rating';
-                            case 'dropdown':
-                              return 'Dropdown';
-                            case 'yes-no':
-                              return 'Yes/No';
-                            case 'date':
-                              return 'Date';
-                            case 'file-upload':
-                              return 'File Upload';
-                            case 'color-picker':
-                              return 'Color Picker';
-                            default:
-                              return question.type;
-                          }
-                        })()}
-                      </Typography>
-                    </Typography>
-                    
-                    {question.media?.url && (
-                      <Box sx={{ 
-                        my: 2, 
-                        position: 'relative',
-                        width: '100%',
-                        maxWidth: 400,
-                        height: 'auto',
-                        margin: '16px auto'
-                      }}>
-                        {question.media.type === 'image' ? (
-                          <Image
-                            src={question.media.url}
-                            alt={`Image for question ${index + 1}`}
-                            width={400}
-                            height={300}
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              objectFit: 'contain',
-                              borderRadius: '8px'
-                            }}
-                            unoptimized
-                          />
-                        ) : question.media.type === 'video' ? (
-                          <ReactPlayer
-                            url={question.media.url}
-                            controls
-                            width="100%"
-                            height="auto"
-                            style={{ borderRadius: '8px' }}
-                            config={{
-                              file: {
-                                attributes: {
-                                  controlsList: 'nodownload',
-                                  onContextMenu: (e: React.MouseEvent) => e.preventDefault()
-                                }
-                              }
-                            }}
-                          />
-                        ) : null}
-                      </Box>
-                    )}
-
-                    <Box sx={{ 
-                      mt: 2,
-                      p: 2,
-                      backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                      borderRadius: 1
-                    }}>
-                      <Typography sx={{ color: 'text.primary' }}>
-                        <strong>Your answer:</strong>{' '}
-                        {(() => {
-                          const answer = selectedSurvey.answers.find(a => a.questionId === question.id)?.answer;
-                          if (!answer) return 'Not answered';
-                          
-                          switch (question.type) {
-                            case 'date':
-                              if (typeof answer === 'string' && answer.match(/^\d{4}-\d{2}-\d{2}/)) {
-                                const date = new Date(answer);
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const year = date.getFullYear();
-                                return `${day}/${month}/${year}`;
-                              }
-                              return answer.toString();
-                              
-                            case 'rating':
-                              return (
-                                <Rating 
-                                  value={Number(answer)} 
-                                  readOnly 
-                                  size="small"
-                                  sx={{ ml: 1 }}
-                                />
-                              );
-                              
-                            case 'slider':
-                              return `${answer}/10`;
-                              
-                            case 'yes-no':
-                              return answer.toString().charAt(0).toUpperCase() + answer.toString().slice(1);
-                              
-                            case 'color-picker':
-                              return (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  {answer.toString()}
-                                  <Box
-                                    sx={{
-                                      width: 20,
-                                      height: 20,
-                                      borderRadius: '4px',
-                                      backgroundColor: answer.toString(),
-                                      border: '1px solid rgba(0,0,0,0.1)'
-                                    }}
-                                  />
-                                </Box>
-                              );
-                              
-                            default:
-                              return answer.toString();
-                          }
-                        })()}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                );
-              })}
             </Box>
           )}
         </Box>

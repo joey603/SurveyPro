@@ -28,7 +28,10 @@ import {
   Slider,
   Stack,
   Alert,
-  // Supprimer Tooltip de cet import
+  InputAdornment,
+  IconButton,
+  Chip,
+  TextField, // Ajout de TextField ici
 } from '@mui/material';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -67,8 +70,13 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TableViewIcon from '@mui/icons-material/TableView';
 import CodeIcon from '@mui/icons-material/Code';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import IconButton from '@mui/material/IconButton';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { TextFieldProps } from '@mui/material';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
@@ -565,6 +573,49 @@ const ResultsPage: React.FC = () => {
 
   // Au début du composant, assurez-vous d'avoir cet état
   const [showDemographic, setShowDemographic] = useState(true);
+
+  // Ajouter ces états au début du composant ResultsPage
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
+    start: null,
+    end: null
+  });
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+
+  // Ajouter cette fonction de filtrage
+  const filteredSurveys = surveys
+    .filter(survey => {
+      const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                         (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+
+      if (dateRange.start && dateRange.end) {
+        const surveyDate = new Date(survey.createdAt);
+        const isInDateRange = surveyDate >= dateRange.start && 
+                           surveyDate <= new Date(dateRange.end.setHours(23, 59, 59));
+        return matchesSearch && isInDateRange;
+      }
+
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'popular') {
+        const aResponses = surveyAnswers[a._id]?.length || 0;
+        const bResponses = surveyAnswers[b._id]?.length || 0;
+        return bResponses - aResponses;
+      } else {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+  // Ajouter cette fonction pour réinitialiser les filtres
+  const clearFilters = () => {
+    setSearchQuery('');
+    setDateRange({ start: null, end: null });
+  };
 
   // Fonctions
   const downloadChart = useCallback((fileName: string) => {
@@ -2659,32 +2710,141 @@ const ResultsPage: React.FC = () => {
         </Box>
 
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
+          {/* Nouvelle section de filtres */}
+          <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search surveys by title or description..."
+              value={searchQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={clearFilters}>
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Chip
+                icon={<FilterListIcon />}
+                label="Date Filter"
+                onClick={() => setShowDateFilter(!showDateFilter)}
+                color={showDateFilter ? "primary" : "default"}
+                variant={showDateFilter ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+              <Chip
+                icon={<FilterListIcon />}
+                label={`${sortBy === 'date' ? 'Popularity' : 'Popularity'}`}
+                onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                color={sortBy === 'popular' ? "primary" : "default"}
+                variant={sortBy === 'popular' ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+            </Stack>
+
+            {showDateFilter && (
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                  <DatePicker
+                    label="Start Date"
+                    value={dateRange.start}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        start: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
+                  />
+                  <DatePicker
+                    label="End Date"
+                    value={dateRange.end}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        end: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
+                    minDate={dateRange.start || undefined}
+                  />
+                </Stack>
+              </LocalizationProvider>
+            )}
+          </Box>
+
           {error ? (
             <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
               {error}
             </Typography>
           ) : (
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-              {surveys.map((survey) => (
+              {filteredSurveys.map((survey) => (
                 <Paper
                   key={survey._id}
                   elevation={1}
                   sx={{
                     borderRadius: 2,
                     overflow: 'hidden',
-                    transition: 'box-shadow 0.3s ease-in-out',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'all 0.3s ease-in-out',
+                    position: 'relative',
                     '&:hover': {
                       boxShadow: 3,
+                      zIndex: 1,
+                      '& .hover-content': {
+                        opacity: 1,
+                        visibility: 'visible',
+                        transform: 'translateY(0)',
+                      }
                     }
                   }}
                 >
-                  <Box sx={{ p: 3 }}>
+                  <Box sx={{ 
+                    p: 3,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}>
                     <Typography 
                       variant="h6" 
                       sx={{ 
                         mb: 2,
                         color: 'primary.main',
-                        fontWeight: 500
+                        fontWeight: 500,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.3,
+                        height: '2.6em'
                       }}
                     >
                       {survey.title}
@@ -2692,10 +2852,104 @@ const ResultsPage: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       color="text.secondary"
-                      sx={{ mb: 2 }}
+                      sx={{ 
+                        mb: 2,
+                        flex: 1,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.5,
+                        height: '4.5em'
+                      }}
                     >
-                      {survey.description}
+                      {survey.description || 'No description available'}
                     </Typography>
+
+                    <Box
+                      className="hover-content"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'white',
+                        p: 3,
+                        opacity: 0,
+                        visibility: 'hidden',
+                        transform: 'translateY(-10px)',
+                        transition: 'all 0.3s ease-in-out',
+                        boxShadow: 3,
+                        borderRadius: 2,
+                        zIndex: 2,
+                        overflowY: 'auto',
+                        '&::-webkit-scrollbar': {
+                          width: '8px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                          background: '#f1f1f1',
+                          borderRadius: '4px',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                          background: '#888',
+                          borderRadius: '4px',
+                          '&:hover': {
+                            background: '#666',
+                          },
+                        },
+                      }}
+                    >
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          color: 'primary.main',
+                          fontWeight: 500,
+                          mb: 2 
+                        }}
+                      >
+                        {survey.title}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          mb: 2,
+                          lineHeight: 1.6 
+                        }}
+                      >
+                        {survey.description || 'No description available'}
+                      </Typography>
+                    </Box>
+
+                    <Stack 
+                      direction="row" 
+                      spacing={2} 
+                      alignItems="center"
+                      sx={{ 
+                        mt: 'auto',
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    >
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        noWrap
+                      >
+                        Created on {new Date(survey.createdAt).toLocaleDateString()}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={`${(surveyAnswers[survey._id] || []).length} responses`}
+                        sx={{
+                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          color: '#667eea',
+                          fontSize: '0.75rem',
+                          flexShrink: 0
+                        }}
+                      />
+                    </Stack>
                   </Box>
                   
                   <Box sx={{ 
@@ -2704,7 +2958,9 @@ const ResultsPage: React.FC = () => {
                     borderColor: 'divider',
                     backgroundColor: 'action.hover',
                     display: 'flex',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    position: 'relative',
+                    zIndex: 1
                   }}>
                     <Button
                       onClick={() => handleViewResults(survey)}
