@@ -72,7 +72,6 @@ const questionTypes = [
   { value: 'slider', label: 'Slider' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'date', label: 'Date Picker' },
-  { value: 'color-picker', label: 'Color Picker' },
 ];
 
 const educationOptions = [
@@ -107,11 +106,8 @@ const SurveyCreationPage: React.FC = () => {
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const [selectedColors, setSelectedColors] = useState<{
-    [key: string]: { color: string; alpha: number };
-  }>({});
-
-  const questions = watch('questions'); // Surveille toutes les questions
+  const watchedQuestions = watch('questions');
+  const watchedTitle = watch('title');
 
   const [cities, setCities] = useState<string[]>([]); // Liste des villes
   const [selectedCity, setSelectedCity] = useState(''); // Ville sélectionnée
@@ -127,6 +123,47 @@ const SurveyCreationPage: React.FC = () => {
     severity: 'info',
     open: false
   });
+
+  const [validationErrors, setValidationErrors] = useState<{
+    title?: boolean;
+    description?: boolean;
+    questions: { 
+      [key: string]: boolean | { 
+        text?: boolean;
+        options?: { [key: number]: boolean } 
+      }
+    };
+  }>({
+    questions: {}
+  });
+
+  // Mettre à jour les erreurs en temps réel pour le titre
+  useEffect(() => {
+    setValidationErrors(prev => ({
+      ...prev,
+      title: !watchedTitle?.trim(),
+    }));
+  }, [watchedTitle]);
+
+  // Mettre à jour les erreurs en temps réel pour les questions
+  useEffect(() => {
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      watchedQuestions.forEach((question: any, index: number) => {
+        if (question.text?.trim()) {
+          if (newErrors.questions) {
+            delete newErrors.questions[index];
+          }
+        } else {
+          if (!newErrors.questions) {
+            newErrors.questions = {};
+          }
+          newErrors.questions[index] = true;
+        }
+      });
+      return newErrors;
+    });
+  }, [watchedQuestions]);
 
   const fetchCities = async () => {
     try {
@@ -186,19 +223,6 @@ const SurveyCreationPage: React.FC = () => {
     };
   }, [fields]);
 
-  // useEffect to initialize color-picker questions
-  useEffect(() => {
-    // Initialize missing color-picker entries
-    questions.forEach((question) => {
-      if (question.type === 'color-picker' && !selectedColors[question.id]) {
-        setSelectedColors((prev) => ({
-          ...prev,
-          [question.id]: { color: '#000000', alpha: 1 },
-        }));
-      }
-    });
-  }, [questions]); // Trigger this effect when questions change
-
   const handleAddQuestion = () => {
     const id = Date.now().toString();
     append({
@@ -210,10 +234,6 @@ const SurveyCreationPage: React.FC = () => {
       selectedDate: null,
     });
     setLocalOptions((prev) => ({ ...prev, [id]: [] }));
-    setSelectedColors((prev) => ({
-      ...prev,
-      [id]: { color: '#000000', alpha: 1 },
-    }));
   };
 
   const handleDeleteQuestion = (index: number) => {
@@ -240,7 +260,10 @@ const SurveyCreationPage: React.FC = () => {
     });
   };
 
-  const handleResetSurvey = (showNotification: boolean = true) => {
+  const handleResetSurvey = (event?: React.MouseEvent<Element, MouseEvent> | null) => {
+    if (event) {
+      event.preventDefault();
+    }
     reset({
       title: '',
       description: '',
@@ -249,13 +272,11 @@ const SurveyCreationPage: React.FC = () => {
     });
     setLocalOptions({});
     
-    if (showNotification) {
-      setNotification({
-        message: 'Form has been reset',
-        severity: 'info',
-        open: true
-      });
-    }
+    setNotification({
+      message: 'Form has been reset',
+      severity: 'info',
+      open: true
+    });
   };
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
@@ -304,6 +325,77 @@ const SurveyCreationPage: React.FC = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
+      const errors: { 
+        title?: boolean;
+        description?: boolean;
+        questions: { 
+          [key: string]: boolean | { 
+            text?: boolean;
+            options?: { [key: number]: boolean } 
+          }
+        };
+      } = { 
+        questions: {} 
+      };
+      let hasErrors = false;
+
+      // Vérifier le titre
+      if (!data.title?.trim()) {
+        errors.title = true;
+        hasErrors = true;
+      }
+
+      // Vérification qu'il y a au moins une question
+      if (data.questions.length === 0) {
+        setNotification({
+          message: 'Please add at least one question to your survey',
+          severity: 'error',
+          open: true
+        });
+        return;
+      }
+
+      // Vérification des questions et de leurs options
+      data.questions.forEach((question, index) => {
+        const questionErrors: { text?: boolean; options?: { [key: number]: boolean } } = {};
+        
+        // Vérifier le texte de la question
+        if (!question.text?.trim()) {
+          questionErrors.text = true;
+          hasErrors = true;
+        }
+
+        // Vérifier les options pour les questions à choix multiples et dropdown
+        if ((question.type === 'multiple-choice' || question.type === 'dropdown') && question.options) {
+          const optionErrors: { [key: number]: boolean } = {};
+          
+          question.options.forEach((option, optionIndex) => {
+            if (!option.trim()) {
+              optionErrors[optionIndex] = true;
+              hasErrors = true;
+            }
+          });
+
+          if (Object.keys(optionErrors).length > 0) {
+            questionErrors.options = optionErrors;
+          }
+        }
+
+        if (Object.keys(questionErrors).length > 0) {
+          errors.questions[index] = questionErrors;
+        }
+      });
+
+      if (hasErrors) {
+        setValidationErrors(errors);
+        setNotification({
+          message: 'Please fill in all required fields and options',
+          severity: 'error',
+          open: true
+        });
+        return;
+      }
+
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('No authentication token found');
@@ -326,7 +418,7 @@ const SurveyCreationPage: React.FC = () => {
       });
 
       setTimeout(() => {
-        handleResetSurvey(false);
+        handleResetSurvey(null);
       }, 2000);
       
     } catch (error: any) {
@@ -410,11 +502,11 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   const renderPreviewQuestion = () => {
-    const totalQuestions = questions.length;
+    const totalQuestions = watchedQuestions.length;
     const adjustedIndex = demographicEnabled
       ? currentPreviewIndex - 1
       : currentPreviewIndex;
-    const question = adjustedIndex >= 0 ? questions[adjustedIndex] : null;
+    const question = adjustedIndex >= 0 ? watchedQuestions[adjustedIndex] : null;
 
     if (currentPreviewIndex === 0 && demographicEnabled) {
       return renderDemographicPreview();
@@ -538,7 +630,7 @@ const SurveyCreationPage: React.FC = () => {
                 onChange={(newDate) =>
                   setValue(
                     `questions`,
-                    questions.map((q) =>
+                    watchedQuestions.map((q) =>
                       q.id === question.id ? { ...q, selectedDate: newDate } : q
                     )
                   )
@@ -564,79 +656,6 @@ const SurveyCreationPage: React.FC = () => {
               Uploaded file: {uploadedFile.name}
             </Typography>
           )}
-          {question.type === 'color-picker' && (
-            <Box>
-              <ChromePicker
-                color={{
-                  r: selectedColors[question.id]?.color
-                    ? parseInt(
-                        selectedColors[question.id].color.slice(1, 3),
-                        16
-                      )
-                    : 0,
-                  g: selectedColors[question.id]?.color
-                    ? parseInt(
-                        selectedColors[question.id].color.slice(3, 5),
-                        16
-                      )
-                    : 0,
-                  b: selectedColors[question.id]?.color
-                    ? parseInt(
-                        selectedColors[question.id].color.slice(5, 7),
-                        16
-                      )
-                    : 0,
-                  a: selectedColors[question.id]?.alpha || 1,
-                }}
-                onChangeComplete={(color) => {
-                  setSelectedColors((prev) => ({
-                    ...prev,
-                    [question.id]: {
-                      color: color.hex,
-                      alpha: color.rgb.a || 1,
-                    },
-                  }));
-                }}
-                styles={{
-                  default: {
-                    picker: {
-                      width: '300px',
-                      height: 'auto',
-                      boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                      borderRadius: '10px',
-                    },
-                  },
-                }}
-              />
-              <Box
-                sx={{
-                  width: 120,
-                  height: 60,
-                  mt: 2,
-                  backgroundColor: `rgba(${parseInt(
-                    selectedColors[question.id]?.color?.slice(1, 3) || '00',
-                    16
-                  )}, 
-                                ${parseInt(
-                                  selectedColors[question.id]?.color?.slice(
-                                    3,
-                                    5
-                                  ) || '00',
-                                  16
-                                )}, 
-                                ${parseInt(
-                                  selectedColors[question.id]?.color?.slice(
-                                    5,
-                                    7
-                                  ) || '00',
-                                  16
-                                )}, 
-                                ${selectedColors[question.id]?.alpha || 1})`,
-                  border: '1px solid #ddd',
-                }}
-              />
-            </Box>
-          )}
         </Box>
 
         {/* Affichage du numéro de question */}
@@ -653,11 +672,58 @@ const SurveyCreationPage: React.FC = () => {
   const handleAddOption = (index: number) => {
     const currentQuestion = fields[index];
     const currentOptions = currentQuestion.options ?? [];
+    const values = getValues();
+    const currentQuestionValues = values.questions[index];
 
+    // Mettre à jour les options en préservant toutes les valeurs existantes
     update(index, {
-      ...currentQuestion,
+      ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
       options: [...currentOptions, ''],
     });
+  };
+
+  // Fonction utilitaire pour vérifier l'état d'erreur
+  const getQuestionError = (questionIndex: number) => {
+    const error = validationErrors.questions[questionIndex];
+    if (typeof error === 'object') {
+      return Boolean(error.text);
+    }
+    return Boolean(error);
+  };
+
+  const getOptionError = (questionIndex: number, optionIndex: number) => {
+    const error = validationErrors.questions[questionIndex];
+    if (typeof error === 'object' && error.options) {
+      return Boolean(error.options[optionIndex]);
+    }
+    return false;
+  };
+
+  // Fonction utilitaire pour vérifier si une question a des erreurs
+  const hasQuestionErrors = (questionIndex: number) => {
+    const error = validationErrors.questions[questionIndex];
+    if (!error) return false;
+    
+    if (typeof error === 'object') {
+      // Vérifier le texte de la question
+      if (error.text) return true;
+      
+      // Vérifier les options
+      if (error.options) {
+        return Object.values(error.options).some(optionError => optionError);
+      }
+    }
+    
+    return Boolean(error);
+  };
+
+  // Fonction utilitaire pour vérifier les erreurs d'options
+  const hasOptionsErrors = (questionIndex: number) => {
+    const error = validationErrors.questions[questionIndex];
+    if (typeof error === 'object' && error.options) {
+      return Object.values(error.options).some(optionError => optionError);
+    }
+    return false;
   };
 
   return (
@@ -716,6 +782,32 @@ const SurveyCreationPage: React.FC = () => {
                   fullWidth
                   sx={{ mb: 3 }}
                   variant="outlined"
+                  error={validationErrors.title}
+                  helperText={validationErrors.title ? "Title is required" : ""}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    if (e.target.value.trim()) {
+                      setValidationErrors(prev => ({
+                        ...prev,
+                        title: false
+                      }));
+                    }
+                  }}
+                  InputProps={{
+                    sx: {
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: validationErrors.title ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: validationErrors.title ? '#ef4444' : '#667eea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: validationErrors.title ? '#ef4444' : '#667eea',
+                        },
+                      },
+                    },
+                  }}
                 />
               )}
             />
@@ -771,7 +863,9 @@ const SurveyCreationPage: React.FC = () => {
                   p: 3,
                   mb: 3,
                   borderRadius: 2,
-                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  border: hasQuestionErrors(index)
+                    ? '2px solid #ef4444' 
+                    : '1px solid rgba(0, 0, 0, 0.1)',
                 }}
               >
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -804,6 +898,37 @@ const SurveyCreationPage: React.FC = () => {
                         label="Question Text"
                         fullWidth
                         variant="outlined"
+                        error={getQuestionError(index)}
+                        helperText={getQuestionError(index) ? "Question text is required" : ""}
+                        onChange={(e) => {
+                          textField.onChange(e);
+                          const newValue = e.target.value.trim();
+                          const currentQuestion = validationErrors.questions[index];
+                          
+                          setValidationErrors(prev => ({
+                            ...prev,
+                            questions: {
+                              ...prev.questions,
+                              [index]: {
+                                ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                text: !newValue
+                              }
+                            }
+                          }));
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                              borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                            },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -825,15 +950,81 @@ const SurveyCreationPage: React.FC = () => {
                               fullWidth
                               variant="outlined"
                               size="small"
+                              error={getOptionError(index, optionIndex)}
+                              helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
+                              onChange={(e) => {
+                                optionField.onChange(e);
+                                const newValue = e.target.value.trim();
+                                
+                                setValidationErrors(prev => ({
+                                  ...prev,
+                                  questions: {
+                                    ...prev.questions,
+                                    [index]: {
+                                      ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                      options: {
+                                        ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
+                                        [optionIndex]: !newValue
+                                      }
+                                    }
+                                  }
+                                }));
+                              }}
+                              sx={{
+                                '& .MuiOutlinedInput-root': {
+                                  '& fieldset': {
+                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                  },
+                                },
+                              }}
                             />
                           )}
                         />
                         <IconButton
                           onClick={() => {
-                            const newOptions = field.options ?? [];
+                            const values = getValues();
+                            const currentQuestionValues = values.questions[index];
+                            const newOptions = [...(currentQuestionValues.options ?? [])];
+                            newOptions.splice(optionIndex, 1);
+                            
+                            // Préserver l'état de validation actuel
+                            const currentValidationState = validationErrors.questions[index];
+                            const currentOptions = typeof currentValidationState === 'object' && 
+                              currentValidationState.options ? { ...currentValidationState.options } : {};
+                            
+                            // Supprimer l'erreur de l'option supprimée et réindexer
+                            const newValidationOptions: { [key: number]: boolean } = {};
+                            Object.entries(currentOptions).forEach(([key, value]) => {
+                              const keyNum = parseInt(key);
+                              if (keyNum < optionIndex) {
+                                newValidationOptions[keyNum] = value;
+                              } else if (keyNum > optionIndex) {
+                                newValidationOptions[keyNum - 1] = value;
+                              }
+                            });
+
+                            // Mettre à jour l'état de validation
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              questions: {
+                                ...prev.questions,
+                                [index]: {
+                                  ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                  options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
+                                }
+                              }
+                            }));
+
+                            // Mettre à jour la question en préservant toutes les valeurs
                             update(index, {
-                              ...field,
-                              options: newOptions.filter((_, i) => i !== optionIndex),
+                              ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
+                              options: newOptions,
                             });
                           }}
                           color="error"
@@ -1019,7 +1210,7 @@ const SurveyCreationPage: React.FC = () => {
               }}
             >
               <Button
-                onClick={handleResetSurvey}
+                onClick={() => handleResetSurvey(null)}
                 variant="outlined"
                 startIcon={<DeleteIcon />}
                 sx={{
@@ -1126,13 +1317,13 @@ const SurveyCreationPage: React.FC = () => {
                 setCurrentPreviewIndex((prev) =>
                   Math.min(
                     prev + 1,
-                    questions.length + (demographicEnabled ? 1 : 0) - 1
+                    watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
                   )
                 )
               }
               disabled={
                 currentPreviewIndex ===
-                questions.length + (demographicEnabled ? 1 : 0) - 1
+                watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
               }
               variant="outlined"
               color="primary"
