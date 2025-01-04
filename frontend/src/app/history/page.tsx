@@ -18,7 +18,8 @@ import {
   TextField,
   InputAdornment,
   Stack,
-  Chip
+  Chip,
+  Slider
 } from "@mui/material";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -82,6 +83,7 @@ const SurveyHistoryPage: React.FC = () => {
   });
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+  const [openDetails, setOpenDetails] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchSurveyResponses = async () => {
@@ -140,6 +142,7 @@ const SurveyHistoryPage: React.FC = () => {
     if (!survey) return;
 
     setLoadingDetails(responseId);
+    setOpenDetails(true);
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -264,6 +267,311 @@ const SurveyHistoryPage: React.FC = () => {
         justifyContent: 'center'
       }}>
         <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
+  if (selectedSurvey && openDetails) {
+    return (
+      <Box sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+      }}>
+        <Paper elevation={3} sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '800px',
+          mb: 4,
+        }}>
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <IconButton
+              onClick={() => {
+                setSelectedSurvey(null);
+                setOpenDetails(false);
+              }}
+              sx={{
+                position: 'absolute',
+                left: 16,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'white',
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h4" fontWeight="bold">
+              {selectedSurvey.surveyTitle}
+            </Typography>
+            <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
+              {selectedSurvey.description}
+            </Typography>
+          </Box>
+
+          <Box sx={{ p: 4, backgroundColor: 'white' }}>
+            {selectedSurvey.demographic && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                  Demographic Information
+                </Typography>
+                <Paper sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="textSecondary">Gender</Typography>
+                      <Typography variant="body1">{selectedSurvey.demographic.gender || 'Not specified'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="textSecondary">Date of Birth</Typography>
+                      <Typography variant="body1">
+                        {selectedSurvey.demographic.dateOfBirth ? formatDate(selectedSurvey.demographic.dateOfBirth) : 'Not specified'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="textSecondary">Education Level</Typography>
+                      <Typography variant="body1">{selectedSurvey.demographic.educationLevel || 'Not specified'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="textSecondary">City</Typography>
+                      <Typography variant="body1">{selectedSurvey.demographic.city || 'Not specified'}</Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Box>
+            )}
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Questions and Answers
+              </Typography>
+              {selectedSurvey.questions?.map((question, index) => (
+                <Paper
+                  key={question.id}
+                  elevation={1}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Question {index + 1}: {question.text}
+                  </Typography>
+
+                  {question.media && question.media.url && (
+                    <Box sx={{ 
+                      mb: 2,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      width: '100%'
+                    }}>
+                      {question.media.type === 'video' ? (
+                        <Box sx={{ width: '100%', maxWidth: '600px' }}>
+                          <ReactPlayer
+                            url={question.media.url}
+                            controls
+                            width="100%"
+                            height="auto"
+                            style={{ 
+                              borderRadius: '8px',
+                              overflow: 'hidden'
+                            }}
+                          />
+                        </Box>
+                      ) : (
+                        <Box sx={{ 
+                          maxWidth: '400px',
+                          width: '100%',
+                          height: 'auto',
+                          position: 'relative'
+                        }}>
+                          <Image
+                            src={question.media.url}
+                            alt="Question media"
+                            width={400}
+                            height={300}
+                            style={{ 
+                              objectFit: 'contain',
+                              width: '100%',
+                              height: 'auto',
+                              borderRadius: '8px'
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle1" color="primary" sx={{ mb: 1 }}>
+                      Available options and your answer:
+                    </Typography>
+                    {(() => {
+                      const userAnswer = selectedSurvey.answers.find(a => a.questionId === question.id)?.answer;
+
+                      switch (question.type) {
+                        case 'rating':
+                          return (
+                            <Rating
+                              value={Number(userAnswer)}
+                              readOnly
+                              size="large"
+                              sx={{ 
+                                '& .MuiRating-icon': { 
+                                  fontSize: '2rem' 
+                                }
+                              }}
+                            />
+                          );
+
+                        case 'multiple_choice':
+                          return (
+                            <Stack spacing={1}>
+                              {question.options?.map((option) => (
+                                <Chip
+                                  key={option}
+                                  label={option}
+                                  color={option === userAnswer ? "primary" : "default"}
+                                  variant={option === userAnswer ? "filled" : "outlined"}
+                                  sx={{
+                                    '&.MuiChip-filled': {
+                                      background: option === userAnswer ? 
+                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                        'inherit'
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Stack>
+                          );
+
+                        case 'yes-no':
+                          return (
+                            <Stack direction="row" spacing={2}>
+                              <Chip
+                                label="Yes"
+                                color={userAnswer === 'yes' ? "primary" : "default"}
+                                variant={userAnswer === 'yes' ? "filled" : "outlined"}
+                                sx={{
+                                  '&.MuiChip-filled': {
+                                    background: userAnswer === 'yes' ? 
+                                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                      'inherit'
+                                  }
+                                }}
+                              />
+                              <Chip
+                                label="No"
+                                color={userAnswer === 'no' ? "primary" : "default"}
+                                variant={userAnswer === 'no' ? "filled" : "outlined"}
+                                sx={{
+                                  '&.MuiChip-filled': {
+                                    background: userAnswer === 'no' ? 
+                                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                      'inherit'
+                                  }
+                                }}
+                              />
+                            </Stack>
+                          );
+
+                        case 'slider':
+                          return (
+                            <Box sx={{ px: 2 }}>
+                              <Slider
+                                value={Number(userAnswer)}
+                                min={1}
+                                max={10}
+                                marks
+                                disabled
+                                valueLabelDisplay="on"
+                                sx={{
+                                  '& .MuiSlider-markLabel': {
+                                    color: 'text.secondary'
+                                  },
+                                  '& .MuiSlider-track': {
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                  }
+                                }}
+                              />
+                            </Box>
+                          );
+
+                        case 'dropdown':
+                          return (
+                            <Stack spacing={1}>
+                              {question.options?.map((option) => (
+                                <Chip
+                                  key={option}
+                                  label={option}
+                                  color={option === userAnswer ? "primary" : "default"}
+                                  variant={option === userAnswer ? "filled" : "outlined"}
+                                  sx={{
+                                    '&.MuiChip-filled': {
+                                      background: option === userAnswer ? 
+                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                        'inherit'
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Stack>
+                          );
+
+                        case 'date':
+                          return (
+                            <Paper 
+                              elevation={0} 
+                              sx={{ 
+                                p: 2, 
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                borderRadius: 2,
+                                border: '1px solid rgba(102, 126, 234, 0.2)'
+                              }}
+                            >
+                              <Typography variant="body1">
+                                {userAnswer ? formatDate(userAnswer) : 'No answer'}
+                              </Typography>
+                            </Paper>
+                          );
+
+                        default:
+                          return (
+                            <Paper 
+                              elevation={0} 
+                              sx={{ 
+                                p: 2, 
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                borderRadius: 2,
+                                border: '1px solid rgba(102, 126, 234, 0.2)'
+                              }}
+                            >
+                              <Typography variant="body1">
+                                {userAnswer || 'No answer'}
+                              </Typography>
+                            </Paper>
+                          );
+                      }
+                    })()}
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+        </Paper>
       </Box>
     );
   }
