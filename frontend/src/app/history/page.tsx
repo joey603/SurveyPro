@@ -33,6 +33,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import CreateIcon from '@mui/icons-material/Create';
 
 interface Survey {
   _id: string;
@@ -262,6 +264,17 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Non authentifié');
 
+      // Récupérer les détails du sondage original
+      const surveyDetailsResponse = await fetch(`http://localhost:5041/api/surveys/${survey.surveyId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!surveyDetailsResponse.ok) throw new Error('Erreur lors de la récupération des détails du sondage');
+      const surveyData = await surveyDetailsResponse.json();
+      console.log('Original survey data:', surveyData);
+
       // Récupérer les détails de la réponse
       const responseDetails = await fetch(`http://localhost:5041/api/survey-answers/responses/${responseId}`, {
         headers: {
@@ -270,54 +283,47 @@ const SurveyHistoryPage: React.FC = () => {
       });
 
       if (!responseDetails.ok) throw new Error('Erreur lors de la récupération des détails');
-
       const detailData = await responseDetails.json();
-      console.log('Detail data received:', detailData);
+      console.log('Response details:', detailData);
 
-      // Récupérer les médias du sondage
-      try {
-        const mediaResponse = await fetch(`http://localhost:5041/api/surveys/${detailData.surveyId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+      // Après avoir récupéré surveyData
+      console.log('Original survey questions with options:', surveyData.questions);
 
-        if (mediaResponse.ok) {
-          const surveyData = await mediaResponse.json();
-          console.log('Survey data with media:', surveyData);
+      // Après avoir récupéré detailData
+      console.log('Response questions:', detailData.questions);
 
-          // Associer les médias aux questions et ajouter la description
-          const updatedSurvey = { 
-            ...survey, 
-            description: surveyData.description,
-            questions: detailData.questions.map((q: any) => {
-              const surveyQuestion = surveyData.questions?.find((sq: any) => sq.id === q.id);
-              return {
-                ...q,
-                media: typeof surveyQuestion?.media === 'string' ? {
-                  url: surveyQuestion.media,
-                  type: surveyQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
-                } : null
-              };
-            })
-          };
-          
-          console.log('Updated survey with media:', updatedSurvey);
-          setSelectedSurvey(updatedSurvey);
-        } else {
-          // Si on ne peut pas récupérer les médias, on continue sans
-          setSelectedSurvey({
-            ...survey,
-            questions: detailData.questions
-          });
-        }
-      } catch (mediaError) {
-        console.warn('Could not fetch media, continuing without:', mediaError);
-        setSelectedSurvey({
-          ...survey,
-          questions: detailData.questions
-        });
-      }
+      // Modifions la fusion des questions
+      const enhancedQuestions = surveyData.questions.map((originalQuestion: any) => {
+        console.log('Original question:', originalQuestion);
+        console.log('Original question options:', originalQuestion.options);
+        
+        const responseQuestion = detailData.questions.find((q: any) => q.id === originalQuestion.id);
+        console.log('Matched response question:', responseQuestion);
+
+        const enhancedQuestion = {
+          id: originalQuestion.id,
+          text: originalQuestion.text,
+          type: originalQuestion.type,
+          options: originalQuestion.options || [],
+          media: typeof originalQuestion.media === 'string' ? {
+            url: originalQuestion.media,
+            type: originalQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
+          } : null
+        };
+        
+        console.log('Enhanced question:', enhancedQuestion);
+        return enhancedQuestion;
+      });
+
+      const updatedSurvey = {
+        ...survey,
+        description: surveyData.description,
+        questions: enhancedQuestions,
+        answers: detailData.answers // Assurez-vous que les réponses sont incluses
+      };
+
+      console.log('Final updated survey:', updatedSurvey);
+      setSelectedSurvey(updatedSurvey);
 
     } catch (err: any) {
       console.error('Error fetching survey details:', err);
@@ -551,25 +557,67 @@ const SurveyHistoryPage: React.FC = () => {
                             />
                           );
 
-                        case 'multiple_choice':
+                        case 'multiple-choice':
+                          console.log('Rendering multiple choice question:', question);
+                          console.log('Question options:', question.options);
+                          console.log('User answer:', userAnswer);
+                          return (
+                            <Stack spacing={1}>
+                              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                Available options:
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {question.options && question.options.length > 0 ? (
+                                  question.options.map((option) => (
+                                    <Chip
+                                      key={option}
+                                      label={option}
+                                      color={option === userAnswer ? "primary" : "default"}
+                                      variant={option === userAnswer ? "filled" : "outlined"}
+                                      sx={{
+                                        width: 'fit-content',
+                                        '&.MuiChip-filled': {
+                                          background: option === userAnswer ? 
+                                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                            'inherit'
+                                        }
+                                      }}
+                                    />
+                                  ))
+                                ) : (
+                                  <Typography color="error">No options available</Typography>
+                                )}
+                              </Box>
+                              <Typography variant="subtitle2" color="primary" sx={{ mt: 1 }}>
+                                Your answer: {userAnswer}
+                              </Typography>
+                            </Stack>
+                          );
+
                         case 'dropdown':
                           return (
                             <Stack spacing={1}>
-                              {question.options?.map((option) => (
-                                <Chip
-                                  key={option}
-                                  label={option}
-                                  color={option === userAnswer ? "primary" : "default"}
-                                  variant={option === userAnswer ? "filled" : "outlined"}
-                                  sx={{
-                                    '&.MuiChip-filled': {
-                                      background: option === userAnswer ? 
-                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
-                                        'inherit'
-                                    }
-                                  }}
-                                />
-                              ))}
+                              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                Votre réponse : {userAnswer}
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {question.options?.map((option) => (
+                                  <Chip
+                                    key={option}
+                                    label={option}
+                                    color={option === userAnswer ? "primary" : "default"}
+                                    variant={option === userAnswer ? "filled" : "outlined"}
+                                    sx={{
+                                      width: 'fit-content',
+                                      '&.MuiChip-filled': {
+                                        background: option === userAnswer ? 
+                                          'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+                                          'inherit'
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </Box>
                             </Stack>
                           );
 
@@ -700,30 +748,71 @@ const SurveyHistoryPage: React.FC = () => {
         </Box>
 
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
-            <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-              <Chip
-                label="My Responses"
+          <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 2, borderRadius: 2, boxShadow: 1 }}>
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={2} 
+              sx={{ 
+                mb: 2,
+                width: '100%'
+              }}
+            >
+              <Button
+                fullWidth
                 onClick={() => setViewType('responses')}
-                color={viewType === 'responses' ? "primary" : "default"}
-                variant={viewType === 'responses' ? "filled" : "outlined"}
+                variant={viewType === 'responses' ? "contained" : "outlined"}
                 sx={{
-                  '&.MuiChip-filled': {
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  ...(viewType === 'responses' ? {
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  }
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    }
+                  } : {
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': {
+                      borderColor: '#764ba2',
+                      color: '#764ba2',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                    }
+                  })
                 }}
-              />
-              <Chip
-                label="Created Surveys"
+                startIcon={<AssignmentTurnedInIcon />}
+              >
+                My Responses
+              </Button>
+              <Button
+                fullWidth
                 onClick={() => setViewType('created')}
-                color={viewType === 'created' ? "primary" : "default"}
-                variant={viewType === 'created' ? "filled" : "outlined"}
+                variant={viewType === 'created' ? "contained" : "outlined"}
                 sx={{
-                  '&.MuiChip-filled': {
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  ...(viewType === 'created' ? {
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  }
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    }
+                  } : {
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': {
+                      borderColor: '#764ba2',
+                      color: '#764ba2',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                    }
+                  })
                 }}
-              />
+                startIcon={<CreateIcon />}
+              >
+                Created Surveys
+              </Button>
             </Stack>
 
             <TextField
