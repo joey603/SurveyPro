@@ -197,6 +197,61 @@ const SurveyHistoryPage: React.FC = () => {
   }, [viewType]);
 
   const handleExpandClick = async (responseId: string) => {
+    if (viewType === 'created') {
+      const survey = createdSurveys.find(s => s._id === responseId);
+      if (!survey) return;
+
+      setOpenDetails(true);
+      setLoadingDetails(responseId);
+
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) throw new Error('Non authentifié');
+
+        const surveyResponse = await fetch(`http://localhost:5041/api/surveys/${responseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!surveyResponse.ok) throw new Error('Erreur lors de la récupération des détails');
+
+        const surveyData = await surveyResponse.json();
+        
+        // Adapter le format avec les informations démographiques
+        const adaptedSurvey: SurveyResponse = {
+          _id: surveyData._id,
+          surveyId: surveyData._id,
+          surveyTitle: surveyData.title,
+          completedAt: surveyData.createdAt,
+          description: surveyData.description,
+          // Ajouter les informations démographiques si elles sont activées
+          demographic: surveyData.demographicEnabled ? {
+            gender: 'Enabled',
+            dateOfBirth: 'Enabled',
+            educationLevel: 'Enabled',
+            city: 'Enabled'
+          } : undefined,
+          questions: surveyData.questions.map((q: any) => ({
+            ...q,
+            media: typeof q.media === 'string' ? {
+              url: q.media,
+              type: q.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
+            } : null
+          })),
+          answers: [] // Pas de réponses car c'est un sondage créé
+        };
+
+        setSelectedSurvey(adaptedSurvey);
+      } catch (err: any) {
+        console.error('Error fetching survey details:', err);
+        setError(err.message);
+      } finally {
+        setLoadingDetails(null);
+      }
+      return;
+    }
+
     const survey = responses.find(r => r._id === responseId);
     if (!survey) return;
 
@@ -497,6 +552,7 @@ const SurveyHistoryPage: React.FC = () => {
                           );
 
                         case 'multiple_choice':
+                        case 'dropdown':
                           return (
                             <Stack spacing={1}>
                               {question.options?.map((option) => (
@@ -567,27 +623,6 @@ const SurveyHistoryPage: React.FC = () => {
                                 }}
                               />
                             </Box>
-                          );
-
-                        case 'dropdown':
-                          return (
-                            <Stack spacing={1}>
-                              {question.options?.map((option) => (
-                                <Chip
-                                  key={option}
-                                  label={option}
-                                  color={option === userAnswer ? "primary" : "default"}
-                                  variant={option === userAnswer ? "filled" : "outlined"}
-                                  sx={{
-                                    '&.MuiChip-filled': {
-                                      background: option === userAnswer ? 
-                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
-                                        'inherit'
-                                    }
-                                  }}
-                                />
-                              ))}
-                            </Stack>
                           );
 
                         case 'date':
