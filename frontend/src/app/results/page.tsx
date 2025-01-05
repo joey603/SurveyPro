@@ -2736,6 +2736,188 @@ const ResultsPage: React.FC = () => {
       rule: typeof pointRules[string][number];
       questionId: string;
       ruleIndex: number;
+    }) => {
+      const [sliderValue, setSliderValue] = useState<number[]>([
+        Number(rule.response) || 0,
+        rule.condition === 'between' ? Number(rule.value) || 0 : 0
+      ]);
+
+      const handleSliderChange = (event: Event, newValue: number | number[]) => {
+        const values = Array.isArray(newValue) ? newValue : [newValue];
+        setSliderValue(values);
+        
+        if (rule.condition === 'between') {
+          updateRule(questionId, ruleIndex, { 
+            response: values[0].toString(),
+            value: values[1].toString()
+          });
+        } else {
+          updateRule(questionId, ruleIndex, { 
+            response: values[0].toString()
+          });
+        }
+      };
+
+      return (
+        <Box sx={{ 
+          width: '100%', 
+          maxWidth: 500,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
+        }}>
+          {/* Condition Select */}
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Condition</InputLabel>
+            <Select
+              value={rule.condition}
+              onChange={(e) => {
+                const newCondition = e.target.value;
+                updateRule(questionId, ruleIndex, { 
+                  condition: newCondition,
+                  value: newCondition === 'between' ? sliderValue[1].toString() : undefined
+                });
+              }}
+              size="small"
+            >
+              <MenuItem value="equals">Égal à</MenuItem>
+              <MenuItem value="greaterThan">Supérieur à</MenuItem>
+              <MenuItem value="lessThan">Inférieur à</MenuItem>
+              <MenuItem value="between">Entre</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* Slider Component */}
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 4,
+              bgcolor: 'rgba(102, 126, 234, 0.05)',
+              borderRadius: 2,
+              border: '1px solid rgba(102, 126, 234, 0.1)'
+            }}
+          >
+            <Box sx={{ px: 2, width: '100%' }}>
+              <Slider
+                value={rule.condition === 'between' ? sliderValue : sliderValue[0]}
+                onChange={handleSliderChange}
+                valueLabelDisplay="auto"
+                min={0}
+                max={100}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 25, label: '25' },
+                  { value: 50, label: '50' },
+                  { value: 75, label: '75' },
+                  { value: 100, label: '100' }
+                ]}
+                sx={{
+                  '& .MuiSlider-rail': {
+                    background: 'rgba(102, 126, 234, 0.2)',
+                    height: 6
+                  },
+                  '& .MuiSlider-track': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    height: 6
+                  },
+                  '& .MuiSlider-thumb': {
+                    width: 16,
+                    height: 16,
+                    backgroundColor: '#764ba2',
+                    '&:hover, &.Mui-focusVisible': {
+                      boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
+                    },
+                  },
+                  '& .MuiSlider-valueLabel': {
+                    backgroundColor: '#764ba2',
+                  },
+                  '& .MuiSlider-mark': {
+                    backgroundColor: '#667eea',
+                    width: 2,
+                    height: 2,
+                    '&.MuiSlider-markActive': {
+                      backgroundColor: '#fff',
+                    }
+                  },
+                  '& .MuiSlider-markLabel': {
+                    fontSize: '0.875rem',
+                    color: 'text.secondary'
+                  }
+                }}
+              />
+
+              {/* Value Display */}
+              <Box sx={{ 
+                mt: 3,
+                display: 'flex', 
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  value={sliderValue[0]}
+                  onChange={(e) => {
+                    const newValue = Math.min(100, Math.max(0, Number(e.target.value)));
+                    handleSliderChange(e as any, rule.condition === 'between' ? [newValue, sliderValue[1]] : newValue);
+                  }}
+                  InputProps={{
+                    inputProps: { min: 0, max: 100 },
+                    sx: {
+                      width: 80,
+                      textAlign: 'center',
+                      '& input': {
+                        textAlign: 'center'
+                      }
+                    }
+                  }}
+                />
+                {rule.condition === 'between' && (
+                  <>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        px: 1,
+                        userSelect: 'none'
+                      }}
+                    >
+                      jusqu'à
+                    </Typography>
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={sliderValue[1]}
+                      onChange={(e) => {
+                        const newValue = Math.min(100, Math.max(0, Number(e.target.value)));
+                        handleSliderChange(e as any, [sliderValue[0], newValue]);
+                      }}
+                      InputProps={{
+                        inputProps: { min: 0, max: 100 },
+                        sx: {
+                          width: 80,
+                          textAlign: 'center',
+                          '& input': {
+                            textAlign: 'center'
+                          }
+                        }
+                      }}
+                    />
+                  </>
+                )}
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      );
+    };
+
+    // Composant pour les règles de type date
+    const DateRuleFields = ({ rule, questionId, ruleIndex }: {
+      rule: typeof pointRules[string][number];
+      questionId: string;
+      ruleIndex: number;
     }) => (
       <>
         <FormControl sx={{ minWidth: 120 }}>
@@ -2746,39 +2928,66 @@ const ResultsPage: React.FC = () => {
             size="small"
           >
             <MenuItem value="equals">Égal à</MenuItem>
-            <MenuItem value="greaterThan">Supérieur à</MenuItem>
-            <MenuItem value="lessThan">Inférieur à</MenuItem>
+            <MenuItem value="before">Avant</MenuItem>
+            <MenuItem value="after">Après</MenuItem>
             <MenuItem value="between">Entre</MenuItem>
           </Select>
         </FormControl>
 
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 250 }}>
-          <TextField
-            type="number"
-            label="Valeur"
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <DatePicker
+              label="Date"
+              value={rule.response ? new Date(rule.response) : null}
+              onChange={(newValue) => {
+                updateRule(questionId, ruleIndex, { 
+                  response: newValue ? newValue.toISOString() : '' 
+                });
+              }}
+              renderInput={(params) => (
+                <TextField {...params} size="small" sx={{ width: 200 }} />
+              )}
+            />
+            {rule.condition === 'between' && (
+              <>
+                <Typography>et</Typography>
+                <DatePicker
+                  label="Date fin"
+                  value={rule.value ? new Date(rule.value) : null}
+                  onChange={(newValue) => {
+                    updateRule(questionId, ruleIndex, { 
+                      value: newValue ? newValue.toISOString() : '' 
+                    });
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" sx={{ width: 200 }} />
+                  )}
+                />
+              </>
+            )}
+          </Stack>
+        </LocalizationProvider>
+      </>
+    );
+
+    // Composant pour les règles de type yes/no
+    const YesNoRuleFields = ({ rule, questionId, ruleIndex }: {
+      rule: typeof pointRules[string][number];
+      questionId: string;
+      ruleIndex: number;
+    }) => (
+      <>
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel>Réponse attendue</InputLabel>
+          <Select
             value={rule.response}
             onChange={(e) => updateRule(questionId, ruleIndex, { response: e.target.value })}
             size="small"
-            InputProps={{
-              inputProps: { min: 0, max: 100 }
-            }}
-          />
-          {rule.condition === 'between' && (
-            <>
-              <Typography>et</Typography>
-              <TextField
-                type="number"
-                label="Valeur max"
-                value={rule.value}
-                onChange={(e) => updateRule(questionId, ruleIndex, { value: e.target.value })}
-                size="small"
-                InputProps={{
-                  inputProps: { min: 0, max: 100 }
-                }}
-              />
-            </>
-          )}
-        </Box>
+          >
+            <MenuItem value="yes">Oui</MenuItem>
+            <MenuItem value="no">Non</MenuItem>
+          </Select>
+        </FormControl>
       </>
     );
 
@@ -2863,6 +3072,22 @@ const ResultsPage: React.FC = () => {
 
                       {question.type === 'slider' && (
                         <SliderRuleFields 
+                          rule={rule} 
+                          questionId={question.id} 
+                          ruleIndex={ruleIndex} 
+                        />
+                      )}
+
+                      {question.type === 'date' && (
+                        <DateRuleFields 
+                          rule={rule} 
+                          questionId={question.id} 
+                          ruleIndex={ruleIndex} 
+                        />
+                      )}
+
+                      {question.type === 'yes-no' && (
+                        <YesNoRuleFields 
                           rule={rule} 
                           questionId={question.id} 
                           ruleIndex={ruleIndex} 
