@@ -120,10 +120,11 @@ interface SurveyAnswer {
       city?: string;
     };
   };
-  answers: Answer[];
+  answers: Array<{
+    questionId: string;
+    answer: any;
+  }>;
   submittedAt: string;
-  points?: number; // Nouveau champ pour le total des points
-  questionPoints?: QuestionPoints; // Points par question
 }
 
 interface Question {
@@ -133,11 +134,17 @@ interface Question {
   options?: string[];
 }
 
-interface DemographicStats {
-  gender: { [key: string]: number };
-  education: { [key: string]: number };
-  city: { [key: string]: number };
+interface DemographicStats extends QuestionStats {
+  genderDistribution: { [key: string]: number };
   ageDistribution: number[];
+  educationDistribution: { [key: string]: number };
+  cityDistribution: { [key: string]: number };
+  totalRespondents: number;
+  answers: { [key: string]: number };
+  total: number;
+  totalPoints: number;
+  averagePoints: number;
+  filteredAnswers: SurveyAnswer[];
 }
 
 interface Survey {
@@ -508,6 +515,34 @@ interface QuestionPoints {
   [questionId: string]: number;
 }
 
+// Ajoutez cette interface pour les règles de points
+interface PointRule {
+  response: string;
+  points: number;
+  condition?: string;
+  value?: string | number;
+}
+
+// Définir d'abord l'interface pour les filtres
+interface DemographicFilter {
+  gender: string;
+  age: [number, number];
+  educationLevel: string;
+  city: string;
+}
+
+interface Filters {
+  demographic: DemographicFilter;
+  dateRange?: {
+    start: Date | null;
+    end: Date | null;
+  };
+  points?: {
+    min: number;
+    max: number;
+  };
+}
+
 const ResultsPage: React.FC = () => {
   // États existants
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -545,24 +580,13 @@ const ResultsPage: React.FC = () => {
   const chartRef = useRef<ChartRefType | null>(null);
 
   // Nouveaux états
-  const [filters, setFilters] = useState<{
+  const [filters, setFilters] = useState<Filters>({
     demographic: {
-      gender?: string;
-      educationLevel?: string;
-      city?: string;
-      age?: [number, number];
-    };
-    answers: {
-      [questionId: string]: string | number | boolean;
-    };
-  }>({
-    demographic: {
-      gender: undefined,
-      educationLevel: undefined,
-      city: undefined,
-      age: undefined
-    },
-    answers: {}
+      gender: '',
+      age: [0, 100],
+      educationLevel: '',
+      city: ''
+    }
   });
 
   // Nouveaux états
@@ -579,10 +603,16 @@ const ResultsPage: React.FC = () => {
   // Ajouter ces nouveaux états
   const [filteredStats, setFilteredStats] = useState<DemographicStats | null>(null);
   const [stats, setStats] = useState<DemographicStats>({
-    gender: {},
-    education: {},
-    city: {},
-    ageDistribution: []
+    genderDistribution: {},
+    ageDistribution: [],
+    educationDistribution: {},
+    cityDistribution: {},
+    totalRespondents: 0,
+    answers: {},
+    total: 0,
+    totalPoints: 0,
+    averagePoints: 0,
+    filteredAnswers: []
   });
 
   // Au début du composant, assurez-vous d'avoir cet état
@@ -828,56 +858,92 @@ const ResultsPage: React.FC = () => {
     const question = selectedSurvey?.questions.find(q => q.id === questionId);
     if (!question) return 0;
 
-    switch (question.type) {
-      case 'multiple-choice':
-      case 'dropdown':
-        // Points basés sur l'option choisie
-        const correctAnswer = question.options?.[0]; // Première option considérée comme correcte
-        return answer.answer === correctAnswer ? questionPoints[questionId] || 1 : 0;
-      
-      case 'slider':
-        // Points basés sur la valeur du slider
-        const value = Number(answer.answer);
-        const maxPoints = questionPoints[questionId] || 1;
-        return (value / 100) * maxPoints;
-      
-      case 'rating':
-        // Points proportionnels à la note donnée
-        const rating = Number(answer.answer);
-        const maxRating = 5; // Supposons une échelle de 1 à 5
-        return (rating / maxRating) * (questionPoints[questionId] || 1);
-      
-      default:
-        return 0;
-    }
-  }, [selectedSurvey, questionPoints]);
+    // Récupérer les règles de points pour cette question
+    const savedRules = localStorage.getItem(`pointRules_${selectedSurvey?._id}`);
+    if (!savedRules) return 0;
 
-  // Modifier la fonction calculateQuestionStats
-  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats & { averagePoints: number } => {
-    const allAnswers = surveyAnswers[surveyId] || [];
-    const stats: QuestionStats & { averagePoints: number } = {
-      total: 0,
-      answers: {},
-      totalPoints: 0, // Initialisation de totalPoints
-      averagePoints: 0
-    };
+    const pointRules = JSON.parse(savedRules);
+    const rules = pointRules[questionId] || [];
 
-    allAnswers.forEach((answer: SurveyAnswer) => {
-      const questionAnswer = answer.answers.find((a: Answer) => a.questionId === questionId);
-      if (questionAnswer && questionAnswer.answer != null) {
-        const value = questionAnswer.answer.toString();
-        stats.answers[value] = (stats.answers[value] || 0) + 1;
-        stats.total++;
-        
-        // Calculer les points pour cette réponse
-        const points = calculatePoints(questionAnswer, questionId);
-        stats.totalPoints += points;
+    let totalPoints = 0;
+    const answerValue = answer.answer?.toString().toLowerCase();
+
+    rules.forEach((rule: PointRule) => {
+      const ruleResponse = rule.response?.toString().toLowerCase();
+      
+      switch (rule.condition) {
+        case 'equals':
+          if (answerValue === ruleResponse) totalPoints += rule.points;
+          break;
+        case 'contains':
+          if (answerValue?.includes(ruleResponse)) totalPoints += rule.points;
+          break;
+        case 'startsWith':
+          if (answerValue?.startsWith(ruleResponse)) totalPoints += rule.points;
+          break;
+        case 'endsWith':
+          if (answerValue?.endsWith(ruleResponse)) totalPoints += rule.points;
+          break;
+        case 'greaterThan':
+          if (Number(answerValue) > Number(ruleResponse)) totalPoints += rule.points;
+          break;
+        case 'lessThan':
+          if (Number(answerValue) < Number(ruleResponse)) totalPoints += rule.points;
+          break;
+        case 'between':
+          const value = Number(answerValue);
+          const [min, max] = ruleResponse.split(',').map(Number);
+          if (value >= min && value <= max) totalPoints += rule.points;
+          break;
       }
     });
 
-    stats.averagePoints = stats.total > 0 ? stats.totalPoints / stats.total : 0;
-    return stats;
-  }, [surveyAnswers, calculatePoints]);
+    return totalPoints;
+  }, [selectedSurvey]);
+
+  // Modifier la fonction calculateQuestionStats
+  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats & { averagePoints: number } => {
+    // Utiliser les réponses filtrées si disponibles, sinon utiliser toutes les réponses
+    const allAnswers = (filteredStats?.filteredAnswers || surveyAnswers[surveyId] || []);
+    
+    // Créer un nouvel objet stats
+    const questionStats: QuestionStats & { averagePoints: number } = {
+      total: 0,
+      answers: {},
+      totalPoints: 0,
+      averagePoints: 0
+    };
+
+    // Utiliser un Set pour garder une trace des réponses uniques
+    const processedAnswers = new Set();
+
+    allAnswers.forEach((surveyAnswer: SurveyAnswer) => {
+      // Trouver la réponse correspondant à la question
+      const questionAnswer = surveyAnswer.answers.find(
+        (a: Answer) => a.questionId === questionId
+      );
+
+      // Vérifier si nous avons déjà traité cette réponse
+      const answerKey = `${surveyAnswer._id}-${questionId}`;
+      if (questionAnswer && questionAnswer.answer != null && !processedAnswers.has(answerKey)) {
+        processedAnswers.add(answerKey);
+        
+        const value = questionAnswer.answer.toString();
+        questionStats.answers[value] = (questionStats.answers[value] || 0) + 1;
+        questionStats.total++;
+        
+        // Calculer les points pour cette réponse
+        const points = calculatePoints(questionAnswer, questionId);
+        questionStats.totalPoints += points;
+      }
+    });
+
+    questionStats.averagePoints = questionStats.total > 0 
+      ? questionStats.totalPoints / questionStats.total 
+      : 0;
+
+    return questionStats;
+  }, [surveyAnswers, filteredStats, calculatePoints]);
 
   // Modifier la fonction handleViewQuestionDetails
   const handleQuestionClick = useCallback((questionId: string) => {
@@ -886,16 +952,19 @@ const ResultsPage: React.FC = () => {
     const question = selectedSurvey.questions.find(q => q.id === questionId);
     if (!question) return;
 
-    const answers = surveyAnswers[selectedSurvey._id] || [];
+    const answers = (filteredStats?.filteredAnswers || surveyAnswers[selectedSurvey._id] || []);
     
-    // Supprimer le filtrage des réponses ici
+    const uniqueAnswers = answers.filter((answer: SurveyAnswer, index: number, self: SurveyAnswer[]) => 
+      index === self.findIndex((a: SurveyAnswer) => a._id === answer._id)
+    );
+
     setSelectedQuestion({
       questionId,
-      answers: answers // Utiliser toutes les réponses sans filtrage
+      answers: uniqueAnswers
     });
     setDialogOpen(true);
     setCurrentView('list');
-  }, [selectedSurvey, surveyAnswers]);
+  }, [selectedSurvey, surveyAnswers, filteredStats]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -976,30 +1045,26 @@ const ResultsPage: React.FC = () => {
   useEffect(() => {
     const loadAnswers = async () => {
       try {
+        if (!selectedSurvey?._id) return;
+        
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('No token found');
         
-        if (!selectedSurvey) return;
+        // Vérifier si nous avons déjà les réponses pour ce sondage
+        if (surveyAnswers[selectedSurvey._id]) return;
         
         const answers = await getSurveyAnswers(selectedSurvey._id, token);
-        const groupedAnswers = answers.reduce((acc: { [key: string]: SurveyAnswer[] }, answer: SurveyAnswer) => {
-          if (!acc[answer.surveyId]) {
-            acc[answer.surveyId] = [];
-          }
-          acc[answer.surveyId].push(answer);
-          return acc;
-        }, {});
-        
-        setSurveyAnswers(groupedAnswers);
+        setSurveyAnswers(prev => ({
+          ...prev,
+          [selectedSurvey._id]: answers
+        }));
       } catch (error) {
         console.error('Error loading survey answers:', error);
         setError('Failed to load survey answers');
       }
     };
 
-    if (selectedSurvey) {
-      loadAnswers();
-    }
+    loadAnswers();
   }, [selectedSurvey]);
 
   // Ajouter cette constante avec les autres constantes
@@ -1027,8 +1092,10 @@ const ResultsPage: React.FC = () => {
         }
       }));
       
-      // Appliquer les filtres automatiquement
-      applyDemographicFilters();
+      // Appliquer les filtres automatiquement avec l'ID du sondage sélectionné
+      if (selectedSurvey?._id) {
+        applyDemographicFilters(selectedSurvey._id);
+      }
     };
 
     const fetchCities = async () => {
@@ -1080,8 +1147,12 @@ const ResultsPage: React.FC = () => {
             onClick={() => {
               setFilteredStats(null);
               setFilters({
-                demographic: {},
-                answers: {}
+                demographic: {
+                  gender: '',
+                  age: [0, 100],
+                  educationLevel: '',
+                  city: ''
+                }
               });
             }}
             sx={{
@@ -1109,8 +1180,10 @@ const ResultsPage: React.FC = () => {
                       gender: e.target.value.toLowerCase() // Stocker en minuscules
                     }
                   }));
-                  // Appliquer les filtres automatiquement
-                  applyDemographicFilters();
+                  // Appliquer les filtres automatiquement avec l'ID du sondage sélectionné
+                  if (selectedSurvey?._id) {
+                    applyDemographicFilters(selectedSurvey._id);
+                  }
                 }}
               >
                 <MenuItem value="">All</MenuItem>
@@ -1137,7 +1210,9 @@ const ResultsPage: React.FC = () => {
                       educationLevel: e.target.value
                     }
                   }));
-                  applyDemographicFilters();
+                  if (selectedSurvey?._id) {
+                    applyDemographicFilters(selectedSurvey._id);
+                  }
                 }}
               >
                 <MenuItem value="">All</MenuItem>
@@ -1161,7 +1236,9 @@ const ResultsPage: React.FC = () => {
                       city: e.target.value
                     }
                   }));
-                  applyDemographicFilters();
+                  if (selectedSurvey?._id) {
+                    applyDemographicFilters(selectedSurvey._id);
+                  }
                 }}
               >
                 <MenuItem value="">All Cities</MenuItem>
@@ -1223,30 +1300,36 @@ const ResultsPage: React.FC = () => {
 
   const calculateDemographicStats = useCallback((surveyId: string): DemographicStats => {
     const answers = surveyAnswers[surveyId] || [];
-    const stats = {
-      gender: {},
-      education: {},
-      city: {},
-      ageDistribution: Array(121).fill(0) // Tableau pour les âges de 0 à 120
-    } as DemographicStats;
+    const stats: DemographicStats = {
+      genderDistribution: {},
+      ageDistribution: Array(121).fill(0),
+      educationDistribution: {},
+      cityDistribution: {},
+      totalRespondents: 0,
+      answers: {},
+      total: 0,
+      totalPoints: 0,
+      averagePoints: 0,
+      filteredAnswers: []
+    };
 
     answers.forEach((answer: SurveyAnswer) => {
       const demographic = answer.respondent?.demographic;
       if (demographic) {
         // Traitement du genre
         if (demographic.gender) {
-          stats.gender[demographic.gender] = (stats.gender[demographic.gender] || 0) + 1;
+          stats.genderDistribution[demographic.gender] = (stats.genderDistribution[demographic.gender] || 0) + 1;
         }
 
         // Traitement du niveau d'éducation
         if (demographic.educationLevel) {
-          stats.education[demographic.educationLevel] = 
-            (stats.education[demographic.educationLevel] || 0) + 1;
+          stats.educationDistribution[demographic.educationLevel] = 
+            (stats.educationDistribution[demographic.educationLevel] || 0) + 1;
         }
 
         // Traitement de la ville
         if (demographic.city) {
-          stats.city[demographic.city] = (stats.city[demographic.city] || 0) + 1;
+          stats.cityDistribution[demographic.city] = (stats.cityDistribution[demographic.city] || 0) + 1;
         }
 
         // Traitement de l'âge
@@ -1256,6 +1339,8 @@ const ResultsPage: React.FC = () => {
             stats.ageDistribution[age]++;
           }
         }
+
+        stats.totalRespondents++;
       }
     });
 
@@ -1327,9 +1412,9 @@ const ResultsPage: React.FC = () => {
               }}>
                 <Pie
                   data={{
-                    labels: Object.keys(filteredStats?.gender || stats.gender),
+                    labels: Object.keys(filteredStats?.genderDistribution || stats.genderDistribution),
                     datasets: [{
-                      data: Object.values(filteredStats?.gender || stats.gender),
+                      data: Object.values(filteredStats?.genderDistribution || stats.genderDistribution),
                       backgroundColor: chartColors.backgrounds,
                       borderColor: chartColors.borders,
                       borderWidth: 1
@@ -1383,9 +1468,9 @@ const ResultsPage: React.FC = () => {
               }}>
                 <Bar
                   data={{
-                    labels: Object.keys(filteredStats?.education || stats.education),
+                    labels: Object.keys(filteredStats?.educationDistribution || stats.educationDistribution),
                     datasets: [{
-                      data: Object.values(filteredStats?.education || stats.education),
+                      data: Object.values(filteredStats?.educationDistribution || stats.educationDistribution),
                       backgroundColor: chartColors.backgrounds,
                       borderColor: chartColors.borders,
                       borderWidth: 1,
@@ -1538,9 +1623,9 @@ const ResultsPage: React.FC = () => {
               <Box sx={{ height: 'calc(100% - 60px)' }}>
                 <Doughnut
                   data={{
-                    labels: Object.keys(filteredStats?.city || stats.city),
+                    labels: Object.keys(filteredStats?.cityDistribution || stats.cityDistribution),
                     datasets: [{
-                      data: Object.values(filteredStats?.city || stats.city),
+                      data: Object.values(filteredStats?.cityDistribution || stats.cityDistribution),
                       backgroundColor: [
                         'rgba(102, 126, 234, 0.6)',
                         'rgba(118, 75, 162, 0.6)',
@@ -1572,7 +1657,7 @@ const ResultsPage: React.FC = () => {
     if (!selectedSurvey) return null;
 
     const answers = surveyAnswers[selectedSurvey._id] || [];
-
+    
     return (
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" gutterBottom>
@@ -2183,112 +2268,133 @@ const ResultsPage: React.FC = () => {
     link.click();
   }, [selectedSurvey, prepareAllQuestionsData]);
 
-  // Ajoutez ces interfaces au début du fichier
-  interface DemographicFilters {
-    gender?: string;
-    educationLevel?: string;
-    city?: string;
-    age?: [number, number];
-  }
-
   // Modifiez la fonction d'application des filtres
-  const applyDemographicFilters = useCallback(() => {
-    if (!selectedSurvey) return;
-
-    const answers = surveyAnswers[selectedSurvey._id] || [];
+  const applyDemographicFilters = useCallback((surveyId: string) => {
+    if (!surveyId) return;
     
-    console.log('Current filters:', filters.demographic);
+    // Récupérer uniquement les réponses pour ce sondage spécifique
+    const surveyResponses = surveyAnswers[surveyId] || [];
     
-    const filteredAnswers = answers.filter(answer => {
-      const demographic = answer.respondent?.demographic;
-      if (!demographic) return false;
-
-      // Debug logs
-      console.log('Checking answer:', {
-        answerGender: demographic.gender,
-        filterGender: filters.demographic.gender?.toLowerCase(), // Convertir en minuscules
-        matches: !filters.demographic.gender || 
-                demographic.gender === filters.demographic.gender?.toLowerCase()
-      });
-
-      // Filtre par genre - Comparaison insensible à la casse
-      if (filters.demographic.gender && filters.demographic.gender !== '') {
-        if (!demographic.gender || 
-            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+    // Appliquer les filtres sur les réponses du sondage
+    const filteredAnswers = surveyResponses.filter(answer => {
+      const demographic = answer.respondent.demographic;
+      const currentFilters = filters.demographic;
+      
+      // Filtre par genre
+      if (currentFilters.gender && demographic?.gender !== currentFilters.gender) {
+        return false;
+      }
+      
+      // Filtre par âge
+      if (demographic?.dateOfBirth && currentFilters.age) {
+        const age = calculateAge(new Date(demographic.dateOfBirth));
+        if (age < currentFilters.age[0] || age > currentFilters.age[1]) {
           return false;
         }
       }
-
-      // Reste des filtres inchangé...
-      if (filters.demographic.educationLevel && 
-          filters.demographic.educationLevel !== "" && 
-          demographic.educationLevel !== filters.demographic.educationLevel) {
+      
+      // Filtre par niveau d'éducation
+      if (currentFilters.educationLevel && demographic?.educationLevel !== currentFilters.educationLevel) {
         return false;
       }
-
-      if (filters.demographic.city && 
-          filters.demographic.city !== "" && 
-          demographic.city !== filters.demographic.city) {
+      
+      // Filtre par ville
+      if (currentFilters.city && demographic?.city !== currentFilters.city) {
         return false;
-      }
-
-      if (filters.demographic.age && 
-          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
-        if (demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
       }
 
       return true;
     });
 
-    console.log('Filtered answers:', filteredAnswers);
-
-    const newStats: DemographicStats = {
-      gender: {},
-      education: {},
-      city: {},
-      ageDistribution: Array(121).fill(0)
+    // Calculer les nouvelles statistiques basées sur les réponses filtrées
+    const newStats = {
+      ...calculateDemographicStats(surveyId),
+      filteredAnswers: filteredAnswers
     };
 
-    filteredAnswers.forEach(answer => {
-      const demographic = answer.respondent?.demographic;
-      if (demographic) {
-        if (demographic.gender) {
-          newStats.gender[demographic.gender] = (newStats.gender[demographic.gender] || 0) + 1;
-        }
+    setFilteredStats(newStats);
+  }, [surveyAnswers, filters, calculateDemographicStats]);
 
-        if (demographic.educationLevel) {
-          newStats.education[demographic.educationLevel] = 
-            (newStats.education[demographic.educationLevel] || 0) + 1;
-        }
+  // Fonction utilitaire pour calculer l'âge
+  const calculateAge = (birthDate: Date): number => {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
 
-        if (demographic.city) {
-          newStats.city[demographic.city] = (newStats.city[demographic.city] || 0) + 1;
-        }
+  // Mettre à jour useEffect pour initialiser les stats avec le bon sondage
+  useEffect(() => {
+    if (selectedSurvey?._id) {
+      const initialStats = calculateDemographicStats(selectedSurvey._id);
+      setStats(initialStats);
+      setFilteredStats(initialStats);
+    }
+  }, [selectedSurvey, calculateDemographicStats]);
 
-        if (demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age >= 0 && age <= 120) {
-            newStats.ageDistribution[age]++;
-          }
+  // Ajoutez cette fonction pour calculer les points d'une réponse
+  const calculateAnswerPoints = useCallback((answer: SurveyAnswer) => {
+    if (!selectedSurvey) return 0;
+
+    let totalPoints = 0;
+    const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
+    if (!savedRules) return 0;
+
+    const pointRules: { [key: string]: PointRule[] } = JSON.parse(savedRules);
+
+    answer.answers.forEach(ans => {
+      const rules = pointRules[ans.questionId];
+      if (!rules) return;
+
+      rules.forEach((rule: PointRule) => {
+        let points = 0;
+        const answerValue = ans.answer?.toString().toLowerCase();
+        const ruleResponse = rule.response?.toString().toLowerCase();
+
+        switch (rule.condition) {
+          case 'equals':
+            if (answerValue === ruleResponse) points = rule.points;
+            break;
+          case 'contains':
+            if (answerValue?.includes(ruleResponse)) points = rule.points;
+            break;
+          case 'startsWith':
+            if (answerValue?.startsWith(ruleResponse)) points = rule.points;
+            break;
+          case 'endsWith':
+            if (answerValue?.endsWith(ruleResponse)) points = rule.points;
+            break;
+          case 'greaterThan':
+            if (Number(answerValue) > Number(ruleResponse)) points = rule.points;
+            break;
+          case 'lessThan':
+            if (Number(answerValue) < Number(ruleResponse)) points = rule.points;
+            break;
+          case 'between':
+            const value = Number(answerValue);
+            const min = Number(ruleResponse);
+            const max = Number(rule.value);
+            if (value >= min && value <= max) points = rule.points;
+            break;
         }
-      }
+        totalPoints += points;
+      });
     });
 
-    console.log('New stats:', newStats);
-    setFilteredStats(newStats);
-  }, [selectedSurvey, surveyAnswers, filters.demographic, calculateDemographicStats]);
+    return totalPoints;
+  }, [selectedSurvey]);
 
-  // Ajouter un useEffect pour appliquer les filtres lorsqu'ils changent
+  // Ajoutez un useEffect pour appliquer les filtres quand ils changent
   useEffect(() => {
     if (selectedSurvey) {
-      applyDemographicFilters();
+      applyDemographicFilters(selectedSurvey._id);
     }
-  }, [filters.demographic, selectedSurvey, applyDemographicFilters]);
+  }, [selectedSurvey, applyDemographicFilters]);
 
   useEffect(() => {
     if (selectedSurvey && surveyAnswers[selectedSurvey._id]) {
@@ -2493,7 +2599,7 @@ const ResultsPage: React.FC = () => {
       }
     };
 
-    return (
+  return (
       <Box sx={{ 
         height: '400px', 
         width: '100%',
@@ -2658,7 +2764,7 @@ const ResultsPage: React.FC = () => {
             </Select>
           </FormControl>
 
-          <TextField
+            <TextField
             label="Texte attendu"
             value={localText}
             onChange={handleTextChange}
@@ -2906,7 +3012,7 @@ const ResultsPage: React.FC = () => {
                     />
                   </>
                 )}
-              </Box>
+            </Box>
             </Box>
           </Paper>
         </Box>
@@ -3030,14 +3136,14 @@ const ResultsPage: React.FC = () => {
                 }
               }}
             >
-              <CardContent>
+                  <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#2d3748' }}>
                   Question {qIndex + 1}: {question.text}
-                </Typography>
+                    </Typography>
                 
                 <Typography variant="subtitle2" sx={{ color: '#4a5568', mb: 2 }}>
                   Type: {question.type}
-                </Typography>
+                    </Typography>
 
                 <Box sx={{ pl: 2 }}>
                   {pointRules[question.id]?.map((rule, ruleIndex) => (
@@ -3101,7 +3207,7 @@ const ResultsPage: React.FC = () => {
                             <Select
                               value={rule.response}
                               onChange={(e) => updateRule(question.id, ruleIndex, { response: e.target.value })}
-                              size="small"
+                      size="small"
                             >
                               {question.options?.map((option, index) => (
                                 <MenuItem key={index} value={option}>{option}</MenuItem>
@@ -3156,15 +3262,15 @@ const ResultsPage: React.FC = () => {
                     }}
                   >
                     Ajouter une règle
-                  </Button>
+                    </Button>
                 </Box>
               </CardContent>
-            </Card>
-          ))}
+                </Card>
+            ))}
         </DialogContent>
 
         <DialogActions sx={{ p: 3, bgcolor: 'rgba(102, 126, 234, 0.05)' }}>
-          <Button 
+          <Button
             onClick={onClose}
             variant="outlined"
             startIcon={<ClearIcon />}
@@ -3213,10 +3319,10 @@ const ResultsPage: React.FC = () => {
       borderRadius: 1,
       boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
     }}>
-      <Button
+                  <Button
         startIcon={<SettingsIcon />}
         onClick={() => setShowPointsConfig(true)}
-        variant="outlined"
+                    variant="outlined"
         sx={{
           borderColor: 'rgba(102, 126, 234, 0.5)',
           color: '#667eea',
@@ -3227,7 +3333,7 @@ const ResultsPage: React.FC = () => {
         }}
       >
         Configurer les Points
-      </Button>
+                  </Button>
       
       <Button
         startIcon={<FilterListIcon />}
@@ -3244,7 +3350,7 @@ const ResultsPage: React.FC = () => {
       >
         Filtrer par Points
       </Button>
-    </Box>
+          </Box>
   );
 
   if (loading) {
@@ -3309,7 +3415,7 @@ const ResultsPage: React.FC = () => {
 
           <Box sx={{ p: 3 }}>
             {selectedSurvey?.demographicEnabled && (
-              <FilterPanel />
+            <FilterPanel />
             )}
 
             {/* Questions section */}
@@ -3358,14 +3464,14 @@ const ResultsPage: React.FC = () => {
                       alignItems: 'flex-start', 
                       mb: 2 
                     }}>
-                      <Box>
+              <Box>
                         <Typography variant="h6" sx={{ color: '#1a237e' }}>
                           Question {index + 1}: {question.text}
-                        </Typography>
+                </Typography>
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
                           Type: {question.type}
                         </Typography>
-                      </Box>
+                    </Box>
                       <Button
                         variant="contained"
                         startIcon={<BarChartIcon />}
@@ -3384,7 +3490,7 @@ const ResultsPage: React.FC = () => {
                       >
                         View Details ({stats.total} responses)
                       </Button>
-                    </Box>
+                </Box>
 
                     <Divider sx={{ my: 2 }} />
 
@@ -3394,7 +3500,7 @@ const ResultsPage: React.FC = () => {
                   </Paper>
                 );
               })}
-            </Box>
+                </Box>
 
             {/* Export Buttons */}
             <Box sx={{ 
@@ -3433,7 +3539,7 @@ const ResultsPage: React.FC = () => {
                   Export All to JSON
                 </Button>
               </Stack>
-            </Box>
+                </Box>
 
             {/* Demographic Stats Button and Content */}
             {selectedSurvey?.demographicEnabled && (
@@ -3447,7 +3553,7 @@ const ResultsPage: React.FC = () => {
                   alignItems: 'center'
                 }}>
                   {renderDemographicStats()}
-                </Box>
+              </Box>
               </>
             )}
 
@@ -3468,11 +3574,11 @@ const ResultsPage: React.FC = () => {
           </Box>
         </Paper>
 
-        <Dialog
-          open={dialogOpen}
-          onClose={handleClose}
-          maxWidth="md"
-          fullWidth
+      <Dialog
+        open={dialogOpen}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
           PaperProps={{
             sx: {
               borderRadius: 2,
@@ -3536,7 +3642,7 @@ const ResultsPage: React.FC = () => {
                   <InputAdornment position="end">
                     <IconButton size="small" onClick={clearFilters}>
                       <ClearIcon />
-                    </IconButton>
+              </IconButton>
                   </InputAdornment>
                 ),
               }}
@@ -3575,29 +3681,14 @@ const ResultsPage: React.FC = () => {
                   <DatePicker
                     label="Start Date"
                     value={dateRange.start}
-                    onChange={(newValue: Date | null) => {
-                      setDateRange(prev => ({
-                        ...prev,
-                        start: newValue
-                      }));
-                    }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
-                    )}
+                    onChange={(date: Date | null) => setDateRange(prev => ({ ...prev, start: date }))}
+                    renderInput={(params) => <TextField {...params} />}
                   />
                   <DatePicker
                     label="End Date"
                     value={dateRange.end}
-                    onChange={(newValue: Date | null) => {
-                      setDateRange(prev => ({
-                        ...prev,
-                        end: newValue
-                      }));
-                    }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
-                    )}
-                    minDate={dateRange.start || undefined}
+                    onChange={(date: Date | null) => setDateRange(prev => ({ ...prev, end: date }))}
+                    renderInput={(params) => <TextField {...params} />}
                   />
                 </Stack>
               </LocalizationProvider>
