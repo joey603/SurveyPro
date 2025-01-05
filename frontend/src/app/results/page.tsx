@@ -32,6 +32,7 @@ import {
   IconButton,
   Chip,
   TextField, // Ajout de TextField ici
+  Rating,
 } from '@mui/material';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -77,6 +78,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
+import SettingsIcon from '@mui/icons-material/Settings';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { debounce } from 'lodash';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
@@ -116,6 +122,8 @@ interface SurveyAnswer {
   };
   answers: Answer[];
   submittedAt: string;
+  points?: number; // Nouveau champ pour le total des points
+  questionPoints?: QuestionPoints; // Points par question
 }
 
 interface Question {
@@ -144,6 +152,7 @@ interface Survey {
 interface QuestionStats {
   total: number;
   answers: { [key: string]: number };
+  totalPoints: number; // Ajout de totalPoints
 }
 
 // Modifier les options communes pour les graphiques
@@ -494,6 +503,11 @@ const ChartView = memo(({ data, question }: {
   );
 });
 
+// Ajouter l'interface au début du fichier, avec les autres interfaces
+interface QuestionPoints {
+  [questionId: string]: number;
+}
+
 const ResultsPage: React.FC = () => {
   // États existants
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -585,6 +599,14 @@ const ResultsPage: React.FC = () => {
   });
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+
+  // Ajouter ce nouvel état
+  const [questionPoints, setQuestionPoints] = useState<QuestionPoints>({});
+  
+  // Ajouter ces états pour la gestion des points
+  const [pointsFilter, setPointsFilter] = useState<[number, number]>([0, 100]);
+  const [showPointsFilter, setShowPointsFilter] = useState(false);
+  const [showPointsConfig, setShowPointsConfig] = useState(false);
 
   // Ajouter cette fonction de filtrage
   const filteredSurveys = surveys
@@ -801,14 +823,43 @@ const ResultsPage: React.FC = () => {
     });
   }, [filters]);
 
-  // Modifier la fonction calculateQuestionStats pour inclure toutes les réponses
-  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats => {
+  // Ajouter la fonction calculatePoints avant calculateQuestionStats
+  const calculatePoints = useCallback((answer: Answer, questionId: string): number => {
+    const question = selectedSurvey?.questions.find(q => q.id === questionId);
+    if (!question) return 0;
+
+    switch (question.type) {
+      case 'multiple-choice':
+      case 'dropdown':
+        // Points basés sur l'option choisie
+        const correctAnswer = question.options?.[0]; // Première option considérée comme correcte
+        return answer.answer === correctAnswer ? questionPoints[questionId] || 1 : 0;
+      
+      case 'slider':
+        // Points basés sur la valeur du slider
+        const value = Number(answer.answer);
+        const maxPoints = questionPoints[questionId] || 1;
+        return (value / 100) * maxPoints;
+      
+      case 'rating':
+        // Points proportionnels à la note donnée
+        const rating = Number(answer.answer);
+        const maxRating = 5; // Supposons une échelle de 1 à 5
+        return (rating / maxRating) * (questionPoints[questionId] || 1);
+      
+      default:
+        return 0;
+    }
+  }, [selectedSurvey, questionPoints]);
+
+  // Modifier la fonction calculateQuestionStats
+  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats & { averagePoints: number } => {
     const allAnswers = surveyAnswers[surveyId] || [];
-    
-    // Ne pas filtrer les réponses basées sur les données démographiques
-    const stats: QuestionStats = {
+    const stats: QuestionStats & { averagePoints: number } = {
       total: 0,
-      answers: {}
+      answers: {},
+      totalPoints: 0, // Initialisation de totalPoints
+      averagePoints: 0
     };
 
     allAnswers.forEach((answer: SurveyAnswer) => {
@@ -817,11 +868,16 @@ const ResultsPage: React.FC = () => {
         const value = questionAnswer.answer.toString();
         stats.answers[value] = (stats.answers[value] || 0) + 1;
         stats.total++;
+        
+        // Calculer les points pour cette réponse
+        const points = calculatePoints(questionAnswer, questionId);
+        stats.totalPoints += points;
       }
     });
 
+    stats.averagePoints = stats.total > 0 ? stats.totalPoints / stats.total : 0;
     return stats;
-  }, [surveyAnswers]);
+  }, [surveyAnswers, calculatePoints]);
 
   // Modifier la fonction handleViewQuestionDetails
   const handleQuestionClick = useCallback((questionId: string) => {
@@ -2455,6 +2511,517 @@ const ResultsPage: React.FC = () => {
     );
   };
 
+  // Ajouter cette fonction pour mettre à jour les points d'une question
+  const handlePointsChange = (questionId: string, points: number) => {
+    setQuestionPoints(prev => ({
+      ...prev,
+      [questionId]: points
+    }));
+  };
+
+  // Ajouter ce composant pour la configuration des points
+  const PointsConfigDialog = memo(({ open, onClose }: { open: boolean; onClose: () => void }) => {
+    // Modifier l'initialisation des règles de points pour utiliser le localStorage
+    const [pointRules, setPointRules] = useState<{
+      [questionId: string]: Array<{
+        response: string;
+        points: number;
+        condition?: string;
+        value?: string | number;
+      }>
+    }>({});
+
+    // Charger les règles sauvegardées au montage du composant
+    useEffect(() => {
+      if (selectedSurvey) {
+        const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
+        if (savedRules) {
+          setPointRules(JSON.parse(savedRules));
+        } else {
+          // Initialisation par défaut si pas de règles sauvegardées
+          const initialRules: typeof pointRules = {};
+          selectedSurvey.questions.forEach(question => {
+            initialRules[question.id] = [{
+              response: '',
+              points: 0,
+              condition: 'equals'
+            }];
+          });
+          setPointRules(initialRules);
+        }
+      }
+    }, [selectedSurvey]);
+
+    // Sauvegarder les règles quand elles sont modifiées
+    const saveRules = useCallback(() => {
+      if (selectedSurvey) {
+        localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(pointRules));
+        
+        // Mettre à jour les points des questions
+        setQuestionPoints(prev => {
+          const newPoints = { ...prev };
+          Object.entries(pointRules).forEach(([questionId, rules]) => {
+            newPoints[questionId] = Math.max(...rules.map(r => r.points));
+          });
+          return newPoints;
+        });
+      }
+    }, [pointRules, selectedSurvey]);
+
+    // Modifier les fonctions de gestion des règles pour sauvegarder automatiquement
+    const addRule = (questionId: string) => {
+      setPointRules(prev => {
+        const newRules = {
+          ...prev,
+          [questionId]: [
+            ...(prev[questionId] || []),
+            {
+              response: '',
+              points: 0,
+              condition: 'equals'
+            }
+          ]
+        };
+        if (selectedSurvey) {
+          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
+        }
+        return newRules;
+      });
+    };
+
+    const removeRule = (questionId: string, index: number) => {
+      setPointRules(prev => {
+        const newRules = {
+          ...prev,
+          [questionId]: prev[questionId].filter((_, i) => i !== index)
+        };
+        if (selectedSurvey) {
+          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
+        }
+        return newRules;
+      });
+    };
+
+    const updateRule = (questionId: string, index: number, updates: Partial<typeof pointRules[string][number]>) => {
+      setPointRules(prev => {
+        const newRules = {
+          ...prev,
+          [questionId]: prev[questionId].map((rule, i) => 
+            i === index ? { ...rule, ...updates } : rule
+          )
+        };
+        if (selectedSurvey) {
+          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
+        }
+        return newRules;
+      });
+    };
+
+    // Composant pour les règles de type texte
+    const TextRuleFields = ({ rule, questionId, ruleIndex }: {
+      rule: typeof pointRules[string][number];
+      questionId: string;
+      ruleIndex: number;
+    }) => {
+      const [localText, setLocalText] = useState(rule.response || '');
+
+      useEffect(() => {
+        setLocalText(rule.response || '');
+      }, [rule.response]);
+
+      const debouncedUpdate = useCallback(
+        debounce((value: string) => {
+          updateRule(questionId, ruleIndex, { response: value });
+        }, 300),
+        [questionId, ruleIndex]
+      );
+
+      const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setLocalText(newValue);
+        debouncedUpdate(newValue);
+      };
+
+      return (
+        <>
+          <FormControl sx={{ minWidth: 120 }}>
+            <InputLabel>Condition</InputLabel>
+            <Select
+              value={rule.condition}
+              onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
+              size="small"
+            >
+              <MenuItem value="equals">Égal à</MenuItem>
+              <MenuItem value="contains">Contient</MenuItem>
+              <MenuItem value="startsWith">Commence par</MenuItem>
+              <MenuItem value="endsWith">Termine par</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Texte attendu"
+            value={localText}
+            onChange={handleTextChange}
+            size="small"
+            multiline
+            rows={3}
+            sx={{ 
+              width: 300, // Taille fixe au lieu de minWidth
+              '& .MuiInputBase-root': {
+                padding: '8px',
+                height: '100px', // Hauteur fixe
+                overflow: 'auto' // Ajout de scroll si nécessaire
+              },
+              '& .MuiInputBase-input': {
+                height: '100% !important', // Forcer la hauteur
+                resize: 'none' // Désactiver le redimensionnement
+              }
+            }}
+            InputProps={{
+              sx: {
+                fontSize: '0.875rem',
+                lineHeight: '1.5'
+              }
+            }}
+          />
+        </>
+      );
+    };
+
+    // Composant pour les règles de type rating
+    const RatingRuleFields = ({ rule, questionId, ruleIndex }: {
+      rule: typeof pointRules[string][number];
+      questionId: string;
+      ruleIndex: number;
+    }) => (
+      <>
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel>Condition</InputLabel>
+          <Select
+            value={rule.condition}
+            onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
+            size="small"
+          >
+            <MenuItem value="equals">Égal à</MenuItem>
+            <MenuItem value="greaterThan">Supérieur à</MenuItem>
+            <MenuItem value="lessThan">Inférieur à</MenuItem>
+            <MenuItem value="between">Entre</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Rating
+            value={Number(rule.response)}
+            onChange={(_, newValue) => {
+              updateRule(questionId, ruleIndex, { response: newValue?.toString() || '0' });
+            }}
+          />
+          {rule.condition === 'between' && (
+            <>
+              <Typography>et</Typography>
+              <Rating
+                value={Number(rule.value)}
+                onChange={(_, newValue) => {
+                  updateRule(questionId, ruleIndex, { value: newValue?.toString() || '0' });
+                }}
+              />
+            </>
+          )}
+        </Box>
+      </>
+    );
+
+    // Composant pour les règles de type slider
+    const SliderRuleFields = ({ rule, questionId, ruleIndex }: {
+      rule: typeof pointRules[string][number];
+      questionId: string;
+      ruleIndex: number;
+    }) => (
+      <>
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel>Condition</InputLabel>
+          <Select
+            value={rule.condition}
+            onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
+            size="small"
+          >
+            <MenuItem value="equals">Égal à</MenuItem>
+            <MenuItem value="greaterThan">Supérieur à</MenuItem>
+            <MenuItem value="lessThan">Inférieur à</MenuItem>
+            <MenuItem value="between">Entre</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 250 }}>
+          <TextField
+            type="number"
+            label="Valeur"
+            value={rule.response}
+            onChange={(e) => updateRule(questionId, ruleIndex, { response: e.target.value })}
+            size="small"
+            InputProps={{
+              inputProps: { min: 0, max: 100 }
+            }}
+          />
+          {rule.condition === 'between' && (
+            <>
+              <Typography>et</Typography>
+              <TextField
+                type="number"
+                label="Valeur max"
+                value={rule.value}
+                onChange={(e) => updateRule(questionId, ruleIndex, { value: e.target.value })}
+                size="small"
+                InputProps={{
+                  inputProps: { min: 0, max: 100 }
+                }}
+              />
+            </>
+          )}
+        </Box>
+      </>
+    );
+
+    return (
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">Configuration des Règles de Points</Typography>
+          <IconButton onClick={onClose} sx={{ color: 'white' }}>
+            <ClearIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ mt: 2 }}>
+          {selectedSurvey?.questions.map((question, qIndex) => (
+            <Card 
+              key={question.id} 
+              sx={{ 
+                mb: 3,
+                border: '1px solid rgba(102, 126, 234, 0.2)',
+                '&:hover': {
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  borderColor: 'rgba(102, 126, 234, 0.5)'
+                }
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2d3748' }}>
+                  Question {qIndex + 1}: {question.text}
+                </Typography>
+                
+                <Typography variant="subtitle2" sx={{ color: '#4a5568', mb: 2 }}>
+                  Type: {question.type}
+                </Typography>
+
+                <Box sx={{ pl: 2 }}>
+                  {pointRules[question.id]?.map((rule, ruleIndex) => (
+                    <Box 
+                      key={ruleIndex}
+                      sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        mb: 2,
+                        p: 2,
+                        borderRadius: 1,
+                        bgcolor: 'rgba(102, 126, 234, 0.05)'
+                      }}
+                    >
+                      {/* Champs spécifiques selon le type de question */}
+                      {question.type === 'text' && (
+                        <TextRuleFields 
+                          rule={rule} 
+                          questionId={question.id} 
+                          ruleIndex={ruleIndex} 
+                        />
+                      )}
+
+                      {question.type === 'rating' && (
+                        <RatingRuleFields 
+                          rule={rule} 
+                          questionId={question.id} 
+                          ruleIndex={ruleIndex} 
+                        />
+                      )}
+
+                      {question.type === 'slider' && (
+                        <SliderRuleFields 
+                          rule={rule} 
+                          questionId={question.id} 
+                          ruleIndex={ruleIndex} 
+                        />
+                      )}
+
+                      {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
+                        <>
+                          <FormControl sx={{ minWidth: 200 }}>
+                            <InputLabel>Réponse</InputLabel>
+                            <Select
+                              value={rule.response}
+                              onChange={(e) => updateRule(question.id, ruleIndex, { response: e.target.value })}
+                              size="small"
+                            >
+                              {question.options?.map((option, index) => (
+                                <MenuItem key={index} value={option}>{option}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </>
+                      )}
+
+                      {/* Points à attribuer */}
+                      <TextField
+                        type="number"
+                        label="Points"
+                        value={rule.points}
+                        onChange={(e) => updateRule(question.id, ruleIndex, { 
+                          points: Math.max(0, parseInt(e.target.value) || 0)
+                        })}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Chip 
+                                label="pts"
+                                size="small"
+                                sx={{ bgcolor: 'primary.main', color: 'white' }}
+                              />
+                            </InputAdornment>
+                          ),
+                          inputProps: { min: 0 }
+                        }}
+                        size="small"
+                        sx={{ width: 150 }}
+                      />
+
+                      <IconButton 
+                        onClick={() => removeRule(question.id, ruleIndex)}
+                        sx={{ color: 'error.main' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  ))}
+
+                  <Button
+                    startIcon={<AddIcon />}
+                    onClick={() => addRule(question.id)}
+                    sx={{
+                      mt: 1,
+                      color: '#667eea',
+                      '&:hover': {
+                        bgcolor: 'rgba(102, 126, 234, 0.05)'
+                      }
+                    }}
+                  >
+                    Ajouter une règle
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, bgcolor: 'rgba(102, 126, 234, 0.05)' }}>
+          <Button 
+            onClick={onClose}
+            variant="outlined"
+            startIcon={<ClearIcon />}
+            sx={{
+              borderColor: 'rgba(102, 126, 234, 0.5)',
+              color: '#667eea',
+              '&:hover': {
+                borderColor: '#667eea',
+                bgcolor: 'rgba(102, 126, 234, 0.05)'
+              }
+            }}
+          >
+            Annuler
+          </Button>
+          <Button 
+            onClick={() => {
+              saveRules();
+              onClose();
+            }}
+            variant="contained"
+            startIcon={<SaveIcon />}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              }
+            }}
+          >
+            Sauvegarder
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  });
+
+  // Ajouter ce bouton dans la barre d'outils principale
+  const renderToolbar = () => (
+    <Box sx={{ 
+      mb: 3, 
+      display: 'flex', 
+      gap: 2, 
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      p: 2,
+      bgcolor: 'white',
+      borderRadius: 1,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+    }}>
+      <Button
+        startIcon={<SettingsIcon />}
+        onClick={() => setShowPointsConfig(true)}
+        variant="outlined"
+        sx={{
+          borderColor: 'rgba(102, 126, 234, 0.5)',
+          color: '#667eea',
+          '&:hover': {
+            borderColor: '#667eea',
+            bgcolor: 'rgba(102, 126, 234, 0.05)'
+          }
+        }}
+      >
+        Configurer les Points
+      </Button>
+      
+      <Button
+        startIcon={<FilterListIcon />}
+        onClick={() => setShowPointsFilter(!showPointsFilter)}
+        variant="outlined"
+        sx={{
+          borderColor: 'rgba(102, 126, 234, 0.5)',
+          color: '#667eea',
+          '&:hover': {
+            borderColor: '#667eea',
+            bgcolor: 'rgba(102, 126, 234, 0.05)'
+          }
+        }}
+      >
+        Filtrer par Points
+      </Button>
+    </Box>
+  );
+
   if (loading) {
     return (
       <Box sx={{
@@ -2658,6 +3225,21 @@ const ResultsPage: React.FC = () => {
                 </Box>
               </>
             )}
+
+            {renderToolbar()}
+            
+            {showPointsFilter && (
+              <PointsFilterPanel 
+                pointsFilter={pointsFilter}
+                setPointsFilter={setPointsFilter}
+                setShowPointsFilter={setShowPointsFilter}
+              />
+            )}
+            
+            <PointsConfigDialog 
+              open={showPointsConfig} 
+              onClose={() => setShowPointsConfig(false)} 
+            />
           </Box>
         </Paper>
 
@@ -3066,5 +3648,88 @@ const formatDate = (date: string | Date) => {
     day: 'numeric'
   });
 };
+
+// Ajouter ce composant pour le filtrage par points
+const PointsFilterPanel = memo(({ 
+  pointsFilter, 
+  setPointsFilter, 
+  setShowPointsFilter 
+}: { 
+  pointsFilter: [number, number];
+  setPointsFilter: (value: [number, number]) => void;
+  setShowPointsFilter: (value: boolean) => void;
+}) => {
+  return (
+    <Box sx={{ 
+      mb: 3, 
+      p: 3, 
+      border: '1px solid rgba(102, 126, 234, 0.2)',
+      borderRadius: 2,
+      bgcolor: 'white',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+    }}>
+      <Typography variant="h6" gutterBottom sx={{ 
+        color: '#2d3748',
+        fontWeight: 600,
+        mb: 3
+      }}>
+        Filtrer par Points
+      </Typography>
+
+      <Box sx={{ px: 2 }}>
+        <Typography gutterBottom sx={{
+          color: '#4a5568',
+          fontSize: '0.875rem',
+          marginBottom: 1
+        }}>
+          Points minimum
+        </Typography>
+        <Slider
+          value={pointsFilter}
+          onChange={(_, newValue) => setPointsFilter(newValue as [number, number])}
+          valueLabelDisplay="auto"
+          min={0}
+          max={100}
+          sx={{
+            width: '100%',
+            '& .MuiSlider-rail': {
+              background: 'rgba(118, 75, 162, 0.2)',
+            },
+            '& .MuiSlider-track': {
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            },
+            '& .MuiSlider-thumb': {
+              backgroundColor: '#764ba2',
+              '&:hover, &.Mui-focusVisible': {
+                boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
+              },
+            },
+            '& .MuiSlider-valueLabel': {
+              backgroundColor: '#764ba2',
+            },
+            '& .MuiSlider-mark': {
+              backgroundColor: '#667eea',
+            },
+          }}
+          marks={[
+            { value: 0, label: '0' },
+            { value: 20, label: '20' },
+            { value: 40, label: '40' },
+            { value: 60, label: '60' },
+            { value: 80, label: '80' },
+            { value: 100, label: '100' }
+          ]}
+        />
+        <Typography gutterBottom sx={{
+          color: '#4a5568',
+          fontSize: '0.875rem',
+          marginBottom: 1
+        }}>
+          Points maximum
+        </Typography>
+      </Box>
+    </Box>
+  );
+});
 
 export default ResultsPage;
