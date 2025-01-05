@@ -642,6 +642,67 @@ const ResultsPage: React.FC = () => {
   const [showPointsFilter, setShowPointsFilter] = useState(false);
   const [showPointsConfig, setShowPointsConfig] = useState(false);
 
+  // Ajouter un état pour les villes
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
+  // Ajouter la constante DEFAULT_CITIES au début du fichier
+  const DEFAULT_CITIES = [
+    "Tel Aviv",
+    "Jerusalem",
+    "Haifa",
+    "Rishon LeZion",
+    "Petah Tikva",
+    "Ashdod",
+    "Netanya",
+    "Beer Sheva",
+    "Holon",
+    "Bnei Brak"
+  ];
+
+  // Modifier la fonction fetchCities
+  const fetchCities = async () => {
+    try {
+      const response = await fetch(
+        "https://countriesnow.space/api/v0.1/countries/cities",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ country: "Israel" }),
+        }
+      );
+      const data = await response.json();
+
+      if (data && data.data) {
+        return data.data;
+      }
+      return DEFAULT_CITIES;
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      return DEFAULT_CITIES;
+    }
+  };
+
+  // Modifier l'useEffect pour charger les villes
+  useEffect(() => {
+    const loadCities = async () => {
+      try {
+        setLoadingCities(true);
+        const citiesData = await fetchCities();
+        setCities(citiesData);
+      } catch (error) {
+        console.error('Error loading cities:', error);
+        setCities(DEFAULT_CITIES);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    loadCities();
+  }, []);
+
   // Ajouter cette fonction de filtrage
   const filteredSurveys = surveys
     .filter(survey => {
@@ -1078,251 +1139,207 @@ const ResultsPage: React.FC = () => {
     "other"
   ];
 
-  const FilterPanel = () => {
-    const [cities, setCities] = useState<string[]>([]);
-    const [ageRange, setAgeRange] = useState<[number, number]>(
-      filters.demographic.age || [0, 100]
-    );
-
-    const handleAgeChange = (_: Event | React.SyntheticEvent, newValue: number | number[]) => {
-      const newRange = newValue as [number, number];
-      setAgeRange(newRange);
-      
-      setFilters(prev => ({
-        ...prev,
-        demographic: {
-          ...prev.demographic,
-          age: newRange
-        }
-      }));
-      
-      // Appliquer les filtres automatiquement avec l'ID du sondage sélectionné
-      if (selectedSurvey?._id) {
-        applyDemographicFilters(selectedSurvey._id);
-      }
-    };
-
-    const fetchCities = async () => {
-      try {
-        const response = await fetch(
-          "https://countriesnow.space/api/v0.1/countries/cities",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ country: "Israel" }),
+  // Ajouter cette fonction pour gérer les changements de filtres
+  const handleFilterChange = (field: string, value: any) => {
+    setFilters(prev => {
+      if (field === 'age' || field === 'gender' || field === 'educationLevel' || field === 'city') {
+        return {
+          ...prev,
+          demographic: {
+            ...prev.demographic,
+            [field]: value
           }
-        );
-        const data = await response.json();
-
-        if (data && data.data) {
-          return data.data;
-        }
-        return [];
-      } catch (error) {
-        console.error("Error fetching cities:", error);
-        // Liste de secours en cas d'erreur
-        return [
-          "Tel Aviv", "Jerusalem", "Haifa", "Rishon LeZion",
-          "Petah Tikva", "Ashdod", "Netanya", "Beer Sheva",
-          "Holon", "Bnei Brak"
-        ];
+        };
       }
-    };
+      return prev;
+    });
+  };
 
-    useEffect(() => {
-      const loadCities = async () => {
-        const citiesList = await fetchCities();
-        setCities(citiesList);
-      };
-      loadCities();
-    }, []);
+  
 
+  const FilterPanel = () => {
     return (
-      <Box sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Demographic Filters
-          </Typography>
-          <Button
-            color="primary"
-            size="small"
-            onClick={() => {
-              setFilteredStats(null);
-              setFilters({
+      <Box sx={{ mb: 3 }}>
+        {/* Demographic Filters Section */}
+        <Paper sx={{ 
+          p: 3, 
+          mb: 2, 
+          borderRadius: 2,
+          border: '1px solid rgba(102, 126, 234, 0.2)'
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            mb: 2 
+          }}>
+            <Typography variant="h6" sx={{ color: '#2d3748', fontWeight: 600 }}>
+              Demographic Filters
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setFilters(prev => ({
+                ...prev,
                 demographic: {
                   gender: '',
                   age: [0, 100],
                   educationLevel: '',
                   city: ''
-                },
-                points: {
-                  min: 0,
-                  max: 100
                 }
-              });
-            }}
-            sx={{
-              color: '#667eea',
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.05)'
-              }
-            }}
-          >
-            Reset Filters
-          </Button>
-        </Box>
-        <Grid container spacing={2}>
-          {/* Ajouter le filtre de genre */}
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Gender</InputLabel>
-              <Select
-                value={filters.demographic.gender || ''}
-                onChange={(e) => {
-                  setFilters(prev => ({
-                    ...prev,
-                    demographic: {
-                      ...prev.demographic,
-                      gender: e.target.value.toLowerCase() // Stocker en minuscules
-                    }
-                  }));
-                  // Appliquer les filtres automatiquement avec l'ID du sondage sélectionné
-                  if (selectedSurvey?._id) {
-                    applyDemographicFilters(selectedSurvey._id);
-                  }
-                }}
-              >
-                <MenuItem value="">All</MenuItem>
-                {genderOptions.map((gender) => (
-                  <MenuItem key={gender} value={gender}>
-                    {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+              }))}
+              sx={{
+                color: '#667eea',
+                '&:hover': {
+                  backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                }
+              }}
+            >
+              Reset Filters
+            </Button>
+          </Box>
 
-          {/* Ajuster la taille des autres éléments */}
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Education Level</InputLabel>
-              <Select
-                value={filters.demographic.educationLevel || ''}
-                onChange={(e) => {
-                  setFilters(prev => ({
-                    ...prev,
-                    demographic: {
-                      ...prev.demographic,
-                      educationLevel: e.target.value
-                    }
-                  }));
-                  if (selectedSurvey?._id) {
-                    applyDemographicFilters(selectedSurvey._id);
-                  }
-                }}
-              >
-                <MenuItem value="">All</MenuItem>
-                {educationLevels.map((level) => (
-                  <MenuItem key={level} value={level}>{level}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={filters.demographic.gender}
+                  onChange={(e) => handleFilterChange('gender', e.target.value)}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>City</InputLabel>
-              <Select
-                value={filters.demographic.city || ''}
-                onChange={(e) => {
-                  setFilters(prev => ({
-                    ...prev,
-                    demographic: {
-                      ...prev.demographic,
-                      city: e.target.value
-                    }
-                  }));
-                  if (selectedSurvey?._id) {
-                    applyDemographicFilters(selectedSurvey._id);
-                  }
-                }}
-              >
-                <MenuItem value="">All Cities</MenuItem>
-                {cities.map((city) => (
-                  <MenuItem key={city} value={city}>{city}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Education Level</InputLabel>
+                <Select
+                  value={filters.demographic.educationLevel}
+                  onChange={(e) => handleFilterChange('educationLevel', e.target.value)}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {educationLevels.map((level) => (
+                    <MenuItem key={level} value={level}>{level}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-          <Grid item xs={12} sm={3}>
-            <Box sx={{ width: '100%', px: 1 }}> {/* Réduit le padding horizontal */}
-              <Typography gutterBottom sx={{ color: '#1a237e' }}>
-                Age Range: {ageRange[0]} - {ageRange[1]} years
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>City</InputLabel>
+                <Select
+                  value={filters.demographic.city}
+                  onChange={(e) => handleFilterChange('city', e.target.value)}
+                  disabled={loadingCities}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {loadingCities ? (
+                    <MenuItem disabled>Loading cities...</MenuItem>
+                  ) : (
+                    cities.map((city) => (
+                      <MenuItem key={city} value={city}>{city}</MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Typography gutterBottom variant="body2" color="text.secondary">
+                Age Range
               </Typography>
               <Slider
-                value={ageRange}
-                onChange={handleAgeChange}
+                value={filters.demographic.age}
+                onChange={(_, newValue) => handleFilterChange('age', newValue)}
                 valueLabelDisplay="auto"
                 min={0}
                 max={100}
-                sx={{
-                  width: '90%', // Réduit légèrement la largeur
-                  ml: 1, // Ajoute une marge à gauche
-                  '& .MuiSlider-rail': {
-                    background: 'rgba(118, 75, 162, 0.2)',
-                  },
-                  '& .MuiSlider-track': {
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  },
-                  '& .MuiSlider-thumb': {
-                    backgroundColor: '#764ba2',
-                    '&:hover, &.Mui-focusVisible': {
-                      boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
-                    },
-                  },
-                  '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#764ba2',
-                  },
-                  '& .MuiSlider-mark': {
-                    backgroundColor: '#667eea',
-                  },
-                }}
-                marks={[
-                  { value: 0, label: '0' },
-                  { value: 20, label: '20' },
-                  { value: 40, label: '40' },
-                  { value: 60, label: '60' },
-                  { value: 80, label: '80' },
-                  { value: 100, label: '100' }
-                ]}
               />
-            </Box>
+            </Grid>
           </Grid>
-        </Grid>
-        <Box sx={{ width: '100%', mt: 2 }}>
-          <Typography gutterBottom>
-            Filtrer par points
-          </Typography>
-          <Slider
-            value={[filters.points?.min || 0, filters.points?.max || 100]}
-            onChange={(_, newValue) => handlePointsFilterChange(newValue as [number, number])}
-            valueLabelDisplay="auto"
-            min={0}
-            max={100}
-            sx={{
-              color: '#667eea',
-              '& .MuiSlider-thumb': {
-                backgroundColor: '#667eea',
-              },
-              '& .MuiSlider-track': {
-                backgroundColor: '#667eea',
-              }
-            }}
-          />
-        </Box>
+        </Paper>
+
+        {/* Points Filter Section */}
+        <Paper sx={{ 
+          p: 3, 
+          borderRadius: 2,
+          border: '1px solid rgba(102, 126, 234, 0.2)'
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            mb: 2 
+          }}>
+            <Typography variant="h6" sx={{ color: '#2d3748', fontWeight: 600 }}>
+              Points Filter
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={() => setFilters(prev => ({
+                  ...prev,
+                  points: {
+                    min: 0,
+                    max: 100
+                  }
+                }))}
+                sx={{
+                  color: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                  }
+                }}
+              >
+                Reset Filters
+              </Button>
+              <Button
+                startIcon={<SettingsIcon />}
+                onClick={() => setShowPointsConfig(true)}
+                size="small"
+                sx={{
+                  color: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                  }
+                }}
+              >
+                Configure Points
+              </Button>
+            </Box>
+          </Box>
+
+          <Box sx={{ px: 2 }}>
+            <Slider
+              value={[filters.points.min, filters.points.max]}
+              onChange={(_, newValue) => handlePointsFilterChange(newValue as [number, number])}
+              valueLabelDisplay="auto"
+              min={0}
+              max={100}
+              sx={{
+                color: '#667eea',
+                '& .MuiSlider-thumb': {
+                  backgroundColor: '#667eea',
+                },
+                '& .MuiSlider-track': {
+                  backgroundColor: '#667eea',
+                }
+              }}
+              marks={[
+                { value: 0, label: '0' },
+                { value: 25, label: '25' },
+                { value: 50, label: '50' },
+                { value: 75, label: '75' },
+                { value: 100, label: '100' }
+              ]}
+            />
+          </Box>
+        </Paper>
       </Box>
     );
   };
@@ -1400,8 +1417,8 @@ const ResultsPage: React.FC = () => {
         </Box>
 
         <Grid container spacing={4} sx={{ 
-          justifyContent: 'center', // Centrer les éléments de la grille
-          alignItems: 'stretch'     // Étirer les éléments à la même hauteur
+          justifyContent: 'center',
+          alignItems: 'stretch'     
         }}>
           {/* Genre */}
           <Grid item xs={12} md={6}>
@@ -3372,7 +3389,7 @@ const ResultsPage: React.FC = () => {
     );
   });
 
-  // Ajouter ce bouton dans la barre d'outils principale
+  // Supprimer ou remplacer la fonction renderToolbar par une version plus simple
   const renderToolbar = () => (
     <Box sx={{ 
       mb: 3, 
@@ -3385,38 +3402,8 @@ const ResultsPage: React.FC = () => {
       borderRadius: 1,
       boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
     }}>
-                  <Button
-        startIcon={<SettingsIcon />}
-        onClick={() => setShowPointsConfig(true)}
-                    variant="outlined"
-        sx={{
-          borderColor: 'rgba(102, 126, 234, 0.5)',
-          color: '#667eea',
-          '&:hover': {
-            borderColor: '#667eea',
-            bgcolor: 'rgba(102, 126, 234, 0.05)'
-          }
-        }}
-      >
-        Configurer les Points
-                  </Button>
-      
-      <Button
-        startIcon={<FilterListIcon />}
-        onClick={() => setShowPointsFilter(!showPointsFilter)}
-        variant="outlined"
-        sx={{
-          borderColor: 'rgba(102, 126, 234, 0.5)',
-          color: '#667eea',
-          '&:hover': {
-            borderColor: '#667eea',
-            bgcolor: 'rgba(102, 126, 234, 0.05)'
-          }
-        }}
-      >
-        Filtrer par Points
-      </Button>
-          </Box>
+      {/* Vous pouvez ajouter d'autres éléments de la barre d'outils ici si nécessaire */}
+    </Box>
   );
 
   if (loading) {
