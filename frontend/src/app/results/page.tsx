@@ -327,7 +327,7 @@ const ChartView = memo(({ data, question }: {
           color: '#4a5568',
           font: {
             size: 12,
-            weight: 500
+            weight: 400
           },
           padding: 15,
         }
@@ -537,7 +537,7 @@ interface Filters {
     start: Date | null;
     end: Date | null;
   };
-  points?: {
+  points: {
     min: number;
     max: number;
   };
@@ -586,6 +586,10 @@ const ResultsPage: React.FC = () => {
       age: [0, 100],
       educationLevel: '',
       city: ''
+    },
+    points: {
+      min: 0,
+      max: 100
     }
   });
 
@@ -1152,6 +1156,10 @@ const ResultsPage: React.FC = () => {
                   age: [0, 100],
                   educationLevel: '',
                   city: ''
+                },
+                points: {
+                  min: 0,
+                  max: 100
                 }
               });
             }}
@@ -1294,6 +1302,27 @@ const ResultsPage: React.FC = () => {
             </Box>
           </Grid>
         </Grid>
+        <Box sx={{ width: '100%', mt: 2 }}>
+          <Typography gutterBottom>
+            Filtrer par points
+          </Typography>
+          <Slider
+            value={[filters.points?.min || 0, filters.points?.max || 100]}
+            onChange={(_, newValue) => handlePointsFilterChange(newValue as [number, number])}
+            valueLabelDisplay="auto"
+            min={0}
+            max={100}
+            sx={{
+              color: '#667eea',
+              '& .MuiSlider-thumb': {
+                backgroundColor: '#667eea',
+              },
+              '& .MuiSlider-track': {
+                backgroundColor: '#667eea',
+              }
+            }}
+          />
+        </Box>
       </Box>
     );
   };
@@ -2272,48 +2301,85 @@ const ResultsPage: React.FC = () => {
   const applyDemographicFilters = useCallback((surveyId: string) => {
     if (!surveyId) return;
     
-    // Récupérer uniquement les réponses pour ce sondage spécifique
     const surveyResponses = surveyAnswers[surveyId] || [];
     
-    // Appliquer les filtres sur les réponses du sondage
+    // Filtrer les réponses en fonction de tous les critères (démographiques ET points)
     const filteredAnswers = surveyResponses.filter(answer => {
-      const demographic = answer.respondent.demographic;
-      const currentFilters = filters.demographic;
+      // Vérification démographique
+      const demographic = answer.respondent?.demographic;
+      const demoFilters = filters.demographic;
       
-      // Filtre par genre
-      if (currentFilters.gender && demographic?.gender !== currentFilters.gender) {
+      // Appliquer les filtres démographiques
+      if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
         return false;
       }
       
-      // Filtre par âge
-      if (demographic?.dateOfBirth && currentFilters.age) {
+      if (demographic?.dateOfBirth && demoFilters.age) {
         const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < currentFilters.age[0] || age > currentFilters.age[1]) {
+        if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
           return false;
         }
       }
       
-      // Filtre par niveau d'éducation
-      if (currentFilters.educationLevel && demographic?.educationLevel !== currentFilters.educationLevel) {
+      if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
         return false;
       }
       
-      // Filtre par ville
-      if (currentFilters.city && demographic?.city !== currentFilters.city) {
+      if (demoFilters.city && demographic?.city !== demoFilters.city) {
         return false;
+      }
+
+      // Vérification des points
+      if (filters.points) {
+        // Calculer le total des points pour toutes les réponses de cet utilisateur
+        const totalPoints = answer.answers.reduce((sum, ans) => {
+          return sum + calculatePoints(ans, ans.questionId);
+        }, 0);
+
+        // Appliquer le filtre des points
+        if (totalPoints < filters.points.min || totalPoints > filters.points.max) {
+          return false;
+        }
       }
 
       return true;
     });
 
-    // Calculer les nouvelles statistiques basées sur les réponses filtrées
-    const newStats = {
+    // Calculer les nouvelles statistiques avec les réponses filtrées
+    const newStats: DemographicStats = {
       ...calculateDemographicStats(surveyId),
-      filteredAnswers: filteredAnswers
+      filteredAnswers: filteredAnswers,
+      totalPoints: filteredAnswers.reduce((sum, answer) => {
+        return sum + answer.answers.reduce((answerSum, ans) => {
+          return answerSum + calculatePoints(ans, ans.questionId);
+        }, 0);
+      }, 0),
+      averagePoints: filteredAnswers.length > 0 
+        ? filteredAnswers.reduce((sum, answer) => {
+            return sum + answer.answers.reduce((answerSum, ans) => {
+              return answerSum + calculatePoints(ans, ans.questionId);
+            }, 0);
+          }, 0) / filteredAnswers.length
+        : 0
     };
 
     setFilteredStats(newStats);
-  }, [surveyAnswers, filters, calculateDemographicStats]);
+  }, [surveyAnswers, filters, calculateDemographicStats, calculatePoints]);
+
+  // Ajouter cette fonction pour mettre à jour le filtre de points
+  const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
+    setFilters(prev => ({
+      ...prev,
+      points: {
+        min: newRange[0],
+        max: newRange[1]
+      }
+    }));
+    
+    if (selectedSurvey?._id) {
+      applyDemographicFilters(selectedSurvey._id);
+    }
+  }, [selectedSurvey, applyDemographicFilters]);
 
   // Fonction utilitaire pour calculer l'âge
   const calculateAge = (birthDate: Date): number => {
@@ -3317,7 +3383,7 @@ const ResultsPage: React.FC = () => {
       p: 2,
       bgcolor: 'white',
       borderRadius: 1,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
     }}>
                   <Button
         startIcon={<SettingsIcon />}
@@ -3381,8 +3447,7 @@ const ResultsPage: React.FC = () => {
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',
-          maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
+          width: '100%',  // Ajout de cette ligne pour limiter la largeur
           mb: 4,
         }}>
           <Box sx={{
