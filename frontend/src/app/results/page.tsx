@@ -580,7 +580,7 @@ const ResultsPage: React.FC = () => {
   const chartRef = useRef<ChartRefType | null>(null);
 
   // Nouveaux états
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Filters>({
     demographic: {
       gender: '',           // Vide par défaut
       age: [0, 100],       // Plage complète par défaut
@@ -589,7 +589,7 @@ const ResultsPage: React.FC = () => {
     },
     points: {
       min: 0,              // Minimum par défaut
-      max: 100             // Maximum par défaut
+      max: 100            // Maximum par défaut
     }
   });
 
@@ -871,54 +871,7 @@ const ResultsPage: React.FC = () => {
     setSelectedSurvey(null);
   };
 
-  // Ajouter la fonction de filtrage
-  const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
-    // Si tous les filtres sont vides, retourner toutes les réponses
-    const hasActiveFilters = Object.values(filters.demographic).some(value => 
-      value !== undefined && value !== "" && 
-      !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
-    );
-
-    if (!hasActiveFilters) {
-      return answers;
-    }
-
-    return answers.filter(answer => {
-      // Si pas de données démographiques, inclure la réponse
-      if (!answer.respondent?.demographic) {
-        return true;
-      }
-
-      const demographic = answer.respondent.demographic;
-
-      // Appliquer les filtres seulement si les données démographiques existent
-      if (filters.demographic.educationLevel && 
-          filters.demographic.educationLevel !== "" && 
-          demographic.educationLevel !== filters.demographic.educationLevel) {
-        return false;
-      }
-
-      if (filters.demographic.city && 
-          filters.demographic.city !== "" && 
-          demographic.city !== filters.demographic.city) {
-        return false;
-      }
-
-      if (filters.demographic.age && 
-          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
-        if (demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    });
-  }, [filters]);
-
-  // Ajouter la fonction calculatePoints avant calculateQuestionStats
+  // Déplacer calculatePoints avant filterAnswers
   const calculatePoints = useCallback((answer: Answer, questionId: string): number => {
     const question = selectedSurvey?.questions.find(q => q.id === questionId);
     if (!question) return 0;
@@ -966,12 +919,84 @@ const ResultsPage: React.FC = () => {
     return totalPoints;
   }, [selectedSurvey]);
 
+  const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
+    // Vérifier si des filtres sont réellement actifs
+    const hasActiveFilters = 
+      filters.demographic.gender !== '' || 
+      filters.demographic.educationLevel !== '' || 
+      filters.demographic.city !== '' || 
+      filters.demographic.age[0] !== 0 || 
+      filters.demographic.age[1] !== 100 ||
+      filters.points.min > 0 ||
+      filters.points.max < 100; // Ajout des conditions pour les points
+
+    // Si aucun filtre n'est actif, retourner toutes les réponses
+    if (!hasActiveFilters) {
+      return answers;
+    }
+
+    return answers.filter(answer => {
+      let passesFilters = true;
+
+      // Vérification des filtres démographiques
+      if (answer.respondent?.demographic) {
+        const demographic = answer.respondent.demographic;
+
+        if (filters.demographic.gender && demographic.gender !== filters.demographic.gender) {
+          passesFilters = false;
+        }
+
+        if (filters.demographic.educationLevel && demographic.educationLevel !== filters.demographic.educationLevel) {
+          passesFilters = false;
+        }
+
+        if (filters.demographic.city && demographic.city !== filters.demographic.city) {
+          passesFilters = false;
+        }
+
+        if (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100) {
+          if (demographic.dateOfBirth) {
+            const age = calculateAge(new Date(demographic.dateOfBirth));
+            if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+              passesFilters = false;
+            }
+          }
+        }
+      } else if (hasActiveFilters && 
+                (filters.demographic.gender || 
+                 filters.demographic.educationLevel || 
+                 filters.demographic.city || 
+                 filters.demographic.age[0] !== 0 || 
+                 filters.demographic.age[1] !== 100)) {
+        passesFilters = false;
+      }
+
+      // Vérification du filtre de points
+      if (passesFilters && (filters.points.min > 0 || filters.points.max < 100)) {
+        let totalPoints = 0;
+        
+        // Calculer les points totaux pour toutes les réponses
+        answer.answers.forEach(ans => {
+          totalPoints += calculatePoints(ans, ans.questionId);
+        });
+
+        if (totalPoints < filters.points.min || totalPoints > filters.points.max) {
+          passesFilters = false;
+        }
+      }
+
+      return passesFilters;
+    });
+  }, [filters, calculatePoints]);
+
   // Modifier la fonction calculateQuestionStats
   const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats & { averagePoints: number } => {
-    // Utiliser les réponses filtrées si disponibles, sinon utiliser toutes les réponses
-    const allAnswers = (filteredStats?.filteredAnswers || surveyAnswers[surveyId] || []);
+    // Utiliser directement les réponses du sondage, sans passer par filteredStats
+    const allAnswers = surveyAnswers[surveyId] || [];
     
-    // Créer un nouvel objet stats
+    // Appliquer les filtres uniquement si nécessaire
+    const filteredAnswers = filterAnswers(allAnswers);
+    
     const questionStats: QuestionStats & { averagePoints: number } = {
       total: 0,
       answers: {},
@@ -982,13 +1007,11 @@ const ResultsPage: React.FC = () => {
     // Utiliser un Set pour garder une trace des réponses uniques
     const processedAnswers = new Set();
 
-    allAnswers.forEach((surveyAnswer: SurveyAnswer) => {
-      // Trouver la réponse correspondant à la question
+    filteredAnswers.forEach((surveyAnswer: SurveyAnswer) => {
       const questionAnswer = surveyAnswer.answers.find(
         (a: Answer) => a.questionId === questionId
       );
 
-      // Vérifier si nous avons déjà traité cette réponse
       const answerKey = `${surveyAnswer._id}-${questionId}`;
       if (questionAnswer && questionAnswer.answer != null && !processedAnswers.has(answerKey)) {
         processedAnswers.add(answerKey);
@@ -997,7 +1020,6 @@ const ResultsPage: React.FC = () => {
         questionStats.answers[value] = (questionStats.answers[value] || 0) + 1;
         questionStats.total++;
         
-        // Calculer les points pour cette réponse
         const points = calculatePoints(questionAnswer, questionId);
         questionStats.totalPoints += points;
       }
@@ -1008,7 +1030,7 @@ const ResultsPage: React.FC = () => {
       : 0;
 
     return questionStats;
-  }, [surveyAnswers, filteredStats, calculatePoints]);
+  }, [surveyAnswers, filterAnswers, calculatePoints]);
 
   // Modifier la fonction handleViewQuestionDetails
   const handleQuestionClick = useCallback((questionId: string) => {
@@ -1017,9 +1039,11 @@ const ResultsPage: React.FC = () => {
     const question = selectedSurvey.questions.find(q => q.id === questionId);
     if (!question) return;
 
-    const answers = (filteredStats?.filteredAnswers || surveyAnswers[selectedSurvey._id] || []);
+    // Utiliser directement les réponses du sondage et appliquer les filtres
+    const answers = surveyAnswers[selectedSurvey._id] || [];
+    const filteredAnswers = filterAnswers(answers);
     
-    const uniqueAnswers = answers.filter((answer: SurveyAnswer, index: number, self: SurveyAnswer[]) => 
+    const uniqueAnswers = filteredAnswers.filter((answer: SurveyAnswer, index: number, self: SurveyAnswer[]) => 
       index === self.findIndex((a: SurveyAnswer) => a._id === answer._id)
     );
 
@@ -1029,7 +1053,7 @@ const ResultsPage: React.FC = () => {
     });
     setDialogOpen(true);
     setCurrentView('list');
-  }, [selectedSurvey, surveyAnswers, filteredStats]);
+  }, [selectedSurvey, surveyAnswers, filterAnswers]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -1155,16 +1179,7 @@ const ResultsPage: React.FC = () => {
     });
   };
 
-  // Déplacer handlePointsFilterChange au niveau du composant principal
-  const handlePointsFilterChange = useCallback((value: [number, number]) => {
-    setFilters(prev => ({
-      ...prev,
-      points: {
-        min: value[0],
-        max: value[1]
-      }
-    }));
-  }, []);
+  
 
   const FilterPanel = () => {
     return (
@@ -2329,27 +2344,18 @@ const ResultsPage: React.FC = () => {
     
     const surveyResponses = surveyAnswers[surveyId] || [];
     
-    // Filtrer les réponses uniquement si des filtres sont actifs
+    // Filtrer les réponses en fonction de tous les critères (démographiques ET points)
     const filteredAnswers = surveyResponses.filter(answer => {
+      // Vérification démographique
       const demographic = answer.respondent?.demographic;
       const demoFilters = filters.demographic;
       
-      // Vérifier si des filtres sont actifs
-      const hasActiveFilters = 
-        demoFilters.gender || 
-        demoFilters.educationLevel || 
-        demoFilters.city || 
-        (demoFilters.age[0] > 0 || demoFilters.age[1] < 100);
-
-      // Si aucun filtre n'est actif, inclure toutes les réponses
-      if (!hasActiveFilters) return true;
-      
-      // Appliquer les filtres démographiques seulement s'ils sont définis
+      // Appliquer les filtres démographiques
       if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
         return false;
       }
       
-      if (demographic?.dateOfBirth && demoFilters.age && hasActiveFilters) {
+      if (demographic?.dateOfBirth && demoFilters.age) {
         const age = calculateAge(new Date(demographic.dateOfBirth));
         if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
           return false;
@@ -2364,10 +2370,23 @@ const ResultsPage: React.FC = () => {
         return false;
       }
 
+      // Vérification des points
+      if (filters.points) {
+        // Calculer le total des points pour toutes les réponses de cet utilisateur
+        const totalPoints = answer.answers.reduce((sum, ans) => {
+          return sum + calculatePoints(ans, ans.questionId);
+        }, 0);
+
+        // Appliquer le filtre des points
+        if (totalPoints < filters.points.min || totalPoints > filters.points.max) {
+          return false;
+        }
+      }
+
       return true;
     });
 
-    // Mettre à jour les statistiques avec toutes les réponses si aucun filtre n'est actif
+    // Calculer les nouvelles statistiques avec les réponses filtrées
     const newStats: DemographicStats = {
       ...calculateDemographicStats(surveyId),
       filteredAnswers: filteredAnswers,
@@ -2388,6 +2407,20 @@ const ResultsPage: React.FC = () => {
     setFilteredStats(newStats);
   }, [surveyAnswers, filters, calculateDemographicStats, calculatePoints]);
 
+  // Ajouter cette fonction pour mettre à jour le filtre de points
+  const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
+    setFilters(prev => ({
+      ...prev,
+      points: {
+        min: newRange[0],
+        max: newRange[1]
+      }
+    }));
+    
+    if (selectedSurvey?._id) {
+      applyDemographicFilters(selectedSurvey._id);
+    }
+  }, [selectedSurvey, applyDemographicFilters]);
 
   // Fonction utilitaire pour calculer l'âge
   const calculateAge = (birthDate: Date): number => {
@@ -2831,15 +2864,15 @@ const ResultsPage: React.FC = () => {
               onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
               size="small"
             >
-              <MenuItem value="equals">Equals</MenuItem>
-              <MenuItem value="contains">Contains</MenuItem>
-              <MenuItem value="startsWith">Starts with</MenuItem>
-              <MenuItem value="endsWith">Ends with</MenuItem>
+              <MenuItem value="equals">Égal à</MenuItem>
+              <MenuItem value="contains">Contient</MenuItem>
+              <MenuItem value="startsWith">Commence par</MenuItem>
+              <MenuItem value="endsWith">Termine par</MenuItem>
             </Select>
           </FormControl>
 
             <TextField
-            label="Expected Text"
+            label="Texte attendu"
             value={localText}
             onChange={handleTextChange}
             size="small"
@@ -2882,10 +2915,10 @@ const ResultsPage: React.FC = () => {
             onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
             size="small"
           >
-            <MenuItem value="equals">Equals</MenuItem>
-            <MenuItem value="greaterThan">Greater than</MenuItem>
-            <MenuItem value="lessThan">Less than</MenuItem>
-            <MenuItem value="between">Between</MenuItem>
+            <MenuItem value="equals">Égal à</MenuItem>
+            <MenuItem value="greaterThan">Supérieur à</MenuItem>
+            <MenuItem value="lessThan">Inférieur à</MenuItem>
+            <MenuItem value="between">Entre</MenuItem>
           </Select>
         </FormControl>
 
@@ -2898,7 +2931,7 @@ const ResultsPage: React.FC = () => {
           />
           {rule.condition === 'between' && (
             <>
-              <Typography>and</Typography>
+              <Typography>et</Typography>
               <Rating
                 value={Number(rule.value)}
                 onChange={(_, newValue) => {
@@ -2960,10 +2993,10 @@ const ResultsPage: React.FC = () => {
               }}
               size="small"
             >
-              <MenuItem value="equals">Equals</MenuItem>
-              <MenuItem value="greaterThan">Greater than</MenuItem>
-              <MenuItem value="lessThan">Less than</MenuItem>
-              <MenuItem value="between">Between</MenuItem>
+              <MenuItem value="equals">Égal à</MenuItem>
+              <MenuItem value="greaterThan">Supérieur à</MenuItem>
+              <MenuItem value="lessThan">Inférieur à</MenuItem>
+              <MenuItem value="between">Entre</MenuItem>
             </Select>
           </FormControl>
 
@@ -3063,7 +3096,7 @@ const ResultsPage: React.FC = () => {
                         userSelect: 'none'
                       }}
                     >
-                      to
+                      jusqu'à
                     </Typography>
                     <TextField
                       size="small"
@@ -3107,10 +3140,10 @@ const ResultsPage: React.FC = () => {
             onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
             size="small"
           >
-            <MenuItem value="equals">Equals</MenuItem>
-            <MenuItem value="before">Before</MenuItem>
-            <MenuItem value="after">After</MenuItem>
-            <MenuItem value="between">Between</MenuItem>
+            <MenuItem value="equals">Égal à</MenuItem>
+            <MenuItem value="before">Avant</MenuItem>
+            <MenuItem value="after">Après</MenuItem>
+            <MenuItem value="between">Entre</MenuItem>
           </Select>
         </FormControl>
 
@@ -3130,9 +3163,9 @@ const ResultsPage: React.FC = () => {
             />
             {rule.condition === 'between' && (
               <>
-                <Typography>and</Typography>
+                <Typography>et</Typography>
                 <DatePicker
-                  label="End Date"
+                  label="Date fin"
                   value={rule.value ? new Date(rule.value) : null}
                   onChange={(newValue) => {
                     updateRule(questionId, ruleIndex, { 
@@ -3158,14 +3191,14 @@ const ResultsPage: React.FC = () => {
     }) => (
       <>
         <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Expected Response</InputLabel>
+          <InputLabel>Réponse attendue</InputLabel>
           <Select
             value={rule.response}
             onChange={(e) => updateRule(questionId, ruleIndex, { response: e.target.value })}
             size="small"
           >
-            <MenuItem value="yes">Yes</MenuItem>
-            <MenuItem value="no">No</MenuItem>
+            <MenuItem value="yes">Oui</MenuItem>
+            <MenuItem value="no">Non</MenuItem>
           </Select>
         </FormControl>
       </>
@@ -3191,7 +3224,7 @@ const ResultsPage: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="h6">Points Configuration</Typography>
+          <Typography variant="h6">Configuration des Règles de Points</Typography>
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <ClearIcon />
           </IconButton>
@@ -3277,7 +3310,7 @@ const ResultsPage: React.FC = () => {
                       {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
                         <>
                           <FormControl sx={{ minWidth: 200 }}>
-                            <InputLabel>Expected Response</InputLabel>
+                            <InputLabel>Réponse</InputLabel>
                             <Select
                               value={rule.response}
                               onChange={(e) => updateRule(question.id, ruleIndex, { response: e.target.value })}
@@ -3335,7 +3368,7 @@ const ResultsPage: React.FC = () => {
                       }
                     }}
                   >
-                    Add Rule
+                    Ajouter une règle
                     </Button>
                 </Box>
               </CardContent>
@@ -3357,7 +3390,7 @@ const ResultsPage: React.FC = () => {
               }
             }}
           >
-            Cancel
+            Annuler
           </Button>
           <Button 
             onClick={() => {
@@ -3373,7 +3406,7 @@ const ResultsPage: React.FC = () => {
               }
             }}
           >
-            Save Rules
+            Sauvegarder
           </Button>
         </DialogActions>
       </Dialog>
@@ -4032,7 +4065,7 @@ const PointsFilterPanel = memo(({
         fontWeight: 600,
         mb: 3
       }}>
-        Filter by Points
+        Filtrer par Points
       </Typography>
 
       <Box sx={{ px: 2 }}>
@@ -4041,7 +4074,7 @@ const PointsFilterPanel = memo(({
           fontSize: '0.875rem',
           marginBottom: 1
         }}>
-          Minimum Points
+          Points minimum
         </Typography>
         <Slider
           value={pointsFilter}
@@ -4084,7 +4117,7 @@ const PointsFilterPanel = memo(({
           fontSize: '0.875rem',
           marginBottom: 1
         }}>
-          Maximum Points
+          Points maximum
         </Typography>
       </Box>
     </Box>
