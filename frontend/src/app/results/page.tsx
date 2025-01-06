@@ -552,7 +552,8 @@ interface PointsFilterPanelProps {
   pointsFilter: [number, number];
   setPointsFilter: (value: [number, number]) => void;
   setShowPointsFilter: (value: boolean) => void;
-  handlePointsFilterChange: (newRange: [number, number]) => void;
+  handlePointsFilterChange: (value: [number, number]) => void;
+  setShowPointsConfig: (value: boolean) => void;  // Ajout de cette prop
 }
 
 const ResultsPage: React.FC = () => {
@@ -2653,9 +2654,6 @@ const ResultsPage: React.FC = () => {
     
     // Filtrer les réponses en fonction des critères
     const filteredAnswers = surveyResponses.filter(answer => {
-      const demographic = answer.respondent?.demographic;
-      const demoFilters = filters.demographic;
-      
       // Calculer les points totaux pour cette réponse
       const answerPoints = calculateAnswerPoints(answer);
 
@@ -2666,24 +2664,29 @@ const ResultsPage: React.FC = () => {
         }
       }
       
-      // Appliquer les filtres démographiques
-      if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
-        return false;
-      }
-      
-      if (demographic?.dateOfBirth && demoFilters.age) {
-        const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
+      // Si le sondage a des données démographiques, appliquer ces filtres
+      if (selectedSurvey?.demographicEnabled) {
+        const demographic = answer.respondent?.demographic;
+        const demoFilters = filters.demographic;
+        
+        if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
           return false;
         }
-      }
-      
-      if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
-        return false;
-      }
-      
-      if (demoFilters.city && demographic?.city !== demoFilters.city) {
-        return false;
+        
+        if (demographic?.dateOfBirth && demoFilters.age) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
+            return false;
+          }
+        }
+        
+        if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
+          return false;
+        }
+        
+        if (demoFilters.city && demographic?.city !== demoFilters.city) {
+          return false;
+        }
       }
 
       return true;
@@ -2707,7 +2710,7 @@ const ResultsPage: React.FC = () => {
     newStats.averagePoints = newStats.totalPoints / (newStats.totalRespondents || 1);
 
     setFilteredStats(newStats);
-  }, [surveyAnswers, filters, calculateAnswerPoints]);
+  }, [surveyAnswers, filters, calculateAnswerPoints, selectedSurvey]);
 
   // Ajouter ces fonctions utilitaires pour calculer les distributions
   const calculateGenderDistribution = (answers: SurveyAnswer[]) => {
@@ -3724,47 +3727,50 @@ const ResultsPage: React.FC = () => {
           justifyContent: 'space-between', 
           px: 3,
           py: 2,
-          bgcolor: 'rgba(102, 126, 234, 0.05)'
+          bgcolor: 'white',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)'
         }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Stack direction="row" spacing={2}>
               <Button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to reset all rules? This action cannot be undone.')) {
+                    resetRules();
+                  }
+                }}
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                sx={{
+                  borderColor: 'error.main',
+                  color: 'error.main',
+                  '&:hover': {
+                    backgroundColor: 'error.light',
+                    borderColor: 'error.dark',
+                    color: 'error.contrastText'
+                  }
+                }}
+              >
+                Reset All
+              </Button>
+          </Stack>
+          
+          <Box>
+            <Button 
               onClick={() => {
-                if (window.confirm('Are you sure you want to reset all rules? This action cannot be undone.')) {
-                  resetRules();
-                }
+                saveRules();
+                onClose();
               }}
-              variant="outlined"
-              startIcon={<RefreshIcon />}
+              variant="contained"
+              startIcon={<SaveIcon />}
               sx={{
-                borderColor: 'error.main',
-                color: 'error.main',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
-                  backgroundColor: 'error.light',
-                  borderColor: 'error.dark',
-                  color: 'error.contrastText'
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                 }
               }}
             >
-              Reset All
+              Save
             </Button>
-          
           </Box>
-          <Button 
-            onClick={() => {
-              saveRules();
-              onClose();
-            }}
-            variant="contained"
-            startIcon={<SaveIcon />}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              }
-            }}
-          >
-            Save
-          </Button>
         </DialogActions>
       </Dialog>
     );
@@ -3851,6 +3857,19 @@ const ResultsPage: React.FC = () => {
             <FilterPanel />
             )}
 
+            {/* Points Filter Section - Moved above questions */}
+            {!selectedSurvey?.demographicEnabled && (
+              <Box sx={{ mb: 4 }}>
+                <PointsFilterPanel 
+                  pointsFilter={pointsFilter}
+                  setPointsFilter={setPointsFilter}
+                  setShowPointsFilter={setShowPointsFilter}
+                  handlePointsFilterChange={handlePointsFilterChange}
+                  setShowPointsConfig={setShowPointsConfig}
+                />
+              </Box>
+            )}
+
             {/* Questions section */}
             <Box sx={{ mb: 4 }}>
               <Typography 
@@ -3862,8 +3881,8 @@ const ResultsPage: React.FC = () => {
                   WebkitBackgroundClip: 'text',
                   backgroundClip: 'text',
                   color: 'transparent',
-                  display: 'inline-block', // Ajout de cette ligne
-                  '&::before': {          // Ajout de cette ligne
+                  display: 'inline-block',
+                  '&::before': {
                     content: '""',
                     position: 'absolute',
                     top: 0,
@@ -3975,7 +3994,7 @@ const ResultsPage: React.FC = () => {
                 </Box>
 
             {/* Demographic Stats Button and Content */}
-            {selectedSurvey?.demographicEnabled && (
+            {selectedSurvey?.demographicEnabled ? (
               <>
                 <Box sx={{ 
                   mt: 6, 
@@ -3988,18 +4007,29 @@ const ResultsPage: React.FC = () => {
                   {renderDemographicStats()}
               </Box>
               </>
+            ) : (
+              // Ajouter cette section pour les sondages non-démographiques
+              <Box sx={{ 
+                mt: 6, 
+                pt: 4, 
+                borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}>
+                {showPointsFilter && (
+                  <PointsFilterPanel 
+                    pointsFilter={pointsFilter}
+                    setPointsFilter={setPointsFilter}
+                    setShowPointsFilter={setShowPointsFilter}
+                    handlePointsFilterChange={handlePointsFilterChange}
+                    setShowPointsConfig={setShowPointsConfig}  // Ajout de cette prop
+                  />
+                )}
+              </Box>
             )}
 
             {renderToolbar()}
-            
-            {showPointsFilter && (
-              <PointsFilterPanel 
-                pointsFilter={pointsFilter}
-                setPointsFilter={setPointsFilter}
-                setShowPointsFilter={setShowPointsFilter}
-                handlePointsFilterChange={handlePointsFilterChange}
-              />
-            )}
             
             <PointsConfigDialog 
               open={showPointsConfig} 
@@ -4404,7 +4434,8 @@ const PointsFilterPanel = memo(({
   pointsFilter, 
   setPointsFilter, 
   setShowPointsFilter,
-  handlePointsFilterChange 
+  handlePointsFilterChange,
+  setShowPointsConfig
 }: PointsFilterPanelProps) => {
   const handleChange = (event: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue)) {
@@ -4438,19 +4469,43 @@ const PointsFilterPanel = memo(({
         >
           Filter by Points
         </Typography>
-        <IconButton 
-          onClick={() => setShowPointsFilter(false)}
-          size="small"
-          sx={{ 
-            color: 'text.secondary',
-            '&:hover': {
-              color: 'primary.main',
-              bgcolor: 'rgba(102, 126, 234, 0.08)'
-            }
-          }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              setPointsFilter([0, 100]);
+              handlePointsFilterChange([0, 100]);
+            }}
+            sx={{
+              color: '#667eea',
+              borderColor: '#667eea',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderColor: '#667eea'
+              }
+            }}
+          >
+            Reset Points
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            onClick={() => setShowPointsConfig(true)}
+            sx={{
+              color: '#667eea',
+              borderColor: '#667eea',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderColor: '#667eea'
+              }
+            }}
+          >
+            Configure Points
+          </Button>
+        </Stack>
       </Box>
 
       <Box sx={{ px: 2, py: 1 }}>
