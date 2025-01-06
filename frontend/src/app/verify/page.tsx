@@ -12,11 +12,11 @@ const VerifyPage = () => {
   const [error, setError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
-  const email = localStorage.getItem("email"); // Récupérer l'email depuis le localStorage
+  const email = localStorage.getItem("email");
 
   useEffect(() => {
     if (!email) {
-      router.push("/login"); // Rediriger vers login si l'email n'existe pas
+      router.push("/login");
     }
   }, [email, router]);
 
@@ -26,13 +26,13 @@ const VerifyPage = () => {
     setError("");
     try {
       const response = await axios.post("http://localhost:5041/api/auth/verify-email", {
-        email, // L'email est automatiquement utilisé depuis le localStorage
+        email,
         verificationCode,
       });
       setMessage(response.data.message);
       setTimeout(() => {
-        localStorage.removeItem("email"); // Supprimer l'email après vérification réussie
-        router.push("/login"); // Redirection vers la page login
+        localStorage.removeItem("email");
+        router.push("/login");
       }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.message || "Verification failed.");
@@ -49,8 +49,7 @@ const VerifyPage = () => {
       await axios.post("http://localhost:5041/api/auth/resend-verification", {
         email,
       });
-      setMessage("Un nouveau code a été envoyé à votre email.");
-      // Démarrer le cooldown de 60 secondes
+      setMessage("A new code has been sent to your email.");
       setResendCooldown(60);
       const timer = setInterval(() => {
         setResendCooldown((prev) => {
@@ -62,7 +61,7 @@ const VerifyPage = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Échec de l'envoi du code.");
+      setError(err.response?.data?.message || "Failed to send code.");
     } finally {
       setLoading(false);
     }
@@ -72,7 +71,7 @@ const VerifyPage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // Même dégradé que la page principale
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         padding: 3,
         display: "flex",
         alignItems: "center",
@@ -81,7 +80,7 @@ const VerifyPage = () => {
     >
       <Box
         sx={{
-          backgroundColor: "white", // Fond blanc comme les cards de la page principale
+          backgroundColor: "white",
           padding: 4,
           borderRadius: 2,
           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
@@ -103,7 +102,7 @@ const VerifyPage = () => {
             marginBottom: 2
           }}
         >
-          Vérification Email
+          Email Verification
         </Typography>
         <Typography 
           variant="h6" 
@@ -114,13 +113,13 @@ const VerifyPage = () => {
             marginBottom: 3
           }}
         >
-          Entrez le code de vérification envoyé à votre email.
+          Enter the verification code sent to your email.
         </Typography>
         {message && <Alert severity="success" sx={{ marginBottom: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ marginBottom: 2 }}>{error}</Alert>}
         <TextField
           fullWidth
-          label="Code de vérification"
+          label="Verification Code"
           value={verificationCode}
           onChange={(e) => setVerificationCode(e.target.value)}
           margin="normal"
@@ -154,7 +153,7 @@ const VerifyPage = () => {
             },
           }}
         >
-          {loading ? <CircularProgress size={24} color="inherit" /> : "Vérifier"}
+          {loading ? <CircularProgress size={24} color="inherit" /> : "Verify"}
         </Button>
         <Button
           fullWidth
@@ -170,8 +169,8 @@ const VerifyPage = () => {
           }}
         >
           {resendCooldown > 0 
-            ? `Renvoyer le code (${resendCooldown}s)` 
-            : "Renvoyer le code"}
+            ? `Resend code (${resendCooldown}s)` 
+            : "Resend code"}
         </Button>
       </Box>
     </Box>
