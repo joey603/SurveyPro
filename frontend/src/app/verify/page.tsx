@@ -10,6 +10,7 @@ const VerifyPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const email = localStorage.getItem("email"); // Récupérer l'email depuis le localStorage
 
@@ -35,6 +36,33 @@ const VerifyPage = () => {
       }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.message || "Verification failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    setMessage("");
+    setError("");
+    try {
+      await axios.post("http://localhost:5041/api/auth/resend-verification", {
+        email,
+      });
+      setMessage("Un nouveau code a été envoyé à votre email.");
+      // Démarrer le cooldown de 60 secondes
+      setResendCooldown(60);
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Échec de l'envoi du code.");
     } finally {
       setLoading(false);
     }
@@ -127,6 +155,23 @@ const VerifyPage = () => {
           }}
         >
           {loading ? <CircularProgress size={24} color="inherit" /> : "Vérifier"}
+        </Button>
+        <Button
+          fullWidth
+          variant="text"
+          onClick={handleResendCode}
+          disabled={loading || resendCooldown > 0}
+          sx={{
+            marginTop: 2,
+            color: '#667eea',
+            '&:hover': {
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            },
+          }}
+        >
+          {resendCooldown > 0 
+            ? `Renvoyer le code (${resendCooldown}s)` 
+            : "Renvoyer le code"}
         </Button>
       </Box>
     </Box>

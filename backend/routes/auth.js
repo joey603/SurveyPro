@@ -215,4 +215,37 @@ router.put('/password', authMiddleware, async (req, res) => {
   }
 });
 
+// Nouvelle route pour renvoyer le code de vérification
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Vérifier si l'utilisateur existe
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Vérifier si l'utilisateur n'est pas déjà vérifié
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Cet email est déjà vérifié.' });
+    }
+
+    // Générer un nouveau code de vérification
+    const verificationCode = Math.floor(100000 + Math.random() * 900000);
+    
+    // Mettre à jour le code de vérification dans la base de données
+    user.verificationCode = verificationCode;
+    await user.save();
+
+    // Envoyer le nouveau code par email
+    await sendVerificationEmail(email, verificationCode);
+
+    res.status(200).json({ message: 'Un nouveau code de vérification a été envoyé.' });
+  } catch (error) {
+    console.error('Erreur lors du renvoi du code :', error);
+    res.status(500).json({ message: 'Erreur lors de l\'envoi du nouveau code.' });
+  }
+});
+
 module.exports = router;
