@@ -43,50 +43,90 @@ const VerifyPage = () => {
   return (
     <Box
       sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // Même dégradé que la page principale
+        padding: 3,
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "100vh",
-        backgroundColor: "#f5f5f5",
-        padding: 3,
       }}
     >
       <Box
         sx={{
-          backgroundColor: "white",
+          backgroundColor: "white", // Fond blanc comme les cards de la page principale
           padding: 4,
           borderRadius: 2,
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
           maxWidth: 400,
           width: "100%",
+          transition: "all 0.3s ease-in-out",
+          "&:hover": {
+            transform: "translateY(-8px)",
+          },
         }}
       >
-        <Typography variant="h4" gutterBottom align="center">
-          Verify Your Email
+        <Typography 
+          variant="h3" 
+          gutterBottom 
+          align="center"
+          sx={{ 
+            color: "#1a237e",
+            fontWeight: 600,
+            marginBottom: 2
+          }}
+        >
+          Vérification Email
         </Typography>
-        <Typography variant="body1" gutterBottom align="center">
-          Enter the verification code sent to your email.
+        <Typography 
+          variant="h6" 
+          gutterBottom 
+          align="center"
+          sx={{ 
+            color: "text.secondary",
+            marginBottom: 3
+          }}
+        >
+          Entrez le code de vérification envoyé à votre email.
         </Typography>
         {message && <Alert severity="success" sx={{ marginBottom: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ marginBottom: 2 }}>{error}</Alert>}
         <TextField
           fullWidth
-          label="Verification Code"
+          label="Code de vérification"
           value={verificationCode}
           onChange={(e) => setVerificationCode(e.target.value)}
           margin="normal"
           type="number"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '&:hover fieldset': {
+                borderColor: '#667eea',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#667eea',
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: '#667eea',
+            },
+          }}
         />
         <Button
           fullWidth
           variant="contained"
-          color="primary"
           onClick={handleVerify}
           disabled={loading}
-          sx={{ marginTop: 2 }}
+          sx={{
+            marginTop: 3,
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: 'white',
+            padding: '12px',
+            '&:hover': {
+              background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+            },
+          }}
         >
-          {loading ? <CircularProgress size={24} /> : "Verify"}
+          {loading ? <CircularProgress size={24} color="inherit" /> : "Vérifier"}
         </Button>
       </Box>
     </Box>
