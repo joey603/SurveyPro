@@ -123,8 +123,10 @@ interface SurveyAnswer {
   answers: Array<{
     questionId: string;
     answer: any;
+    points?: number; // Points par question
   }>;
   submittedAt: string;
+  points?: number; // Points totaux pour cette réponse
 }
 
 interface Question {
@@ -541,6 +543,14 @@ interface Filters {
     min: number;
     max: number;
   };
+}
+
+// Ajouter au début du fichier avec les autres interfaces
+interface PointsFilterPanelProps {
+  pointsFilter: [number, number];
+  setPointsFilter: (value: [number, number]) => void;
+  setShowPointsFilter: (value: boolean) => void;
+  handlePointsFilterChange: (newRange: [number, number]) => void;
 }
 
 const ResultsPage: React.FC = () => {
@@ -1164,19 +1174,17 @@ const ResultsPage: React.FC = () => {
   ];
 
   // Ajouter cette fonction pour gérer les changements de filtres
-  const handleFilterChange = (field: string, value: any) => {
-    setFilters(prev => {
-      if (field === 'age' || field === 'gender' || field === 'educationLevel' || field === 'city') {
-        return {
-          ...prev,
-          demographic: {
-            ...prev.demographic,
-            [field]: value
-          }
-        };
+  const handleFilterChange = (
+    filterType: keyof typeof filters.demographic,
+    value: any
+  ) => {
+    setFilters(prev => ({
+      ...prev,
+      demographic: {
+        ...prev.demographic,
+        [filterType]: value
       }
-      return prev;
-    });
+    }));
   };
 
   
@@ -1900,13 +1908,19 @@ const ResultsPage: React.FC = () => {
 
     return (
       <>
-        <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          pb: 3
-        }}>
+        <DialogTitle 
+          component="div" // Changer le component en div au lieu de h2 par défaut
+          sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            pb: 3
+          }}
+        >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            <Typography 
+              variant="h6" 
+              component="h2" // Définir explicitement le component comme h2
+            >
               {question.text}
             </Typography>
             
@@ -2338,114 +2352,8 @@ const ResultsPage: React.FC = () => {
     link.click();
   }, [selectedSurvey, prepareAllQuestionsData]);
 
-  // Modifiez la fonction d'application des filtres
-  const applyDemographicFilters = useCallback((surveyId: string) => {
-    if (!surveyId) return;
-    
-    const surveyResponses = surveyAnswers[surveyId] || [];
-    
-    // Filtrer les réponses en fonction de tous les critères (démographiques ET points)
-    const filteredAnswers = surveyResponses.filter(answer => {
-      // Vérification démographique
-      const demographic = answer.respondent?.demographic;
-      const demoFilters = filters.demographic;
-      
-      // Appliquer les filtres démographiques
-      if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
-        return false;
-      }
-      
-      if (demographic?.dateOfBirth && demoFilters.age) {
-        const age = calculateAge(new Date(demographic.dateOfBirth));
-        if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
-          return false;
-        }
-      }
-      
-      if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
-        return false;
-      }
-      
-      if (demoFilters.city && demographic?.city !== demoFilters.city) {
-        return false;
-      }
-
-      // Vérification des points
-      if (filters.points) {
-        // Calculer le total des points pour toutes les réponses de cet utilisateur
-        const totalPoints = answer.answers.reduce((sum, ans) => {
-          return sum + calculatePoints(ans, ans.questionId);
-        }, 0);
-
-        // Appliquer le filtre des points
-        if (totalPoints < filters.points.min || totalPoints > filters.points.max) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Calculer les nouvelles statistiques avec les réponses filtrées
-    const newStats: DemographicStats = {
-      ...calculateDemographicStats(surveyId),
-      filteredAnswers: filteredAnswers,
-      totalPoints: filteredAnswers.reduce((sum, answer) => {
-        return sum + answer.answers.reduce((answerSum, ans) => {
-          return answerSum + calculatePoints(ans, ans.questionId);
-        }, 0);
-      }, 0),
-      averagePoints: filteredAnswers.length > 0 
-        ? filteredAnswers.reduce((sum, answer) => {
-            return sum + answer.answers.reduce((answerSum, ans) => {
-              return answerSum + calculatePoints(ans, ans.questionId);
-            }, 0);
-          }, 0) / filteredAnswers.length
-        : 0
-    };
-
-    setFilteredStats(newStats);
-  }, [surveyAnswers, filters, calculateDemographicStats, calculatePoints]);
-
-  // Ajouter cette fonction pour mettre à jour le filtre de points
-  const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
-    setFilters(prev => ({
-      ...prev,
-      points: {
-        min: newRange[0],
-        max: newRange[1]
-      }
-    }));
-    
-    if (selectedSurvey?._id) {
-      applyDemographicFilters(selectedSurvey._id);
-    }
-  }, [selectedSurvey, applyDemographicFilters]);
-
-  // Fonction utilitaire pour calculer l'âge
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
-
-  // Mettre à jour useEffect pour initialiser les stats avec le bon sondage
-  useEffect(() => {
-    if (selectedSurvey?._id) {
-      const initialStats = calculateDemographicStats(selectedSurvey._id);
-      setStats(initialStats);
-      setFilteredStats(initialStats);
-    }
-  }, [selectedSurvey, calculateDemographicStats]);
-
-  // Ajoutez cette fonction pour calculer les points d'une réponse
-  const calculateAnswerPoints = useCallback((answer: SurveyAnswer) => {
+  // Garder une seule définition de calculateAnswerPoints au niveau du composant
+  const calculateAnswerPoints = useCallback((answer: SurveyAnswer): number => {
     if (!selectedSurvey) return 0;
 
     let totalPoints = 0;
@@ -2495,6 +2403,188 @@ const ResultsPage: React.FC = () => {
 
     return totalPoints;
   }, [selectedSurvey]);
+
+  // Modifier la fonction applyDemographicFilters
+  const applyDemographicFilters = useCallback((surveyId: string) => {
+    if (!surveyId) return;
+    
+    const surveyResponses = surveyAnswers[surveyId] || [];
+    
+    // Filtrer les réponses en fonction des critères
+    const filteredAnswers = surveyResponses.filter(answer => {
+      const demographic = answer.respondent?.demographic;
+      const demoFilters = filters.demographic;
+      
+      // Calculer les points totaux pour cette réponse
+      const answerPoints = calculateAnswerPoints(answer);
+
+      // Vérifier si les points sont dans la plage définie par le filtre
+      if (pointsFilter && pointsFilter.length === 2) {
+        const [minPoints, maxPoints] = pointsFilter;
+        if (answerPoints < minPoints || answerPoints > maxPoints) {
+          return false;
+        }
+      }
+      
+      // Appliquer les filtres démographiques
+      if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
+        return false;
+      }
+      
+      if (demographic?.dateOfBirth && demoFilters.age) {
+        const age = calculateAge(new Date(demographic.dateOfBirth));
+        if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
+          return false;
+        }
+      }
+      
+      if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
+        return false;
+      }
+      
+      if (demoFilters.city && demographic?.city !== demoFilters.city) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // S'assurer qu'il y a des réponses filtrées avant de continuer
+    if (filteredAnswers.length === 0) {
+      const emptyStats: DemographicStats = {
+        totalRespondents: 0,
+        answers: {},
+        total: 0,
+        totalPoints: 0,
+        averagePoints: 0,
+        filteredAnswers: [],
+        genderDistribution: {},
+        ageDistribution: new Array(100).fill(0),
+        educationDistribution: {},
+        cityDistribution: {}
+      };
+      setFilteredStats(emptyStats);
+      return;
+    }
+
+    // Calculer les points totaux
+    const totalPoints = filteredAnswers.reduce((sum, answer) => {
+      return sum + calculateAnswerPoints(answer);
+    }, 0);
+
+    // Calculer les nouvelles statistiques avec les réponses filtrées
+    const newStats: DemographicStats = {
+      totalRespondents: filteredAnswers.length,
+      answers: {},
+      total: filteredAnswers.length,
+      totalPoints: totalPoints,
+      averagePoints: filteredAnswers.length > 0 ? totalPoints / filteredAnswers.length : 0,
+      filteredAnswers: filteredAnswers,
+      genderDistribution: calculateGenderDistribution(filteredAnswers),
+      ageDistribution: calculateAgeDistribution(filteredAnswers),
+      educationDistribution: calculateEducationDistribution(filteredAnswers),
+      cityDistribution: calculateCityDistribution(filteredAnswers)
+    };
+
+    setFilteredStats(newStats);
+  }, [surveyAnswers, filters.demographic, pointsFilter]);
+
+  // Ajouter ces fonctions utilitaires pour calculer les distributions
+  const calculateGenderDistribution = (answers: SurveyAnswer[]) => {
+    const distribution: { [key: string]: number } = {};
+    answers.forEach(answer => {
+      const gender = answer.respondent?.demographic?.gender;
+      if (gender) {
+        distribution[gender] = (distribution[gender] || 0) + 1;
+      }
+    });
+    return distribution;
+  };
+
+  const calculateAgeDistribution = (answers: SurveyAnswer[]) => {
+    const distribution = new Array(100).fill(0);
+    answers.forEach(answer => {
+      const dob = answer.respondent?.demographic?.dateOfBirth;
+      if (dob) {
+        const age = calculateAge(new Date(dob));
+        if (age >= 0 && age < 100) {
+          distribution[age]++;
+        }
+      }
+    });
+    return distribution;
+  };
+
+  const calculateEducationDistribution = (answers: SurveyAnswer[]) => {
+    const distribution: { [key: string]: number } = {};
+    answers.forEach(answer => {
+      const education = answer.respondent?.demographic?.educationLevel;
+      if (education) {
+        distribution[education] = (distribution[education] || 0) + 1;
+      }
+    });
+    return distribution;
+  };
+
+  const calculateCityDistribution = (answers: SurveyAnswer[]) => {
+    const distribution: { [key: string]: number } = {};
+    answers.forEach(answer => {
+      const city = answer.respondent?.demographic?.city;
+      if (city) {
+        distribution[city] = (distribution[city] || 0) + 1;
+      }
+    });
+    return distribution;
+  };
+
+  // Modifier le useEffect pour appliquer les filtres quand ils changent
+  useEffect(() => {
+    if (selectedSurvey) {
+      applyDemographicFilters(selectedSurvey._id);
+    }
+  }, [selectedSurvey, filters.demographic, pointsFilter, applyDemographicFilters]);
+
+  // Modifier le handlePointsFilterChange
+  const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
+    setFilters(prev => ({
+      ...prev,
+      points: {
+        min: newRange[0],
+        max: newRange[1]
+      }
+    }));
+  }, []);
+
+  // Ajouter un useEffect pour déclencher le filtrage quand les points changent
+  useEffect(() => {
+    if (selectedSurvey) {
+      applyDemographicFilters(selectedSurvey._id);
+    }
+  }, [selectedSurvey, filters.demographic, pointsFilter, applyDemographicFilters]);
+
+  // Fonction utilitaire pour calculer l'âge
+  const calculateAge = (birthDate: Date): number => {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  // Mettre à jour useEffect pour initialiser les stats avec le bon sondage
+  useEffect(() => {
+    if (selectedSurvey?._id) {
+      const initialStats = calculateDemographicStats(selectedSurvey._id);
+      setStats(initialStats);
+      setFilteredStats(initialStats);
+    }
+  }, [selectedSurvey, calculateDemographicStats]);
+
+  
 
   // Ajoutez un useEffect pour appliquer les filtres quand ils changent
   useEffect(() => {
@@ -3217,14 +3307,22 @@ const ResultsPage: React.FC = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <Typography variant="h6">Configuration des Règles de Points</Typography>
+        <DialogTitle 
+          component="div" // Changer le component en div au lieu de h2 par défaut
+          sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <Typography 
+            variant="h6" 
+            component="h2" // Définir explicitement le component comme h2
+          >
+            Configuration des Règles de Points
+          </Typography>
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <ClearIcon />
           </IconButton>
@@ -3640,6 +3738,7 @@ const ResultsPage: React.FC = () => {
                 pointsFilter={pointsFilter}
                 setPointsFilter={setPointsFilter}
                 setShowPointsFilter={setShowPointsFilter}
+                handlePointsFilterChange={handlePointsFilterChange}
               />
             )}
             
@@ -4045,12 +4144,17 @@ const formatDate = (date: string | Date) => {
 const PointsFilterPanel = memo(({ 
   pointsFilter, 
   setPointsFilter, 
-  setShowPointsFilter 
-}: { 
-  pointsFilter: [number, number];
-  setPointsFilter: (value: [number, number]) => void;
-  setShowPointsFilter: (value: boolean) => void;
-}) => {
+  setShowPointsFilter,
+  handlePointsFilterChange 
+}: PointsFilterPanelProps) => {
+  const handleChange = (event: Event, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) {
+      const newRange: [number, number] = [newValue[0], newValue[1]];
+      setPointsFilter(newRange);
+      handlePointsFilterChange(newRange);
+    }
+  };
+
   return (
     <Box sx={{ 
       mb: 3, 
@@ -4060,65 +4164,28 @@ const PointsFilterPanel = memo(({
       bgcolor: 'white',
       boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
     }}>
-      <Typography variant="h6" gutterBottom sx={{ 
-        color: '#2d3748',
-        fontWeight: 600,
-        mb: 3
-      }}>
+      <Typography variant="h6" gutterBottom>
         Filtrer par Points
       </Typography>
-
-      <Box sx={{ px: 2 }}>
-        <Typography gutterBottom sx={{
-          color: '#4a5568',
-          fontSize: '0.875rem',
-          marginBottom: 1
-        }}>
-          Points minimum
-        </Typography>
+      <Box sx={{ px: 2, py: 3 }}>
         <Slider
           value={pointsFilter}
-          onChange={(_, newValue) => setPointsFilter(newValue as [number, number])}
+          onChange={handleChange}
           valueLabelDisplay="auto"
           min={0}
           max={100}
-          sx={{
-            width: '100%',
-            '& .MuiSlider-rail': {
-              background: 'rgba(118, 75, 162, 0.2)',
-            },
-            '& .MuiSlider-track': {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            },
-            '& .MuiSlider-thumb': {
-              backgroundColor: '#764ba2',
-              '&:hover, &.Mui-focusVisible': {
-                boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
-              },
-            },
-            '& .MuiSlider-valueLabel': {
-              backgroundColor: '#764ba2',
-            },
-            '& .MuiSlider-mark': {
-              backgroundColor: '#667eea',
-            },
-          }}
           marks={[
             { value: 0, label: '0' },
-            { value: 20, label: '20' },
-            { value: 40, label: '40' },
-            { value: 60, label: '60' },
-            { value: 80, label: '80' },
+            { value: 25, label: '25' },
+            { value: 50, label: '50' },
+            { value: 75, label: '75' },
             { value: 100, label: '100' }
           ]}
         />
-        <Typography gutterBottom sx={{
-          color: '#4a5568',
-          fontSize: '0.875rem',
-          marginBottom: 1
-        }}>
-          Points maximum
-        </Typography>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+          <Typography>Min: {pointsFilter[0]} points</Typography>
+          <Typography>Max: {pointsFilter[1]} points</Typography>
+        </Box>
       </Box>
     </Box>
   );
