@@ -33,6 +33,7 @@ import {
   Chip,
   TextField, // Ajout de TextField ici
   Rating,
+  Badge,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
@@ -3866,6 +3867,7 @@ const ResultsPage: React.FC = () => {
                   setShowPointsFilter={setShowPointsFilter}
                   handlePointsFilterChange={handlePointsFilterChange}
                   setShowPointsConfig={setShowPointsConfig}
+                  selectedSurvey={selectedSurvey}  // Ajouter cette prop
                 />
               </Box>
             )}
@@ -4024,6 +4026,7 @@ const ResultsPage: React.FC = () => {
                     setShowPointsFilter={setShowPointsFilter}
                     handlePointsFilterChange={handlePointsFilterChange}
                     setShowPointsConfig={setShowPointsConfig}  // Ajout de cette prop
+                    selectedSurvey={selectedSurvey}  // Ajouter cette prop
                   />
                 )}
               </Box>
@@ -4435,8 +4438,33 @@ const PointsFilterPanel = memo(({
   setPointsFilter, 
   setShowPointsFilter,
   handlePointsFilterChange,
-  setShowPointsConfig
-}: PointsFilterPanelProps) => {
+  setShowPointsConfig,
+  selectedSurvey
+}: PointsFilterPanelProps & { selectedSurvey: Survey }) => {
+  const [rulesCount, setRulesCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (selectedSurvey) {
+      const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
+      if (savedRules) {
+        try {
+          const rules = JSON.parse(savedRules) as Record<string, any[]>;
+          // Correction du typage de la fonction reduce
+          const totalRules = Object.values(rules).reduce((total: number, questionRules: any[]) => {
+            return total + (Array.isArray(questionRules) ? questionRules.length : 0);
+          }, 0) as number; // Forcer le type number pour le résultat
+          setRulesCount(totalRules);
+        } catch (error) {
+          console.error('Error parsing rules:', error);
+          setRulesCount(0);
+        }
+      } else {
+        setRulesCount(0);
+      }
+    }
+  }, [selectedSurvey]);
+
+  // Ajouter la fonction handleChange
   const handleChange = (event: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue)) {
       const newRange: [number, number] = [newValue[0], newValue[1]];
@@ -4470,40 +4498,47 @@ const PointsFilterPanel = memo(({
           Filter by Points
         </Typography>
         <Stack direction="row" spacing={2}>
+          
+          <Badge 
+            badgeContent={rulesCount}
+            color="error"
+            sx={{
+              '& .MuiBadge-badge': {
+                backgroundColor: '#ef4444',
+                color: 'white',
+                fontWeight: 'bold'
+              }
+            }}
+          >
+            <Button
+              variant="text"
+              startIcon={<SettingsIcon />}
+              onClick={() => setShowPointsConfig(true)}
+              sx={{
+                color: '#667eea',
+                '&:hover': {
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                }
+              }}
+            >
+              Configure Points
+            </Button>
+          </Badge>
+
           <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
+            variant="text"
             onClick={() => {
               setPointsFilter([0, 100]);
               handlePointsFilterChange([0, 100]);
             }}
             sx={{
               color: '#667eea',
-              borderColor: '#667eea',
-              backgroundColor: 'white',
               '&:hover': {
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderColor: '#667eea'
               }
             }}
           >
-            Reset Points
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<SettingsIcon />}
-            onClick={() => setShowPointsConfig(true)}
-            sx={{
-              color: '#667eea',
-              borderColor: '#667eea',
-              backgroundColor: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderColor: '#667eea'
-              }
-            }}
-          >
-            Configure Points
+            Reset filter
           </Button>
         </Stack>
       </Box>
@@ -4593,7 +4628,7 @@ const PointsFilterPanel = memo(({
             }}
             sx={{ width: 120 }}
           />
-          <Typography color="text.secondary">to</Typography>
+          <Typography color="text.secondary"></Typography>
           <TextField
             label="Max Points"
             type="number"
