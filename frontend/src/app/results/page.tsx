@@ -1389,6 +1389,43 @@ const ResultsPage: React.FC = () => {
                   { value: 100, label: '100' }
                 ]}
               />
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                mt: 2,
+                px: 1
+              }}>
+                <TextField
+                  size="small"
+                  label="Min Age"
+                  type="number"
+                  value={ageSliderValue[0]}
+                  onChange={(e) => {
+                    const value = Math.max(0, Math.min(ageSliderValue[1], Number(e.target.value)));
+                    setAgeSliderValue([value, ageSliderValue[1]]);
+                    handleAgeSliderChangeCommitted(createSyntheticEvent(), [value, ageSliderValue[1]]);
+                  }}
+                  InputProps={{
+                    inputProps: { min: 0, max: ageSliderValue[1] }
+                  }}
+                  sx={{ width: '100px' }}
+                />
+                <TextField
+                  size="small"
+                  label="Max Age"
+                  type="number"
+                  value={ageSliderValue[1]}
+                  onChange={(e) => {
+                    const value = Math.max(ageSliderValue[0], Math.min(100, Number(e.target.value)));
+                    setAgeSliderValue([ageSliderValue[0], value]);
+                    handleAgeSliderChangeCommitted(createSyntheticEvent(), [ageSliderValue[0], value]);
+                  }}
+                  InputProps={{
+                    inputProps: { min: ageSliderValue[0], max: 100 }
+                  }}
+                  sx={{ width: '100px' }}
+                />
+              </Box>
             </Grid>
           </Grid>
         </Paper>
@@ -1451,64 +1488,64 @@ const ResultsPage: React.FC = () => {
               valueLabelDisplay="auto"
               min={0}
               max={100}
-              step={1}
-              disableSwap
-              sx={{
-                color: '#667eea',
-                '& .MuiSlider-thumb': {
-                  height: 24,
-                  width: 24,
-                  backgroundColor: '#fff',
-                  border: '2px solid #667eea',
-                  '&:hover': {
-                    boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
+                step={1}
+                disableSwap
+                sx={{
+                  color: '#667eea',
+                  '& .MuiSlider-thumb': {
+                    height: 24,
+                    width: 24,
+                    backgroundColor: '#fff',
+                    border: '2px solid #667eea',
+                    '&:hover': {
+                      boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
+                    },
+                    '&.Mui-active': {
+                      boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
+                    }
                   },
-                  '&.Mui-active': {
-                    boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
-                  }
-                },
-                '& .MuiSlider-track': {
-                  backgroundColor: '#667eea',
-                  border: 'none',
-                  height: 4
-                },
-                '& .MuiSlider-rail': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                  height: 4
-                },
-                '& .MuiSlider-valueLabel': {
-                  backgroundColor: '#667eea',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  '&:before': {
-                    display: 'none'
-                  }
-                },
-                '& .MuiSlider-mark': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.3)',
-                  height: 8,
-                  width: 2,
-                  '&.MuiSlider-markActive': {
+                  '& .MuiSlider-track': {
                     backgroundColor: '#667eea',
+                    border: 'none',
+                    height: 4
+                  },
+                  '& .MuiSlider-rail': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    height: 4
+                  },
+                  '& .MuiSlider-valueLabel': {
+                    backgroundColor: '#667eea',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    '&:before': {
+                      display: 'none'
+                    }
+                  },
+                  '& .MuiSlider-mark': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                    height: 8,
+                    width: 2,
+                    '&.MuiSlider-markActive': {
+                      backgroundColor: '#667eea',
+                    }
                   }
-                }
-              }}
-              marks={[
-                { value: 0, label: '0' },
-                { value: 25, label: '25' },
-                { value: 50, label: '50' },
-                { value: 75, label: '75' },
-                { value: 100, label: '100' }
-              ]}
-            />
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              mt: 2,
-              px: 1
-            }}>
-              <TextField
-                size="small"
+                }}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 25, label: '25' },
+                  { value: 50, label: '50' },
+                  { value: 75, label: '75' },
+                  { value: 100, label: '100' }
+                ]}
+              />
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                mt: 2,
+                px: 1
+              }}>
+                <TextField
+                  size="small"
                 label="Min Points"
                 type="number"
                 value={sliderValue[0]}
@@ -1516,14 +1553,14 @@ const ResultsPage: React.FC = () => {
                   const value = Math.max(0, Math.min(sliderValue[1], Number(e.target.value)));
                   setSliderValue([value, sliderValue[1]]);
                   handleSliderChangeCommitted(createSyntheticEvent(), [value, sliderValue[1]]);
-                }}
-                InputProps={{
+                  }}
+                  InputProps={{
                   inputProps: { min: 0, max: sliderValue[1] }
-                }}
-                sx={{ width: '100px' }}
-              />
-              <TextField
-                size="small"
+                  }}
+                  sx={{ width: '100px' }}
+                />
+                <TextField
+                  size="small"
                 label="Max Points"
                 type="number"
                 value={sliderValue[1]}
@@ -1531,13 +1568,13 @@ const ResultsPage: React.FC = () => {
                   const value = Math.max(sliderValue[0], Math.min(100, Number(e.target.value)));
                   setSliderValue([sliderValue[0], value]);
                   handleSliderChangeCommitted(createSyntheticEvent(), [sliderValue[0], value]);
-                }}
-                InputProps={{
+                  }}
+                  InputProps={{
                   inputProps: { min: sliderValue[0], max: 100 }
-                }}
-                sx={{ width: '100px' }}
-              />
-            </Box>
+                  }}
+                  sx={{ width: '100px' }}
+                />
+              </Box>
           </Box>
         </Paper>
       </Box>
@@ -1674,7 +1711,7 @@ const ResultsPage: React.FC = () => {
                 />
               </Box>
             </Paper>
-          </Grid>
+            </Grid>
 
           {/* Niveau d'éducation */}
           <Grid item xs={12} md={6}>
@@ -1838,16 +1875,16 @@ const ResultsPage: React.FC = () => {
               <Box sx={{ height: 'calc(100% - 60px)' }}>
                 {renderAgeChart(filteredStats?.ageDistribution || stats.ageDistribution)}
               </Box>
-            </Paper>
+        </Paper>
           </Grid>
 
           {/* Villes */}
           <Grid item xs={12} md={6}>
             <Paper elevation={0} sx={{ 
-              p: 3, 
+          p: 3, 
               height: '400px',
               border: '1px solid rgba(0,0,0,0.1)',
-              borderRadius: 2,
+          borderRadius: 2,
               transition: 'all 0.3s ease',
               '&:hover': {
                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -2092,10 +2129,10 @@ const ResultsPage: React.FC = () => {
               {question.text}
             </Typography>
             
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
               gap: 2,
               mt: 2 
             }}>
@@ -2109,7 +2146,7 @@ const ResultsPage: React.FC = () => {
                 }}>
                   <Typography variant="overline" sx={{ opacity: 0.9, display: 'block' }}>
                     Total Responses
-                  </Typography>
+            </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {selectedQuestion.answers.length}
                   </Typography>
@@ -2351,7 +2388,7 @@ const ResultsPage: React.FC = () => {
           borderTop: '1px solid rgba(0, 0, 0, 0.1)'
         }}>
           <Stack direction="row" spacing={2}>
-            <Button
+              <Button
               variant="contained"
               startIcon={<TableViewIcon />}
               onClick={exportCSV}
@@ -2694,8 +2731,8 @@ const ResultsPage: React.FC = () => {
   // Modifier la fonction handlePointsFilterChange
   const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
     setFilters(prev => ({
-      ...prev,
-      points: {
+                  ...prev,
+                  points: {
         min: newRange[0],
         max: newRange[1]
       }
@@ -3118,7 +3155,7 @@ const ResultsPage: React.FC = () => {
             size="small"
             multiline
             rows={3}
-            sx={{ 
+                sx={{
               width: 300, // Taille fixe au lieu de minWidth
               '& .MuiInputBase-root': {
                 padding: '8px',
@@ -3632,14 +3669,14 @@ const ResultsPage: React.FC = () => {
                     onClick={() => addRule(question.id)}
                     sx={{
                       mt: 1,
-                      color: '#667eea',
-                      '&:hover': {
+                  color: '#667eea',
+                  '&:hover': {
                         bgcolor: 'rgba(102, 126, 234, 0.05)'
-                      }
-                    }}
-                  >
+                  }
+                }}
+              >
                     Add Rule
-                    </Button>
+              </Button>
                 </Box>
               </CardContent>
                 </Card>
@@ -3654,7 +3691,7 @@ const ResultsPage: React.FC = () => {
           bgcolor: 'rgba(102, 126, 234, 0.05)'
         }}>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
+              <Button
               onClick={() => {
                 if (window.confirm('Are you sure you want to reset all rules? This action cannot be undone.')) {
                   resetRules();
@@ -4231,11 +4268,11 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         <Chip
-                          size="small"
+                size="small"
                           label={`${survey.questions?.length || 0} questions`}
-                          sx={{
+                sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            color: '#667eea',
+                  color: '#667eea',
                             height: '24px'
                           }}
                         />
@@ -4277,17 +4314,17 @@ const ResultsPage: React.FC = () => {
                       size="small"
                       sx={{
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        '&:hover': {
+                  '&:hover': {
                           background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                        }
-                      }}
-                    >
+                  }
+                }}
+              >
                       View Results
-                    </Button>
-                  </Box>
+              </Button>
+            </Box>
                 </Paper>
               ))}
-            </Box>
+          </Box>
           )}
         </Box>
       </Paper>
@@ -4395,12 +4432,12 @@ const PointsFilterPanel = memo(({
       </Box>
 
       <Box sx={{ px: 2, py: 1 }}>
-        <Slider
+            <Slider
           value={pointsFilter}
           onChange={handleChange}
           valueLabelDisplay="on"
-          min={0}
-          max={100}
+              min={0}
+              max={100}
           marks={[
             { value: 0, label: '0' },
             { value: 25, label: '25' },
@@ -4408,7 +4445,7 @@ const PointsFilterPanel = memo(({
             { value: 75, label: '75' },
             { value: 100, label: '100' }
           ]}
-          sx={{
+              sx={{
             '& .MuiSlider-rail': {
               background: 'rgba(102, 126, 234, 0.2)',
               height: 6
@@ -4418,10 +4455,10 @@ const PointsFilterPanel = memo(({
               height: 6,
               border: 'none'
             },
-            '& .MuiSlider-thumb': {
+                '& .MuiSlider-thumb': {
               width: 20,
               height: 20,
-              backgroundColor: '#fff',
+                  backgroundColor: '#fff',
               border: '2px solid #764ba2',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               '&:hover, &.Mui-focusVisible': {
