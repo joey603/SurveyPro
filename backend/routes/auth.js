@@ -7,8 +7,23 @@ const sgMail = require('@sendgrid/mail');
 console.log('SendGrid API Key being used:', process.env.SENDGRID_API_KEY);
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const authMiddleware = require('../middleware/authMiddleware'); // Import du middleware
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
+
+// Fonction pour convertir l'image en base64
+const getLogoAsBase64 = () => {
+  try {
+    const logoPath = path.join(__dirname, '..', 'images', 'logo-wide.png');
+    console.log('Logo path:', logoPath); // Pour déboguer le chemin
+    const logoBuffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${logoBuffer.toString('base64')}`;
+  } catch (error) {
+    console.error('Error reading logo file:', error);
+    return ''; // Retourne une chaîne vide si l'image n'est pas trouvée
+  }
+};
 
 // Fonction pour envoyer un e-mail de vérification
 const sendVerificationEmail = async (email, verificationCode) => {
@@ -17,14 +32,29 @@ const sendVerificationEmail = async (email, verificationCode) => {
     from: process.env.EMAIL_FROM,
     subject: 'Your Verification Code',
     text: `Your verification code is: ${verificationCode}`,
-    html: `<p>Your verification code is: <strong>${verificationCode}</strong></p>`,
+    html: `
+      <div style="text-align: center; font-family: Arial, sans-serif;">
+        <div style="margin-bottom: 30px;">
+          <h1 style="color: #4a90e2; font-size: 32px; font-weight: bold;">SurveyPro</h1>
+        </div>
+        <div style="padding: 20px; background-color: #f9f9f9; border-radius: 5px; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #333;">Your Verification Code</h2>
+          <p style="font-size: 32px; font-weight: bold; color: #4a90e2; margin: 20px 0; letter-spacing: 3px;">
+            ${verificationCode}
+          </p>
+          <p style="color: #666; margin-top: 20px;">
+            This code will expire in 1 hour. If you didn't request this code, please ignore this email.
+          </p>
+        </div>
+      </div>
+    `,
   };
 
   try {
     await sgMail.send(msg);
     console.log(`Verification email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending email:', error.response?.body || error.message);
+    console.error('Email sending error:', error.response?.body || error.message);
     throw new Error('Failed to send verification email');
   }
 };
