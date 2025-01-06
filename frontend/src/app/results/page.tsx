@@ -1237,6 +1237,17 @@ const ResultsPage: React.FC = () => {
       return new Event('change') as unknown as React.SyntheticEvent<Element, Event>;
     };
 
+    // Ajouter cette fonction pour compter le nombre total de règles
+    const countTotalRules = useCallback(() => {
+      if (!selectedSurvey) return 0;
+      
+      const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
+      if (!savedRules) return 0;
+
+      const pointRules = JSON.parse(savedRules) as { [key: string]: any[] };
+      return Object.values(pointRules).reduce((total: number, rules: any[]) => total + rules.length, 0 as number);
+    }, [selectedSurvey]);
+
     return (
       <Box sx={{ mb: 3 }}>
         {/* Demographic Filters Section */}
@@ -1446,6 +1457,43 @@ const ResultsPage: React.FC = () => {
               Points Filter
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+                startIcon={<SettingsIcon />}
+                onClick={() => setShowPointsConfig(true)}
+                size="small"
+                sx={{
+                  color: '#667eea',
+                  position: 'relative',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                  }
+                }}
+              >
+                Configure Points
+                {countTotalRules() > 0 && (
+                  <Box
+                    component="span" // Ajout du component span
+                    sx={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -10,
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: 16,
+                      height: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.65rem',
+                      fontWeight: 'bold',
+                      border: '1.5px solid white'
+                    }}
+                  >
+                    {countTotalRules().toString()}
+                  </Box>
+                )}
+              </Button>
               <Button
                 size="small"
                 onClick={() => setFilters(prev => ({
@@ -1464,19 +1512,7 @@ const ResultsPage: React.FC = () => {
               >
                 Reset Filters
               </Button>
-              <Button
-                startIcon={<SettingsIcon />}
-                onClick={() => setShowPointsConfig(true)}
-                size="small"
-                sx={{
-                  color: '#667eea',
-                  '&:hover': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
-                  }
-                }}
-              >
-                Configure Points
-              </Button>
+              
             </Box>
           </Box>
 
@@ -3711,21 +3747,7 @@ const ResultsPage: React.FC = () => {
             >
               Reset All
             </Button>
-            <Button
-              onClick={onClose}
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              sx={{
-                borderColor: 'rgba(102, 126, 234, 0.5)',
-                color: '#667eea',
-                '&:hover': {
-                  borderColor: '#667eea',
-                  bgcolor: 'rgba(102, 126, 234, 0.05)'
-                }
-              }}
-            >
-              Cancel
-            </Button>
+          
           </Box>
           <Button 
             onClick={() => {
