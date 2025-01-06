@@ -34,6 +34,7 @@ import {
   TextField, // Ajout de TextField ici
   Rating,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -1191,6 +1192,51 @@ const ResultsPage: React.FC = () => {
   
 
   const FilterPanel = () => {
+    // Ajouter un état local pour le slider d'âge
+    const [ageSliderValue, setAgeSliderValue] = useState<[number, number]>([
+      filters.demographic.age[0],
+      filters.demographic.age[1]
+    ]);
+
+    // Gestionnaire pour le changement du slider d'âge
+    const handleAgeSliderChange = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
+      setAgeSliderValue(newValue as [number, number]);
+    };
+
+    // Gestionnaire pour la validation du changement du slider d'âge
+    const handleAgeSliderChangeCommitted = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
+      const [min, max] = newValue as [number, number];
+      setFilters(prev => ({
+        ...prev,
+        demographic: {
+          ...prev.demographic,
+          age: [min, max]
+        }
+      }));
+    };
+
+    const [sliderValue, setSliderValue] = useState<[number, number]>([
+      filters.points.min,
+      filters.points.max
+    ]);
+
+    const handleSliderChange = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
+      setSliderValue(newValue as [number, number]);
+    };
+
+    const handleSliderChangeCommitted = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
+      const [min, max] = newValue as [number, number];
+      setFilters(prev => ({
+        ...prev,
+        points: { min, max }
+      }));
+    };
+
+    // Créer un événement synthétique pour les TextFields
+    const createSyntheticEvent = () => {
+      return new Event('change') as unknown as React.SyntheticEvent<Element, Event>;
+    };
+
     return (
       <Box sx={{ mb: 3 }}>
         {/* Demographic Filters Section */}
@@ -1287,11 +1333,61 @@ const ResultsPage: React.FC = () => {
                 Age Range
               </Typography>
               <Slider
-                value={filters.demographic.age}
-                onChange={(_, newValue) => handleFilterChange('age', newValue)}
+                value={ageSliderValue}
+                onChange={handleAgeSliderChange}
+                onChangeCommitted={handleAgeSliderChangeCommitted}
                 valueLabelDisplay="auto"
                 min={0}
                 max={100}
+                step={1}
+                disableSwap
+                sx={{
+                  color: '#667eea',
+                  '& .MuiSlider-thumb': {
+                    height: 24,
+                    width: 24,
+                    backgroundColor: '#fff',
+                    border: '2px solid #667eea',
+                    '&:hover': {
+                      boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
+                    },
+                    '&.Mui-active': {
+                      boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
+                    }
+                  },
+                  '& .MuiSlider-track': {
+                    backgroundColor: '#667eea',
+                    border: 'none',
+                    height: 4
+                  },
+                  '& .MuiSlider-rail': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    height: 4
+                  },
+                  '& .MuiSlider-valueLabel': {
+                    backgroundColor: '#667eea',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    '&:before': {
+                      display: 'none'
+                    }
+                  },
+                  '& .MuiSlider-mark': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                    height: 8,
+                    width: 2,
+                    '&.MuiSlider-markActive': {
+                      backgroundColor: '#667eea',
+                    }
+                  }
+                }}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 25, label: '25' },
+                  { value: 50, label: '50' },
+                  { value: 75, label: '75' },
+                  { value: 100, label: '100' }
+                ]}
               />
             </Grid>
           </Grid>
@@ -1349,18 +1445,52 @@ const ResultsPage: React.FC = () => {
 
           <Box sx={{ px: 2 }}>
             <Slider
-              value={[filters.points.min, filters.points.max]}
-              onChange={(_, newValue) => handlePointsFilterChange(newValue as [number, number])}
+              value={sliderValue}
+              onChange={handleSliderChange}
+              onChangeCommitted={handleSliderChangeCommitted}
               valueLabelDisplay="auto"
               min={0}
               max={100}
+              step={1}
+              disableSwap
               sx={{
                 color: '#667eea',
                 '& .MuiSlider-thumb': {
-                  backgroundColor: '#667eea',
+                  height: 24,
+                  width: 24,
+                  backgroundColor: '#fff',
+                  border: '2px solid #667eea',
+                  '&:hover': {
+                    boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
+                  },
+                  '&.Mui-active': {
+                    boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
+                  }
                 },
                 '& .MuiSlider-track': {
                   backgroundColor: '#667eea',
+                  border: 'none',
+                  height: 4
+                },
+                '& .MuiSlider-rail': {
+                  backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                  height: 4
+                },
+                '& .MuiSlider-valueLabel': {
+                  backgroundColor: '#667eea',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  '&:before': {
+                    display: 'none'
+                  }
+                },
+                '& .MuiSlider-mark': {
+                  backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                  height: 8,
+                  width: 2,
+                  '&.MuiSlider-markActive': {
+                    backgroundColor: '#667eea',
+                  }
                 }
               }}
               marks={[
@@ -1371,6 +1501,43 @@ const ResultsPage: React.FC = () => {
                 { value: 100, label: '100' }
               ]}
             />
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              mt: 2,
+              px: 1
+            }}>
+              <TextField
+                size="small"
+                label="Min Points"
+                type="number"
+                value={sliderValue[0]}
+                onChange={(e) => {
+                  const value = Math.max(0, Math.min(sliderValue[1], Number(e.target.value)));
+                  setSliderValue([value, sliderValue[1]]);
+                  handleSliderChangeCommitted(createSyntheticEvent(), [value, sliderValue[1]]);
+                }}
+                InputProps={{
+                  inputProps: { min: 0, max: sliderValue[1] }
+                }}
+                sx={{ width: '100px' }}
+              />
+              <TextField
+                size="small"
+                label="Max Points"
+                type="number"
+                value={sliderValue[1]}
+                onChange={(e) => {
+                  const value = Math.max(sliderValue[0], Math.min(100, Number(e.target.value)));
+                  setSliderValue([sliderValue[0], value]);
+                  handleSliderChangeCommitted(createSyntheticEvent(), [sliderValue[0], value]);
+                }}
+                InputProps={{
+                  inputProps: { min: sliderValue[0], max: 100 }
+                }}
+                sx={{ width: '100px' }}
+              />
+            </Box>
           </Box>
         </Paper>
       </Box>
@@ -4189,22 +4356,49 @@ const PointsFilterPanel = memo(({
   };
 
   return (
-    <Box sx={{ 
+    <Paper elevation={0} sx={{ 
       mb: 3, 
       p: 3, 
       border: '1px solid rgba(102, 126, 234, 0.2)',
       borderRadius: 2,
       bgcolor: 'white',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
     }}>
-      <Typography variant="h6" gutterBottom>
-        Filter by Points
-      </Typography>
-      <Box sx={{ px: 2, py: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3
+      }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#2d3748',
+            fontWeight: 600 
+          }}
+        >
+          Filter by Points
+        </Typography>
+        <IconButton 
+          onClick={() => setShowPointsFilter(false)}
+          size="small"
+          sx={{ 
+            color: 'text.secondary',
+            '&:hover': {
+              color: 'primary.main',
+              bgcolor: 'rgba(102, 126, 234, 0.08)'
+            }
+          }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
+      <Box sx={{ px: 2, py: 1 }}>
         <Slider
           value={pointsFilter}
           onChange={handleChange}
-          valueLabelDisplay="auto"
+          valueLabelDisplay="on"
           min={0}
           max={100}
           marks={[
@@ -4214,13 +4408,96 @@ const PointsFilterPanel = memo(({
             { value: 75, label: '75' },
             { value: 100, label: '100' }
           ]}
+          sx={{
+            '& .MuiSlider-rail': {
+              background: 'rgba(102, 126, 234, 0.2)',
+              height: 6
+            },
+            '& .MuiSlider-track': {
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              height: 6,
+              border: 'none'
+            },
+            '& .MuiSlider-thumb': {
+              width: 20,
+              height: 20,
+              backgroundColor: '#fff',
+              border: '2px solid #764ba2',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              '&:hover, &.Mui-focusVisible': {
+                boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
+              },
+              '&.Mui-active': {
+                boxShadow: '0 0 0 12px rgba(118, 75, 162, 0.16)',
+              }
+            },
+            '& .MuiSlider-valueLabel': {
+              background: '#764ba2',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              '&:before': {
+                display: 'none'
+              }
+            },
+            '& .MuiSlider-mark': {
+              backgroundColor: '#667eea',
+              width: 2,
+              height: 2,
+              '&.MuiSlider-markActive': {
+                backgroundColor: '#fff',
+              }
+            },
+            '& .MuiSlider-markLabel': {
+              fontSize: '0.75rem',
+              color: 'text.secondary',
+              fontWeight: 500
+            }
+          }}
         />
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-          <Typography>Min: {pointsFilter[0]} points</Typography>
-          <Typography>Max: {pointsFilter[1]} points</Typography>
+
+        <Box sx={{ 
+          mt: 3,
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 2 
+        }}>
+          <TextField
+            label="Min Points"
+            type="number"
+            value={pointsFilter[0]}
+            onChange={(e) => {
+              const newValue = Math.max(0, Math.min(pointsFilter[1], Number(e.target.value)));
+              handlePointsFilterChange([newValue, pointsFilter[1]]);
+            }}
+            size="small"
+            InputProps={{
+              endAdornment: <InputAdornment position="end">pts</InputAdornment>,
+              inputProps: { min: 0, max: pointsFilter[1] }
+            }}
+            sx={{ width: 120 }}
+          />
+          <Typography color="text.secondary">to</Typography>
+          <TextField
+            label="Max Points"
+            type="number"
+            value={pointsFilter[1]}
+            onChange={(e) => {
+              const newValue = Math.max(pointsFilter[0], Math.min(100, Number(e.target.value)));
+              handlePointsFilterChange([pointsFilter[0], newValue]);
+            }}
+            size="small"
+            InputProps={{
+              endAdornment: <InputAdornment position="end">pts</InputAdornment>,
+              inputProps: { min: pointsFilter[0], max: 100 }
+            }}
+            sx={{ width: 120 }}
+          />
         </Box>
       </Box>
-    </Box>
+    </Paper>
   );
 });
 
