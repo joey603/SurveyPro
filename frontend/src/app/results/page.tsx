@@ -83,6 +83,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { debounce } from 'lodash';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
@@ -2419,9 +2420,8 @@ const ResultsPage: React.FC = () => {
       const answerPoints = calculateAnswerPoints(answer);
 
       // Vérifier si les points sont dans la plage définie par le filtre
-      if (pointsFilter && pointsFilter.length === 2) {
-        const [minPoints, maxPoints] = pointsFilter;
-        if (answerPoints < minPoints || answerPoints > maxPoints) {
+      if (filters.points.min !== 0 || filters.points.max !== 100) {
+        if (answerPoints < filters.points.min || answerPoints > filters.points.max) {
           return false;
         }
       }
@@ -2449,45 +2449,25 @@ const ResultsPage: React.FC = () => {
       return true;
     });
 
-    // S'assurer qu'il y a des réponses filtrées avant de continuer
-    if (filteredAnswers.length === 0) {
-      const emptyStats: DemographicStats = {
-        totalRespondents: 0,
-        answers: {},
-        total: 0,
-        totalPoints: 0,
-        averagePoints: 0,
-        filteredAnswers: [],
-        genderDistribution: {},
-        ageDistribution: new Array(100).fill(0),
-        educationDistribution: {},
-        cityDistribution: {}
-      };
-      setFilteredStats(emptyStats);
-      return;
-    }
-
-    // Calculer les points totaux
-    const totalPoints = filteredAnswers.reduce((sum, answer) => {
-      return sum + calculateAnswerPoints(answer);
-    }, 0);
-
     // Calculer les nouvelles statistiques avec les réponses filtrées
     const newStats: DemographicStats = {
       totalRespondents: filteredAnswers.length,
       answers: {},
       total: filteredAnswers.length,
-      totalPoints: totalPoints,
-      averagePoints: filteredAnswers.length > 0 ? totalPoints / filteredAnswers.length : 0,
-      filteredAnswers: filteredAnswers,
+      totalPoints: filteredAnswers.reduce((sum, answer) => sum + calculateAnswerPoints(answer), 0),
+      averagePoints: 0,
+      filteredAnswers,
       genderDistribution: calculateGenderDistribution(filteredAnswers),
       ageDistribution: calculateAgeDistribution(filteredAnswers),
       educationDistribution: calculateEducationDistribution(filteredAnswers),
       cityDistribution: calculateCityDistribution(filteredAnswers)
     };
 
+    // Calculer la moyenne des points
+    newStats.averagePoints = newStats.totalPoints / (newStats.totalRespondents || 1);
+
     setFilteredStats(newStats);
-  }, [surveyAnswers, filters.demographic, pointsFilter]);
+  }, [surveyAnswers, filters, calculateAnswerPoints]);
 
   // Ajouter ces fonctions utilitaires pour calculer les distributions
   const calculateGenderDistribution = (answers: SurveyAnswer[]) => {
@@ -2537,14 +2517,14 @@ const ResultsPage: React.FC = () => {
     return distribution;
   };
 
-  // Modifier le useEffect pour appliquer les filtres quand ils changent
+  // Modifier le useEffect pour réagir aux changements des filtres de points
   useEffect(() => {
     if (selectedSurvey) {
       applyDemographicFilters(selectedSurvey._id);
     }
-  }, [selectedSurvey, filters.demographic, pointsFilter, applyDemographicFilters]);
+  }, [selectedSurvey, filters.demographic, filters.points, applyDemographicFilters]);
 
-  // Modifier le handlePointsFilterChange
+  // Modifier la fonction handlePointsFilterChange
   const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
     setFilters(prev => ({
       ...prev,
@@ -2553,6 +2533,9 @@ const ResultsPage: React.FC = () => {
         max: newRange[1]
       }
     }));
+    
+    // Mettre à jour les points filter
+    setPointsFilter(newRange);
   }, []);
 
   // Ajouter un useEffect pour déclencher le filtrage quand les points changent
@@ -2560,7 +2543,7 @@ const ResultsPage: React.FC = () => {
     if (selectedSurvey) {
       applyDemographicFilters(selectedSurvey._id);
     }
-  }, [selectedSurvey, filters.demographic, pointsFilter, applyDemographicFilters]);
+  }, [selectedSurvey, filters.demographic, filters.points, applyDemographicFilters]);
 
   // Fonction utilitaire pour calculer l'âge
   const calculateAge = (birthDate: Date): number => {
@@ -2954,15 +2937,15 @@ const ResultsPage: React.FC = () => {
               onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
               size="small"
             >
-              <MenuItem value="equals">Égal à</MenuItem>
-              <MenuItem value="contains">Contient</MenuItem>
-              <MenuItem value="startsWith">Commence par</MenuItem>
-              <MenuItem value="endsWith">Termine par</MenuItem>
+              <MenuItem value="equals">Equals</MenuItem>
+              <MenuItem value="contains">Contains</MenuItem>
+              <MenuItem value="startsWith">Starts with</MenuItem>
+              <MenuItem value="endsWith">Ends with</MenuItem>
             </Select>
           </FormControl>
 
             <TextField
-            label="Texte attendu"
+            label="Expected text"
             value={localText}
             onChange={handleTextChange}
             size="small"
@@ -3005,10 +2988,10 @@ const ResultsPage: React.FC = () => {
             onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
             size="small"
           >
-            <MenuItem value="equals">Égal à</MenuItem>
-            <MenuItem value="greaterThan">Supérieur à</MenuItem>
-            <MenuItem value="lessThan">Inférieur à</MenuItem>
-            <MenuItem value="between">Entre</MenuItem>
+            <MenuItem value="equals">Equals</MenuItem>
+            <MenuItem value="greaterThan">Greater than</MenuItem>
+            <MenuItem value="lessThan">Less than</MenuItem>
+            <MenuItem value="between">Between</MenuItem>
           </Select>
         </FormControl>
 
@@ -3021,7 +3004,7 @@ const ResultsPage: React.FC = () => {
           />
           {rule.condition === 'between' && (
             <>
-              <Typography>et</Typography>
+              <Typography>and</Typography>
               <Rating
                 value={Number(rule.value)}
                 onChange={(_, newValue) => {
@@ -3083,10 +3066,10 @@ const ResultsPage: React.FC = () => {
               }}
               size="small"
             >
-              <MenuItem value="equals">Égal à</MenuItem>
-              <MenuItem value="greaterThan">Supérieur à</MenuItem>
-              <MenuItem value="lessThan">Inférieur à</MenuItem>
-              <MenuItem value="between">Entre</MenuItem>
+              <MenuItem value="equals">Equals</MenuItem>
+              <MenuItem value="greaterThan">Greater than</MenuItem>
+              <MenuItem value="lessThan">Less than</MenuItem>
+              <MenuItem value="between">Between</MenuItem>
             </Select>
           </FormControl>
 
@@ -3186,7 +3169,7 @@ const ResultsPage: React.FC = () => {
                         userSelect: 'none'
                       }}
                     >
-                      jusqu'à
+                      and
                     </Typography>
                     <TextField
                       size="small"
@@ -3230,10 +3213,10 @@ const ResultsPage: React.FC = () => {
             onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
             size="small"
           >
-            <MenuItem value="equals">Égal à</MenuItem>
-            <MenuItem value="before">Avant</MenuItem>
-            <MenuItem value="after">Après</MenuItem>
-            <MenuItem value="between">Entre</MenuItem>
+            <MenuItem value="equals">Equals</MenuItem>
+            <MenuItem value="before">Before</MenuItem>
+            <MenuItem value="after">After</MenuItem>
+            <MenuItem value="between">Between</MenuItem>
           </Select>
         </FormControl>
 
@@ -3253,9 +3236,9 @@ const ResultsPage: React.FC = () => {
             />
             {rule.condition === 'between' && (
               <>
-                <Typography>et</Typography>
+                <Typography>and</Typography>
                 <DatePicker
-                  label="Date fin"
+                  label="Date end"
                   value={rule.value ? new Date(rule.value) : null}
                   onChange={(newValue) => {
                     updateRule(questionId, ruleIndex, { 
@@ -3281,18 +3264,40 @@ const ResultsPage: React.FC = () => {
     }) => (
       <>
         <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Réponse attendue</InputLabel>
+          <InputLabel>Expected answer</InputLabel>
           <Select
             value={rule.response}
             onChange={(e) => updateRule(questionId, ruleIndex, { response: e.target.value })}
             size="small"
           >
-            <MenuItem value="yes">Oui</MenuItem>
-            <MenuItem value="no">Non</MenuItem>
+            <MenuItem value="yes">Yes</MenuItem>
+            <MenuItem value="no">No</MenuItem>
           </Select>
         </FormControl>
       </>
     );
+
+    // Ajouter la fonction de réinitialisation
+    const resetRules = useCallback(() => {
+      if (selectedSurvey) {
+        // Initialiser avec des règles vides
+        const initialRules: typeof pointRules = {};
+        selectedSurvey.questions.forEach(question => {
+          initialRules[question.id] = [{
+            response: '',
+            points: 0,
+            condition: 'equals'
+          }];
+        });
+        setPointRules(initialRules);
+        
+        // Supprimer les règles sauvegardées dans le localStorage
+        localStorage.removeItem(`pointRules_${selectedSurvey._id}`);
+        
+        // Réinitialiser les points des questions
+        setQuestionPoints({});
+      }
+    }, [selectedSurvey]);
 
     return (
       <Dialog 
@@ -3321,7 +3326,7 @@ const ResultsPage: React.FC = () => {
             variant="h6" 
             component="h2" // Définir explicitement le component comme h2
           >
-            Configuration des Règles de Points
+            Points Rules Configuration
           </Typography>
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <ClearIcon />
@@ -3408,7 +3413,7 @@ const ResultsPage: React.FC = () => {
                       {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
                         <>
                           <FormControl sx={{ minWidth: 200 }}>
-                            <InputLabel>Réponse</InputLabel>
+                            <InputLabel>Answer</InputLabel>
                             <Select
                               value={rule.response}
                               onChange={(e) => updateRule(question.id, ruleIndex, { response: e.target.value })}
@@ -3422,7 +3427,7 @@ const ResultsPage: React.FC = () => {
                         </>
                       )}
 
-                      {/* Points à attribuer */}
+                      {/* Points to assign */}
                       <TextField
                         type="number"
                         label="Points"
@@ -3466,7 +3471,7 @@ const ResultsPage: React.FC = () => {
                       }
                     }}
                   >
-                    Ajouter une règle
+                    Add Rule
                     </Button>
                 </Box>
               </CardContent>
@@ -3474,22 +3479,50 @@ const ResultsPage: React.FC = () => {
             ))}
         </DialogContent>
 
-        <DialogActions sx={{ p: 3, bgcolor: 'rgba(102, 126, 234, 0.05)' }}>
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            startIcon={<ClearIcon />}
-            sx={{
-              borderColor: 'rgba(102, 126, 234, 0.5)',
-              color: '#667eea',
-              '&:hover': {
-                borderColor: '#667eea',
-                bgcolor: 'rgba(102, 126, 234, 0.05)'
-              }
-            }}
-          >
-            Annuler
-          </Button>
+        <DialogActions sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          px: 3,
+          py: 2,
+          bgcolor: 'rgba(102, 126, 234, 0.05)'
+        }}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to reset all rules? This action cannot be undone.')) {
+                  resetRules();
+                }
+              }}
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              sx={{
+                borderColor: 'error.main',
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.light',
+                  borderColor: 'error.dark',
+                  color: 'error.contrastText'
+                }
+              }}
+            >
+              Reset All
+            </Button>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              startIcon={<ClearIcon />}
+              sx={{
+                borderColor: 'rgba(102, 126, 234, 0.5)',
+                color: '#667eea',
+                '&:hover': {
+                  borderColor: '#667eea',
+                  bgcolor: 'rgba(102, 126, 234, 0.05)'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
           <Button 
             onClick={() => {
               saveRules();
@@ -3504,7 +3537,7 @@ const ResultsPage: React.FC = () => {
               }
             }}
           >
-            Sauvegarder
+            Save
           </Button>
         </DialogActions>
       </Dialog>
@@ -4165,7 +4198,7 @@ const PointsFilterPanel = memo(({
       boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
     }}>
       <Typography variant="h6" gutterBottom>
-        Filtrer par Points
+        Filter by Points
       </Typography>
       <Box sx={{ px: 2, py: 3 }}>
         <Slider
