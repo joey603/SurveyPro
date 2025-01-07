@@ -224,6 +224,22 @@ const LoginPage = () => {
               Log in
             </Button>
 
+            <Typography align="center" sx={{ mb: 2 }}>
+              <Button
+                href="/forgot-password"
+                sx={{
+                  textTransform: 'none',
+                  color: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Mot de passe oublié ?
+              </Button>
+            </Typography>
+
             <Typography align="center" sx={{ mt: 2 }}>
               Don't have an account ?{' '}
               <Button

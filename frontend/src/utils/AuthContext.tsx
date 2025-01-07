@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const publicRoutes = ['/login', '/register', '/verify'];
+  const publicRoutes = ['/login', '/register', '/verify', '/forgot-password', '/reset-password'];
 
   const isTokenExpired = (token: string | null): boolean => {
     if (!token) return true;

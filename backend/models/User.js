@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false }, // Indique si l'utilisateur a vérifié son e-mail
   accessToken: { type: String }, // Token d'accès
   refreshToken: { type: String }, // Token de rafraîchissement
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 });
 
 module.exports = mongoose.model('User', userSchema);

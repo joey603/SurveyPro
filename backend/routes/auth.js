@@ -278,4 +278,100 @@ router.post('/resend-verification', async (req, res) => {
   }
 });
 
+// Route pour mot de passe oublié
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(200).json({ 
+        message: 'If an account exists with this email, you will receive reset instructions.' 
+      });
+    }
+
+    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // Expires in 1 hour
+    await user.save();
+
+    if (!process.env.FRONTEND_URL) {
+      console.error('FRONTEND_URL is not defined in environment variables');
+      throw new Error('Configuration error');
+    }
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_FROM,
+      subject: 'Reset Your Password',
+      html: `
+        <div style="text-align: center; font-family: Arial, sans-serif;">
+          <h2>Password Reset Request</h2>
+          <p>You have requested to reset your password.</p>
+          <p>Click the button below to set a new password:</p>
+          <a href="${resetUrl}" style="
+            background-color: #4a90e2;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 20px 0;
+          ">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you did not request this reset, please ignore this email.</p>
+        </div>
+      `
+    };
+
+    await sgMail.send(msg);
+
+    res.status(200).json({ 
+      message: 'Reset instructions have been sent to your email.' 
+    });
+
+  } catch (error) {
+    console.error('Error during password reset request:', error);
+    res.status(500).json({ message: 'An error occurred while sending reset instructions.' });
+  }
+});
+
+// Route pour réinitialiser le mot de passe
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'Reset link is invalid or has expired.'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Your password has been successfully reset.'
+    });
+
+  } catch (error) {
+    console.error('Error during password reset:', error);
+    res.status(500).json({
+      message: 'An error occurred while resetting your password.'
+    });
+  }
+});
+
 module.exports = router;
