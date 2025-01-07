@@ -137,6 +137,9 @@ const SurveyCreationPage: React.FC = () => {
     questions: {}
   });
 
+  // Ajout d'un état pour suivre si le formulaire a été soumis
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
   // Mettre à jour les erreurs en temps réel pour le titre
   useEffect(() => {
     setValidationErrors(prev => ({
@@ -324,6 +327,7 @@ const SurveyCreationPage: React.FC = () => {
   }, [watch('questions')]);
 
   const onSubmit = async (data: FormData) => {
+    setIsSubmitted(true); // Marquer le formulaire comme soumis
     try {
       const errors: { 
         title?: boolean;
@@ -684,6 +688,7 @@ const SurveyCreationPage: React.FC = () => {
 
   // Fonction utilitaire pour vérifier l'état d'erreur
   const getQuestionError = (questionIndex: number) => {
+    if (!isSubmitted) return false; // Ne pas montrer d'erreur si pas encore soumis
     const error = validationErrors.questions[questionIndex];
     if (typeof error === 'object') {
       return Boolean(error.text);
@@ -692,6 +697,7 @@ const SurveyCreationPage: React.FC = () => {
   };
 
   const getOptionError = (questionIndex: number, optionIndex: number) => {
+    if (!isSubmitted) return false; // Ne pas montrer d'erreur si pas encore soumis
     const error = validationErrors.questions[questionIndex];
     if (typeof error === 'object' && error.options) {
       return Boolean(error.options[optionIndex]);
@@ -782,8 +788,8 @@ const SurveyCreationPage: React.FC = () => {
                   fullWidth
                   sx={{ mb: 3 }}
                   variant="outlined"
-                  error={validationErrors.title}
-                  helperText={validationErrors.title ? "Title is required" : ""}
+                  error={isSubmitted && validationErrors.title}
+                  helperText={isSubmitted && validationErrors.title ? "Title is required" : ""}
                   onChange={(e) => {
                     field.onChange(e);
                     if (e.target.value.trim()) {
@@ -797,13 +803,13 @@ const SurveyCreationPage: React.FC = () => {
                     sx: {
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
-                          borderColor: validationErrors.title ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
                         },
                         '&:hover fieldset': {
-                          borderColor: validationErrors.title ? '#ef4444' : '#667eea',
+                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
                         },
                         '&.Mui-focused fieldset': {
-                          borderColor: validationErrors.title ? '#ef4444' : '#667eea',
+                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
                         },
                       },
                     },
@@ -863,7 +869,7 @@ const SurveyCreationPage: React.FC = () => {
                   p: 3,
                   mb: 3,
                   borderRadius: 2,
-                  border: hasQuestionErrors(index)
+                  border: isSubmitted && hasQuestionErrors(index)
                     ? '2px solid #ef4444' 
                     : '1px solid rgba(0, 0, 0, 0.1)',
                 }}
