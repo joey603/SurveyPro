@@ -11,6 +11,7 @@ import {
   Paper,
   Container,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import axios from 'axios';
 
@@ -20,6 +21,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
   const validateEmail = (value: string) => {
@@ -73,6 +75,7 @@ const LoginPage = () => {
     }
 
     setError('');
+    setIsLoading(true);
 
     try {
       const response = await axios.post(
@@ -92,6 +95,8 @@ const LoginPage = () => {
       } else {
         setError(err.response?.data?.message || 'An error occurred during login');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -207,13 +212,13 @@ const LoginPage = () => {
             <Button
               type="submit"
               fullWidth
+              disabled={isLoading}
               variant="contained"
               sx={{
                 padding: '12px',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
-                  background:
-                    'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                 },
                 textTransform: 'none',
                 fontSize: '1.1rem',
@@ -221,7 +226,11 @@ const LoginPage = () => {
                 mb: 2,
               }}
             >
-              Log in
+              {isLoading ? (
+                <CircularProgress size={24} sx={{ color: 'white' }} />
+              ) : (
+                'Log in'
+              )}
             </Button>
 
             <Typography align="center" sx={{ mb: 2 }}>
@@ -236,7 +245,7 @@ const LoginPage = () => {
                   },
                 }}
               >
-                Mot de passe oublié ?
+                Forgot password ?
               </Button>
             </Typography>
 
