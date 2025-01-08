@@ -33,9 +33,7 @@ import {
   Chip,
   TextField, // Ajout de TextField ici
   Rating,
-  Badge,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -80,12 +78,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
-import SaveIcon from '@mui/icons-material/Save';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { debounce } from 'lodash';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
@@ -123,13 +117,8 @@ interface SurveyAnswer {
       city?: string;
     };
   };
-  answers: Array<{
-    questionId: string;
-    answer: any;
-    points?: number; // Points par question
-  }>;
+  answers: Answer[];
   submittedAt: string;
-  points?: number; // Points totaux pour cette réponse
 }
 
 interface Question {
@@ -139,17 +128,11 @@ interface Question {
   options?: string[];
 }
 
-interface DemographicStats extends QuestionStats {
-  genderDistribution: { [key: string]: number };
+interface DemographicStats {
+  gender: { [key: string]: number };
+  education: { [key: string]: number };
+  city: { [key: string]: number };
   ageDistribution: number[];
-  educationDistribution: { [key: string]: number };
-  cityDistribution: { [key: string]: number };
-  totalRespondents: number;
-  answers: { [key: string]: number };
-  total: number;
-  totalPoints: number;
-  averagePoints: number;
-  filteredAnswers: SurveyAnswer[];
 }
 
 interface Survey {
@@ -164,7 +147,6 @@ interface Survey {
 interface QuestionStats {
   total: number;
   answers: { [key: string]: number };
-  totalPoints: number; // Ajout de totalPoints
 }
 
 // Modifier les options communes pour les graphiques
@@ -332,7 +314,7 @@ const ChartView = memo(({ data, question }: {
           color: '#4a5568',
           font: {
             size: 12,
-            weight: 400
+            weight: 500
           },
           padding: 15,
         }
@@ -515,46 +497,16 @@ const ChartView = memo(({ data, question }: {
   );
 });
 
-// Ajouter l'interface au début du fichier, avec les autres interfaces
-interface QuestionPoints {
-  [questionId: string]: number;
+// Ajouter l'interface pour le paramètre de la fonction de comparaison
+interface ComparisonValue {
+  value: string | number;
+  operator: string;
 }
 
-// Ajoutez cette interface pour les règles de points
-interface PointRule {
-  response: string;
-  points: number;
-  condition?: string;
-  value?: string | number;
-}
-
-// Définir d'abord l'interface pour les filtres
-interface DemographicFilter {
-  gender: string;
-  age: [number, number];
-  educationLevel: string;
-  city: string;
-}
-
-interface Filters {
-  demographic: DemographicFilter;
-  dateRange?: {
-    start: Date | null;
-    end: Date | null;
-  };
-  points: {
-    min: number;
-    max: number;
-  };
-}
-
-// Ajouter au début du fichier avec les autres interfaces
-interface PointsFilterPanelProps {
-  pointsFilter: [number, number];
-  setPointsFilter: (value: [number, number]) => void;
-  setShowPointsFilter: (value: boolean) => void;
-  handlePointsFilterChange: (value: [number, number]) => void;
-  setShowPointsConfig: (value: boolean) => void;  // Ajout de cette prop
+// Ajouter l'interface pour le type de réponse
+interface AnswerValue {
+  questionId: string;
+  answer: string | number | null;
 }
 
 const ResultsPage: React.FC = () => {
@@ -594,17 +546,24 @@ const ResultsPage: React.FC = () => {
   const chartRef = useRef<ChartRefType | null>(null);
 
   // Nouveaux états
-  const [filters, setFilters] = useState<Filters>({
+  const [filters, setFilters] = useState<{
     demographic: {
-      gender: '',           // Vide par défaut
-      age: [0, 100],       // Plage complète par défaut
-      educationLevel: '',   // Vide par défaut
-      city: ''             // Vide par défaut
+      gender?: string;
+      educationLevel?: string;
+      city?: string;
+      age?: [number, number];
+    };
+    answers: {
+      [questionId: string]: string | number | boolean;
+    };
+  }>({
+    demographic: {
+      gender: undefined,
+      educationLevel: undefined,
+      city: undefined,
+      age: undefined
     },
-    points: {
-      min: 0,              // Minimum par défaut
-      max: 100            // Maximum par défaut
-    }
+    answers: {}
   });
 
   // Nouveaux états
@@ -621,16 +580,10 @@ const ResultsPage: React.FC = () => {
   // Ajouter ces nouveaux états
   const [filteredStats, setFilteredStats] = useState<DemographicStats | null>(null);
   const [stats, setStats] = useState<DemographicStats>({
-    genderDistribution: {},
-    ageDistribution: [],
-    educationDistribution: {},
-    cityDistribution: {},
-    totalRespondents: 0,
-    answers: {},
-    total: 0,
-    totalPoints: 0,
-    averagePoints: 0,
-    filteredAnswers: []
+    gender: {},
+    education: {},
+    city: {},
+    ageDistribution: []
   });
 
   // Au début du composant, assurez-vous d'avoir cet état
@@ -648,74 +601,611 @@ const ResultsPage: React.FC = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
 
-  // Ajouter ce nouvel état
-  const [questionPoints, setQuestionPoints] = useState<QuestionPoints>({});
-  
-  // Ajouter ces états pour la gestion des points
-  const [pointsFilter, setPointsFilter] = useState<[number, number]>([0, 100]);
-  const [showPointsFilter, setShowPointsFilter] = useState(false);
-  const [showPointsConfig, setShowPointsConfig] = useState(false);
+  // Ajouter après les interfaces existantes
+  interface AnswerFilter {
+    questionId: string;
+    rules: FilterRule[];
+  }
 
-  // Ajouter un état pour les villes
-  const [cities, setCities] = useState<string[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
+  interface FilterRule {
+    operator: string;
+    value: string | number | null;
+    secondValue?: string | number | null; // Ajout d'une valeur secondaire pour "between"
+  }
 
-  // Ajouter la constante DEFAULT_CITIES au début du fichier
-  const DEFAULT_CITIES = [
-    "Tel Aviv",
-    "Jerusalem",
-    "Haifa",
-    "Rishon LeZion",
-    "Petah Tikva",
-    "Ashdod",
-    "Netanya",
-    "Beer Sheva",
-    "Holon",
-    "Bnei Brak"
-  ];
+  interface FilterValue {
+    single: string | number | null;
+    range?: [number, number]; // Utiliser un type séparé pour les plages de valeurs
+  }
 
-  // Modifier la fonction fetchCities
-  const fetchCities = async () => {
-    try {
-      const response = await fetch(
-        "https://countriesnow.space/api/v0.1/countries/cities",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ country: "Israel" }),
-        }
-      );
-      const data = await response.json();
+  interface QuestionFilter {
+    questionId: string;
+    rules: FilterRule[];
+  }
 
-      if (data && data.data) {
-        return data.data;
-      }
-      return DEFAULT_CITIES;
-    } catch (error) {
-      console.error("Error fetching cities:", error);
-      return DEFAULT_CITIES;
+  interface AnswerFilters {
+    [questionId: string]: AnswerFilter;
+  }
+
+  // Ajouter dans le composant principal
+  const [showAnswerFilters, setShowAnswerFilters] = useState(false);
+  const [answerFilters, setAnswerFilters] = useState<AnswerFilters>({});
+  const [filteredByAnswers, setFilteredByAnswers] = useState<boolean>(false);
+
+  // Dans le composant ResultsPage, ajouter l'état configOpen
+  const [configOpen, setConfigOpen] = useState<boolean>(false);
+
+  // Ajouter la fonction pour obtenir les opérateurs selon le type de question
+  const getOperatorsByType = (questionType: string): string[] => {
+    const commonOperators = ['equals', 'not'];
+    
+    switch (questionType) {
+      case 'rating':
+      case 'slider':
+        return [...commonOperators, 'greater', 'less', 'between'];
+      case 'text':
+        return [...commonOperators, 'contains', 'not_contains'];
+      case 'multiple-choice':
+      case 'dropdown':
+      case 'yes-no':
+        return commonOperators;
+      case 'date':
+        return [...commonOperators, 'before', 'after', 'between'];
+      default:
+        return commonOperators;
     }
   };
 
-  // Modifier l'useEffect pour charger les villes
-  useEffect(() => {
-    const loadCities = async () => {
-      try {
-        setLoadingCities(true);
-        const citiesData = await fetchCities();
-        setCities(citiesData);
-      } catch (error) {
-        console.error('Error loading cities:', error);
-        setCities(DEFAULT_CITIES);
-      } finally {
-        setLoadingCities(false);
-      }
+  // Modifier les comparaisons numériques pour convertir les chaînes en nombres
+  const compareValues = (value1: string | number | null, operator: string, rule: FilterRule) => {
+    if (operator === 'between' && rule.secondValue !== undefined) {
+      const num = typeof value1 === 'string' ? parseFloat(value1) : value1;
+      const min = typeof rule.value === 'string' ? parseFloat(rule.value) : rule.value;
+      const max = typeof rule.secondValue === 'string' ? parseFloat(rule.secondValue) : rule.secondValue;
+      
+      return num !== null && min !== null && max !== null && num >= min && num <= max;
+    }
+
+    // Reste de la logique existante pour les autres opérateurs
+    const num1 = typeof value1 === 'string' ? parseFloat(value1) : value1;
+    const num2 = typeof rule.value === 'string' ? parseFloat(rule.value) : rule.value;
+
+    if (num1 === null || num2 === null) return false;
+
+    switch (operator) {
+      case 'equals':
+        return num1 === num2;
+      case 'greater':
+        return num1 > num2;
+      case 'less':
+        return num1 < num2;
+      default:
+        return false;
+    }
+  };
+
+  // Ajouter cette fonction pour appliquer les filtres de réponses
+  const applyAnswerFilters = useCallback((answers: SurveyAnswer[]) => {
+    const filteredAnswers = answers.filter(answer => {
+      return Object.values(answerFilters).every(filter => {
+        const answerValue = answer.answers.find((a: AnswerValue) => a.questionId === filter.questionId)?.answer;
+        
+        return filter.rules.every(rule => {
+          switch (rule.operator) {
+            case 'equals':
+              return answerValue === rule.value;
+            case 'not':
+              return answerValue !== rule.value;
+            case 'greater':
+              return compareValues(answerValue, '>', rule);
+            case 'less':
+              return compareValues(answerValue, '<', rule);
+            case 'contains':
+              return String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+            case 'not_contains':
+              return !String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+            default:
+              return true;
+          }
+        });
+      });
+    });
+
+    return filteredAnswers;
+  }, [answerFilters, compareValues]);
+
+  // Modifier l'interface AnswerFilterPanel pour inclure les props nécessaires
+  interface AnswerFilterPanelProps {
+    open: boolean;
+    onClose: () => void;
+    selectedSurvey: Survey;
+    answerFilters: AnswerFilters;
+    setAnswerFilters: React.Dispatch<React.SetStateAction<AnswerFilters>>;
+  }
+
+  // Modifier la déclaration du composant pour inclure les props
+  const AnswerFilterPanel: React.FC<AnswerFilterPanelProps> = ({
+    open,
+    onClose,
+    selectedSurvey,
+    answerFilters,
+    setAnswerFilters
+  }) => {
+    const [tempFilters, setTempFilters] = useState<AnswerFilters>(answerFilters);
+
+    // Définir removeRule à l'intérieur du composant
+    const removeRule = useCallback((questionId: string, ruleIndex: number) => {
+      setTempFilters(prev => {
+        const newFilters = { ...prev };
+        if (newFilters[questionId]) {
+          const updatedRules = newFilters[questionId].rules.filter((_, index) => index !== ruleIndex);
+          if (updatedRules.length === 0) {
+            delete newFilters[questionId];
+          } else {
+            newFilters[questionId] = {
+              ...newFilters[questionId],
+              rules: updatedRules
+            };
+          }
+        }
+        return newFilters;
+      });
+    }, []);
+
+    const addRuleToQuestion = (questionId: string) => {
+      setTempFilters((prev: AnswerFilters) => ({
+        ...prev,
+        [questionId]: {
+          questionId,
+          rules: [...(prev[questionId]?.rules || []), { operator: '', value: null }]
+        }
+      }));
     };
 
-    loadCities();
-  }, []);
+    const applyAnswerFilters = useCallback(() => {
+      if (!selectedSurvey || Object.keys(tempFilters).length === 0) {
+        setFilteredByAnswers(false);
+        return;
+      }
+
+      const answers = surveyAnswers[selectedSurvey._id] || [];
+      const filteredAnswers = answers.filter(answer => {
+        return Object.values(tempFilters).every((filter: QuestionFilter) => {
+          const answerValue = answer.answers.find(a => a.questionId === filter.questionId)?.answer;
+          
+          return filter.rules.every((rule: FilterRule) => {
+            switch (rule.operator) {
+              case 'equals':
+                return answerValue === rule.value;
+              case 'not':
+                return answerValue !== rule.value;
+              case 'greater':
+                return compareValues(answerValue, '>', rule);
+              case 'less':
+                return compareValues(answerValue, '<', rule);
+              case 'between':
+                return compareValues(answerValue, 'between', rule);
+              case 'contains':
+                return String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+              case 'not_contains':
+                return !String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+              default:
+                return true;
+            }
+          });
+        });
+      });
+
+      setFilteredByAnswers(true);
+      const newStats = calculateDemographicStats(selectedSurvey._id, filteredAnswers);
+      setFilteredStats(newStats);
+    }, [selectedSurvey, tempFilters, surveyAnswers]);
+
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Typography variant="h6">Configure Answer Filters</Typography>
+        </DialogTitle>
+        
+        <DialogContent>
+          {selectedSurvey?.questions.map(question => (
+            <Box 
+              key={question.id} 
+              sx={{ 
+                mb: 4, 
+                p: 2, 
+                border: '1px solid rgba(0,0,0,0.1)', 
+                borderRadius: 1,
+                backgroundColor: 'background.paper' 
+              }}
+            >
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: '#667eea' }}>
+                {question.text}
+              </Typography>
+              
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+                Type: {question.type}
+              </Typography>
+
+              {/* Rules Section */}
+              {tempFilters[question.id]?.rules.map((rule: FilterRule, ruleIndex: number) => (
+                <Box 
+                  key={ruleIndex}
+                  sx={{ 
+                    mb: 2, 
+                    p: 2, 
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                    borderRadius: 1,
+                    position: 'relative'
+                  }}
+                >
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={3}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Operator</InputLabel>
+                        <Select
+                          value={rule.operator}
+                          onChange={(e) => {
+                            setTempFilters(prev => ({
+                              ...prev,
+                              [question.id]: {
+                                ...prev[question.id],
+                                rules: prev[question.id].rules.map((r, idx) =>
+                                  idx === ruleIndex ? { ...r, operator: e.target.value } : r
+                                )
+                              }
+                            }));
+                          }}
+                        >
+                          {getOperatorsByType(question.type).map(op => (
+                            <MenuItem key={op} value={op}>
+                              {op.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={8}>
+                      {/* Champs de valeur selon le type de question et l'opérateur */}
+                      {rule.operator === 'between' ? (
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          {question.type === 'rating' && (
+                            <>
+                              <Rating
+                                value={Number(rule.value || 0)}
+                                onChange={(_, newValue) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      questionId: question.id,
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, value: newValue } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                              />
+                              <Typography>et</Typography>
+                              <Rating
+                                value={Number(rule.secondValue || 0)}
+                                onChange={(_, newValue) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      questionId: question.id,
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, secondValue: newValue } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                              />
+                            </>
+                          )}
+
+                          {question.type === 'slider' && (
+                            <>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={rule.value || ''}
+                                onChange={(e) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      questionId: question.id,
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, value: Number(e.target.value) || null } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                                InputProps={{ inputProps: { min: 0, max: 100 } }}
+                              />
+                              <Typography>et</Typography>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={rule.secondValue || ''}
+                                onChange={(e) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      questionId: question.id,
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, secondValue: Number(e.target.value) || null } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                                InputProps={{ inputProps: { min: 0, max: 100 } }}
+                              />
+                            </>
+                          )}
+
+                          {question.type === 'date' && (
+                            <>
+                              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                <DatePicker
+                                  value={rule.value ? new Date(rule.value.toString()) : null}
+                                  onChange={(newValue) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        questionId: question.id,
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { ...r, value: newValue?.toISOString() || null } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                  renderInput={(params) => (
+                                    <TextField {...params} size="small" />
+                                  )}
+                                />
+                                <Typography sx={{ mx: 1 }}>et</Typography>
+                                <DatePicker
+                                  value={rule.secondValue ? new Date(rule.secondValue.toString()) : null}
+                                  onChange={(newValue) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        questionId: question.id,
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { ...r, secondValue: newValue?.toISOString() || null } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                  renderInput={(params) => (
+                                    <TextField {...params} size="small" />
+                                  )}
+                                />
+                              </LocalizationProvider>
+                            </>
+                          )}
+                        </Stack>
+                      ) : (
+                        // Code existant pour les autres opérateurs
+                        <>
+                          {question.type === 'rating' && (
+                            <Rating
+                              value={Number(rule.value || 0)}
+                              onChange={(_, newValue) => {
+                                setTempFilters(prev => ({
+                                  ...prev,
+                                  [question.id]: {
+                                    questionId: question.id,
+                                    rules: prev[question.id].rules.map((r, idx) =>
+                                      idx === ruleIndex ? { ...r, value: newValue } : r
+                                    )
+                                  }
+                                }));
+                              }}
+                            />
+                          )}
+
+                          {question.type === 'slider' && (
+                            <Slider
+                              value={typeof rule.value === 'number' ? rule.value : 0}
+                              min={0}
+                              max={100}
+                              valueLabelDisplay="auto"
+                              onChange={(_, newValue) => {
+                                setTempFilters(prev => ({
+                                  ...prev,
+                                  [question.id]: {
+                                    questionId: question.id,
+                                    rules: prev[question.id].rules.map((r, idx) =>
+                                      idx === ruleIndex ? { 
+                                        ...r, 
+                                        value: typeof newValue === 'number' ? newValue : null 
+                                      } : r
+                                    )
+                                  }
+                                }));
+                              }}
+                            />
+                          )}
+
+                          {(question.type === 'text' || question.type === 'open-ended') && (
+                            <TextField
+                              fullWidth
+                              size="small"
+                              value={rule.value?.toString() || ''}
+                              onChange={(e) => {
+                                setTempFilters(prev => ({
+                                  ...prev,
+                                  [question.id]: {
+                                    questionId: question.id,
+                                    rules: prev[question.id].rules.map((r, idx) =>
+                                      idx === ruleIndex ? { 
+                                        ...r, 
+                                        value: e.target.value || null 
+                                      } : r
+                                    )
+                                  }
+                                }));
+                              }}
+                            />
+                          )}
+
+                          {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
+                            <FormControl fullWidth size="small">
+                              <Select
+                                value={rule.value || ''}
+                                onChange={(e) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      ...prev[question.id],
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                              >
+                                {question.options?.map((option: string) => (
+                                  <MenuItem key={option} value={option}>
+                                    {option}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          )}
+
+                          {question.type === 'yes-no' && (
+                            <FormControl fullWidth size="small">
+                              <Select
+                                value={rule.value || ''}
+                                onChange={(e) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      ...prev[question.id],
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                              >
+                                <MenuItem value="yes">Yes</MenuItem>
+                                <MenuItem value="no">No</MenuItem>
+                              </Select>
+                            </FormControl>
+                          )}
+
+                          {question.type === 'date' && (
+                            <LocalizationProvider dateAdapter={AdapterDateFns}>
+                              <DatePicker
+                                value={rule.value ? new Date(rule.value.toString()) : null}
+                                onChange={(newValue) => {
+                                  setTempFilters(prev => ({
+                                    ...prev,
+                                    [question.id]: {
+                                      questionId: question.id,
+                                      rules: prev[question.id].rules.map((r, idx) =>
+                                        idx === ruleIndex ? { 
+                                          ...r, 
+                                          value: newValue ? newValue.toISOString() : null 
+                                        } : r
+                                      )
+                                    }
+                                  }));
+                                }}
+                                renderInput={(params) => (
+                                  <TextField {...params} size="small" fullWidth />
+                                )}
+                              />
+                            </LocalizationProvider>
+                          )}
+
+                          {question.type === 'color-picker' && (
+                            <TextField
+                              type="color"
+                              fullWidth
+                              size="small"
+                              value={rule.value || '#000000'}
+                              onChange={(e) => {
+                                setTempFilters(prev => ({
+                                  ...prev,
+                                  [question.id]: {
+                                    ...prev[question.id],
+                                    rules: prev[question.id].rules.map((r, idx) =>
+                                      idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                    )
+                                  }
+                                }));
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </Grid>
+
+                    <Grid item xs={1}>
+                      <IconButton 
+                        onClick={() => removeRule(question.id, ruleIndex)}
+                        size="small"
+                        sx={{ color: 'error.main' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))}
+
+              {/* Add Rule Button */}
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => addRuleToQuestion(question.id)}
+                variant="outlined"
+                size="small"
+                sx={{ 
+                  mt: 1,
+                  color: '#667eea',
+                  borderColor: '#667eea',
+                  '&:hover': {
+                    borderColor: '#764ba2',
+                    color: '#764ba2',
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                  }
+                }}
+              >
+                Add Rule
+              </Button>
+            </Box>
+          ))}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button 
+            onClick={() => {
+              setAnswerFilters(tempFilters);
+              onClose();
+              applyAnswerFilters();
+            }} 
+            variant="contained"
+            sx={{
+              backgroundColor: '#667eea',
+              '&:hover': {
+                backgroundColor: '#764ba2'
+              }
+            }}
+          >
+            Apply Filters
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
 
   // Ajouter cette fonction de filtrage
   const filteredSurveys = surveys
@@ -843,35 +1333,38 @@ const ResultsPage: React.FC = () => {
   }, [selectedSurvey, chartTypes, prepareChartData, chartRef]);
 
   useEffect(() => {
-    const loadSurveys = async () => {
+    const loadSurveysAndAnswers = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('accessToken');
-        if (!token) throw new Error('No authentication token found');
-
-        console.log('Fetching surveys...');
+        const token = localStorage.getItem('accessToken') || '';
+        
+        // Charger les sondages
         const surveysData = await fetchSurveys(token);
-        console.log('Surveys received:', surveysData);
         setSurveys(surveysData);
 
-        const answersData: { [key: string]: SurveyAnswer[] } = {};
-        for (const survey of surveysData) {
-          console.log(`Fetching answers for survey: ${survey._id}`);
-          const answers = await getSurveyAnswers(survey._id, token);
-          console.log(`Answers received for survey ${survey._id}:`, answers);
-          answersData[survey._id] = answers;
-        }
-        setSurveyAnswers(answersData);
-        console.log('All answers loaded:', answersData);
-      } catch (error: any) {
-        console.error('Error loading results:', error);
-        setError(error.message || 'Failed to load results');
+        // Charger les réponses pour chaque sondage
+        const answersPromises = surveysData.map((survey: Survey) => 
+          getSurveyAnswers(survey._id, token)
+            .then(answers => ({ [survey._id]: answers }))
+        );
+
+        const allAnswers = await Promise.all(answersPromises);
+        const answersMap = allAnswers.reduce((acc, curr) => ({
+          ...acc,
+          ...curr
+        }), {});
+
+        setSurveyAnswers(answersMap);
+        console.log('Loaded answers:', answersMap); // Debug log
+      } catch (error: unknown) {
+        console.error('Error loading surveys and answers:', error);
+        setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
     };
 
-    loadSurveys();
+    loadSurveysAndAnswers();
   }, []);
 
   console.log('Current state - Surveys:', surveys);
@@ -885,166 +1378,74 @@ const ResultsPage: React.FC = () => {
     setSelectedSurvey(null);
   };
 
-  // Déplacer calculatePoints avant filterAnswers
-  const calculatePoints = useCallback((answer: Answer, questionId: string): number => {
-    const question = selectedSurvey?.questions.find(q => q.id === questionId);
-    if (!question) return 0;
-
-    // Récupérer les règles de points pour cette question
-    const savedRules = localStorage.getItem(`pointRules_${selectedSurvey?._id}`);
-    if (!savedRules) return 0;
-
-    const pointRules = JSON.parse(savedRules);
-    const rules = pointRules[questionId] || [];
-
-    let totalPoints = 0;
-    const answerValue = answer.answer?.toString().toLowerCase();
-
-    rules.forEach((rule: PointRule) => {
-      const ruleResponse = rule.response?.toString().toLowerCase();
-      
-      switch (rule.condition) {
-        case 'equals':
-          if (answerValue === ruleResponse) totalPoints += rule.points;
-          break;
-        case 'contains':
-          if (answerValue?.includes(ruleResponse)) totalPoints += rule.points;
-          break;
-        case 'startsWith':
-          if (answerValue?.startsWith(ruleResponse)) totalPoints += rule.points;
-          break;
-        case 'endsWith':
-          if (answerValue?.endsWith(ruleResponse)) totalPoints += rule.points;
-          break;
-        case 'greaterThan':
-          if (Number(answerValue) > Number(ruleResponse)) totalPoints += rule.points;
-          break;
-        case 'lessThan':
-          if (Number(answerValue) < Number(ruleResponse)) totalPoints += rule.points;
-          break;
-        case 'between':
-          const value = Number(answerValue);
-          const [min, max] = ruleResponse.split(',').map(Number);
-          if (value >= min && value <= max) totalPoints += rule.points;
-          break;
-      }
-    });
-
-    return totalPoints;
-  }, [selectedSurvey]);
-
+  // Ajouter la fonction de filtrage
   const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
-    // Vérifier si des filtres sont réellement actifs
-    const hasActiveFilters = 
-      filters.demographic.gender !== '' || 
-      filters.demographic.educationLevel !== '' || 
-      filters.demographic.city !== '' || 
-      filters.demographic.age[0] !== 0 || 
-      filters.demographic.age[1] !== 100 ||
-      filters.points.min > 0 ||
-      filters.points.max < 100; // Ajout des conditions pour les points
+    // Si tous les filtres sont vides, retourner toutes les réponses
+    const hasActiveFilters = Object.values(filters.demographic).some(value => 
+      value !== undefined && value !== "" && 
+      !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
+    );
 
-    // Si aucun filtre n'est actif, retourner toutes les réponses
     if (!hasActiveFilters) {
       return answers;
     }
 
     return answers.filter(answer => {
-      let passesFilters = true;
+      // Si pas de données démographiques, inclure la réponse
+      if (!answer.respondent?.demographic) {
+        return true;
+      }
 
-      // Vérification des filtres démographiques
-      if (answer.respondent?.demographic) {
-        const demographic = answer.respondent.demographic;
+      const demographic = answer.respondent.demographic;
 
-        if (filters.demographic.gender && demographic.gender !== filters.demographic.gender) {
-          passesFilters = false;
-        }
+      // Appliquer les filtres seulement si les données démographiques existent
+      if (filters.demographic.educationLevel && 
+          filters.demographic.educationLevel !== "" && 
+          demographic.educationLevel !== filters.demographic.educationLevel) {
+        return false;
+      }
 
-        if (filters.demographic.educationLevel && demographic.educationLevel !== filters.demographic.educationLevel) {
-          passesFilters = false;
-        }
+      if (filters.demographic.city && 
+          filters.demographic.city !== "" && 
+          demographic.city !== filters.demographic.city) {
+        return false;
+      }
 
-        if (filters.demographic.city && demographic.city !== filters.demographic.city) {
-          passesFilters = false;
-        }
-
-        if (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100) {
-          if (demographic.dateOfBirth) {
-            const age = calculateAge(new Date(demographic.dateOfBirth));
-            if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-              passesFilters = false;
-            }
+      if (filters.demographic.age && 
+          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+        if (demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
           }
         }
-      } else if (hasActiveFilters && 
-                (filters.demographic.gender || 
-                 filters.demographic.educationLevel || 
-                 filters.demographic.city || 
-                 filters.demographic.age[0] !== 0 || 
-                 filters.demographic.age[1] !== 100)) {
-        passesFilters = false;
       }
 
-      // Vérification du filtre de points
-      if (passesFilters && (filters.points.min > 0 || filters.points.max < 100)) {
-        let totalPoints = 0;
-        
-        // Calculer les points totaux pour toutes les réponses
-        answer.answers.forEach(ans => {
-          totalPoints += calculatePoints(ans, ans.questionId);
-        });
-
-        if (totalPoints < filters.points.min || totalPoints > filters.points.max) {
-          passesFilters = false;
-        }
-      }
-
-      return passesFilters;
+      return true;
     });
-  }, [filters, calculatePoints]);
+  }, [filters]);
 
-  // Modifier la fonction calculateQuestionStats
-  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats & { averagePoints: number } => {
-    // Utiliser directement les réponses du sondage, sans passer par filteredStats
+  // Modifier la fonction calculateQuestionStats pour inclure toutes les réponses
+  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats => {
     const allAnswers = surveyAnswers[surveyId] || [];
     
-    // Appliquer les filtres uniquement si nécessaire
-    const filteredAnswers = filterAnswers(allAnswers);
-    
-    const questionStats: QuestionStats & { averagePoints: number } = {
+    // Ne pas filtrer les réponses basées sur les données démographiques
+    const stats: QuestionStats = {
       total: 0,
-      answers: {},
-      totalPoints: 0,
-      averagePoints: 0
+      answers: {}
     };
 
-    // Utiliser un Set pour garder une trace des réponses uniques
-    const processedAnswers = new Set();
-
-    filteredAnswers.forEach((surveyAnswer: SurveyAnswer) => {
-      const questionAnswer = surveyAnswer.answers.find(
-        (a: Answer) => a.questionId === questionId
-      );
-
-      const answerKey = `${surveyAnswer._id}-${questionId}`;
-      if (questionAnswer && questionAnswer.answer != null && !processedAnswers.has(answerKey)) {
-        processedAnswers.add(answerKey);
-        
+    allAnswers.forEach((answer: SurveyAnswer) => {
+      const questionAnswer = answer.answers.find((a: Answer) => a.questionId === questionId);
+      if (questionAnswer && questionAnswer.answer != null) {
         const value = questionAnswer.answer.toString();
-        questionStats.answers[value] = (questionStats.answers[value] || 0) + 1;
-        questionStats.total++;
-        
-        const points = calculatePoints(questionAnswer, questionId);
-        questionStats.totalPoints += points;
+        stats.answers[value] = (stats.answers[value] || 0) + 1;
+        stats.total++;
       }
     });
 
-    questionStats.averagePoints = questionStats.total > 0 
-      ? questionStats.totalPoints / questionStats.total 
-      : 0;
-
-    return questionStats;
-  }, [surveyAnswers, filterAnswers, calculatePoints]);
+    return stats;
+  }, [surveyAnswers]);
 
   // Modifier la fonction handleViewQuestionDetails
   const handleQuestionClick = useCallback((questionId: string) => {
@@ -1053,21 +1454,16 @@ const ResultsPage: React.FC = () => {
     const question = selectedSurvey.questions.find(q => q.id === questionId);
     if (!question) return;
 
-    // Utiliser directement les réponses du sondage et appliquer les filtres
     const answers = surveyAnswers[selectedSurvey._id] || [];
-    const filteredAnswers = filterAnswers(answers);
     
-    const uniqueAnswers = filteredAnswers.filter((answer: SurveyAnswer, index: number, self: SurveyAnswer[]) => 
-      index === self.findIndex((a: SurveyAnswer) => a._id === answer._id)
-    );
-
+    // Supprimer le filtrage des réponses ici
     setSelectedQuestion({
       questionId,
-      answers: uniqueAnswers
+      answers: answers // Utiliser toutes les réponses sans filtrage
     });
     setDialogOpen(true);
     setCurrentView('list');
-  }, [selectedSurvey, surveyAnswers, filterAnswers]);
+  }, [selectedSurvey, surveyAnswers]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -1148,26 +1544,30 @@ const ResultsPage: React.FC = () => {
   useEffect(() => {
     const loadAnswers = async () => {
       try {
-        if (!selectedSurvey?._id) return;
-        
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('No token found');
         
-        // Vérifier si nous avons déjà les réponses pour ce sondage
-        if (surveyAnswers[selectedSurvey._id]) return;
+        if (!selectedSurvey) return;
         
         const answers = await getSurveyAnswers(selectedSurvey._id, token);
-        setSurveyAnswers(prev => ({
-          ...prev,
-          [selectedSurvey._id]: answers
-        }));
+        const groupedAnswers = answers.reduce((acc: { [key: string]: SurveyAnswer[] }, answer: SurveyAnswer) => {
+          if (!acc[answer.surveyId]) {
+            acc[answer.surveyId] = [];
+          }
+          acc[answer.surveyId].push(answer);
+          return acc;
+        }, {});
+        
+        setSurveyAnswers(groupedAnswers);
       } catch (error) {
         console.error('Error loading survey answers:', error);
         setError('Failed to load survey answers');
       }
     };
 
-    loadAnswers();
+    if (selectedSurvey) {
+      loadAnswers();
+    }
   }, [selectedSurvey]);
 
   // Ajouter cette constante avec les autres constantes
@@ -1177,491 +1577,251 @@ const ResultsPage: React.FC = () => {
     "other"
   ];
 
-  // Ajouter cette fonction pour gérer les changements de filtres
-  const handleFilterChange = (
-    filterType: keyof typeof filters.demographic,
-    value: any
-  ) => {
-    setFilters(prev => ({
-      ...prev,
-      demographic: {
-        ...prev.demographic,
-        [filterType]: value
-      }
-    }));
-  };
-
-  
-
   const FilterPanel = () => {
-    // Ajouter un état local pour le slider d'âge
-    const [ageSliderValue, setAgeSliderValue] = useState<[number, number]>([
-      filters.demographic.age[0],
-      filters.demographic.age[1]
-    ]);
+    const [cities, setCities] = useState<string[]>([]);
+    const [ageRange, setAgeRange] = useState<[number, number]>(
+      filters.demographic.age || [0, 100]
+    );
 
-    // Gestionnaire pour le changement du slider d'âge
-    const handleAgeSliderChange = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
-      setAgeSliderValue(newValue as [number, number]);
-    };
-
-    // Gestionnaire pour la validation du changement du slider d'âge
-    const handleAgeSliderChangeCommitted = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
-      const [min, max] = newValue as [number, number];
+    const handleAgeChange = (_: Event | React.SyntheticEvent, newValue: number | number[]) => {
+      const newRange = newValue as [number, number];
+      setAgeRange(newRange);
+      
       setFilters(prev => ({
         ...prev,
         demographic: {
           ...prev.demographic,
-          age: [min, max]
+          age: newRange
         }
       }));
-    };
-
-    const [sliderValue, setSliderValue] = useState<[number, number]>([
-      filters.points.min,
-      filters.points.max
-    ]);
-
-    const handleSliderChange = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
-      setSliderValue(newValue as [number, number]);
-    };
-
-    const handleSliderChangeCommitted = (_: Event | React.SyntheticEvent<Element, Event>, newValue: number | number[]) => {
-      const [min, max] = newValue as [number, number];
-      setFilters(prev => ({
-        ...prev,
-        points: { min, max }
-      }));
-    };
-
-    // Créer un événement synthétique pour les TextFields
-    const createSyntheticEvent = () => {
-      return new Event('change') as unknown as React.SyntheticEvent<Element, Event>;
-    };
-
-    // Ajouter cette fonction pour compter le nombre total de règles
-    const countTotalRules = useCallback(() => {
-      if (!selectedSurvey) return 0;
       
-      const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
-      if (!savedRules) return 0;
+      // Appliquer les filtres automatiquement
+      applyDemographicFilters();
+    };
 
-      const pointRules = JSON.parse(savedRules) as { [key: string]: any[] };
-      return Object.values(pointRules).reduce((total: number, rules: any[]) => total + rules.length, 0 as number);
-    }, [selectedSurvey]);
+    const fetchCities = async () => {
+      try {
+        const response = await fetch(
+          "https://countriesnow.space/api/v0.1/countries/cities",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ country: "Israel" }),
+          }
+        );
+        const data = await response.json();
+
+        if (data && data.data) {
+          return data.data;
+        }
+        return [];
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+        // Liste de secours en cas d'erreur
+        return [
+          "Tel Aviv", "Jerusalem", "Haifa", "Rishon LeZion",
+          "Petah Tikva", "Ashdod", "Netanya", "Beer Sheva",
+          "Holon", "Bnei Brak"
+        ];
+      }
+    };
+
+    useEffect(() => {
+      const loadCities = async () => {
+        const citiesList = await fetchCities();
+        setCities(citiesList);
+      };
+      loadCities();
+    }, []);
 
     return (
-      <Box sx={{ mb: 3 }}>
-        {/* Demographic Filters Section */}
-        <Paper sx={{ 
-          p: 3, 
-          mb: 2, 
-          borderRadius: 2,
-          border: '1px solid rgba(102, 126, 234, 0.2)'
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 2 
-          }}>
-            <Typography variant="h6" sx={{ color: '#2d3748', fontWeight: 600 }}>
-              Demographic Filters
-            </Typography>
-            <Button
-              size="small"
-              onClick={() => setFilters(prev => ({
-                ...prev,
-                demographic: {
-                  gender: '',
-                  age: [0, 100],
-                  educationLevel: '',
-                  city: ''
-                }
-              }))}
-              sx={{
-                color: '#667eea',
-                '&:hover': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.05)'
-                }
-              }}
-            >
-              Reset Filters
-            </Button>
-          </Box>
+      <Box sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Demographic Filters
+          </Typography>
+          <Button
+            color="primary"
+            size="small"
+            onClick={() => {
+              setFilteredStats(null);
+              setFilters({
+                demographic: {},
+                answers: {}
+              });
+            }}
+            sx={{
+              color: '#667eea',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.05)'
+              }
+            }}
+          >
+            Reset Filters
+          </Button>
+        </Box>
+        <Grid container spacing={2}>
+          {/* Ajouter le filtre de genre */}
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Gender</InputLabel>
+              <Select
+                value={filters.demographic.gender || ''}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      gender: e.target.value.toLowerCase() // Stocker en minuscules
+                    }
+                  }));
+                  // Appliquer les filtres automatiquement
+                  applyDemographicFilters();
+                }}
+              >
+                <MenuItem value="">All</MenuItem>
+                {genderOptions.map((gender) => (
+                  <MenuItem key={gender} value={gender}>
+                    {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  value={filters.demographic.gender}
-                  onChange={(e) => handleFilterChange('gender', e.target.value)}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="male">Male</MenuItem>
-                  <MenuItem value="female">Female</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+          {/* Ajuster la taille des autres éléments */}
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Education Level</InputLabel>
+              <Select
+                value={filters.demographic.educationLevel || ''}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      educationLevel: e.target.value
+                    }
+                  }));
+                  applyDemographicFilters();
+                }}
+              >
+                <MenuItem value="">All</MenuItem>
+                {educationLevels.map((level) => (
+                  <MenuItem key={level} value={level}>{level}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Education Level</InputLabel>
-                <Select
-                  value={filters.demographic.educationLevel}
-                  onChange={(e) => handleFilterChange('educationLevel', e.target.value)}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {educationLevels.map((level) => (
-                    <MenuItem key={level} value={level}>{level}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>City</InputLabel>
+              <Select
+                value={filters.demographic.city || ''}
+                onChange={(e) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    demographic: {
+                      ...prev.demographic,
+                      city: e.target.value
+                    }
+                  }));
+                  applyDemographicFilters();
+                }}
+              >
+                <MenuItem value="">All Cities</MenuItem>
+                {cities.map((city) => (
+                  <MenuItem key={city} value={city}>{city}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>City</InputLabel>
-                <Select
-                  value={filters.demographic.city}
-                  onChange={(e) => handleFilterChange('city', e.target.value)}
-                  disabled={loadingCities}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {loadingCities ? (
-                    <MenuItem disabled>Loading cities...</MenuItem>
-                  ) : (
-                    cities.map((city) => (
-                      <MenuItem key={city} value={city}>{city}</MenuItem>
-                    ))
-                  )}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Typography gutterBottom variant="body2" color="text.secondary">
-                Age Range
+          <Grid item xs={12} sm={3}>
+            <Box sx={{ width: '100%', px: 1 }}> {/* Réduit le padding horizontal */}
+              <Typography gutterBottom sx={{ color: '#1a237e' }}>
+                Age Range: {ageRange[0]} - {ageRange[1]} years
               </Typography>
               <Slider
-                value={ageSliderValue}
-                onChange={handleAgeSliderChange}
-                onChangeCommitted={handleAgeSliderChangeCommitted}
+                value={ageRange}
+                onChange={handleAgeChange}
                 valueLabelDisplay="auto"
                 min={0}
                 max={100}
-                step={1}
-                disableSwap
                 sx={{
-                  color: '#667eea',
-                  '& .MuiSlider-thumb': {
-                    height: 24,
-                    width: 24,
-                    backgroundColor: '#fff',
-                    border: '2px solid #667eea',
-                    '&:hover': {
-                      boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
-                    },
-                    '&.Mui-active': {
-                      boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
-                    }
+                  width: '90%', // Réduit légèrement la largeur
+                  ml: 1, // Ajoute une marge à gauche
+                  '& .MuiSlider-rail': {
+                    background: 'rgba(118, 75, 162, 0.2)',
                   },
                   '& .MuiSlider-track': {
-                    backgroundColor: '#667eea',
-                    border: 'none',
-                    height: 4
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   },
-                  '& .MuiSlider-rail': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                    height: 4
+                  '& .MuiSlider-thumb': {
+                    backgroundColor: '#764ba2',
+                    '&:hover, &.Mui-focusVisible': {
+                      boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
+                    },
                   },
                   '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#667eea',
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    '&:before': {
-                      display: 'none'
-                    }
+                    backgroundColor: '#764ba2',
                   },
                   '& .MuiSlider-mark': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.3)',
-                    height: 8,
-                    width: 2,
-                    '&.MuiSlider-markActive': {
-                      backgroundColor: '#667eea',
-                    }
-                  }
+                    backgroundColor: '#667eea',
+                  },
                 }}
                 marks={[
                   { value: 0, label: '0' },
-                  { value: 25, label: '25' },
-                  { value: 50, label: '50' },
-                  { value: 75, label: '75' },
+                  { value: 20, label: '20' },
+                  { value: 40, label: '40' },
+                  { value: 60, label: '60' },
+                  { value: 80, label: '80' },
                   { value: 100, label: '100' }
                 ]}
               />
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                mt: 2,
-                px: 1
-              }}>
-                <TextField
-                  size="small"
-                  label="Min Age"
-                  type="number"
-                  value={ageSliderValue[0]}
-                  onChange={(e) => {
-                    const value = Math.max(0, Math.min(ageSliderValue[1], Number(e.target.value)));
-                    setAgeSliderValue([value, ageSliderValue[1]]);
-                    handleAgeSliderChangeCommitted(createSyntheticEvent(), [value, ageSliderValue[1]]);
-                  }}
-                  InputProps={{
-                    inputProps: { min: 0, max: ageSliderValue[1] }
-                  }}
-                  sx={{ width: '100px' }}
-                />
-                <TextField
-                  size="small"
-                  label="Max Age"
-                  type="number"
-                  value={ageSliderValue[1]}
-                  onChange={(e) => {
-                    const value = Math.max(ageSliderValue[0], Math.min(100, Number(e.target.value)));
-                    setAgeSliderValue([ageSliderValue[0], value]);
-                    handleAgeSliderChangeCommitted(createSyntheticEvent(), [ageSliderValue[0], value]);
-                  }}
-                  InputProps={{
-                    inputProps: { min: ageSliderValue[0], max: 100 }
-                  }}
-                  sx={{ width: '100px' }}
-                />
-              </Box>
-            </Grid>
-          </Grid>
-        </Paper>
-
-        {/* Points Filter Section */}
-        <Paper sx={{ 
-          p: 3, 
-          borderRadius: 2,
-          border: '1px solid rgba(102, 126, 234, 0.2)'
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 2 
-          }}>
-            <Typography variant="h6" sx={{ color: '#2d3748', fontWeight: 600 }}>
-              Points Filter
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-                startIcon={<SettingsIcon />}
-                onClick={() => setShowPointsConfig(true)}
-                size="small"
-                sx={{
-                  color: '#667eea',
-                  position: 'relative',
-                  '&:hover': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
-                  }
-                }}
-              >
-                Configure Points
-                {countTotalRules() > 0 && (
-                  <Box
-                    component="span" // Ajout du component span
-                    sx={{
-                      position: 'absolute',
-                      top: -6,
-                      right: -10,
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: 16,
-                      height: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.65rem',
-                      fontWeight: 'bold',
-                      border: '1.5px solid white'
-                    }}
-                  >
-                    {countTotalRules().toString()}
-                  </Box>
-                )}
-              </Button>
-              <Button
-                size="small"
-                onClick={() => setFilters(prev => ({
-                  ...prev,
-                  points: {
-                    min: 0,
-                    max: 100
-                  }
-                }))}
-                sx={{
-                  color: '#667eea',
-                  '&:hover': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
-                  }
-                }}
-              >
-                Reset Filters
-              </Button>
-              
             </Box>
-          </Box>
-
-          <Box sx={{ px: 2 }}>
-            <Slider
-              value={sliderValue}
-              onChange={handleSliderChange}
-              onChangeCommitted={handleSliderChangeCommitted}
-              valueLabelDisplay="auto"
-              min={0}
-              max={100}
-                step={1}
-                disableSwap
-                sx={{
-                  color: '#667eea',
-                  '& .MuiSlider-thumb': {
-                    height: 24,
-                    width: 24,
-                    backgroundColor: '#fff',
-                    border: '2px solid #667eea',
-                    '&:hover': {
-                      boxShadow: '0 0 0 8px rgba(102, 126, 234, 0.16)',
-                    },
-                    '&.Mui-active': {
-                      boxShadow: '0 0 0 12px rgba(102, 126, 234, 0.24)',
-                    }
-                  },
-                  '& .MuiSlider-track': {
-                    backgroundColor: '#667eea',
-                    border: 'none',
-                    height: 4
-                  },
-                  '& .MuiSlider-rail': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                    height: 4
-                  },
-                  '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#667eea',
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    '&:before': {
-                      display: 'none'
-                    }
-                  },
-                  '& .MuiSlider-mark': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.3)',
-                    height: 8,
-                    width: 2,
-                    '&.MuiSlider-markActive': {
-                      backgroundColor: '#667eea',
-                    }
-                  }
-                }}
-                marks={[
-                  { value: 0, label: '0' },
-                  { value: 25, label: '25' },
-                  { value: 50, label: '50' },
-                  { value: 75, label: '75' },
-                  { value: 100, label: '100' }
-                ]}
-              />
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                mt: 2,
-                px: 1
-              }}>
-                <TextField
-                  size="small"
-                label="Min Points"
-                type="number"
-                value={sliderValue[0]}
-                onChange={(e) => {
-                  const value = Math.max(0, Math.min(sliderValue[1], Number(e.target.value)));
-                  setSliderValue([value, sliderValue[1]]);
-                  handleSliderChangeCommitted(createSyntheticEvent(), [value, sliderValue[1]]);
-                  }}
-                  InputProps={{
-                  inputProps: { min: 0, max: sliderValue[1] }
-                  }}
-                  sx={{ width: '100px' }}
-                />
-                <TextField
-                  size="small"
-                label="Max Points"
-                type="number"
-                value={sliderValue[1]}
-                onChange={(e) => {
-                  const value = Math.max(sliderValue[0], Math.min(100, Number(e.target.value)));
-                  setSliderValue([sliderValue[0], value]);
-                  handleSliderChangeCommitted(createSyntheticEvent(), [sliderValue[0], value]);
-                  }}
-                  InputProps={{
-                  inputProps: { min: sliderValue[0], max: 100 }
-                  }}
-                  sx={{ width: '100px' }}
-                />
-              </Box>
-          </Box>
-        </Paper>
+          </Grid>
+        </Grid>
       </Box>
     );
   };
 
-  const calculateDemographicStats = useCallback((surveyId: string): DemographicStats => {
-    const answers = surveyAnswers[surveyId] || [];
+  // Modifier la fonction calculateDemographicStats pour accepter un paramètre optionnel
+  const calculateDemographicStats = useCallback((surveyId: string, filteredAnswers?: SurveyAnswer[]): DemographicStats => {
+    const answers = filteredAnswers || surveyAnswers[surveyId] || [];
+    
     const stats: DemographicStats = {
-      genderDistribution: {},
-      ageDistribution: Array(121).fill(0),
-      educationDistribution: {},
-      cityDistribution: {},
-      totalRespondents: 0,
-      answers: {},
-      total: 0,
-      totalPoints: 0,
-      averagePoints: 0,
-      filteredAnswers: []
+      gender: {},
+      education: {},
+      city: {},
+      ageDistribution: Array(121).fill(0)
     };
 
-    answers.forEach((answer: SurveyAnswer) => {
+    answers.forEach(answer => {
       const demographic = answer.respondent?.demographic;
       if (demographic) {
-        // Traitement du genre
         if (demographic.gender) {
-          stats.genderDistribution[demographic.gender] = (stats.genderDistribution[demographic.gender] || 0) + 1;
+          stats.gender[demographic.gender] = (stats.gender[demographic.gender] || 0) + 1;
         }
 
-        // Traitement du niveau d'éducation
         if (demographic.educationLevel) {
-          stats.educationDistribution[demographic.educationLevel] = 
-            (stats.educationDistribution[demographic.educationLevel] || 0) + 1;
+          stats.education[demographic.educationLevel] = 
+            (stats.education[demographic.educationLevel] || 0) + 1;
         }
 
-        // Traitement de la ville
         if (demographic.city) {
-          stats.cityDistribution[demographic.city] = (stats.cityDistribution[demographic.city] || 0) + 1;
+          stats.city[demographic.city] = (stats.city[demographic.city] || 0) + 1;
         }
 
-        // Traitement de l'âge
         if (demographic.dateOfBirth) {
           const age = calculateAge(new Date(demographic.dateOfBirth));
           if (age >= 0 && age <= 120) {
             stats.ageDistribution[age]++;
           }
         }
-
-        stats.totalRespondents++;
       }
     });
 
@@ -1692,8 +1852,8 @@ const ResultsPage: React.FC = () => {
         </Box>
 
         <Grid container spacing={4} sx={{ 
-          justifyContent: 'center',
-          alignItems: 'stretch'     
+          justifyContent: 'center', // Centrer les éléments de la grille
+          alignItems: 'stretch'     // Étirer les éléments à la même hauteur
         }}>
           {/* Genre */}
           <Grid item xs={12} md={6}>
@@ -1733,9 +1893,9 @@ const ResultsPage: React.FC = () => {
               }}>
                 <Pie
                   data={{
-                    labels: Object.keys(filteredStats?.genderDistribution || stats.genderDistribution),
+                    labels: Object.keys(filteredStats?.gender || stats.gender),
                     datasets: [{
-                      data: Object.values(filteredStats?.genderDistribution || stats.genderDistribution),
+                      data: Object.values(filteredStats?.gender || stats.gender),
                       backgroundColor: chartColors.backgrounds,
                       borderColor: chartColors.borders,
                       borderWidth: 1
@@ -1749,7 +1909,7 @@ const ResultsPage: React.FC = () => {
                 />
               </Box>
             </Paper>
-            </Grid>
+          </Grid>
 
           {/* Niveau d'éducation */}
           <Grid item xs={12} md={6}>
@@ -1789,9 +1949,9 @@ const ResultsPage: React.FC = () => {
               }}>
                 <Bar
                   data={{
-                    labels: Object.keys(filteredStats?.educationDistribution || stats.educationDistribution),
+                    labels: Object.keys(filteredStats?.education || stats.education),
                     datasets: [{
-                      data: Object.values(filteredStats?.educationDistribution || stats.educationDistribution),
+                      data: Object.values(filteredStats?.education || stats.education),
                       backgroundColor: chartColors.backgrounds,
                       borderColor: chartColors.borders,
                       borderWidth: 1,
@@ -1913,16 +2073,16 @@ const ResultsPage: React.FC = () => {
               <Box sx={{ height: 'calc(100% - 60px)' }}>
                 {renderAgeChart(filteredStats?.ageDistribution || stats.ageDistribution)}
               </Box>
-        </Paper>
+            </Paper>
           </Grid>
 
           {/* Villes */}
           <Grid item xs={12} md={6}>
             <Paper elevation={0} sx={{ 
-          p: 3, 
+              p: 3, 
               height: '400px',
               border: '1px solid rgba(0,0,0,0.1)',
-          borderRadius: 2,
+              borderRadius: 2,
               transition: 'all 0.3s ease',
               '&:hover': {
                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -1944,9 +2104,9 @@ const ResultsPage: React.FC = () => {
               <Box sx={{ height: 'calc(100% - 60px)' }}>
                 <Doughnut
                   data={{
-                    labels: Object.keys(filteredStats?.cityDistribution || stats.cityDistribution),
+                    labels: Object.keys(filteredStats?.city || stats.city),
                     datasets: [{
-                      data: Object.values(filteredStats?.cityDistribution || stats.cityDistribution),
+                      data: Object.values(filteredStats?.city || stats.city),
                       backgroundColor: [
                         'rgba(102, 126, 234, 0.6)',
                         'rgba(118, 75, 162, 0.6)',
@@ -1978,7 +2138,7 @@ const ResultsPage: React.FC = () => {
     if (!selectedSurvey) return null;
 
     const answers = surveyAnswers[selectedSurvey._id] || [];
-    
+
     return (
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" gutterBottom>
@@ -2151,26 +2311,20 @@ const ResultsPage: React.FC = () => {
 
     return (
       <>
-        <DialogTitle 
-          component="div" // Changer le component en div au lieu de h2 par défaut
-          sx={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            pb: 3
-          }}
-        >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          pb: 3
+        }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography 
-              variant="h6" 
-              component="h2" // Définir explicitement le component comme h2
-            >
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
               {question.text}
             </Typography>
             
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
               gap: 2,
               mt: 2 
             }}>
@@ -2184,7 +2338,7 @@ const ResultsPage: React.FC = () => {
                 }}>
                   <Typography variant="overline" sx={{ opacity: 0.9, display: 'block' }}>
                     Total Responses
-            </Typography>
+                  </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {selectedQuestion.answers.length}
                   </Typography>
@@ -2426,7 +2580,7 @@ const ResultsPage: React.FC = () => {
           borderTop: '1px solid rgba(0, 0, 0, 0.1)'
         }}>
           <Stack direction="row" spacing={2}>
-              <Button
+            <Button
               variant="contained"
               startIcon={<TableViewIcon />}
               onClick={exportCSV}
@@ -2595,230 +2749,112 @@ const ResultsPage: React.FC = () => {
     link.click();
   }, [selectedSurvey, prepareAllQuestionsData]);
 
-  // Garder une seule définition de calculateAnswerPoints au niveau du composant
-  const calculateAnswerPoints = useCallback((answer: SurveyAnswer): number => {
-    if (!selectedSurvey) return 0;
+  // Ajoutez ces interfaces au début du fichier
+  interface DemographicFilters {
+    gender?: string;
+    educationLevel?: string;
+    city?: string;
+    age?: [number, number];
+  }
 
-    let totalPoints = 0;
-    const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
-    if (!savedRules) return 0;
+  // Modifiez la fonction d'application des filtres
+  const applyDemographicFilters = useCallback(() => {
+    if (!selectedSurvey) return;
 
-    const pointRules: { [key: string]: PointRule[] } = JSON.parse(savedRules);
+    const answers = surveyAnswers[selectedSurvey._id] || [];
+    
+    console.log('Current filters:', filters.demographic);
+    
+    const filteredAnswers = answers.filter(answer => {
+      const demographic = answer.respondent?.demographic;
+      if (!demographic) return false;
 
-    answer.answers.forEach(ans => {
-      const rules = pointRules[ans.questionId];
-      if (!rules) return;
-
-      rules.forEach((rule: PointRule) => {
-        let points = 0;
-        const answerValue = ans.answer?.toString().toLowerCase();
-        const ruleResponse = rule.response?.toString().toLowerCase();
-
-        switch (rule.condition) {
-          case 'equals':
-            if (answerValue === ruleResponse) points = rule.points;
-            break;
-          case 'contains':
-            if (answerValue?.includes(ruleResponse)) points = rule.points;
-            break;
-          case 'startsWith':
-            if (answerValue?.startsWith(ruleResponse)) points = rule.points;
-            break;
-          case 'endsWith':
-            if (answerValue?.endsWith(ruleResponse)) points = rule.points;
-            break;
-          case 'greaterThan':
-            if (Number(answerValue) > Number(ruleResponse)) points = rule.points;
-            break;
-          case 'lessThan':
-            if (Number(answerValue) < Number(ruleResponse)) points = rule.points;
-            break;
-          case 'between':
-            const value = Number(answerValue);
-            const min = Number(ruleResponse);
-            const max = Number(rule.value);
-            if (value >= min && value <= max) points = rule.points;
-            break;
-        }
-        totalPoints += points;
+      // Debug logs
+      console.log('Checking answer:', {
+        answerGender: demographic.gender,
+        filterGender: filters.demographic.gender?.toLowerCase(), // Convertir en minuscules
+        matches: !filters.demographic.gender || 
+                demographic.gender === filters.demographic.gender?.toLowerCase()
       });
-    });
 
-    return totalPoints;
-  }, [selectedSurvey]);
-
-  // Modifier la fonction applyDemographicFilters
-  const applyDemographicFilters = useCallback((surveyId: string) => {
-    if (!surveyId) return;
-    
-    const surveyResponses = surveyAnswers[surveyId] || [];
-    
-    // Filtrer les réponses en fonction des critères
-    const filteredAnswers = surveyResponses.filter(answer => {
-      // Calculer les points totaux pour cette réponse
-      const answerPoints = calculateAnswerPoints(answer);
-
-      // Vérifier si les points sont dans la plage définie par le filtre
-      if (filters.points.min !== 0 || filters.points.max !== 100) {
-        if (answerPoints < filters.points.min || answerPoints > filters.points.max) {
+      // Filtre par genre - Comparaison insensible à la casse
+      if (filters.demographic.gender && filters.demographic.gender !== '') {
+        if (!demographic.gender || 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
           return false;
         }
       }
-      
-      // Si le sondage a des données démographiques, appliquer ces filtres
-      if (selectedSurvey?.demographicEnabled) {
-        const demographic = answer.respondent?.demographic;
-        const demoFilters = filters.demographic;
-        
-        if (demoFilters.gender && demographic?.gender !== demoFilters.gender) {
-          return false;
-        }
-        
-        if (demographic?.dateOfBirth && demoFilters.age) {
+
+      // Reste des filtres inchangé...
+      if (filters.demographic.educationLevel && 
+          filters.demographic.educationLevel !== "" && 
+          demographic.educationLevel !== filters.demographic.educationLevel) {
+        return false;
+      }
+
+      if (filters.demographic.city && 
+          filters.demographic.city !== "" && 
+          demographic.city !== filters.demographic.city) {
+        return false;
+      }
+
+      if (filters.demographic.age && 
+          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+        if (demographic.dateOfBirth) {
           const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < demoFilters.age[0] || age > demoFilters.age[1]) {
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
             return false;
           }
-        }
-        
-        if (demoFilters.educationLevel && demographic?.educationLevel !== demoFilters.educationLevel) {
-          return false;
-        }
-        
-        if (demoFilters.city && demographic?.city !== demoFilters.city) {
-          return false;
         }
       }
 
       return true;
     });
 
-    // Calculer les nouvelles statistiques avec les réponses filtrées
+    console.log('Filtered answers:', filteredAnswers);
+
     const newStats: DemographicStats = {
-      totalRespondents: filteredAnswers.length,
-      answers: {},
-      total: filteredAnswers.length,
-      totalPoints: filteredAnswers.reduce((sum, answer) => sum + calculateAnswerPoints(answer), 0),
-      averagePoints: 0,
-      filteredAnswers,
-      genderDistribution: calculateGenderDistribution(filteredAnswers),
-      ageDistribution: calculateAgeDistribution(filteredAnswers),
-      educationDistribution: calculateEducationDistribution(filteredAnswers),
-      cityDistribution: calculateCityDistribution(filteredAnswers)
+      gender: {},
+      education: {},
+      city: {},
+      ageDistribution: Array(121).fill(0)
     };
 
-    // Calculer la moyenne des points
-    newStats.averagePoints = newStats.totalPoints / (newStats.totalRespondents || 1);
+    filteredAnswers.forEach(answer => {
+      const demographic = answer.respondent?.demographic;
+      if (demographic) {
+        if (demographic.gender) {
+          newStats.gender[demographic.gender] = (newStats.gender[demographic.gender] || 0) + 1;
+        }
 
-    setFilteredStats(newStats);
-  }, [surveyAnswers, filters, calculateAnswerPoints, selectedSurvey]);
+        if (demographic.educationLevel) {
+          newStats.education[demographic.educationLevel] = 
+            (newStats.education[demographic.educationLevel] || 0) + 1;
+        }
 
-  // Ajouter ces fonctions utilitaires pour calculer les distributions
-  const calculateGenderDistribution = (answers: SurveyAnswer[]) => {
-    const distribution: { [key: string]: number } = {};
-    answers.forEach(answer => {
-      const gender = answer.respondent?.demographic?.gender;
-      if (gender) {
-        distribution[gender] = (distribution[gender] || 0) + 1;
-      }
-    });
-    return distribution;
-  };
+        if (demographic.city) {
+          newStats.city[demographic.city] = (newStats.city[demographic.city] || 0) + 1;
+        }
 
-  const calculateAgeDistribution = (answers: SurveyAnswer[]) => {
-    const distribution = new Array(100).fill(0);
-    answers.forEach(answer => {
-      const dob = answer.respondent?.demographic?.dateOfBirth;
-      if (dob) {
-        const age = calculateAge(new Date(dob));
-        if (age >= 0 && age < 100) {
-          distribution[age]++;
+        if (demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age >= 0 && age <= 120) {
+            newStats.ageDistribution[age]++;
+          }
         }
       }
     });
-    return distribution;
-  };
 
-  const calculateEducationDistribution = (answers: SurveyAnswer[]) => {
-    const distribution: { [key: string]: number } = {};
-    answers.forEach(answer => {
-      const education = answer.respondent?.demographic?.educationLevel;
-      if (education) {
-        distribution[education] = (distribution[education] || 0) + 1;
-      }
-    });
-    return distribution;
-  };
+    console.log('New stats:', newStats);
+    setFilteredStats(newStats);
+  }, [selectedSurvey, surveyAnswers, filters.demographic, calculateDemographicStats]);
 
-  const calculateCityDistribution = (answers: SurveyAnswer[]) => {
-    const distribution: { [key: string]: number } = {};
-    answers.forEach(answer => {
-      const city = answer.respondent?.demographic?.city;
-      if (city) {
-        distribution[city] = (distribution[city] || 0) + 1;
-      }
-    });
-    return distribution;
-  };
-
-  // Modifier le useEffect pour réagir aux changements des filtres de points
+  // Ajouter un useEffect pour appliquer les filtres lorsqu'ils changent
   useEffect(() => {
     if (selectedSurvey) {
-      applyDemographicFilters(selectedSurvey._id);
+      applyDemographicFilters();
     }
-  }, [selectedSurvey, filters.demographic, filters.points, applyDemographicFilters]);
-
-  // Modifier la fonction handlePointsFilterChange
-  const handlePointsFilterChange = useCallback((newRange: [number, number]) => {
-    setFilters(prev => ({
-                  ...prev,
-                  points: {
-        min: newRange[0],
-        max: newRange[1]
-      }
-    }));
-    
-    // Mettre à jour les points filter
-    setPointsFilter(newRange);
-  }, []);
-
-  // Ajouter un useEffect pour déclencher le filtrage quand les points changent
-  useEffect(() => {
-    if (selectedSurvey) {
-      applyDemographicFilters(selectedSurvey._id);
-    }
-  }, [selectedSurvey, filters.demographic, filters.points, applyDemographicFilters]);
-
-  // Fonction utilitaire pour calculer l'âge
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
-
-  // Mettre à jour useEffect pour initialiser les stats avec le bon sondage
-  useEffect(() => {
-    if (selectedSurvey?._id) {
-      const initialStats = calculateDemographicStats(selectedSurvey._id);
-      setStats(initialStats);
-      setFilteredStats(initialStats);
-    }
-  }, [selectedSurvey, calculateDemographicStats]);
-
-  
-
-  // Ajoutez un useEffect pour appliquer les filtres quand ils changent
-  useEffect(() => {
-    if (selectedSurvey) {
-      applyDemographicFilters(selectedSurvey._id);
-    }
-  }, [selectedSurvey, applyDemographicFilters]);
+  }, [filters.demographic, selectedSurvey, applyDemographicFilters]);
 
   useEffect(() => {
     if (selectedSurvey && surveyAnswers[selectedSurvey._id]) {
@@ -3023,7 +3059,7 @@ const ResultsPage: React.FC = () => {
       }
     };
 
-  return (
+    return (
       <Box sx={{ 
         height: '400px', 
         width: '100%',
@@ -3041,758 +3077,24 @@ const ResultsPage: React.FC = () => {
     );
   };
 
-  // Ajouter cette fonction pour mettre à jour les points d'une question
-  const handlePointsChange = (questionId: string, points: number) => {
-    setQuestionPoints(prev => ({
-      ...prev,
-      [questionId]: points
-    }));
-  };
-
-  // Ajouter ce composant pour la configuration des points
-  const PointsConfigDialog = memo(({ open, onClose }: { open: boolean; onClose: () => void }) => {
-    // Modifier l'initialisation des règles de points pour utiliser le localStorage
-    const [pointRules, setPointRules] = useState<{
-      [questionId: string]: Array<{
-        response: string;
-        points: number;
-        condition?: string;
-        value?: string | number;
-      }>
-    }>({});
-
-    // Charger les règles sauvegardées au montage du composant
-    useEffect(() => {
-      if (selectedSurvey) {
-        const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
-        if (savedRules) {
-          setPointRules(JSON.parse(savedRules));
+  // Déplacer removeRule au niveau du composant principal et avant son utilisation
+  const removeRule = useCallback((questionId: string, ruleIndex: number) => {
+    setAnswerFilters(prev => {
+      const newFilters = { ...prev };
+      if (newFilters[questionId]) {
+        const updatedRules = newFilters[questionId].rules.filter((_, index) => index !== ruleIndex);
+        if (updatedRules.length === 0) {
+          delete newFilters[questionId];
         } else {
-          // Initialisation par défaut si pas de règles sauvegardées
-          const initialRules: typeof pointRules = {};
-          selectedSurvey.questions.forEach(question => {
-            initialRules[question.id] = [{
-              response: '',
-              points: 0,
-              condition: 'equals'
-            }];
-          });
-          setPointRules(initialRules);
+          newFilters[questionId] = {
+            ...newFilters[questionId],
+            rules: updatedRules
+          };
         }
       }
-    }, [selectedSurvey]);
-
-    // Sauvegarder les règles quand elles sont modifiées
-    const saveRules = useCallback(() => {
-      if (selectedSurvey) {
-        localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(pointRules));
-        
-        // Mettre à jour les points des questions
-        setQuestionPoints(prev => {
-          const newPoints = { ...prev };
-          Object.entries(pointRules).forEach(([questionId, rules]) => {
-            newPoints[questionId] = Math.max(...rules.map(r => r.points));
-          });
-          return newPoints;
-        });
-      }
-    }, [pointRules, selectedSurvey]);
-
-    // Modifier les fonctions de gestion des règles pour sauvegarder automatiquement
-    const addRule = (questionId: string) => {
-      setPointRules(prev => {
-        const newRules = {
-          ...prev,
-          [questionId]: [
-            ...(prev[questionId] || []),
-            {
-              response: '',
-              points: 0,
-              condition: 'equals'
-            }
-          ]
-        };
-        if (selectedSurvey) {
-          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
-        }
-        return newRules;
-      });
-    };
-
-    const removeRule = (questionId: string, index: number) => {
-      setPointRules(prev => {
-        const newRules = {
-          ...prev,
-          [questionId]: prev[questionId].filter((_, i) => i !== index)
-        };
-        if (selectedSurvey) {
-          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
-        }
-        return newRules;
-      });
-    };
-
-    const updateRule = (questionId: string, index: number, updates: Partial<typeof pointRules[string][number]>) => {
-      setPointRules(prev => {
-        const newRules = {
-          ...prev,
-          [questionId]: prev[questionId].map((rule, i) => 
-            i === index ? { ...rule, ...updates } : rule
-          )
-        };
-        if (selectedSurvey) {
-          localStorage.setItem(`pointRules_${selectedSurvey._id}`, JSON.stringify(newRules));
-        }
-        return newRules;
-      });
-    };
-
-    // Composant pour les règles de type texte
-    const TextRuleFields = ({ rule, questionId, ruleIndex }: {
-      rule: typeof pointRules[string][number];
-      questionId: string;
-      ruleIndex: number;
-    }) => {
-      const [localText, setLocalText] = useState(rule.response || '');
-
-      useEffect(() => {
-        setLocalText(rule.response || '');
-      }, [rule.response]);
-
-      const debouncedUpdate = useCallback(
-        debounce((value: string) => {
-          updateRule(questionId, ruleIndex, { response: value });
-        }, 300),
-        [questionId, ruleIndex]
-      );
-
-      const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
-        setLocalText(newValue);
-        debouncedUpdate(newValue);
-      };
-
-      return (
-        <>
-          <FormControl sx={{ minWidth: 120 }}>
-            <InputLabel>Condition</InputLabel>
-            <Select
-              value={rule.condition}
-              onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
-              size="small"
-            >
-              <MenuItem value="equals">Equals</MenuItem>
-              <MenuItem value="contains">Contains</MenuItem>
-              <MenuItem value="startsWith">Starts with</MenuItem>
-              <MenuItem value="endsWith">Ends with</MenuItem>
-            </Select>
-          </FormControl>
-
-            <TextField
-            label="Expected text"
-            value={localText}
-            onChange={handleTextChange}
-            size="small"
-            multiline
-            rows={3}
-                sx={{
-              width: 300, // Taille fixe au lieu de minWidth
-              '& .MuiInputBase-root': {
-                padding: '8px',
-                height: '100px', // Hauteur fixe
-                overflow: 'auto' // Ajout de scroll si nécessaire
-              },
-              '& .MuiInputBase-input': {
-                height: '100% !important', // Forcer la hauteur
-                resize: 'none' // Désactiver le redimensionnement
-              }
-            }}
-            InputProps={{
-              sx: {
-                fontSize: '0.875rem',
-                lineHeight: '1.5'
-              }
-            }}
-          />
-        </>
-      );
-    };
-
-    // Composant pour les règles de type rating
-    const RatingRuleFields = ({ rule, questionId, ruleIndex }: {
-      rule: typeof pointRules[string][number];
-      questionId: string;
-      ruleIndex: number;
-    }) => (
-      <>
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Condition</InputLabel>
-          <Select
-            value={rule.condition}
-            onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
-            size="small"
-          >
-            <MenuItem value="equals">Equals</MenuItem>
-            <MenuItem value="greaterThan">Greater than</MenuItem>
-            <MenuItem value="lessThan">Less than</MenuItem>
-            <MenuItem value="between">Between</MenuItem>
-          </Select>
-        </FormControl>
-
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Rating
-            value={Number(rule.response)}
-            onChange={(_, newValue) => {
-              updateRule(questionId, ruleIndex, { response: newValue?.toString() || '0' });
-            }}
-          />
-          {rule.condition === 'between' && (
-            <>
-              <Typography>and</Typography>
-              <Rating
-                value={Number(rule.value)}
-                onChange={(_, newValue) => {
-                  updateRule(questionId, ruleIndex, { value: newValue?.toString() || '0' });
-                }}
-              />
-            </>
-          )}
-        </Box>
-      </>
-    );
-
-    // Composant pour les règles de type slider
-    const SliderRuleFields = ({ rule, questionId, ruleIndex }: {
-      rule: typeof pointRules[string][number];
-      questionId: string;
-      ruleIndex: number;
-    }) => {
-      const [sliderValue, setSliderValue] = useState<number[]>([
-        Number(rule.response) || 0,
-        rule.condition === 'between' ? Number(rule.value) || 0 : 0
-      ]);
-
-      const handleSliderChange = (event: Event, newValue: number | number[]) => {
-        const values = Array.isArray(newValue) ? newValue : [newValue];
-        setSliderValue(values);
-        
-        if (rule.condition === 'between') {
-          updateRule(questionId, ruleIndex, { 
-            response: values[0].toString(),
-            value: values[1].toString()
-          });
-        } else {
-          updateRule(questionId, ruleIndex, { 
-            response: values[0].toString()
-          });
-        }
-      };
-
-      return (
-        <Box sx={{ 
-          width: '100%', 
-          maxWidth: 500,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3
-        }}>
-          {/* Condition Select */}
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Condition</InputLabel>
-            <Select
-              value={rule.condition}
-              onChange={(e) => {
-                const newCondition = e.target.value;
-                updateRule(questionId, ruleIndex, { 
-                  condition: newCondition,
-                  value: newCondition === 'between' ? sliderValue[1].toString() : undefined
-                });
-              }}
-              size="small"
-            >
-              <MenuItem value="equals">Equals</MenuItem>
-              <MenuItem value="greaterThan">Greater than</MenuItem>
-              <MenuItem value="lessThan">Less than</MenuItem>
-              <MenuItem value="between">Between</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Slider Component */}
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: 4,
-              bgcolor: 'rgba(102, 126, 234, 0.05)',
-              borderRadius: 2,
-              border: '1px solid rgba(102, 126, 234, 0.1)'
-            }}
-          >
-            <Box sx={{ px: 2, width: '100%' }}>
-              <Slider
-                value={rule.condition === 'between' ? sliderValue : sliderValue[0]}
-                onChange={handleSliderChange}
-                valueLabelDisplay="auto"
-                min={0}
-                max={100}
-                marks={[
-                  { value: 0, label: '0' },
-                  { value: 25, label: '25' },
-                  { value: 50, label: '50' },
-                  { value: 75, label: '75' },
-                  { value: 100, label: '100' }
-                ]}
-                sx={{
-                  '& .MuiSlider-rail': {
-                    background: 'rgba(102, 126, 234, 0.2)',
-                    height: 6
-                  },
-                  '& .MuiSlider-track': {
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    height: 6
-                  },
-                  '& .MuiSlider-thumb': {
-                    width: 16,
-                    height: 16,
-                    backgroundColor: '#764ba2',
-                    '&:hover, &.Mui-focusVisible': {
-                      boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
-                    },
-                  },
-                  '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#764ba2',
-                  },
-                  '& .MuiSlider-mark': {
-                    backgroundColor: '#667eea',
-                    width: 2,
-                    height: 2,
-                    '&.MuiSlider-markActive': {
-                      backgroundColor: '#fff',
-                    }
-                  },
-                  '& .MuiSlider-markLabel': {
-                    fontSize: '0.875rem',
-                    color: 'text.secondary'
-                  }
-                }}
-              />
-
-              {/* Value Display */}
-              <Box sx={{ 
-                mt: 3,
-                display: 'flex', 
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  value={sliderValue[0]}
-                  onChange={(e) => {
-                    const newValue = Math.min(100, Math.max(0, Number(e.target.value)));
-                    handleSliderChange(e as any, rule.condition === 'between' ? [newValue, sliderValue[1]] : newValue);
-                  }}
-                  InputProps={{
-                    inputProps: { min: 0, max: 100 },
-                    sx: {
-                      width: 80,
-                      textAlign: 'center',
-                      '& input': {
-                        textAlign: 'center'
-                      }
-                    }
-                  }}
-                />
-                {rule.condition === 'between' && (
-                  <>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: 'text.secondary',
-                        px: 1,
-                        userSelect: 'none'
-                      }}
-                    >
-                      and
-                    </Typography>
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={sliderValue[1]}
-                      onChange={(e) => {
-                        const newValue = Math.min(100, Math.max(0, Number(e.target.value)));
-                        handleSliderChange(e as any, [sliderValue[0], newValue]);
-                      }}
-                      InputProps={{
-                        inputProps: { min: 0, max: 100 },
-                        sx: {
-                          width: 80,
-                          textAlign: 'center',
-                          '& input': {
-                            textAlign: 'center'
-                          }
-                        }
-                      }}
-                    />
-                  </>
-                )}
-            </Box>
-            </Box>
-          </Paper>
-        </Box>
-      );
-    };
-
-    // Composant pour les règles de type date
-    const DateRuleFields = ({ rule, questionId, ruleIndex }: {
-      rule: typeof pointRules[string][number];
-      questionId: string;
-      ruleIndex: number;
-    }) => (
-      <>
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Condition</InputLabel>
-          <Select
-            value={rule.condition}
-            onChange={(e) => updateRule(questionId, ruleIndex, { condition: e.target.value })}
-            size="small"
-          >
-            <MenuItem value="equals">Equals</MenuItem>
-            <MenuItem value="before">Before</MenuItem>
-            <MenuItem value="after">After</MenuItem>
-            <MenuItem value="between">Between</MenuItem>
-          </Select>
-        </FormControl>
-
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <DatePicker
-              label="Date"
-              value={rule.response ? new Date(rule.response) : null}
-              onChange={(newValue) => {
-                updateRule(questionId, ruleIndex, { 
-                  response: newValue ? newValue.toISOString() : '' 
-                });
-              }}
-              renderInput={(params) => (
-                <TextField {...params} size="small" sx={{ width: 200 }} />
-              )}
-            />
-            {rule.condition === 'between' && (
-              <>
-                <Typography>and</Typography>
-                <DatePicker
-                  label="Date end"
-                  value={rule.value ? new Date(rule.value) : null}
-                  onChange={(newValue) => {
-                    updateRule(questionId, ruleIndex, { 
-                      value: newValue ? newValue.toISOString() : '' 
-                    });
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} size="small" sx={{ width: 200 }} />
-                  )}
-                />
-              </>
-            )}
-          </Stack>
-        </LocalizationProvider>
-      </>
-    );
-
-    // Composant pour les règles de type yes/no
-    const YesNoRuleFields = ({ rule, questionId, ruleIndex }: {
-      rule: typeof pointRules[string][number];
-      questionId: string;
-      ruleIndex: number;
-    }) => (
-      <>
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Expected answer</InputLabel>
-          <Select
-            value={rule.response}
-            onChange={(e) => updateRule(questionId, ruleIndex, { response: e.target.value })}
-            size="small"
-          >
-            <MenuItem value="yes">Yes</MenuItem>
-            <MenuItem value="no">No</MenuItem>
-          </Select>
-        </FormControl>
-      </>
-    );
-
-    // Ajouter la fonction de réinitialisation
-    const resetRules = useCallback(() => {
-      if (selectedSurvey) {
-        // Initialiser avec des règles vides
-        const initialRules: typeof pointRules = {};
-        selectedSurvey.questions.forEach(question => {
-          initialRules[question.id] = [{
-            response: '',
-            points: 0,
-            condition: 'equals'
-          }];
-        });
-        setPointRules(initialRules);
-        
-        // Supprimer les règles sauvegardées dans le localStorage
-        localStorage.removeItem(`pointRules_${selectedSurvey._id}`);
-        
-        // Réinitialiser les points des questions
-        setQuestionPoints({});
-      }
-    }, [selectedSurvey]);
-
-    return (
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{
-          sx: {
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }
-        }}
-      >
-        <DialogTitle 
-          component="div" // Changer le component en div au lieu de h2 par défaut
-          sx={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
-          <Typography 
-            variant="h6" 
-            component="h2" // Définir explicitement le component comme h2
-          >
-            Points Rules Configuration
-          </Typography>
-          <IconButton onClick={onClose} sx={{ color: 'white' }}>
-            <ClearIcon />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ mt: 2 }}>
-          {selectedSurvey?.questions.map((question, qIndex) => (
-            <Card 
-              key={question.id} 
-              sx={{ 
-                mb: 3,
-                border: '1px solid rgba(102, 126, 234, 0.2)',
-                '&:hover': {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  borderColor: 'rgba(102, 126, 234, 0.5)'
-                }
-              }}
-            >
-                  <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: '#2d3748' }}>
-                  Question {qIndex + 1}: {question.text}
-                    </Typography>
-                
-                <Typography variant="subtitle2" sx={{ color: '#4a5568', mb: 2 }}>
-                  Type: {question.type}
-                    </Typography>
-
-                <Box sx={{ pl: 2 }}>
-                  {pointRules[question.id]?.map((rule, ruleIndex) => (
-                    <Box 
-                      key={ruleIndex}
-                      sx={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 1,
-                        bgcolor: 'rgba(102, 126, 234, 0.05)'
-                      }}
-                    >
-                      {/* Champs spécifiques selon le type de question */}
-                      {question.type === 'text' && (
-                        <TextRuleFields 
-                          rule={rule} 
-                          questionId={question.id} 
-                          ruleIndex={ruleIndex} 
-                        />
-                      )}
-
-                      {question.type === 'rating' && (
-                        <RatingRuleFields 
-                          rule={rule} 
-                          questionId={question.id} 
-                          ruleIndex={ruleIndex} 
-                        />
-                      )}
-
-                      {question.type === 'slider' && (
-                        <SliderRuleFields 
-                          rule={rule} 
-                          questionId={question.id} 
-                          ruleIndex={ruleIndex} 
-                        />
-                      )}
-
-                      {question.type === 'date' && (
-                        <DateRuleFields 
-                          rule={rule} 
-                          questionId={question.id} 
-                          ruleIndex={ruleIndex} 
-                        />
-                      )}
-
-                      {question.type === 'yes-no' && (
-                        <YesNoRuleFields 
-                          rule={rule} 
-                          questionId={question.id} 
-                          ruleIndex={ruleIndex} 
-                        />
-                      )}
-
-                      {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
-                        <>
-                          <FormControl sx={{ minWidth: 200 }}>
-                            <InputLabel>Answer</InputLabel>
-                            <Select
-                              value={rule.response}
-                              onChange={(e) => updateRule(question.id, ruleIndex, { response: e.target.value })}
-                      size="small"
-                            >
-                              {question.options?.map((option, index) => (
-                                <MenuItem key={index} value={option}>{option}</MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </>
-                      )}
-
-                      {/* Points to assign */}
-                      <TextField
-                        type="number"
-                        label="Points"
-                        value={rule.points}
-                        onChange={(e) => updateRule(question.id, ruleIndex, { 
-                          points: Math.max(0, parseInt(e.target.value) || 0)
-                        })}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Chip 
-                                label="pts"
-                                size="small"
-                                sx={{ bgcolor: 'primary.main', color: 'white' }}
-                              />
-                            </InputAdornment>
-                          ),
-                          inputProps: { min: 0 }
-                        }}
-                        size="small"
-                        sx={{ width: 150 }}
-                      />
-
-                      <IconButton 
-                        onClick={() => removeRule(question.id, ruleIndex)}
-                        sx={{ color: 'error.main' }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  ))}
-
-                  <Button
-                    startIcon={<AddIcon />}
-                    onClick={() => addRule(question.id)}
-                    sx={{
-                      mt: 1,
-                  color: '#667eea',
-                  '&:hover': {
-                        bgcolor: 'rgba(102, 126, 234, 0.05)'
-                  }
-                }}
-              >
-                    Add Rule
-              </Button>
-                </Box>
-              </CardContent>
-                </Card>
-            ))}
-        </DialogContent>
-
-        <DialogActions sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          px: 3,
-          py: 2,
-          bgcolor: 'white',
-          borderTop: '1px solid rgba(0, 0, 0, 0.1)'
-        }}>
-          <Stack direction="row" spacing={2}>
-              <Button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to reset all rules? This action cannot be undone.')) {
-                    resetRules();
-                  }
-                }}
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                sx={{
-                  borderColor: 'error.main',
-                  color: 'error.main',
-                  '&:hover': {
-                    backgroundColor: 'error.light',
-                    borderColor: 'error.dark',
-                    color: 'error.contrastText'
-                  }
-                }}
-              >
-                Reset All
-              </Button>
-          </Stack>
-          
-          <Box>
-            <Button 
-              onClick={() => {
-                saveRules();
-                onClose();
-              }}
-              variant="contained"
-              startIcon={<SaveIcon />}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                }
-              }}
-            >
-              Save
-            </Button>
-          </Box>
-        </DialogActions>
-      </Dialog>
-    );
-  });
-
-  // Supprimer ou remplacer la fonction renderToolbar par une version plus simple
-  const renderToolbar = () => (
-    <Box sx={{ 
-      mb: 3, 
-      display: 'flex', 
-      gap: 2, 
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      p: 2,
-      bgcolor: 'white',
-      borderRadius: 1,
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-    }}>
-      {/* Vous pouvez ajouter d'autres éléments de la barre d'outils ici si nécessaire */}
-    </Box>
-  );
+      return newFilters;
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -3822,7 +3124,8 @@ const ResultsPage: React.FC = () => {
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',  // Ajout de cette ligne pour limiter la largeur
+          width: '100%',
+          maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
           mb: 4,
         }}>
           <Box sx={{
@@ -3854,23 +3157,85 @@ const ResultsPage: React.FC = () => {
           </Box>
 
           <Box sx={{ p: 3 }}>
+            {/* Demographic Filter section */}
             {selectedSurvey?.demographicEnabled && (
-            <FilterPanel />
+              <FilterPanel />
             )}
 
-            {/* Points Filter Section - Moved above questions */}
-            {!selectedSurvey?.demographicEnabled && (
-              <Box sx={{ mb: 4 }}>
-                <PointsFilterPanel 
-                  pointsFilter={pointsFilter}
-                  setPointsFilter={setPointsFilter}
-                  setShowPointsFilter={setShowPointsFilter}
-                  handlePointsFilterChange={handlePointsFilterChange}
-                  setShowPointsConfig={setShowPointsConfig}
-                  selectedSurvey={selectedSurvey}  // Ajouter cette prop
-                />
+            {/* Filter Answers Section */}
+            <Paper 
+              sx={{ 
+                p: 2, 
+                mb: 3, 
+                backgroundColor: 'background.paper',
+                borderRadius: 2
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                  Filter Answers
+                </Typography>
+                <Button
+                  startIcon={<FilterListIcon />}
+                  onClick={() => setConfigOpen(true)}
+                  variant="outlined"
+                  sx={{
+                    color: '#667eea',
+                    borderColor: '#667eea',
+                    '&:hover': {
+                      borderColor: '#764ba2',
+                      color: '#764ba2',
+                      backgroundColor: 'rgba(102, 126, 234, 0.05)'
+                    }
+                  }}
+                >
+                  Configure Filters
+                </Button>
               </Box>
-            )}
+
+              {/* Active Filters Display */}
+              <Box sx={{ mt: 2 }}>
+                {Object.entries(answerFilters).length > 0 ? (
+                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+                    {Object.entries(answerFilters).map(([questionId, filter]) => {
+                      const question = selectedSurvey?.questions.find(q => q.id === questionId);
+                      return filter.rules.map((rule, ruleIndex) => (
+                        <Chip
+                          key={`${questionId}-${ruleIndex}`}
+                          label={`${question?.text}: ${rule.operator} ${rule.value}`}
+                          onDelete={() => removeRule(questionId, ruleIndex)}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            '& .MuiChip-deleteIcon': {
+                              color: '#667eea',
+                              '&:hover': {
+                                color: '#764ba2'
+                              }
+                            }
+                          }}
+                        />
+                      ));
+                    })}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No filters applied
+                  </Typography>
+                )}
+              </Box>
+            </Paper>
+
+            {/* Answer Filter section - Ajout ici */}
+            <Box sx={{ mt: 3, mb: 3 }}>
+              <AnswerFilterPanel 
+                open={configOpen}
+                onClose={() => setConfigOpen(false)}
+                selectedSurvey={selectedSurvey}
+                answerFilters={answerFilters}
+                setAnswerFilters={setAnswerFilters}
+              />
+            </Box>
 
             {/* Questions section */}
             <Box sx={{ mb: 4 }}>
@@ -3884,16 +3249,6 @@ const ResultsPage: React.FC = () => {
                   backgroundClip: 'text',
                   color: 'transparent',
                   display: 'inline-block',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    left: 0,
-                    background: 'inherit',
-                    zIndex: -1
-                  }
                 }}
               >
                 Survey Questions
@@ -3918,14 +3273,14 @@ const ResultsPage: React.FC = () => {
                       alignItems: 'flex-start', 
                       mb: 2 
                     }}>
-              <Box>
+                      <Box>
                         <Typography variant="h6" sx={{ color: '#1a237e' }}>
                           Question {index + 1}: {question.text}
-                </Typography>
+                        </Typography>
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
                           Type: {question.type}
                         </Typography>
-                    </Box>
+                      </Box>
                       <Button
                         variant="contained"
                         startIcon={<BarChartIcon />}
@@ -3944,7 +3299,7 @@ const ResultsPage: React.FC = () => {
                       >
                         View Details ({stats.total} responses)
                       </Button>
-                </Box>
+                    </Box>
 
                     <Divider sx={{ my: 2 }} />
 
@@ -3954,7 +3309,7 @@ const ResultsPage: React.FC = () => {
                   </Paper>
                 );
               })}
-                </Box>
+            </Box>
 
             {/* Export Buttons */}
             <Box sx={{ 
@@ -3993,10 +3348,10 @@ const ResultsPage: React.FC = () => {
                   Export All to JSON
                 </Button>
               </Stack>
-                </Box>
+            </Box>
 
             {/* Demographic Stats Button and Content */}
-            {selectedSurvey?.demographicEnabled ? (
+            {selectedSurvey?.demographicEnabled && (
               <>
                 <Box sx={{ 
                   mt: 6, 
@@ -4007,45 +3362,17 @@ const ResultsPage: React.FC = () => {
                   alignItems: 'center'
                 }}>
                   {renderDemographicStats()}
-              </Box>
+                </Box>
               </>
-            ) : (
-              // Ajouter cette section pour les sondages non-démographiques
-              <Box sx={{ 
-                mt: 6, 
-                pt: 4, 
-                borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}>
-                {showPointsFilter && (
-                  <PointsFilterPanel 
-                    pointsFilter={pointsFilter}
-                    setPointsFilter={setPointsFilter}
-                    setShowPointsFilter={setShowPointsFilter}
-                    handlePointsFilterChange={handlePointsFilterChange}
-                    setShowPointsConfig={setShowPointsConfig}  // Ajout de cette prop
-                    selectedSurvey={selectedSurvey}  // Ajouter cette prop
-                  />
-                )}
-              </Box>
             )}
-
-            {renderToolbar()}
-            
-            <PointsConfigDialog 
-              open={showPointsConfig} 
-              onClose={() => setShowPointsConfig(false)} 
-            />
           </Box>
         </Paper>
 
-      <Dialog
-        open={dialogOpen}
-        onClose={handleClose}
-        maxWidth="md"
-        fullWidth
+        <Dialog
+          open={dialogOpen}
+          onClose={handleClose}
+          maxWidth="md"
+          fullWidth
           PaperProps={{
             sx: {
               borderRadius: 2,
@@ -4109,7 +3436,7 @@ const ResultsPage: React.FC = () => {
                   <InputAdornment position="end">
                     <IconButton size="small" onClick={clearFilters}>
                       <ClearIcon />
-              </IconButton>
+                    </IconButton>
                   </InputAdornment>
                 ),
               }}
@@ -4148,14 +3475,29 @@ const ResultsPage: React.FC = () => {
                   <DatePicker
                     label="Start Date"
                     value={dateRange.start}
-                    onChange={(date: Date | null) => setDateRange(prev => ({ ...prev, start: date }))}
-                    renderInput={(params) => <TextField {...params} />}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        start: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
                   />
                   <DatePicker
                     label="End Date"
                     value={dateRange.end}
-                    onChange={(date: Date | null) => setDateRange(prev => ({ ...prev, end: date }))}
-                    renderInput={(params) => <TextField {...params} />}
+                    onChange={(newValue: Date | null) => {
+                      setDateRange(prev => ({
+                        ...prev,
+                        end: newValue
+                      }));
+                    }}
+                    renderInput={(params: TextFieldProps) => (
+                      <TextField {...params} size="small" />
+                    )}
+                    minDate={dateRange.start || undefined}
                   />
                 </Stack>
               </LocalizationProvider>
@@ -4168,218 +3510,201 @@ const ResultsPage: React.FC = () => {
             </Typography>
           ) : (
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-              {filteredSurveys.map((survey) => (
-                <Paper
-                  key={survey._id}
-                  elevation={1}
-                  sx={{
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'all 0.3s ease-in-out',
-                    position: 'relative',
-                    '&:hover': {
-                      boxShadow: 3,
-                      zIndex: 1,
-                      '& .hover-content': {
-                        opacity: 1,
-                        visibility: 'visible',
-                        transform: 'translateY(0)',
-                      }
-                    }
-                  }}
-                >
-                  <Box sx={{ 
-                    p: 3,
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative'
-                  }}>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        mb: 2,
-                        color: 'primary.main',
-                        fontWeight: 500,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.3,
-                        height: '2.6em'
-                      }}
-                    >
-                      {survey.title}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{ 
-                        mb: 2,
-                        flex: 1,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.5,
-                        height: '4.5em'
-                      }}
-                    >
-                      {survey.description || 'No description available'}
-                    </Typography>
+              {filteredSurveys.map((survey) => {
+                const responses = surveyAnswers[survey._id] || [];
+                console.log(`Survey ${survey._id} has ${responses.length} responses`); // Debug log
 
-                    <Box
-                      className="hover-content"
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'white',
-                        p: 3,
-                        opacity: 0,
-                        visibility: 'hidden',
-                        transform: 'translateY(-10px)',
-                        transition: 'all 0.3s ease-in-out',
+                return (
+                  <Paper
+                    key={survey._id}
+                    elevation={1}
+                    sx={{
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease-in-out',
+                      position: 'relative',
+                      '&:hover': {
                         boxShadow: 3,
-                        borderRadius: 2,
-                        zIndex: 2,
-                        overflowY: 'auto',
-                        '&::-webkit-scrollbar': {
-                          width: '8px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                          background: '#f1f1f1',
-                          borderRadius: '4px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: '#888',
-                          borderRadius: '4px',
-                          '&:hover': {
-                            background: '#666',
-                          },
-                        },
-                      }}
-                    >
+                        transform: 'translateY(-2px)',
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
+                          mb: 2,
                           color: 'primary.main',
-                          fontWeight: 500,
-                          mb: 2 
+                          fontWeight: 500
                         }}
                       >
                         {survey.title}
                       </Typography>
+                      
+                      {/* Badges section */}
+                      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                        <Chip
+                          size="small"
+                          label={`${responses.length} Responses`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={`${survey.questions.length} Questions`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={survey.demographicEnabled ? "Demographic" : "No Demographic"}
+                          sx={{
+                            backgroundColor: survey.demographicEnabled ? 
+                              'rgba(72, 187, 120, 0.1)' : 'rgba(237, 100, 100, 0.1)',
+                            color: survey.demographicEnabled ? 
+                              'rgb(72, 187, 120)' : 'rgb(237, 100, 100)',
+                          }}
+                        />
+                      </Stack>
+
                       <Typography 
                         variant="body2" 
+                        color="text.secondary"
                         sx={{ 
-                          color: 'text.secondary',
                           mb: 2,
-                          lineHeight: 1.6 
+                          flex: 1
                         }}
                       >
                         {survey.description || 'No description available'}
                       </Typography>
-                    </Box>
 
-                    <Stack 
-                      direction="column" 
-                      spacing={1} 
-                      sx={{ 
-                        mt: 'auto',
-                        position: 'relative',
-                        zIndex: 1,
-                        minHeight: '60px'
-                      }}
-                    >
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
+                      <Box
+                        className="hover-content"
                         sx={{
-                          display: 'block',
-                          mb: 1,
-                          fontSize: '0.75rem'
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'white',
+                          p: 3,
+                          opacity: 0,
+                          visibility: 'hidden',
+                          transform: 'translateY(-10px)',
+                          transition: 'all 0.3s ease-in-out',
+                          boxShadow: 3,
+                          borderRadius: 2,
+                          zIndex: 2,
+                          overflowY: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#f1f1f1',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#888',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: '#666',
+                            },
+                          },
                         }}
                       >
-                        Created on {formatDate(survey.createdAt)}
-                      </Typography>
-                      
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            mb: 2 
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            mb: 2,
+                            lineHeight: 1.6 
+                          }}
+                        >
+                          {survey.description || 'No description available'}
+                        </Typography>
+                      </Box>
+
                       <Stack 
                         direction="row" 
-                        spacing={1} 
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          flexWrap: 'wrap',
-                          gap: '8px',
-                          '& .MuiChip-root': {
-                            margin: '0 !important'  // Supprime les marges automatiques
-                          }
+                        spacing={2} 
+                        alignItems="center"
+                        sx={{ 
+                          mt: 'auto',
+                          position: 'relative',
+                          zIndex: 1
                         }}
                       >
-                        <Chip
-                size="small"
-                          label={`${survey.questions?.length || 0} questions`}
-                sx={{
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                  color: '#667eea',
-                            height: '24px'
-                          }}
-                        />
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          noWrap
+                        >
+                          Created on {new Date(survey.createdAt).toLocaleDateString()}
+                        </Typography>
                         <Chip
                           size="small"
-                          label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                          label={`${(surveyAnswers[survey._id] || []).length} responses`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            height: '24px'
-                          }}
-                        />
-                        <Chip
-                          size="small"
-                          label={`${surveyAnswers[survey._id]?.length || 0} responses`}
-                          sx={{
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            color: '#667eea',
-                            height: '24px'
+                            fontSize: '0.75rem',
+                            flexShrink: 0
                           }}
                         />
                       </Stack>
-                    </Stack>
-                  </Box>
-                  
-                  <Box sx={{ 
-                    p: 2, 
-                    borderTop: 1, 
-                    borderColor: 'divider',
-                    backgroundColor: 'action.hover',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    position: 'relative',
-                    zIndex: 1
-                  }}>
-                    <Button
-                      onClick={() => handleViewResults(survey)}
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                          background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  }
-                }}
-              >
-                      View Results
-              </Button>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      p: 2, 
+                      borderTop: 1, 
+                      borderColor: 'divider',
+                      backgroundColor: 'action.hover',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
+                      <Button
+                        onClick={() => handleViewResults(survey)}
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        View Results
+                      </Button>
+                    </Box>
+                  </Paper>
+                );
+              })}
             </Box>
-                </Paper>
-              ))}
-          </Box>
           )}
         </Box>
       </Paper>
@@ -4421,233 +3746,5 @@ const calculateAge = (birthDate: Date): number => {
   
   return age;
 };
-
-// Ajouter cette fonction après les imports
-const formatDate = (date: string | Date) => {
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
-
-// Ajouter ce composant pour le filtrage par points
-const PointsFilterPanel = memo(({ 
-  pointsFilter, 
-  setPointsFilter, 
-  setShowPointsFilter,
-  handlePointsFilterChange,
-  setShowPointsConfig,
-  selectedSurvey
-}: PointsFilterPanelProps & { selectedSurvey: Survey }) => {
-  const [rulesCount, setRulesCount] = useState<number>(0);
-
-  useEffect(() => {
-    if (selectedSurvey) {
-      const savedRules = localStorage.getItem(`pointRules_${selectedSurvey._id}`);
-      if (savedRules) {
-        try {
-          const rules = JSON.parse(savedRules) as Record<string, any[]>;
-          // Correction du typage de la fonction reduce
-          const totalRules = Object.values(rules).reduce((total: number, questionRules: any[]) => {
-            return total + (Array.isArray(questionRules) ? questionRules.length : 0);
-          }, 0) as number; // Forcer le type number pour le résultat
-          setRulesCount(totalRules);
-        } catch (error) {
-          console.error('Error parsing rules:', error);
-          setRulesCount(0);
-        }
-      } else {
-        setRulesCount(0);
-      }
-    }
-  }, [selectedSurvey]);
-
-  // Ajouter la fonction handleChange
-  const handleChange = (event: Event, newValue: number | number[]) => {
-    if (Array.isArray(newValue)) {
-      const newRange: [number, number] = [newValue[0], newValue[1]];
-      setPointsFilter(newRange);
-      handlePointsFilterChange(newRange);
-    }
-  };
-
-  return (
-    <Paper elevation={0} sx={{ 
-      mb: 3, 
-      p: 3, 
-      border: '1px solid rgba(102, 126, 234, 0.2)',
-      borderRadius: 2,
-      bgcolor: 'white',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-    }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 3
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#2d3748',
-            fontWeight: 600 
-          }}
-        >
-          Filter by Points
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          
-          <Badge 
-            badgeContent={rulesCount}
-            color="error"
-            sx={{
-              '& .MuiBadge-badge': {
-                backgroundColor: '#ef4444',
-                color: 'white',
-                fontWeight: 'bold'
-              }
-            }}
-          >
-            <Button
-              variant="text"
-              startIcon={<SettingsIcon />}
-              onClick={() => setShowPointsConfig(true)}
-              sx={{
-                color: '#667eea',
-                '&:hover': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                }
-              }}
-            >
-              Configure Points
-            </Button>
-          </Badge>
-
-          <Button
-            variant="text"
-            onClick={() => {
-              setPointsFilter([0, 100]);
-              handlePointsFilterChange([0, 100]);
-            }}
-            sx={{
-              color: '#667eea',
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              }
-            }}
-          >
-            Reset filter
-          </Button>
-        </Stack>
-      </Box>
-
-      <Box sx={{ px: 2, py: 1 }}>
-            <Slider
-          value={pointsFilter}
-          onChange={handleChange}
-          valueLabelDisplay="on"
-              min={0}
-              max={100}
-          marks={[
-            { value: 0, label: '0' },
-            { value: 25, label: '25' },
-            { value: 50, label: '50' },
-            { value: 75, label: '75' },
-            { value: 100, label: '100' }
-          ]}
-              sx={{
-            '& .MuiSlider-rail': {
-              background: 'rgba(102, 126, 234, 0.2)',
-              height: 6
-            },
-            '& .MuiSlider-track': {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              height: 6,
-              border: 'none'
-            },
-                '& .MuiSlider-thumb': {
-              width: 20,
-              height: 20,
-                  backgroundColor: '#fff',
-              border: '2px solid #764ba2',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              '&:hover, &.Mui-focusVisible': {
-                boxShadow: '0 0 0 8px rgba(118, 75, 162, 0.16)',
-              },
-              '&.Mui-active': {
-                boxShadow: '0 0 0 12px rgba(118, 75, 162, 0.16)',
-              }
-            },
-            '& .MuiSlider-valueLabel': {
-              background: '#764ba2',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              '&:before': {
-                display: 'none'
-              }
-            },
-            '& .MuiSlider-mark': {
-              backgroundColor: '#667eea',
-              width: 2,
-              height: 2,
-              '&.MuiSlider-markActive': {
-                backgroundColor: '#fff',
-              }
-            },
-            '& .MuiSlider-markLabel': {
-              fontSize: '0.75rem',
-              color: 'text.secondary',
-              fontWeight: 500
-            }
-          }}
-        />
-
-        <Box sx={{ 
-          mt: 3,
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 2 
-        }}>
-          <TextField
-            label="Min Points"
-            type="number"
-            value={pointsFilter[0]}
-            onChange={(e) => {
-              const newValue = Math.max(0, Math.min(pointsFilter[1], Number(e.target.value)));
-              handlePointsFilterChange([newValue, pointsFilter[1]]);
-            }}
-            size="small"
-            InputProps={{
-              endAdornment: <InputAdornment position="end">pts</InputAdornment>,
-              inputProps: { min: 0, max: pointsFilter[1] }
-            }}
-            sx={{ width: 120 }}
-          />
-          <Typography color="text.secondary"></Typography>
-          <TextField
-            label="Max Points"
-            type="number"
-            value={pointsFilter[1]}
-            onChange={(e) => {
-              const newValue = Math.max(pointsFilter[0], Math.min(100, Number(e.target.value)));
-              handlePointsFilterChange([pointsFilter[0], newValue]);
-            }}
-            size="small"
-            InputProps={{
-              endAdornment: <InputAdornment position="end">pts</InputAdornment>,
-              inputProps: { min: pointsFilter[0], max: 100 }
-            }}
-            sx={{ width: 120 }}
-          />
-        </Box>
-      </Box>
-    </Paper>
-  );
-});
 
 export default ResultsPage;
