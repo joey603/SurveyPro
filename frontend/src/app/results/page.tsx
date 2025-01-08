@@ -635,6 +635,8 @@ const ResultsPage: React.FC = () => {
   // Dans le composant ResultsPage, ajouter l'état configOpen
   const [configOpen, setConfigOpen] = useState<boolean>(false);
 
+  // Ajouter un état pour stocker les réponses filtrées
+  const [filteredAnswers, setFilteredAnswers] = useState<Record<string, SurveyAnswer[]>>({});
   // Ajouter la fonction pour obtenir les opérateurs selon le type de question
   const getOperatorsByType = (questionType: string): string[] => {
     const commonOperators = ['equals', 'not'];
@@ -1425,18 +1427,62 @@ const ResultsPage: React.FC = () => {
     });
   }, [filters]);
 
-  // Modifier la fonction calculateQuestionStats pour inclure toutes les réponses
+  // Modifier la fonction calculateQuestionStats pour prendre en compte les filtres démographiques
   const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats => {
-    const allAnswers = surveyAnswers[surveyId] || [];
-    
-    // Ne pas filtrer les réponses basées sur les données démographiques
+    if (!surveyAnswers[surveyId]) return { total: 0, answers: {} };
+
+    // Obtenir toutes les réponses
+    let answers = surveyAnswers[surveyId];
+
+    // Appliquer les filtres démographiques
+    if (Object.keys(filters.demographic).length > 0) {
+      answers = answers.filter(answer => {
+        const demographic = answer.respondent?.demographic;
+        if (!demographic) return false;
+
+        // Filtre par genre
+        if (filters.demographic.gender && 
+            filters.demographic.gender !== "" && 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          return false;
+        }
+
+        // Filtre par niveau d'éducation
+        if (filters.demographic.educationLevel && 
+            filters.demographic.educationLevel !== "" && 
+            demographic.educationLevel !== filters.demographic.educationLevel) {
+          return false;
+        }
+
+        // Filtre par ville
+        if (filters.demographic.city && 
+            filters.demographic.city !== "" && 
+            demographic.city !== filters.demographic.city) {
+          return false;
+        }
+
+        // Filtre par âge
+        if (filters.demographic.age && 
+            (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+          if (demographic.dateOfBirth) {
+            const age = calculateAge(new Date(demographic.dateOfBirth));
+            if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      });
+    }
+
     const stats: QuestionStats = {
       total: 0,
       answers: {}
     };
 
-    allAnswers.forEach((answer: SurveyAnswer) => {
-      const questionAnswer = answer.answers.find((a: Answer) => a.questionId === questionId);
+    answers.forEach(answer => {
+      const questionAnswer = answer.answers.find(a => a.questionId === questionId);
       if (questionAnswer && questionAnswer.answer != null) {
         const value = questionAnswer.answer.toString();
         stats.answers[value] = (stats.answers[value] || 0) + 1;
@@ -1445,9 +1491,21 @@ const ResultsPage: React.FC = () => {
     });
 
     return stats;
-  }, [surveyAnswers]);
+  }, [surveyAnswers, filters.demographic]); // Ajouter filters.demographic aux dépendances
 
-  // Modifier la fonction handleViewQuestionDetails
+  // Modifier le rendu des questions pour forcer la mise à jour
+  const renderQuestionSummary = useCallback((question: Question, stats: QuestionStats) => {
+    return (
+      <Box>
+        {Object.entries(stats.answers).map(([answer, count], index) => (
+          <Typography key={`${question.id}-${answer}-${index}`}>
+            {answer}: {count} responses ({Math.round((count / stats.total) * 100)}%)
+          </Typography>
+        ))}
+      </Box>
+    );
+  }, []);
+
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
 
@@ -1472,18 +1530,6 @@ const ResultsPage: React.FC = () => {
       setSelectedQuestion(null);
     }, 300);
   }, []);
-
-  const renderQuestionSummary = (question: Question, stats: QuestionStats) => {
-    return (
-      <Box>
-        {Object.entries(stats.answers).map(([answer, count], index) => (
-          <Typography key={index}>
-            {answer}: {count} responses ({Math.round((count / stats.total) * 100)}%)
-          </Typography>
-        ))}
-      </Box>
-    );
-  };
 
   const getChartColors = (count: number) => {
     const baseColors = [
@@ -3095,6 +3141,173 @@ const ResultsPage: React.FC = () => {
       return newFilters;
     });
   }, []);
+
+  // Modifier l'effet qui gère les filtres avec des logs
+  useEffect(() => {
+    if (!selectedSurvey || !surveyAnswers[selectedSurvey._id]) {
+      console.log('🔍 Filtrage impossible:', {
+        selectedSurvey: !!selectedSurvey,
+        hasAnswers: selectedSurvey ? !!surveyAnswers[selectedSurvey._id] : false
+      });
+      return;
+    }
+
+    console.log('🔄 Début du filtrage:', {
+      totalAnswers: surveyAnswers[selectedSurvey._id].length,
+      activeFilters: filters.demographic,
+      answerFilters
+    });
+
+    const hasActiveFilters = Object.values(filters.demographic).some(value => 
+      value !== undefined && value !== "" && 
+      !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
+    );
+
+    const hasActiveAnswerFilters = Object.keys(answerFilters).length > 0;
+
+    console.log('📊 État des filtres:', {
+      hasActiveFilters,
+      hasActiveAnswerFilters
+    });
+
+    // Éviter les calculs inutiles si aucun filtre n'est actif
+    if (!hasActiveFilters && !hasActiveAnswerFilters) {
+      console.log('🔄 Réinitialisation des filtres');
+      if (filteredStats !== null || filteredByAnswers) {
+        setFilteredStats(null);
+        setFilteredByAnswers(false);
+      }
+      return;
+    }
+
+    const originalAnswers = surveyAnswers[selectedSurvey._id];
+    console.log('📝 Réponses originales:', originalAnswers.length);
+
+    const filteredAnswers = originalAnswers.filter(answer => {
+      const demographic = answer.respondent?.demographic;
+      
+      // Log pour chaque réponse filtrée
+      console.log('🔍 Vérification réponse:', {
+        answerId: answer._id,
+        hasDemographic: !!demographic,
+        demographicData: demographic
+      });
+
+      if (hasActiveFilters && !demographic) {
+        console.log('❌ Réponse rejetée: pas de données démographiques');
+        return false;
+      }
+
+      // Vérification des filtres démographiques
+      if (hasActiveFilters && demographic) {
+        if (filters.demographic.gender && 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          console.log('❌ Réponse rejetée: genre ne correspond pas', {
+            attendu: filters.demographic.gender,
+            reçu: demographic.gender
+          });
+          return false;
+        }
+
+        if (filters.demographic.educationLevel && 
+            demographic.educationLevel !== filters.demographic.educationLevel) {
+          console.log('❌ Réponse rejetée: niveau d\'éducation ne correspond pas', {
+            attendu: filters.demographic.educationLevel,
+            reçu: demographic.educationLevel
+          });
+          return false;
+        }
+
+        if (filters.demographic.city && 
+            demographic.city !== filters.demographic.city) {
+          console.log('❌ Réponse rejetée: ville ne correspond pas', {
+            attendu: filters.demographic.city,
+            reçu: demographic.city
+          });
+          return false;
+        }
+
+        if (filters.demographic.age && demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            console.log('❌ Réponse rejetée: âge hors limites', {
+              age,
+              limites: filters.demographic.age
+            });
+            return false;
+          }
+        }
+      }
+
+      // Vérification des filtres de réponses
+      if (hasActiveAnswerFilters) {
+        const passesAnswerFilters = Object.entries(answerFilters).every(([questionId, filter]) => {
+          const answerValue = answer.answers.find(a => a.questionId === questionId)?.answer;
+          console.log('🔍 Vérification réponse à la question:', {
+            questionId,
+            answerValue,
+            filter
+          });
+
+          return filter.rules.every(rule => {
+            const result = evaluateRule(answerValue, rule);
+            console.log('📋 Évaluation règle:', {
+              rule,
+              answerValue,
+              result
+            });
+            return result;
+          });
+        });
+
+        if (!passesAnswerFilters) {
+          console.log('❌ Réponse rejetée: ne correspond pas aux filtres de réponses');
+          return false;
+        }
+      }
+
+      console.log('✅ Réponse acceptée');
+      return true;
+    });
+
+    console.log('📊 Résultats du filtrage:', {
+      totalInitial: originalAnswers.length,
+      totalFiltré: filteredAnswers.length,
+      réponsesFiltrees: filteredAnswers
+    });
+
+    const newStats = calculateDemographicStats(selectedSurvey._id, filteredAnswers);
+    console.log('📈 Nouvelles statistiques calculées:', newStats);
+
+    setFilteredStats(newStats);
+    setFilteredByAnswers(hasActiveAnswerFilters);
+
+  }, [selectedSurvey, surveyAnswers, filters.demographic, answerFilters, calculateDemographicStats]);
+
+  // Ajouter une fonction helper pour évaluer les règles
+  const evaluateRule = (value: any, rule: FilterRule) => {
+    switch (rule.operator) {
+      case 'equals':
+        return value === rule.value;
+      case 'not':
+        return value !== rule.value;
+      case 'contains':
+        return String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+      case 'not_contains':
+        return !String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+      case 'greater':
+        return Number(value) > Number(rule.value);
+      case 'less':
+        return Number(value) < Number(rule.value);
+      case 'between':
+        if (Array.isArray(rule.value)) {
+          return Number(value) >= rule.value[0] && Number(value) <= rule.value[1];
+        }
+        return false;
+      default:
+        return true;
+    }
+  };
 
   if (loading) {
     return (
