@@ -326,8 +326,11 @@ const SurveyCreationPage: React.FC = () => {
     setLocalQuestions(getValues('questions'));
   }, [watch('questions')]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const onSubmit = async (data: FormData) => {
-    setIsSubmitted(true); // Marquer le formulaire comme soumis
+    setIsSubmitted(true);
+    setIsSubmitting(true);
     try {
       const errors: { 
         title?: boolean;
@@ -432,6 +435,8 @@ const SurveyCreationPage: React.FC = () => {
         severity: 'error',
         open: true
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1214,15 +1219,24 @@ const SurveyCreationPage: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                startIcon={<CheckCircleIcon />}
+                disabled={isSubmitting}
+                startIcon={isSubmitting ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <CheckCircleIcon />
+                )}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                   },
+                  '&.Mui-disabled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    opacity: 0.7,
+                  }
                 }}
               >
-                Create Survey
+                {isSubmitting ? 'Creating...' : 'Create Survey'}
               </Button>
             </Box>
           </form>
