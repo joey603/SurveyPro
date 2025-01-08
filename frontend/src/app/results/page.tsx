@@ -33,6 +33,8 @@ import {
   Chip,
   TextField, // Ajout de TextField ici
   Rating,
+  Grow,
+  LinearProgress,
 } from '@mui/material';
 import { Tooltip as MuiTooltip } from '@mui/material'; // Renommer l'import de Tooltip
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -1396,36 +1398,36 @@ const ResultsPage: React.FC = () => {
   };
 
   // Ajouter la fonction de filtrage
-  const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
-    // Si tous les filtres sont vides, retourner toutes les réponses
+  const filterAnswers = useCallback((answers: SurveyAnswer[]) => {
+    if (!answers.length) return answers;
+
     const hasActiveFilters = Object.values(filters.demographic).some(value => 
       value !== undefined && value !== "" && 
       !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
     );
 
-    if (!hasActiveFilters) {
-      return answers;
-    }
+    if (!hasActiveFilters) return answers;
 
     return answers.filter(answer => {
-      // Si pas de données démographiques, inclure la réponse
-      if (!answer.respondent?.demographic) {
-        return true;
+      const demographic = answer.respondent?.demographic;
+      if (!demographic) return false;
+
+      if (filters.demographic.gender && filters.demographic.gender !== "") {
+        if (demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          return false;
+        }
       }
 
-      const demographic = answer.respondent.demographic;
-
-      // Appliquer les filtres seulement si les données démographiques existent
-      if (filters.demographic.educationLevel && 
-          filters.demographic.educationLevel !== "" && 
-          demographic.educationLevel !== filters.demographic.educationLevel) {
-        return false;
+      if (filters.demographic.educationLevel && filters.demographic.educationLevel !== "") {
+        if (demographic.educationLevel !== filters.demographic.educationLevel) {
+          return false;
+        }
       }
 
-      if (filters.demographic.city && 
-          filters.demographic.city !== "" && 
-          demographic.city !== filters.demographic.city) {
-        return false;
+      if (filters.demographic.city && filters.demographic.city !== "") {
+        if (demographic.city !== filters.demographic.city) {
+          return false;
+        }
       }
 
       if (filters.demographic.age && 
@@ -1440,13 +1442,13 @@ const ResultsPage: React.FC = () => {
 
       return true;
     });
-  }, [filters]);
+  }, [filters.demographic]);
 
-  // Modifier la fonction calculateQuestionStats pour prendre en compte les filtres démographiques
-  const calculateQuestionStats = useCallback((surveyId: string, questionId: string, filteredAnswers?: SurveyAnswer[]): QuestionStats => {
-    // Utiliser les réponses filtrées si fournies, sinon utiliser toutes les réponses
-    const answers = filteredAnswers || surveyAnswers[surveyId] || [];
-
+  // Modifier la fonction calculateQuestionStats pour accepter les réponses filtrées
+  const calculateQuestionStats = useCallback((surveyId: string, questionId: string, filteredAnswers?: SurveyAnswer[]) => {
+    const allAnswers = surveyAnswers[surveyId] || [];
+    const answers = filteredAnswers || filterAnswers(allAnswers);
+    
     const stats: QuestionStats = {
       total: 0,
       answers: {}
@@ -1454,7 +1456,7 @@ const ResultsPage: React.FC = () => {
 
     answers.forEach(answer => {
       const questionAnswer = answer.answers.find(a => a.questionId === questionId);
-      if (questionAnswer && questionAnswer.answer != null) {
+      if (questionAnswer?.answer) {
         const value = questionAnswer.answer.toString();
         stats.answers[value] = (stats.answers[value] || 0) + 1;
         stats.total++;
@@ -1462,26 +1464,72 @@ const ResultsPage: React.FC = () => {
     });
 
     return stats;
-  }, [surveyAnswers]);
+  }, [surveyAnswers, filterAnswers]);
 
-  // Modifier le rendu des questions pour utiliser les réponses filtrées
+  // Modifier la fonction renderQuestionSummary pour utiliser les réponses filtrées
   const renderQuestionSummary = useCallback((question: Question) => {
     if (!selectedSurvey) return null;
 
-    // Obtenir les réponses filtrées
-    const filteredAnswers = filterAnswers(surveyAnswers[selectedSurvey._id] || []);
-    const stats = calculateQuestionStats(selectedSurvey._id, question.id, filteredAnswers);
+    // Utiliser les réponses filtrées
+    const allAnswers = surveyAnswers[selectedSurvey._id] || [];
+    const filteredAnswers = filterAnswers(allAnswers);
+    
+    // Calculer les statistiques avec les réponses filtrées
+    const questionAnswers = filteredAnswers.map(answer => {
+      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
+      return questionAnswer?.answer?.toString() || 'No response';
+    });
+
+    // Compter les occurrences de chaque réponse
+    const answerCounts = questionAnswers.reduce((acc: { [key: string]: number }, answer) => {
+      acc[answer] = (acc[answer] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Calculer le total et les pourcentages
+    const total = questionAnswers.length;
+    const percentages = Object.entries(answerCounts).map(([answer, count]) => ({
+      answer,
+      count,
+      percentage: ((count / total) * 100).toFixed(1)
+    }));
 
     return (
-      <Box>
-        {Object.entries(stats.answers).map(([answer, count], index) => (
-          <Typography key={`${question.id}-${answer}-${index}`}>
-            {answer}: {count} responses ({Math.round((count / stats.total) * 100)}%)
-          </Typography>
-        ))}
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+          Responses: {total} {filteredAnswers.length !== allAnswers.length && `(filtered from ${allAnswers.length})`}
+        </Typography>
+        
+        <Box sx={{ mt: 2 }}>
+          {percentages.map(({ answer, count, percentage }) => (
+            <Box key={answer} sx={{ mb: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2">
+                  {answer}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {count} ({percentage}%)
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={parseFloat(percentage)}
+                sx={{
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: 4,
+                  }
+                }}
+              />
+            </Box>
+          ))}
+        </Box>
       </Box>
     );
-  }, [selectedSurvey, surveyAnswers, filterAnswers, calculateQuestionStats]);
+  }, [selectedSurvey, surveyAnswers, filterAnswers]);
 
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
@@ -2322,7 +2370,7 @@ const ResultsPage: React.FC = () => {
     const question = selectedSurvey.questions.find(q => q.id === questionId);
     if (!question) return null;
 
-    // Obtenir les réponses filtrées
+    // Utiliser les réponses filtrées
     const filteredAnswers = filterAnswers(selectedQuestion.answers);
     const stats = calculateQuestionStats(selectedSurvey._id, questionId, filteredAnswers);
 
@@ -2357,7 +2405,7 @@ const ResultsPage: React.FC = () => {
                     Total Responses
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {selectedQuestion.answers.length}
+                    {stats.total}
                   </Typography>
                 </Box>
 
@@ -2374,7 +2422,7 @@ const ResultsPage: React.FC = () => {
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {(() => {
                       const answerCounts: { [key: string]: number } = {};
-                      selectedQuestion.answers.forEach(answer => {
+                      filteredAnswers.forEach(answer => {
                         const questionAnswer = answer.answers.find(
                           a => a.questionId === selectedQuestion.questionId
                         );
@@ -2442,7 +2490,7 @@ const ResultsPage: React.FC = () => {
         >
           {currentView === 'list' ? (
             <List sx={{ p: 0 }}>
-              {selectedQuestion.answers.map((answer, index) => {
+              {filteredAnswers.map((answer, index) => {
                 const questionAnswer = answer.answers.find(
                   a => a.questionId === selectedQuestion.questionId
                 );
@@ -2581,7 +2629,7 @@ const ResultsPage: React.FC = () => {
           ) : (
             <Box sx={{ height: '500px', width: '100%', p: 3 }}>
               <ChartView 
-                data={getQuestionData(selectedQuestion.questionId, selectedQuestion.answers)} // Utiliser la nouvelle fonction
+                data={getQuestionData(selectedQuestion.questionId, filteredAnswers)}
                 question={question}
               />
             </Box>
@@ -2660,7 +2708,7 @@ const ResultsPage: React.FC = () => {
         </DialogActions>
       </>
     );
-  }, [selectedSurvey, selectedQuestion, currentView, calculateQuestionStats]); // Ajouter calculateQuestionStats aux dépendances
+  }, [selectedSurvey, selectedQuestion, filterAnswers, calculateQuestionStats, currentView]);
 
   // Ajout d'un useEffect pour surveiller les changements de vue
   useEffect(() => {
@@ -3280,6 +3328,9 @@ const ResultsPage: React.FC = () => {
     }
   };
 
+  // Ajouter cet état au début du composant
+  const [updateTrigger, setUpdateTrigger] = useState(0);
+
   if (loading) {
     return (
       <Box sx={{
@@ -3545,7 +3596,20 @@ const ResultsPage: React.FC = () => {
                   flexDirection: 'column',
                   alignItems: 'center'
                 }}>
-                  {renderDemographicStats()}
+                  <Grow 
+                    in={true} 
+                    timeout={300}
+                    addEndListener={(node, done) => {
+                      // Utiliser requestAnimationFrame pour éviter les mises à jour pendant le rendu
+                      requestAnimationFrame(() => {
+                        node.addEventListener('transitionend', done, false);
+                      });
+                    }}
+                  >
+                    <Box> {/* Wrapper Box pour satisfaire le type ReactElement */}
+                      {renderDemographicStats()}
+                    </Box>
+                  </Grow>
                 </Box>
               </>
             )}
