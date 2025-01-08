@@ -199,6 +199,21 @@ interface ChartContainerProps {
 // Modifier le type ChartRefType pour utiliser les types valides de Chart.js
 type ChartRefType = Chart<keyof ChartTypeRegistry>;
 
+// Ajouter cette fonction avant le composant ChartView
+const getQuestionData = (questionId: string, answers: SurveyAnswer[]): { [key: string]: number } => {
+  const data: { [key: string]: number } = {};
+  
+  answers.forEach(answer => {
+    const questionAnswer = answer.answers.find(a => a.questionId === questionId);
+    if (questionAnswer && questionAnswer.answer != null) {
+      const value = questionAnswer.answer.toString();
+      data[value] = (data[value] || 0) + 1;
+    }
+  });
+
+  return data;
+};
+
 // Créer un nouveau composant pour le graphique
 const ChartView = memo(({ data, question }: { 
   data: any; 
@@ -806,7 +821,7 @@ const ResultsPage: React.FC = () => {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          <Typography variant="h6">Configure Answer Filters</Typography>
+          Configure Answer Filters
         </DialogTitle>
         
         <DialogContent>
@@ -1428,53 +1443,9 @@ const ResultsPage: React.FC = () => {
   }, [filters]);
 
   // Modifier la fonction calculateQuestionStats pour prendre en compte les filtres démographiques
-  const calculateQuestionStats = useCallback((surveyId: string, questionId: string): QuestionStats => {
-    if (!surveyAnswers[surveyId]) return { total: 0, answers: {} };
-
-    // Obtenir toutes les réponses
-    let answers = surveyAnswers[surveyId];
-
-    // Appliquer les filtres démographiques
-    if (Object.keys(filters.demographic).length > 0) {
-      answers = answers.filter(answer => {
-        const demographic = answer.respondent?.demographic;
-        if (!demographic) return false;
-
-        // Filtre par genre
-        if (filters.demographic.gender && 
-            filters.demographic.gender !== "" && 
-            demographic.gender !== filters.demographic.gender.toLowerCase()) {
-          return false;
-        }
-
-        // Filtre par niveau d'éducation
-        if (filters.demographic.educationLevel && 
-            filters.demographic.educationLevel !== "" && 
-            demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        // Filtre par ville
-        if (filters.demographic.city && 
-            filters.demographic.city !== "" && 
-            demographic.city !== filters.demographic.city) {
-          return false;
-        }
-
-        // Filtre par âge
-        if (filters.demographic.age && 
-            (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
-          if (demographic.dateOfBirth) {
-            const age = calculateAge(new Date(demographic.dateOfBirth));
-            if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-              return false;
-            }
-          }
-        }
-
-        return true;
-      });
-    }
+  const calculateQuestionStats = useCallback((surveyId: string, questionId: string, filteredAnswers?: SurveyAnswer[]): QuestionStats => {
+    // Utiliser les réponses filtrées si fournies, sinon utiliser toutes les réponses
+    const answers = filteredAnswers || surveyAnswers[surveyId] || [];
 
     const stats: QuestionStats = {
       total: 0,
@@ -1491,10 +1462,16 @@ const ResultsPage: React.FC = () => {
     });
 
     return stats;
-  }, [surveyAnswers, filters.demographic]); // Ajouter filters.demographic aux dépendances
+  }, [surveyAnswers]);
 
-  // Modifier le rendu des questions pour forcer la mise à jour
-  const renderQuestionSummary = useCallback((question: Question, stats: QuestionStats) => {
+  // Modifier le rendu des questions pour utiliser les réponses filtrées
+  const renderQuestionSummary = useCallback((question: Question) => {
+    if (!selectedSurvey) return null;
+
+    // Obtenir les réponses filtrées
+    const filteredAnswers = filterAnswers(surveyAnswers[selectedSurvey._id] || []);
+    const stats = calculateQuestionStats(selectedSurvey._id, question.id, filteredAnswers);
+
     return (
       <Box>
         {Object.entries(stats.answers).map(([answer, count], index) => (
@@ -1504,7 +1481,7 @@ const ResultsPage: React.FC = () => {
         ))}
       </Box>
     );
-  }, []);
+  }, [selectedSurvey, surveyAnswers, filterAnswers, calculateQuestionStats]);
 
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
@@ -2340,20 +2317,14 @@ const ResultsPage: React.FC = () => {
   };
 
   const renderQuestionDetails = useCallback((questionId: string) => {
-    if (!selectedSurvey || !selectedQuestion) {
-      return null;
-    }
+    if (!selectedSurvey || !selectedQuestion) return null;
 
     const question = selectedSurvey.questions.find(q => q.id === questionId);
-    if (!question) {
-      return null;
-    }
+    if (!question) return null;
 
-    // Modifier cette partie pour utiliser calculateQuestionStats directement
-    const getQuestionData = () => {
-      const stats = calculateQuestionStats(selectedSurvey._id, questionId);
-      return stats.answers;
-    };
+    // Obtenir les réponses filtrées
+    const filteredAnswers = filterAnswers(selectedQuestion.answers);
+    const stats = calculateQuestionStats(selectedSurvey._id, questionId, filteredAnswers);
 
     return (
       <>
@@ -2610,7 +2581,7 @@ const ResultsPage: React.FC = () => {
           ) : (
             <Box sx={{ height: '500px', width: '100%', p: 3 }}>
               <ChartView 
-                data={getQuestionData()} // Utiliser la nouvelle fonction
+                data={getQuestionData(selectedQuestion.questionId, selectedQuestion.answers)} // Utiliser la nouvelle fonction
                 question={question}
               />
             </Box>
@@ -3517,7 +3488,7 @@ const ResultsPage: React.FC = () => {
                     <Divider sx={{ my: 2 }} />
 
                     <Box sx={{ mt: 2 }}>
-                      {renderQuestionSummary(question, stats)}
+                      {renderQuestionSummary(question)}
                     </Box>
                   </Paper>
                 );
