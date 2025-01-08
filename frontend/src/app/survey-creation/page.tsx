@@ -57,7 +57,7 @@ type FormData = {
 
 const isValidMediaURL = (url: string): boolean => {
   try {
-    new URL(url); // Vérifie simplement si c'est une URL valide
+    new URL(url);
     return true;  // Accepte toutes les URLs valides
   } catch {
     return false; // Retourne false uniquement si ce n'est pas une URL valide
@@ -544,44 +544,25 @@ const SurveyCreationPage: React.FC = () => {
 
         {question.media && (
           <Box sx={{ mb: 2, textAlign: 'center' }}>
-            <Box>
-              {(() => {
-                console.log('Rendering media:', question.media);
-                return null; // Renvoyez un élément valide, ici `null` pour ne rien afficher
-              })()}
-            </Box>
-
-            {/* Vérifiez si le média est une vidéo ou une image */}
-            {question.media.startsWith('blob:') ||
-            question.media.endsWith('.mp4') ||
-            question.media.endsWith('.mov') ? (
-              <ReactPlayer
-                url={question.media}
-                controls
-                width="50%"
-                height="200px"
-                style={{
-                  margin: '0 auto',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                }}
-                onError={(e) => console.error('ReactPlayer error:', e)}
-              />
-            ) : question.media.match(/\.(jpg|jpeg|png)$/) ? (
-              <img
-                src={question.media}
-                alt="Uploaded Media"
-                style={{
-                  maxWidth: '50%',
-                  maxHeight: '200px',
-                  display: 'block',
-                  margin: '0 auto',
-                }}
-                onError={(e) => console.error('Image rendering error:', e)}
-              />
-            ) : (
-              <Typography color="error">Invalid media format</Typography>
-            )}
+            <ReactPlayer
+              url={question.media}
+              controls
+              width="50%"
+              height="200px"
+              style={{
+                margin: '0 auto',
+                borderRadius: '8px',
+                overflow: 'hidden',
+              }}
+              onError={(e) => {
+                console.error('ReactPlayer error:', e);
+                setNotification({
+                  message: 'Error loading media in preview. Please check the URL.',
+                  severity: 'error',
+                  open: true
+                });
+              }}
+            />
           </Box>
         )}
 
@@ -1088,11 +1069,13 @@ const SurveyCreationPage: React.FC = () => {
                         value={field.mediaUrl || ''}
                         onChange={(e) => {
                           const url = e.target.value;
-                          update(index, { 
-                            ...field, 
-                            mediaUrl: url,
-                            media: url
-                          });
+                          if (url === '' || isValidMediaURL(url)) {
+                            update(index, { 
+                              ...field, 
+                              mediaUrl: url,
+                              media: url
+                            });
+                          }
                         }}
                         placeholder="Enter media URL"
                         size="small"
@@ -1127,45 +1110,26 @@ const SurveyCreationPage: React.FC = () => {
                         }}
                       />
                     </Box>
-                    {field.media && (
+                    {(field.media || field.mediaUrl) && (
                       <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                        {isUploading[field.id] === true ? (
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              height: '100px',
-                              width: '100%',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                              borderRadius: '8px',
-                            }}
-                          >
-                            <CircularProgress size={40} sx={{ color: '#667eea' }} />
-                          </Box>
+                        {isUploading[field.id] ? (
+                          <CircularProgress size={40} sx={{ color: '#667eea' }} />
                         ) : (
-                          field.media.match(/\.(mp4|mov)$/i) ? (
-                            <ReactPlayer
-                              url={field.media}
-                              controls
-                              width="100%"
-                              height="auto"
-                              style={{ borderRadius: '8px' }}
-                            />
-                          ) : (
-                            <img
-                              src={field.media}
-                              alt="Question media"
-                              style={{
-                                maxWidth: '100%',
-                                height: 'auto',
-                                borderRadius: '8px',
-                              }}
-                              onError={(e) => {
-                                console.error('Error loading media:', e);
-                              }}
-                            />
-                          )
+                          <ReactPlayer
+                            url={field.media}
+                            controls
+                            width="100%"
+                            height="auto"
+                            style={{ borderRadius: '8px' }}
+                            onError={(e) => {
+                              console.error('Error loading media:', e);
+                              setNotification({
+                                message: 'Error loading media. Please check the URL.',
+                                severity: 'error',
+                                open: true
+                              });
+                            }}
+                          />
                         )}
                       </Box>
                     )}
