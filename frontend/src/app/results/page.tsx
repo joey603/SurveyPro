@@ -1401,48 +1401,66 @@ const ResultsPage: React.FC = () => {
   const filterAnswers = useCallback((answers: SurveyAnswer[]) => {
     if (!answers.length) return answers;
 
+    // Vérifier si des filtres sont actifs
     const hasActiveFilters = Object.values(filters.demographic).some(value => 
       value !== undefined && value !== "" && 
       !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
     );
+    const hasActiveAnswerFilters = Object.keys(answerFilters).length > 0;
 
-    if (!hasActiveFilters) return answers;
+    if (!hasActiveFilters && !hasActiveAnswerFilters) return answers;
 
     return answers.filter(answer => {
-      const demographic = answer.respondent?.demographic;
-      if (!demographic) return false;
+      // Appliquer les filtres démographiques
+      if (hasActiveFilters) {
+        const demographic = answer.respondent?.demographic;
+        if (!demographic) return false;
 
-      if (filters.demographic.gender && filters.demographic.gender !== "") {
-        if (demographic.gender !== filters.demographic.gender.toLowerCase()) {
-          return false;
-        }
-      }
-
-      if (filters.demographic.educationLevel && filters.demographic.educationLevel !== "") {
-        if (demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-      }
-
-      if (filters.demographic.city && filters.demographic.city !== "") {
-        if (demographic.city !== filters.demographic.city) {
-          return false;
-        }
-      }
-
-      if (filters.demographic.age && 
-          (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
-        if (demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+        if (filters.demographic.gender && filters.demographic.gender !== "") {
+          if (demographic.gender !== filters.demographic.gender.toLowerCase()) {
             return false;
+          }
+        }
+
+        if (filters.demographic.educationLevel && filters.demographic.educationLevel !== "") {
+          if (demographic.educationLevel !== filters.demographic.educationLevel) {
+            return false;
+          }
+        }
+
+        if (filters.demographic.city && filters.demographic.city !== "") {
+          if (demographic.city !== filters.demographic.city) {
+            return false;
+          }
+        }
+
+        if (filters.demographic.age && 
+            (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100)) {
+          if (demographic.dateOfBirth) {
+            const age = calculateAge(new Date(demographic.dateOfBirth));
+            if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+              return false;
+            }
           }
         }
       }
 
+      // Appliquer les filtres de réponses
+      if (hasActiveAnswerFilters) {
+        return Object.entries(answerFilters).every(([questionId, filter]) => {
+          const questionAnswer = answer.answers.find(a => a.questionId === questionId);
+          if (!questionAnswer) return false;
+
+          return filter.rules.every(rule => {
+            const answerValue = questionAnswer.answer;
+            return evaluateRule(answerValue, rule);
+          });
+        });
+      }
+
       return true;
     });
-  }, [filters.demographic]);
+  }, [filters.demographic, answerFilters]);
 
   // Modifier la fonction calculateQuestionStats pour accepter les réponses filtrées
   const calculateQuestionStats = useCallback((surveyId: string, questionId: string, filteredAnswers?: SurveyAnswer[]) => {
@@ -1470,50 +1488,55 @@ const ResultsPage: React.FC = () => {
   const renderQuestionSummary = useCallback((question: Question) => {
     if (!selectedSurvey) return null;
 
-    // Utiliser les réponses filtrées
     const allAnswers = surveyAnswers[selectedSurvey._id] || [];
     const filteredAnswers = filterAnswers(allAnswers);
     
     // Calculer les statistiques avec les réponses filtrées
-    const questionAnswers = filteredAnswers.map(answer => {
-      const questionAnswer = answer.answers.find(a => a.questionId === question.id);
-      return questionAnswer?.answer?.toString() || 'No response';
-    });
+    const stats = calculateQuestionStats(selectedSurvey._id, question.id, filteredAnswers);
 
-    // Compter les occurrences de chaque réponse
-    const answerCounts = questionAnswers.reduce((acc: { [key: string]: number }, answer) => {
-      acc[answer] = (acc[answer] || 0) + 1;
-      return acc;
-    }, {});
-
-    // Calculer le total et les pourcentages
-    const total = questionAnswers.length;
-    const percentages = Object.entries(answerCounts).map(([answer, count]) => ({
-      answer,
-      count,
-      percentage: ((count / total) * 100).toFixed(1)
-    }));
+    // Ajouter un indicateur visuel pour montrer si des filtres sont actifs
+    const hasActiveFilters = Object.keys(answerFilters).length > 0 || 
+      Object.values(filters.demographic).some(value => 
+        value !== undefined && value !== "" && 
+        !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
+      );
 
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Responses: {total} {filteredAnswers.length !== allAnswers.length && `(filtered from ${allAnswers.length})`}
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Responses: {stats.total} 
+            {hasActiveFilters && filteredAnswers.length !== allAnswers.length && 
+              ` (filtered from ${allAnswers.length})`
+            }
+          </Typography>
+          {hasActiveFilters && (
+            <Chip
+              size="small"
+              label="Filtered"
+              color="primary"
+              sx={{
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+              }}
+            />
+          )}
+        </Box>
         
         <Box sx={{ mt: 2 }}>
-          {percentages.map(({ answer, count, percentage }) => (
+          {Object.entries(stats.answers).map(([answer, count]) => (
             <Box key={answer} sx={{ mb: 1.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2">
                   {answer}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {count} ({percentage}%)
+                  {count} ({Math.round((count / stats.total) * 100)}%)
                 </Typography>
               </Box>
               <LinearProgress
                 variant="determinate"
-                value={parseFloat(percentage)}
+                value={Math.round((count / stats.total) * 100)}
                 sx={{
                   height: 8,
                   borderRadius: 4,
@@ -1529,7 +1552,7 @@ const ResultsPage: React.FC = () => {
         </Box>
       </Box>
     );
-  }, [selectedSurvey, surveyAnswers, filterAnswers]);
+  }, [selectedSurvey, surveyAnswers, filterAnswers, filters.demographic, answerFilters]);
 
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
