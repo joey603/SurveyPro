@@ -1,35 +1,43 @@
 const jwt = require("jsonwebtoken");
 
-const authMiddleware = (req, res, next) => {
-  console.log('authMiddleware appelé');
-  console.log('Headers reçus:', req.headers);
-  
+const authMiddleware = async (req, res, next) => {
   try {
+    // Log pour le débogage
+    console.log('Auth Headers:', req.headers);
+    
     const authHeader = req.headers.authorization;
-    console.log('Authorization header:', authHeader);
+    if (!authHeader) {
+      console.log('No Authorization header found');
+      return res.status(401).json({ message: 'No token provided' });
+    }
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Pas de token Bearer trouvé');
-      return res.status(401).json({ message: 'Token d\'authentification manquant' });
+    // Vérifier le format du header
+    if (!authHeader.startsWith('Bearer ')) {
+      console.log('Invalid Authorization header format');
+      return res.status(401).json({ message: 'Invalid token format' });
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('Token extrait:', token ? 'Token présent' : 'Pas de token');
+    if (!token) {
+      console.log('No token found after Bearer');
+      return res.status(401).json({ message: 'No token provided' });
+    }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Token décodé:', decoded);
-
-    req.user = decoded;
-    console.log('User ajouté à la requête:', req.user);
-
-    next();
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Token decoded successfully:', decoded);
+      req.user = decoded;
+      next();
+    } catch (error) {
+      console.log('Token verification failed:', error.message);
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Token expired' });
+      }
+      return res.status(401).json({ message: 'Invalid token' });
+    }
   } catch (error) {
-    console.error('Erreur dans authMiddleware:', error);
-    res.status(401).json({ 
-      message: 'Token invalide',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ message: 'Server error in auth middleware' });
   }
 };
 

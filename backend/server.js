@@ -5,6 +5,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const surveyRoutes = require("./routes/surveys");
 const surveyAnswerRoutes = require("./routes/surveyAnswers");
+const surveyShareRoutes = require("./routes/surveyShares");
 require("dotenv").config();
 
 const app = express();
@@ -23,32 +24,55 @@ app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(cors());
 
-// Debug middleware pour logger toutes les requêtes
+// Debug middleware amélioré
 app.use((req, res, next) => {
+  console.log('=== Request Debug ===');
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Query:', req.query);
+  console.log('===================');
   next();
 });
 
-// Ajouter ce middleware juste avant vos routes
+// Ajouter ce middleware de debug avant les routes
 app.use((req, res, next) => {
-  console.log(`[DEBUG] ${req.method} ${req.path}`);
-  console.log('[DEBUG] Headers:', req.headers);
+  console.log('Requête reçue:', {
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    headers: req.headers
+  });
   next();
 });
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/surveys", surveyRoutes);
-app.use("/api/survey-answers", (req, res, next) => {
-  console.log("Survey Answers route hit:", req.method, req.url);
-  next();
-}, surveyAnswerRoutes);
+app.use("/api/survey-answers", surveyAnswerRoutes);
+app.use("/api/survey-shares", surveyShareRoutes); // Sans middleware d'authentification
 
-// Catch 404 et logger
+// Catch 404 avec plus de détails
 app.use((req, res) => {
-  console.log("404 Not Found:", req.method, req.url);
-  res.status(404).json({ message: "Route not found" });
+  console.log("404 Not Found Details:", {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body
+  });
+  res.status(404).json({ 
+    message: "Route not found",
+    requestedPath: req.url,
+    method: req.method
+  });
 });
 
 const PORT = process.env.PORT || 5041;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log('Available routes:');
+  console.log('- /api/auth');
+  console.log('- /api/surveys');
+  console.log('- /api/survey-answers');
+  console.log('- /api/survey-shares');
+});

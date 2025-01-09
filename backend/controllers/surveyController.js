@@ -1,6 +1,7 @@
 const Survey = require("../models/Survey");
 const { uploadFileToCloudinary, deleteFileFromCloudinary } = require("../cloudinaryConfig");
 const fs = require("fs");
+const SurveyShare = require('../models/SurveyShare');
 
 exports.createSurvey = async (req, res) => {
   try {
@@ -75,21 +76,36 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    console.log('Fetching surveys for user:', req.user.id);
-    
-    // Modifier la requête pour chercher par userId au lieu de createdBy
-    const surveys = await Survey.find({ userId: req.user.id })
+    // Récupérer les sondages créés par l'utilisateur
+    const ownedSurveys = await Survey.find({ userId: req.user.id })
       .select('title description questions demographicEnabled createdAt')
       .lean();
 
-    console.log('Found surveys:', surveys.length);
+    // Récupérer les sondages partagés avec l'utilisateur
+    const sharedSurveys = await SurveyShare.find({
+      sharedWith: req.user.id,
+      status: 'accepted'
+    })
+    .populate({
+      path: 'surveyId',
+      select: 'title description questions demographicEnabled createdAt'
+    })
+    .lean();
 
-    // Ne pas retourner 404 si aucun sondage n'est trouvé
-    if (!surveys.length) {
-      return res.status(200).json([]); // Retourner un tableau vide au lieu d'une erreur
-    }
+    // Combiner et formater les résultats
+    const allSurveys = [
+      ...ownedSurveys.map(survey => ({
+        ...survey,
+        isOwner: true
+      })),
+      ...sharedSurveys.map(share => ({
+        ...share.surveyId,
+        isOwner: false,
+        sharedBy: share.sharedBy
+      }))
+    ];
 
-    res.status(200).json(surveys);
+    res.status(200).json(allSurveys);
   } catch (error) {
     console.error("Error fetching surveys:", error);
     res.status(500).json({ 

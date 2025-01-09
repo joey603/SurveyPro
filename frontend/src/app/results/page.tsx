@@ -86,6 +86,8 @@ import { TextFieldProps } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { ReactElement } from 'react';
+import ShareIcon from '@mui/icons-material/Share';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
@@ -3786,6 +3788,125 @@ const ResultsPage: React.FC = () => {
     return mostCommon;
   };
 
+  // Ajouter cette interface
+  interface ShareDialogProps {
+    open: boolean;
+    onClose: () => void;
+    surveyId: string;
+  }
+
+  // Ajouter ce composant
+  const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, surveyId }) => {
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+
+    const handleShare = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('http://localhost:5041/api/survey-shares', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            surveyId,
+            recipientEmail: email.trim()
+          })
+        });
+
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Erreur lors du partage');
+        }
+
+        setSuccess(true);
+        setEmail('');
+        setTimeout(() => {
+          setSuccess(false);
+          onClose();
+        }, 2000);
+      } catch (err) {
+        console.error('Erreur détaillée:', err);
+        setError(err instanceof Error ? err.message : 'Erreur lors du partage');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <PersonAddIcon />
+          Partager les résultats
+        </DialogTitle>
+        
+        <DialogContent sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Email du destinataire"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={!!error}
+            helperText={error}
+            disabled={loading || success}
+            sx={{ mt: 1 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <ShareIcon sx={{ color: 'action.active' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          {success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Invitation envoyée avec succès !
+            </Alert>
+          )}
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button 
+            onClick={onClose}
+            disabled={loading}
+            sx={{ color: '#64748b' }}
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleShare}
+            disabled={!email || loading || success}
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              }
+            }}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Partager'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Dans le composant ResultsPage, ajouter cet état
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+
   if (loading) {
     return (
       <Box sx={{
@@ -3823,26 +3944,38 @@ const ResultsPage: React.FC = () => {
             px: 4,
             color: 'white',
             textAlign: 'center',
-            position: 'relative'
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}>
             <IconButton
               onClick={handleBack}
               sx={{
-                position: 'absolute',
-                left: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
                 color: 'white',
               }}
             >
               <ArrowBackIcon />
             </IconButton>
+            
             <Typography variant="h4" fontWeight="bold">
               {selectedSurvey.title}
             </Typography>
-            <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-              Total Responses: {surveyAnswers[selectedSurvey._id]?.length || 0}
-            </Typography>
+
+            <Button
+              onClick={() => setShareDialogOpen(true)}
+              startIcon={<ShareIcon />}
+              variant="contained"
+              sx={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.3)',
+                }
+              }}
+            >
+              Partager
+            </Button>
           </Box>
 
           <Box sx={{ p: 3 }}>
@@ -4121,6 +4254,12 @@ const ResultsPage: React.FC = () => {
           answerFilters={answerFilters}
           setAnswerFilters={setAnswerFilters}
         />
+
+        <ShareDialog
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          surveyId={selectedSurvey._id}
+        />
       </Box>
     );
   }
@@ -4240,7 +4379,7 @@ const ResultsPage: React.FC = () => {
                 </Stack>
               </LocalizationProvider>
             )}
-          </Box>
+              </Box>
 
           {error ? (
             <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
@@ -4256,15 +4395,15 @@ const ResultsPage: React.FC = () => {
                   <Paper
                     key={survey._id}
                     elevation={1}
-                    sx={{
+                      sx={{ 
                       borderRadius: 2,
                       overflow: 'hidden',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
-                      '&:hover': {
+                        '&:hover': {
                         boxShadow: 3,
                         transform: 'translateY(-2px)',
                       }
@@ -4286,8 +4425,8 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         {survey.title}
-                      </Typography>
-                      
+                        </Typography>
+                        
                       {/* Badges section */}
                       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
                         <Chip
@@ -4327,8 +4466,8 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         {survey.description || 'No description available'}
-                      </Typography>
-
+                        </Typography>
+                        
                       <Box
                         className="hover-content"
                         sx={{
@@ -4382,9 +4521,9 @@ const ResultsPage: React.FC = () => {
                           }}
                         >
                           {survey.description || 'No description available'}
-                        </Typography>
-                      </Box>
-
+                          </Typography>
+                        </Box>
+                        
                       <Stack 
                         direction="row" 
                         spacing={2} 
@@ -4425,10 +4564,10 @@ const ResultsPage: React.FC = () => {
                       position: 'relative',
                       zIndex: 1
                     }}>
-                      <Button
+                            <Button
                         onClick={() => handleViewResults(survey)}
                         variant="contained"
-                        size="small"
+                              size="small"
                         sx={{
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
@@ -4437,14 +4576,14 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         View Results
-                      </Button>
+                            </Button>
                     </Box>
-                  </Paper>
+                    </Paper>
                 );
               })}
             </Box>
-          )}
-        </Box>
+            )}
+          </Box>
       </Paper>
     </Box>
   );
