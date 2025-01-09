@@ -1694,19 +1694,56 @@ const ResultsPage: React.FC = () => {
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
 
-    const question = selectedSurvey.questions.find(q => q.id === questionId);
-    if (!question) return;
-
-    const answers = surveyAnswers[selectedSurvey._id] || [];
+    // Obtenir toutes les réponses pour ce sondage
+    const allAnswers = surveyAnswers[selectedSurvey._id] || [];
     
-    // Supprimer le filtrage des réponses ici
+    // Filtrer les réponses selon les filtres actifs
+    const filteredAnswers = allAnswers.filter(answer => {
+      // Vérifier les filtres démographiques
+      if (Object.keys(filters.demographic).length > 0) {
+        const demographic = answer.respondent?.demographic;
+        if (!demographic) return false;
+
+        if (filters.demographic.gender && 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          return false;
+        }
+
+        if (filters.demographic.educationLevel && 
+            demographic.educationLevel !== filters.demographic.educationLevel) {
+          return false;
+        }
+
+        if (filters.demographic.city && 
+            demographic.city !== filters.demographic.city) {
+          return false;
+        }
+
+        if (filters.demographic.age && demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        }
+      }
+
+      // Vérifier les filtres de réponses
+      if (Object.keys(answerFilters).length > 0) {
+        return Object.entries(answerFilters).every(([filteredQuestionId, filter]) => {
+          const answerValue = answer.answers.find(a => a.questionId === filteredQuestionId)?.answer;
+          return filter.rules.every(rule => evaluateRule(answerValue, rule));
+        });
+      }
+
+      return true;
+    });
+
     setSelectedQuestion({
       questionId,
-      answers: answers // Utiliser toutes les réponses sans filtrage
+      answers: filteredAnswers // Utiliser les réponses filtrées au lieu de toutes les réponses
     });
     setDialogOpen(true);
-    setCurrentView('list');
-  }, [selectedSurvey, surveyAnswers]);
+  }, [selectedSurvey, surveyAnswers, filters.demographic, answerFilters, calculateAge]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -2921,44 +2958,15 @@ const ResultsPage: React.FC = () => {
   const renderQuestionDetails = useCallback(() => {
     if (!selectedQuestion || !selectedSurvey) return null;
 
+    // Obtenir le nombre total de réponses (non filtrées)
+    const totalAnswers = surveyAnswers[selectedSurvey._id]?.length || 0;
+    const filteredAnswersCount = selectedQuestion.answers.length;
+
     const question = selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId);
     if (!question) return null;
 
     const mostCommonAnswer = getMostCommonAnswer(selectedQuestion.answers, selectedQuestion.questionId);
     const availableChartTypes = getAvailableChartTypes(question.type);
-
-    const exportToCSV = () => {
-      const data = selectedQuestion.answers.map(answer => ({
-        response: answer.answers.find(a => a.questionId === selectedQuestion.questionId)?.answer,
-        date: new Date(answer.submittedAt).toLocaleDateString(),
-        user: answer.respondent.userId.email
-      }));
-      const csvContent = "data:text/csv;charset=utf-8," + 
-        "Response,Date,User\n" +
-        data.map(row => `${row.response},${row.date},${row.user}`).join("\n");
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `${question.text}_responses.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
-    const exportToJSON = () => {
-      const data = selectedQuestion.answers.map(answer => ({
-        response: answer.answers.find(a => a.questionId === selectedQuestion.questionId)?.answer,
-        date: answer.submittedAt,
-        user: answer.respondent.userId.email
-      }));
-      const jsonContent = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-      const link = document.createElement("a");
-      link.setAttribute("href", jsonContent);
-      link.setAttribute("download", `${question.text}_responses.json`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
 
     return (
       <Dialog 
@@ -2966,12 +2974,6 @@ const ResultsPage: React.FC = () => {
         onClose={handleClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-          }
-        }}
       >
         <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -2980,27 +2982,75 @@ const ResultsPage: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {question.text}
-          </Typography>
+          <Box>
+            <Typography variant="h6" component="div">
+              {question.text}
+            </Typography>
+            <Typography variant="subtitle2" sx={{ mt: 1, opacity: 0.9 }}>
+              {filteredAnswersCount} filtered responses out of {totalAnswers} total responses
+            </Typography>
+          </Box>
           <IconButton onClick={handleClose} sx={{ color: 'white' }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
         <DialogContent sx={{ p: 3 }}>
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ 
+            mb: 3, 
+            display: 'flex', 
+            gap: 2,
+            '&:hover > .MuiPaper-root:not(:hover)': {
+              opacity: 0.7,
+              transform: 'translateY(0)',
+              filter: 'blur(0.5px)'
+            }
+          }}>
+            {/* Premier carré - Most Common Answer */}
             <Paper sx={{ 
-              p: 2, 
+              p: 2,
+              flex: 1,
               bgcolor: 'rgba(102, 126, 234, 0.05)',
               border: '1px solid rgba(102, 126, 234, 0.1)',
-              borderRadius: 2
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              zIndex: 1,
+              '&:hover': {
+                bgcolor: 'rgba(102, 126, 234, 0.08)',
+                transform: 'translateY(-4px) scale(1.02)',
+                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                zIndex: 2
+              }
             }}>
               <Typography variant="subtitle2" color="primary" gutterBottom>
                 Most Common Answer
               </Typography>
               <Typography variant="h6">
                 {mostCommonAnswer || 'No responses yet'}
+              </Typography>
+            </Paper>
+
+            {/* Deuxième carré - Responses Count */}
+            <Paper sx={{ 
+              p: 2,
+              flex: 1,
+              bgcolor: 'rgba(102, 126, 234, 0.05)',
+              border: '1px solid rgba(102, 126, 234, 0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              zIndex: 1,
+              '&:hover': {
+                bgcolor: 'rgba(102, 126, 234, 0.08)',
+                transform: 'translateY(-4px) scale(1.02)',
+                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                zIndex: 2
+              }
+            }}>
+              <Typography variant="subtitle2" color="primary" gutterBottom>
+                Responses
+              </Typography>
+              <Typography variant="h6">
+                {selectedQuestion.answers.length} / {totalAnswers}
               </Typography>
             </Paper>
           </Box>
@@ -3065,7 +3115,7 @@ const ResultsPage: React.FC = () => {
           <Box>
             <Button
               startIcon={<FileDownloadIcon />}
-              onClick={exportToCSV}
+              onClick={exportCSV}
               variant="outlined"
               sx={{ mr: 1 }}
             >
@@ -3073,7 +3123,7 @@ const ResultsPage: React.FC = () => {
             </Button>
             <Button
               startIcon={<CodeIcon />}
-              onClick={exportToJSON}
+              onClick={exportJSON}
               variant="outlined"
             >
               Export JSON
@@ -3095,7 +3145,7 @@ const ResultsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     );
-  }, [selectedQuestion, selectedSurvey, dialogOpen, currentView, handleClose]);
+  }, [selectedQuestion, selectedSurvey, dialogOpen, currentView, handleClose, surveyAnswers]);
 
   // Ajout d'un useEffect pour surveiller les changements de vue
   useEffect(() => {
