@@ -1818,13 +1818,28 @@ const ResultsPage: React.FC = () => {
 
   // Créer le composant DemographicFilterPanel
   const DemographicFilterPanel = ({ open, onClose }: { open: boolean, onClose: () => void }) => {
+    // Ajouter un état temporaire pour stocker les filtres avant de les appliquer
+    const [tempFilters, setTempFilters] = useState(() => ({
+      gender: filters.demographic.gender,
+      educationLevel: filters.demographic.educationLevel,
+      city: filters.demographic.city,
+      age: filters.demographic.age
+    }));
+
+    // Réinitialiser les filtres temporaires à l'ouverture du dialogue
+    useEffect(() => {
+      if (open) {
+        setTempFilters({
+          gender: filters.demographic.gender,
+          educationLevel: filters.demographic.educationLevel,
+          city: filters.demographic.city,
+          age: filters.demographic.age
+        });
+      }
+    }, [open, filters.demographic]);
+
     return (
-      <Dialog 
-        open={open} 
-        onClose={onClose}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Configure Demographic Filters</Typography>
@@ -1838,16 +1853,13 @@ const ResultsPage: React.FC = () => {
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#4a5568' }}>Gender</InputLabel>
+                <InputLabel>Gender</InputLabel>
                 <Select
-                  value={filters.demographic.gender || ''}
+                  value={tempFilters.gender || ''}
                   onChange={(e) => {
-                    setFilters(prev => ({
+                    setTempFilters(prev => ({
                       ...prev,
-                      demographic: {
-                        ...prev.demographic,
-                        gender: e.target.value
-                      }
+                      gender: e.target.value
                     }));
                   }}
                   sx={{
@@ -1874,16 +1886,13 @@ const ResultsPage: React.FC = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#4a5568' }}>Education Level</InputLabel>
+                <InputLabel>Education Level</InputLabel>
                 <Select
-                  value={filters.demographic.educationLevel || ''}
+                  value={tempFilters.educationLevel || ''}
                   onChange={(e) => {
-                    setFilters(prev => ({
+                    setTempFilters(prev => ({
                       ...prev,
-                      demographic: {
-                        ...prev.demographic,
-                        educationLevel: e.target.value
-                      }
+                      educationLevel: e.target.value
                     }));
                   }}
                   sx={{
@@ -1908,16 +1917,13 @@ const ResultsPage: React.FC = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#4a5568' }}>City</InputLabel>
+                <InputLabel>City</InputLabel>
                 <Select
-                  value={filters.demographic.city || ''}
+                  value={tempFilters.city || ''}
                   onChange={(e) => {
-                    setFilters(prev => ({
+                    setTempFilters(prev => ({
                       ...prev,
-                      demographic: {
-                        ...prev.demographic,
-                        city: e.target.value
-                      }
+                      city: e.target.value
                     }));
                   }}
                   sx={{
@@ -1942,22 +1948,17 @@ const ResultsPage: React.FC = () => {
 
             <Grid item xs={12} sm={6}>
               <Box sx={{ px: 2 }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: '#4a5568',
-                    mb: 1,
-                    fontWeight: 500
-                  }}
-                >
-                  Age Range: {ageRange[0]} - {ageRange[1]} years
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Age Range: {tempFilters.age?.[0] || 0} - {tempFilters.age?.[1] || 100} years
                 </Typography>
                 <Slider
-                  value={ageRange}
-                  onChange={handleAgeChange}
-                  valueLabelDisplay="auto"
-                  min={0}
-                  max={100}
+                  value={tempFilters.age || [0, 100]}
+                  onChange={(_, newValue) => {
+                    setTempFilters(prev => ({
+                      ...prev,
+                      age: newValue as [number, number]
+                    }));
+                  }}
                   sx={{
                     color: '#667eea',
                     '& .MuiSlider-rail': {
@@ -1984,20 +1985,26 @@ const ResultsPage: React.FC = () => {
         </DialogContent>
 
         <DialogActions sx={{ p: 3 }}>
-          <Button 
-            onClick={onClose}
-            sx={{
-              color: '#64748b',
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.04)'
-              }
-            }}
-          >
-            Close
+          <Button onClick={onClose}>
+            Cancel
           </Button>
           <Button 
             onClick={() => {
-              applyDemographicFilters();
+              // Appliquer les filtres temporaires aux filtres réels
+              setFilters(prev => ({
+                ...prev,
+                demographic: {
+                  gender: tempFilters.gender,
+                  educationLevel: tempFilters.educationLevel,
+                  city: tempFilters.city,
+                  age: tempFilters.age
+                }
+              }));
+              // Appliquer les filtres et fermer le dialogue
+              if (selectedSurvey) {
+                const newStats = calculateDemographicStats(selectedSurvey._id);
+                setFilteredStats(newStats);
+              }
               onClose();
             }}
             variant="contained"
@@ -2061,8 +2068,13 @@ const ResultsPage: React.FC = () => {
         p: 3,
         borderRadius: 2,
         backgroundColor: 'white',
-        boxShadow: '0 2px 12px rgba(102, 126, 234, 0.08)',
-        border: '1px solid rgba(102, 126, 234, 0.15)'
+        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.08)',
+        border: '1px solid rgba(102, 126, 234, 0.15)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 6px 24px rgba(102, 126, 234, 0.12)',
+          transform: 'translateY(-2px)'
+        }
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -2072,46 +2084,51 @@ const ResultsPage: React.FC = () => {
           pb: 2,
           borderBottom: '1px solid rgba(102, 126, 234, 0.1)'
         }}>
-          <Typography variant="h6" sx={{ 
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
-            Filter Responses
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <FilterListIcon sx={{ 
+              color: '#667eea',
+              fontSize: '1.8rem'
+            }} />
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Filter Responses
+            </Typography>
+          </Box>
           <Button
             startIcon={<ClearIcon />}
             onClick={() => {
-              // Réinitialiser les stats filtrées
               setFilteredStats(null);
-              
-              // Réinitialiser les filtres démographiques
               setFilters({
                 demographic: {},
                 answers: {}
               });
-              
-              // Réinitialiser les filtres de réponses
               setAnswerFilters({});
-              
-              // Réinitialiser la plage d'âge
               setAgeRange([0, 100]);
-              
-              // Réappliquer les filtres pour mettre à jour l'affichage
               if (selectedSurvey) {
                 const newStats = calculateDemographicStats(selectedSurvey._id);
                 setFilteredStats(newStats);
               }
             }}
+            variant="outlined"
+            size="small"
             sx={{
               color: '#667eea',
               borderColor: 'rgba(102, 126, 234, 0.3)',
               textTransform: 'none',
               fontWeight: 500,
+              px: 2,
+              py: 0.75,
+              borderRadius: '8px',
+              transition: 'all 0.2s ease',
               '&:hover': {
                 backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                borderColor: '#667eea'
+                borderColor: '#667eea',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.15)'
               }
             }}
           >
@@ -2120,57 +2137,77 @@ const ResultsPage: React.FC = () => {
         </Box>
 
         <Grid container spacing={3}>
-          {/* Demographic Filters */}
+          {/* Demographic Filters Section */}
           <Grid item xs={12}>
             <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 2
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: 'rgba(102, 126, 234, 0.02)',
+              border: '1px solid rgba(102, 126, 234, 0.08)',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                borderColor: 'rgba(102, 126, 234, 0.15)'
+              }
             }}>
-              <Typography variant="subtitle2" sx={{ color: '#4a5568', fontWeight: 600 }}>
-                Demographic Filters
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {getActiveDemographicFiltersCount() > 0 && (
-                  <Chip
-                    label={`${getActiveDemographicFiltersCount()} active`}
-                    size="small"
-                    sx={{
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                      color: '#667eea',
-                      fontWeight: 500,
-                    }}
-                  />
-                )}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 2
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Typography variant="subtitle1" sx={{ 
+                    color: '#4a5568', 
+                    fontWeight: 600,
+                    letterSpacing: '0.3px'
+                  }}>
+                    Demographic Filters
+                  </Typography>
+                  {getActiveDemographicFiltersCount() > 0 && (
+                    <Chip
+                      label={`${getActiveDemographicFiltersCount()} active`}
+                      size="small"
+                      sx={{
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        color: '#667eea',
+                        fontWeight: 500,
+                        height: '24px'
+                      }}
+                    />
+                  )}
+                </Box>
                 <Button
                   startIcon={<FilterListIcon />}
                   onClick={() => setDemographicFilterDialogOpen(true)}
-                  variant="outlined"
+                  variant="contained"
                   size="small"
                   sx={{
-                    color: '#667eea',
-                    borderColor: 'rgba(102, 126, 234, 0.3)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
                     textTransform: 'none',
                     fontWeight: 500,
+                    px: 3,
+                    py: 1,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(102, 126, 234, 0.15)',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                      borderColor: '#667eea'
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.25)'
                     }
                   }}
                 >
-                  Configure Demographic Filters
+                  Configure Filters
                 </Button>
               </Box>
-            </Box>
 
-            {/* Affichage des badges de filtres actifs */}
-            {getActiveDemographicFiltersCount() > 0 && (
+              {/* Active Demographic Filters Display */}
               <Box sx={{ 
                 display: 'flex', 
                 flexWrap: 'wrap', 
-                gap: 1,
-                mb: 2 
+                gap: 1
               }}>
                 {filters.demographic.gender && (
                   <Chip
@@ -2178,22 +2215,17 @@ const ResultsPage: React.FC = () => {
                     onDelete={() => {
                       setFilters(prev => ({
                         ...prev,
-                        demographic: {
-                          ...prev.demographic,
-                          gender: undefined
-                        }
+                        demographic: { ...prev.demographic, gender: undefined }
                       }));
-                      applyDemographicFilters();
                     }}
                     size="small"
                     sx={{
-                      backgroundColor: 'white',
-                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                      color: '#667eea',
+                      borderRadius: '6px',
                       '& .MuiChip-deleteIcon': {
                         color: '#667eea',
-                        '&:hover': {
-                          color: '#764ba2'
-                        }
+                        '&:hover': { color: '#764ba2' }
                       }
                     }}
                   />
@@ -2204,22 +2236,17 @@ const ResultsPage: React.FC = () => {
                     onDelete={() => {
                       setFilters(prev => ({
                         ...prev,
-                        demographic: {
-                          ...prev.demographic,
-                          educationLevel: undefined
-                        }
+                        demographic: { ...prev.demographic, educationLevel: undefined }
                       }));
-                      applyDemographicFilters();
                     }}
                     size="small"
                     sx={{
-                      backgroundColor: 'white',
-                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                      color: '#667eea',
+                      borderRadius: '6px',
                       '& .MuiChip-deleteIcon': {
                         color: '#667eea',
-                        '&:hover': {
-                          color: '#764ba2'
-                        }
+                        '&:hover': { color: '#764ba2' }
                       }
                     }}
                   />
@@ -2230,22 +2257,17 @@ const ResultsPage: React.FC = () => {
                     onDelete={() => {
                       setFilters(prev => ({
                         ...prev,
-                        demographic: {
-                          ...prev.demographic,
-                          city: undefined
-                        }
+                        demographic: { ...prev.demographic, city: undefined }
                       }));
-                      applyDemographicFilters();
                     }}
                     size="small"
                     sx={{
-                      backgroundColor: 'white',
-                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                      color: '#667eea',
+                      borderRadius: '6px',
                       '& .MuiChip-deleteIcon': {
                         color: '#667eea',
-                        '&:hover': {
-                          color: '#764ba2'
-                        }
+                        '&:hover': { color: '#764ba2' }
                       }
                     }}
                   />
@@ -2257,121 +2279,135 @@ const ResultsPage: React.FC = () => {
                     onDelete={() => {
                       setFilters(prev => ({
                         ...prev,
-                        demographic: {
-                          ...prev.demographic,
-                          age: [0, 100]
-                        }
+                        demographic: { ...prev.demographic, age: undefined }
                       }));
                       setAgeRange([0, 100]);
-                      applyDemographicFilters();
                     }}
                     size="small"
                     sx={{
-                      backgroundColor: 'white',
-                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                      color: '#667eea',
+                      borderRadius: '6px',
                       '& .MuiChip-deleteIcon': {
                         color: '#667eea',
-                        '&:hover': {
-                          color: '#764ba2'
-                        }
+                        '&:hover': { color: '#764ba2' }
                       }
                     }}
                   />
                 )}
               </Box>
-            )}
+            </Box>
           </Grid>
 
-          {/* Answer Filters */}
+          {/* Answer Filters Section */}
           <Grid item xs={12}>
             <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 2 
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: 'rgba(102, 126, 234, 0.02)',
+              border: '1px solid rgba(102, 126, 234, 0.08)',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                borderColor: 'rgba(102, 126, 234, 0.15)'
+              }
             }}>
-              <Typography 
-                variant="subtitle2" 
-                sx={{ 
-                  color: '#4a5568',
-                  fontWeight: 600
-                }}
-              >
-                Answer Filters
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {Object.keys(answerFilters).length > 0 && (
-                  <Chip
-                    label={`${Object.keys(answerFilters).length} active`}
-                    size="small"
-                    sx={{
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                      color: '#667eea',
-                      fontWeight: 500,
-                    }}
-                  />
-                )}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 2
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Typography variant="subtitle1" sx={{ 
+                    color: '#4a5568', 
+                    fontWeight: 600,
+                    letterSpacing: '0.3px'
+                  }}>
+                    Answer Filters
+                  </Typography>
+                  {Object.keys(answerFilters).length > 0 && (
+                    <Chip
+                      label={`${Object.keys(answerFilters).length} active`}
+                      size="small"
+                      sx={{
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        color: '#667eea',
+                        fontWeight: 500,
+                        height: '24px'
+                      }}
+                    />
+                  )}
+                </Box>
                 <Button
                   startIcon={<FilterListIcon />}
                   onClick={() => setAnswerFilterDialogOpen(true)}
-                  variant="outlined"
+                  variant="contained"
                   size="small"
                   sx={{
-                    color: '#667eea',
-                    borderColor: 'rgba(102, 126, 234, 0.3)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
                     textTransform: 'none',
                     fontWeight: 500,
+                    px: 3,
+                    py: 1,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(102, 126, 234, 0.15)',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                      borderColor: '#667eea'
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.25)'
                     }
                   }}
                 >
-                  Configure Answers Filters
+                  Configure Filters
                 </Button>
               </Box>
-            </Box>
 
-            {/* Affichage des badges de filtres de réponses */}
-            {Object.keys(answerFilters).length > 0 && (
+              {/* Active Answer Filters Display */}
               <Box sx={{ 
                 display: 'flex', 
                 flexWrap: 'wrap', 
-                gap: 1,
-                mb: 2 
+                gap: 1
               }}>
                 {Object.entries(answerFilters).map(([questionId, filter]) => {
                   const question = selectedSurvey?.questions.find(q => q.id === questionId);
-                  return filter.rules.map((rule, index) => (
+                  return filter.rules.map((rule, ruleIndex) => (
                     <Chip
-                      key={`${questionId}-${index}`}
-                      label={`${question?.text?.slice(0, 20)}${question?.text && question.text.length > 20 ? '...' : ''}: ${rule.operator} ${formatFilterValue(rule.value)}`}
+                      key={`${questionId}-${ruleIndex}`}
+                      label={`${question?.text || 'Question'}: ${rule.operator} ${formatFilterValue(rule.value)}${
+                        rule.secondValue ? ` - ${formatFilterValue(rule.secondValue)}` : ''
+                      }`}
                       onDelete={() => {
                         const newFilters = { ...answerFilters };
-                        newFilters[questionId].rules = newFilters[questionId].rules.filter((_, i) => i !== index);
+                        newFilters[questionId].rules = newFilters[questionId].rules.filter((_, idx) => idx !== ruleIndex);
                         if (newFilters[questionId].rules.length === 0) {
                           delete newFilters[questionId];
                         }
                         setAnswerFilters(newFilters);
-                        // Passer les réponses actuelles à applyAnswerFilters
-                        applyAnswerFilters(surveyAnswers[selectedSurvey?._id || ''] || []);
                       }}
                       size="small"
                       sx={{
-                        backgroundColor: 'white',
-                        border: '1px solid rgba(102, 126, 234, 0.3)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                        color: '#667eea',
+                        borderRadius: '6px',
+                        maxWidth: '300px',
+                        '& .MuiChip-label': {
+                          whiteSpace: 'normal',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        },
                         '& .MuiChip-deleteIcon': {
                           color: '#667eea',
-                          '&:hover': {
-                            color: '#764ba2'
-                          }
+                          '&:hover': { color: '#764ba2' }
                         }
                       }}
                     />
                   ));
                 })}
               </Box>
-            )}
+            </Box>
           </Grid>
         </Grid>
       </Box>
