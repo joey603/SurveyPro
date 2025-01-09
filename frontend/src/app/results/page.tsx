@@ -103,27 +103,22 @@ type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter';
 
 interface Answer {
   questionId: string;
-  answer: any;
+  answer: string;
 }
 
 interface SurveyAnswer {
   _id: string;
-  surveyId: string;
+  surveyId: string;  // Ajout de surveyId
+  answers: Answer[];
+  submittedAt: string;
   respondent: {
     userId: {
       _id: string;
       username: string;
       email: string;
     };
-    demographic?: {
-      gender?: string;
-      dateOfBirth?: string;
-      educationLevel?: string;
-      city?: string;
-    };
+    demographic?: Demographic;
   };
-  answers: Answer[];
-  submittedAt: string;
 }
 
 interface Question {
@@ -219,74 +214,139 @@ const getQuestionData = (questionId: string, answers: SurveyAnswer[]): { [key: s
   return data;
 };
 
-// Créer un composant distinct pour le Tooltip
-const AnswerTooltip = ({ answer, questionAnswer }: { answer: SurveyAnswer; questionAnswer?: { answer: any } }) => (
-  <MuiTooltip 
-    title={
-      <Paper sx={{ p: 2 }}>
-        <Stack spacing={1.5}>
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="subtitle2" color="primary.main" gutterBottom>
-              User Information
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 'bold' }}>Email:</Box> {answer.respondent.userId.email || 'N/A'}
-            </Typography>
-          </Box>
+// Ajoutez ces interfaces au début du fichier
+interface QuestionAnswer {
+  questionId: string;
+  answer: string;
+}
 
-          {answer.respondent.demographic && (
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="subtitle2" color="primary.main" gutterBottom>
-                Demographics
-              </Typography>
-              {answer.respondent.demographic.gender && (
-                <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 'bold' }}>Gender:</Box> {answer.respondent.demographic.gender}
-                </Typography>
-              )}
-              {answer.respondent.demographic.dateOfBirth && (
-                <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 'bold' }}>Age:</Box> {calculateAge(new Date(answer.respondent.demographic.dateOfBirth))}
-                </Typography>
-              )}
-              {answer.respondent.demographic.educationLevel && (
-                <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 'bold' }}>Education:</Box> {answer.respondent.demographic.educationLevel}
-                </Typography>
-              )}
-              {answer.respondent.demographic.city && (
-                <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 'bold' }}>City:</Box> {answer.respondent.demographic.city}
-                </Typography>
-              )}
-            </Box>
-          )}
-        </Stack>
-      </Paper>
+interface Demographic {
+  gender?: string;
+  dateOfBirth?: string;
+  educationLevel?: string;
+  city?: string;
+}
+
+interface SurveyAnswer {
+  _id: string;
+  surveyId: string;  // Ajout de surveyId
+  answers: QuestionAnswer[];
+  submittedAt: string;
+  respondent: {
+    userId: {
+      _id: string;
+      username: string;
+      email: string;
+    };
+    demographic?: Demographic;
+  };
+}
+
+// Modifiez le composant AnswerTooltip
+const AnswerTooltip = ({ answer, questionAnswer }: { 
+  answer: SurveyAnswer, 
+  questionAnswer: Answer | undefined 
+}) => {
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    setTooltipPosition({
+      x: event.clientX + 10,
+      y: event.clientY + 10
+    });
+  };
+
+  // Fonction sécurisée pour calculer l'âge
+  const getAge = (dateOfBirth: string | undefined): string => {
+    if (!dateOfBirth) return 'N/A';
+    try {
+      return calculateAge(new Date(dateOfBirth)).toString();
+    } catch (error) {
+      console.error('Error calculating age:', error);
+      return 'N/A';
     }
-    placement="right"
-    arrow
-    children={
-      <Box component="div">
-        <ListItem 
+  };
+
+  return (
+    <ListItem
+      onMouseEnter={() => setIsTooltipOpen(true)}
+      onMouseLeave={() => setIsTooltipOpen(false)}
+      onMouseMove={handleMouseMove}
+      sx={{
+        cursor: 'pointer',
+        '&:hover': {
+          backgroundColor: 'rgba(102, 126, 234, 0.05)',
+        },
+        position: 'relative',
+        borderRadius: 1,
+        mb: 1
+      }}
+    >
+      <ListItemText
+        primary={questionAnswer?.answer || 'No answer'}
+        secondary={new Date(answer.submittedAt).toLocaleString()}
+      />
+      {isTooltipOpen && (
+        <Box
           sx={{
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 1,
-            mb: 1,
-            '&:hover': {
-              bgcolor: 'rgba(102, 126, 234, 0.05)'
+            position: 'fixed',
+            left: tooltipPosition.x,
+            top: tooltipPosition.y,
+            zIndex: 9999,
+            backgroundColor: 'white',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            borderRadius: 2,
+            p: 2,
+            maxWidth: 300,
+            border: '1px solid rgba(102, 126, 234, 0.2)',
+            animation: 'fadeIn 0.2s ease-in-out',
+            '@keyframes fadeIn': {
+              from: {
+                opacity: 0,
+                transform: 'translateY(5px)'
+              },
+              to: {
+                opacity: 1,
+                transform: 'translateY(0)'
+              }
             }
           }}
         >
-          <ListItemText
-            primary={questionAnswer?.answer || 'No response'}
-            secondary={new Date(answer.submittedAt).toLocaleDateString()}
-          />
-        </ListItem>
-      </Box>
-    }
-  />
-);
+          <Typography variant="subtitle2" color="primary" gutterBottom>
+            Respondent Details
+          </Typography>
+          <Typography variant="body2" gutterBottom>
+            <strong>Username:</strong> {answer.respondent.userId.username}
+          </Typography>
+          <Typography variant="body2" gutterBottom>
+            <strong>Email:</strong> {answer.respondent.userId.email}
+          </Typography>
+          {answer.respondent.demographic && (
+            <>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2" color="primary" gutterBottom>
+                Demographics
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Gender:</strong> {answer.respondent.demographic.gender || 'N/A'}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Age:</strong> {getAge(answer.respondent.demographic.dateOfBirth)}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Education:</strong> {answer.respondent.demographic.educationLevel || 'N/A'}
+              </Typography>
+              <Typography variant="body2">
+                <strong>City:</strong> {answer.respondent.demographic.city || 'N/A'}
+              </Typography>
+            </>
+          )}
+        </Box>
+      )}
+    </ListItem>
+  );
+};
 
 // Créer un nouveau composant pour le graphique
 const ChartView = memo(({ data, question }: { 
@@ -690,10 +750,11 @@ const ResultsPage: React.FC = () => {
     rules: FilterRule[];
   }
 
+  // Modifiez l'interface FilterRule pour inclure les types corrects
   interface FilterRule {
     operator: string;
     value: string | number | null;
-    secondValue?: string | number | null; // Ajout d'une valeur secondaire pour "between"
+    secondValue?: string | number | null;
   }
 
   interface FilterValue {
@@ -741,63 +802,35 @@ const ResultsPage: React.FC = () => {
     }
   };
 
-  // Modifier les comparaisons numériques pour convertir les chaînes en nombres
-  const compareValues = (value1: string | number | null, operator: string, rule: FilterRule) => {
-    if (operator === 'between' && rule.secondValue !== undefined) {
-      const num = typeof value1 === 'string' ? parseFloat(value1) : value1;
-      const min = typeof rule.value === 'string' ? parseFloat(rule.value) : rule.value;
-      const max = typeof rule.secondValue === 'string' ? parseFloat(rule.secondValue) : rule.secondValue;
-      
-      return num !== null && min !== null && max !== null && num >= min && num <= max;
-    }
+  // Modifiez la fonction evaluateRule pour gérer explicitement les types
+  const evaluateRule = (value: any, rule: FilterRule): boolean => {
+    // Si la valeur est undefined, on la convertit en null pour la comparaison
+    const safeValue = value ?? null;
+    const safeRuleValue = rule.value ?? null;
 
-    // Reste de la logique existante pour les autres opérateurs
-    const num1 = typeof value1 === 'string' ? parseFloat(value1) : value1;
-    const num2 = typeof rule.value === 'string' ? parseFloat(rule.value) : rule.value;
-
-    if (num1 === null || num2 === null) return false;
-
-    switch (operator) {
+    switch (rule.operator) {
       case 'equals':
-        return num1 === num2;
+        return safeValue === safeRuleValue;
+      case 'not':
+        return safeValue !== safeRuleValue;
       case 'greater':
-        return num1 > num2;
+        return Number(safeValue) > Number(safeRuleValue);
       case 'less':
-        return num1 < num2;
+        return Number(safeValue) < Number(safeRuleValue);
+      case 'between':
+        if (rule.secondValue === undefined) return false;
+        const numValue = Number(safeValue);
+        const min = Number(safeRuleValue);
+        const max = Number(rule.secondValue);
+        return numValue >= min && numValue <= max;
+      case 'contains':
+        return String(safeValue).toLowerCase().includes(String(safeRuleValue).toLowerCase());
+      case 'not_contains':
+        return !String(safeValue).toLowerCase().includes(String(safeRuleValue).toLowerCase());
       default:
-        return false;
+        return true;
     }
   };
-
-  // Ajouter cette fonction pour appliquer les filtres de réponses
-  const applyAnswerFilters = useCallback((answers: SurveyAnswer[]) => {
-    const filteredAnswers = answers.filter(answer => {
-      return Object.values(answerFilters).every(filter => {
-        const answerValue = answer.answers.find((a: AnswerValue) => a.questionId === filter.questionId)?.answer;
-        
-        return filter.rules.every(rule => {
-          switch (rule.operator) {
-            case 'equals':
-              return answerValue === rule.value;
-            case 'not':
-              return answerValue !== rule.value;
-            case 'greater':
-              return compareValues(answerValue, '>', rule);
-            case 'less':
-              return compareValues(answerValue, '<', rule);
-            case 'contains':
-              return String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
-            case 'not_contains':
-              return !String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
-            default:
-              return true;
-          }
-        });
-      });
-    });
-
-    return filteredAnswers;
-  }, [answerFilters, compareValues]);
 
   // Modifier l'interface AnswerFilterPanel pour inclure les props nécessaires
   interface AnswerFilterPanelProps {
@@ -871,15 +904,15 @@ const ResultsPage: React.FC = () => {
               case 'not':
                 return answerValue !== rule.value;
               case 'greater':
-                return compareValues(answerValue, '>', rule);
+                return evaluateRule(answerValue, rule);
               case 'less':
-                return compareValues(answerValue, '<', rule);
+                return evaluateRule(answerValue, rule);
               case 'between':
-                return compareValues(answerValue, 'between', rule);
+                return evaluateRule(answerValue, rule);
               case 'contains':
-                return String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+                return evaluateRule(answerValue, rule);
               case 'not_contains':
-                return !String(answerValue).toLowerCase().includes(String(rule.value).toLowerCase());
+                return evaluateRule(answerValue, rule);
               default:
                 return true;
             }
@@ -1499,11 +1532,10 @@ const ResultsPage: React.FC = () => {
     setSelectedSurvey(null);
   };
 
-  // Ajouter la fonction de filtrage
-  const filterAnswers = useCallback((answers: SurveyAnswer[]) => {
+  // Modifiez la fonction filterAnswers pour gérer explicitement les types
+  const filterAnswers = useCallback((answers: SurveyAnswer[]): SurveyAnswer[] => {
     if (!answers.length) return answers;
 
-    // Vérifier si des filtres sont actifs
     const hasActiveFilters = Object.values(filters.demographic).some(value => 
       value !== undefined && value !== "" && 
       !(Array.isArray(value) && value[0] === 0 && value[1] === 100)
@@ -1513,25 +1545,31 @@ const ResultsPage: React.FC = () => {
     if (!hasActiveFilters && !hasActiveAnswerFilters) return answers;
 
     return answers.filter(answer => {
-      // Appliquer les filtres démographiques
+      // Filtres démographiques
       if (hasActiveFilters) {
         const demographic = answer.respondent?.demographic;
         if (!demographic) return false;
 
         if (filters.demographic.gender && filters.demographic.gender !== "") {
-          if (demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          const genderValue = demographic.gender ?? null;
+          const filterValue = filters.demographic.gender.toLowerCase();
+          if (genderValue?.toLowerCase() !== filterValue) {
             return false;
           }
         }
 
         if (filters.demographic.educationLevel && filters.demographic.educationLevel !== "") {
-          if (demographic.educationLevel !== filters.demographic.educationLevel) {
+          const educationValue = demographic.educationLevel ?? null;
+          const filterValue = filters.demographic.educationLevel;
+          if (educationValue !== filterValue) {
             return false;
           }
         }
 
         if (filters.demographic.city && filters.demographic.city !== "") {
-          if (demographic.city !== filters.demographic.city) {
+          const cityValue = demographic.city ?? null;
+          const filterValue = filters.demographic.city;
+          if (cityValue !== filterValue) {
             return false;
           }
         }
@@ -1547,16 +1585,13 @@ const ResultsPage: React.FC = () => {
         }
       }
 
-      // Appliquer les filtres de réponses
+      // Filtres de réponses
       if (hasActiveAnswerFilters) {
         return Object.entries(answerFilters).every(([questionId, filter]) => {
           const questionAnswer = answer.answers.find(a => a.questionId === questionId);
           if (!questionAnswer) return false;
 
-          return filter.rules.every(rule => {
-            const answerValue = questionAnswer.answer;
-            return evaluateRule(answerValue, rule);
-          });
+          return filter.rules.every(rule => evaluateRule(questionAnswer.answer, rule));
         });
       }
 
@@ -1801,6 +1836,26 @@ const ResultsPage: React.FC = () => {
       }
     }, [open, filters.demographic]);
 
+    const handleApplyFilters = () => {
+      setFilters(prev => ({
+        ...prev,
+        demographic: {
+          gender: tempFilters.gender,
+          educationLevel: tempFilters.educationLevel,
+          city: tempFilters.city,
+          age: tempFilters.age
+        }
+      }));
+      
+      if (selectedSurvey) {
+        const answers = surveyAnswers[selectedSurvey._id] || [];
+        const filtered = filterAnswers(answers);
+        const newStats = calculateDemographicStats(selectedSurvey._id, filtered);
+        setFilteredStats(newStats);
+      }
+      onClose();
+    };
+
     return (
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -1952,24 +2007,7 @@ const ResultsPage: React.FC = () => {
             Cancel
           </Button>
           <Button 
-            onClick={() => {
-              // Appliquer les filtres temporaires aux filtres réels
-              setFilters(prev => ({
-                ...prev,
-                demographic: {
-                  gender: tempFilters.gender,
-                  educationLevel: tempFilters.educationLevel,
-                  city: tempFilters.city,
-                  age: tempFilters.age
-                }
-              }));
-              // Appliquer les filtres et fermer le dialogue
-              if (selectedSurvey) {
-                const newStats = calculateDemographicStats(selectedSurvey._id);
-                setFilteredStats(newStats);
-              }
-              onClose();
-            }}
+            onClick={handleApplyFilters}
             variant="contained"
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -2385,30 +2423,28 @@ const ResultsPage: React.FC = () => {
       gender: {},
       education: {},
       city: {},
-      ageDistribution: Array(121).fill(0)
+      ageDistribution: []
     };
 
     answers.forEach(answer => {
-      const demographic = answer.respondent?.demographic;
-      if (demographic) {
-        if (demographic.gender) {
-          stats.gender[demographic.gender] = (stats.gender[demographic.gender] || 0) + 1;
+      if (answer.respondent?.demographic) {
+        const { gender, educationLevel, city, dateOfBirth } = answer.respondent.demographic;
+        
+        if (gender) {
+          stats.gender[gender] = (stats.gender[gender] || 0) + 1;
         }
-
-        if (demographic.educationLevel) {
-          stats.education[demographic.educationLevel] = 
-            (stats.education[demographic.educationLevel] || 0) + 1;
+        
+        if (educationLevel) {
+          stats.education[educationLevel] = (stats.education[educationLevel] || 0) + 1;
         }
-
-        if (demographic.city) {
-          stats.city[demographic.city] = (stats.city[demographic.city] || 0) + 1;
+        
+        if (city) {
+          stats.city[city] = (stats.city[city] || 0) + 1;
         }
-
-        if (demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age >= 0 && age <= 120) {
-            stats.ageDistribution[age]++;
-          }
+        
+        if (dateOfBirth) {
+          const age = calculateAge(new Date(dateOfBirth));
+          stats.ageDistribution.push(age);
         }
       }
     });
@@ -2881,110 +2917,185 @@ const ResultsPage: React.FC = () => {
     setCurrentView(newView);
   };
 
-  const renderQuestionDetails = useCallback((questionId: string) => {
-    if (!selectedSurvey || !selectedQuestion) return null;
+  // Supprimez la déclaration existante de renderQuestionDetails et remplacez-la par celle-ci
+  const renderQuestionDetails = useCallback(() => {
+    if (!selectedQuestion || !selectedSurvey) return null;
 
-    const question = selectedSurvey.questions.find(q => q.id === questionId);
+    const question = selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId);
     if (!question) return null;
 
-    // Utiliser les réponses filtrées avec une vérification supplémentaire
-    const filteredAnswers = filterAnswers(selectedQuestion.answers).filter(answer => 
-      answer && 
-      answer.respondent && 
-      answer.respondent.userId && 
-      answer.answers
-    );
+    const mostCommonAnswer = getMostCommonAnswer(selectedQuestion.answers, selectedQuestion.questionId);
+    const availableChartTypes = getAvailableChartTypes(question.type);
 
-    const stats = calculateQuestionStats(selectedSurvey._id, questionId, filteredAnswers);
+    const exportToCSV = () => {
+      const data = selectedQuestion.answers.map(answer => ({
+        response: answer.answers.find(a => a.questionId === selectedQuestion.questionId)?.answer,
+        date: new Date(answer.submittedAt).toLocaleDateString(),
+        user: answer.respondent.userId.email
+      }));
+      const csvContent = "data:text/csv;charset=utf-8," + 
+        "Response,Date,User\n" +
+        data.map(row => `${row.response},${row.date},${row.user}`).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${question.text}_responses.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const exportToJSON = () => {
+      const data = selectedQuestion.answers.map(answer => ({
+        response: answer.answers.find(a => a.questionId === selectedQuestion.questionId)?.answer,
+        date: answer.submittedAt,
+        user: answer.respondent.userId.email
+      }));
+      const jsonContent = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+      const link = document.createElement("a");
+      link.setAttribute("href", jsonContent);
+      link.setAttribute("download", `${question.text}_responses.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
     return (
-      <>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              {question.text}
-            </Typography>
-            
-            {/* Statistiques sécurisées */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              gap: 2,
-              mt: 2 
-            }}>
-              <Stack direction="row" spacing={2}>
-                <Box sx={{ 
-                  bgcolor: 'rgba(255, 255, 255, 0.2)',
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: 2,
-                  minWidth: '150px'
-                }}>
-                  <Typography variant="overline" sx={{ opacity: 0.9, display: 'block' }}>
-                    Total Responses
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {stats?.total || 0}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Box>
-          </Box>
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {question.text}
+          </Typography>
+          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
 
-        <DialogContent>
-          {currentView === 'list' ? (
-            <List>
-              {filteredAnswers.map((answer, index) => {
-                // Vérifications de sécurité supplémentaires
-                if (!answer?.respondent?.userId || !answer.answers) {
-                  return null;
-                }
+        <DialogContent sx={{ p: 3 }}>
+          <Box sx={{ mb: 3 }}>
+            <Paper sx={{ 
+              p: 2, 
+              bgcolor: 'rgba(102, 126, 234, 0.05)',
+              border: '1px solid rgba(102, 126, 234, 0.1)',
+              borderRadius: 2
+            }}>
+              <Typography variant="subtitle2" color="primary" gutterBottom>
+                Most Common Answer
+              </Typography>
+              <Typography variant="h6">
+                {mostCommonAnswer || 'No responses yet'}
+              </Typography>
+            </Paper>
+          </Box>
 
+          <Tabs 
+            value={currentView} 
+            onChange={(_, newValue) => setCurrentView(newValue)}
+            sx={{
+              mb: 3,
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                minWidth: 100
+              }
+            }}
+          >
+            <Tab 
+              label="Responses" 
+              value="list"
+              icon={<VisibilityIcon />}
+              iconPosition="start"
+            />
+            {availableChartTypes.length > 0 && (
+              <Tab 
+                label="Charts" 
+                value="chart"
+                icon={<BarChartIcon />}
+                iconPosition="start"
+              />
+            )}
+          </Tabs>
+
+          {currentView === 'list' ? (
+            <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+              {selectedQuestion.answers.map((answer, index) => {
                 const questionAnswer = answer.answers.find(
                   a => a.questionId === selectedQuestion.questionId
                 );
-                const tooltipContent = (
-                  <Box component="div">
-                    <ListItem 
-                      sx={{
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        borderRadius: 1,
-                        mb: 1,
-                        '&:hover': {
-                          bgcolor: 'rgba(102, 126, 234, 0.05)'
-                        }
-                      }}
-                    >
-                      <ListItemText
-                        primary={questionAnswer?.answer || 'No response'}
-                        secondary={new Date(answer.submittedAt).toLocaleDateString()}
-                      />
-                    </ListItem>
-                  </Box>
-                );
-
                 return (
-                  <Box key={answer._id}>
-                    <AnswerTooltip 
-                      answer={answer}
-                      questionAnswer={questionAnswer}
-                    />
-                  </Box>
+                  <AnswerTooltip 
+                    key={index}
+                    answer={answer}
+                    questionAnswer={questionAnswer}
+                  />
                 );
               })}
             </List>
           ) : (
             <ChartView 
-              data={getQuestionData(questionId, filteredAnswers)}
+              data={getQuestionData(selectedQuestion.questionId, selectedQuestion.answers)}
               question={question}
             />
           )}
         </DialogContent>
-      </>
+
+        <DialogActions sx={{ 
+          p: 3, 
+          borderTop: '1px solid rgba(0,0,0,0.1)',
+          display: 'flex',
+          justifyContent: 'space-between'
+        }}>
+          <Box>
+            <Button
+              startIcon={<FileDownloadIcon />}
+              onClick={exportToCSV}
+              variant="outlined"
+              sx={{ mr: 1 }}
+            >
+              Export CSV
+            </Button>
+            <Button
+              startIcon={<CodeIcon />}
+              onClick={exportToJSON}
+              variant="outlined"
+            >
+              Export JSON
+            </Button>
+          </Box>
+          <Button
+            onClick={handleClose}
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
+              }
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     );
-  }, [selectedSurvey, selectedQuestion, currentView, filterAnswers, calculateQuestionStats, calculateAge]);
+  }, [selectedQuestion, selectedSurvey, dialogOpen, currentView, handleClose]);
 
   // Ajout d'un useEffect pour surveiller les changements de vue
   useEffect(() => {
@@ -3579,31 +3690,6 @@ const ResultsPage: React.FC = () => {
 
   }, [selectedSurvey, surveyAnswers, filters.demographic, answerFilters, calculateDemographicStats]);
 
-  // Ajouter une fonction helper pour évaluer les règles
-  const evaluateRule = (value: any, rule: FilterRule) => {
-    switch (rule.operator) {
-      case 'equals':
-        return value === rule.value;
-      case 'not':
-        return value !== rule.value;
-      case 'contains':
-        return String(value).toLowerCase().includes(String(rule.value).toLowerCase());
-      case 'not_contains':
-        return !String(value).toLowerCase().includes(String(rule.value).toLowerCase());
-      case 'greater':
-        return Number(value) > Number(rule.value);
-      case 'less':
-        return Number(value) < Number(rule.value);
-      case 'between':
-        if (Array.isArray(rule.value)) {
-          return Number(value) >= rule.value[0] && Number(value) <= rule.value[1];
-        }
-        return false;
-      default:
-        return true;
-    }
-  };
-
   // Ajouter cet état au début du composant
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
@@ -3639,6 +3725,31 @@ const ResultsPage: React.FC = () => {
       }));
       applyDemographicFilters();
     }
+  };
+
+  // Dans le composant ResultsPage, ajoutez cette fonction
+  const getMostCommonAnswer = (answers: SurveyAnswer[], questionId: string): string => {
+    const answerCounts: { [key: string]: number } = {};
+    
+    answers.forEach(answer => {
+      const questionAnswer = answer.answers.find(a => a.questionId === questionId);
+      if (questionAnswer?.answer) {
+        const value = questionAnswer.answer.toString();
+        answerCounts[value] = (answerCounts[value] || 0) + 1;
+      }
+    });
+
+    let mostCommon = '';
+    let maxCount = 0;
+    
+    Object.entries(answerCounts).forEach(([answer, count]) => {
+      if (count > maxCount) {
+        mostCommon = answer;
+        maxCount = count;
+      }
+    });
+
+    return mostCommon;
   };
 
   if (loading) {
@@ -3943,13 +4054,11 @@ const ResultsPage: React.FC = () => {
             open={dialogOpen}
             onClose={() => {
               setDialogOpen(false);
-              // Les autres états seront nettoyés après la fermeture du Dialog
             }}
             maxWidth="md"
             fullWidth
             TransitionProps={{
               onExited: () => {
-                // Nettoyer les états après la fermeture complète
                 setSelectedQuestion(null);
                 setCurrentView('list');
               }
@@ -3960,7 +4069,7 @@ const ResultsPage: React.FC = () => {
               }
             }}
           >
-            {selectedQuestion && renderQuestionDetails(selectedQuestion.questionId)}
+            {selectedQuestion && renderQuestionDetails()}
           </Dialog>
         )}
         
