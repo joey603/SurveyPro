@@ -53,7 +53,8 @@ import {
   Title,
   Tooltip,
   Legend,
-  ChartOptions
+  ChartOptions,
+  RadialLinearScale
 } from 'chart.js';
 import { ResponsiveRadar } from '@nivo/radar';
 import PieChartIcon from '@mui/icons-material/PieChart';
@@ -88,15 +89,16 @@ import type { ReactElement } from 'react';
 
 // Enregistrer les éléments nécessaires
 ChartJS.register(
-  ArcElement,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,  // Ajout de BarElement
   Title,
   Tooltip,
-  Legend
+  Legend,
+  RadialLinearScale,
+  ArcElement,
+  BarElement
 );
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter';
@@ -3408,60 +3410,60 @@ const ResultsPage: React.FC = () => {
 
   // Modifier la fonction renderAgeChart
   const renderAgeChart = (data: number[]) => {
-    // Filtrer les points pour exclure les 0 participants et les 0 ans
-    const points = data
-      .map((value, age) => ({
-        x: age,
-        y: value,
-        hidden: false // État de visibilité initial
-      }))
-      .filter(point => point.x > 0 && point.y > 0);
+    // Filtrer les âges invalides et les compter correctement
+    const ageDistribution = data.reduce((acc: { [key: number]: number }, age) => {
+      // S'assurer que l'âge est un nombre valide et positif
+      if (typeof age === 'number' && !isNaN(age) && age > 0 && age <= 120) {
+        const roundedAge = Math.floor(age);
+        acc[roundedAge] = (acc[roundedAge] || 0) + 1;
+      }
+      return acc;
+    }, {});
 
-    // Créer un tableau de couleurs différentes pour chaque point
-    const generateColors = (index: number) => {
-      const colors = [
-        { bg: 'rgba(102, 126, 234, 0.6)', border: 'rgba(102, 126, 234, 1)' },
-        { bg: 'rgba(118, 75, 162, 0.6)', border: 'rgba(118, 75, 162, 1)' },
-        { bg: 'rgba(237, 100, 166, 0.6)', border: 'rgba(237, 100, 166, 1)' },
-        { bg: 'rgba(39, 187, 245, 0.6)', border: 'rgba(39, 187, 245, 1)' },
-        { bg: 'rgba(146, 100, 237, 0.6)', border: 'rgba(146, 100, 237, 1)' },
-        { bg: 'rgba(245, 101, 101, 0.6)', border: 'rgba(245, 101, 101, 1)' },
-        { bg: 'rgba(72, 187, 120, 0.6)', border: 'rgba(72, 187, 120, 1)' },
-        { bg: 'rgba(246, 173, 85, 0.6)', border: 'rgba(246, 173, 85, 1)' },
-      ];
-      return colors[index % colors.length];
+    // Log pour debug
+    console.log('Age distribution data:', {
+      rawData: data,
+      processedDistribution: ageDistribution,
+      totalParticipants: Object.values(ageDistribution).reduce((sum, count) => sum + count, 0)
+    });
+
+    const cityColors = {
+      backgrounds: [
+        'rgba(102, 126, 234, 0.6)',    // Bleu principal
+        'rgba(118, 75, 162, 0.6)',     // Violet
+        'rgba(75, 192, 192, 0.6)',     // Turquoise
+        'rgba(255, 159, 64, 0.6)',     // Orange
+        'rgba(255, 99, 132, 0.6)',     // Rose
+      ],
+      borders: [
+        'rgba(102, 126, 234, 1)',      // Bleu principal
+        'rgba(118, 75, 162, 1)',       // Violet
+        'rgba(75, 192, 192, 1)',       // Turquoise
+        'rgba(255, 159, 64, 1)',       // Orange
+        'rgba(255, 99, 132, 1)',       // Rose
+      ]
     };
+
+    const ages = Object.keys(ageDistribution).map(Number).sort((a, b) => a - b);
+
+    const datasets = ages.map((age, index) => ({
+      label: `${age} ans - ${ageDistribution[age]} participant${ageDistribution[age] > 1 ? 's' : ''}`,
+      data: [{
+        x: age,
+        y: ageDistribution[age]
+      }],
+      backgroundColor: cityColors.backgrounds[index % cityColors.backgrounds.length],
+      borderColor: cityColors.borders[index % cityColors.borders.length],
+      borderWidth: 2,
+      pointRadius: 8,
+      pointHoverRadius: 10,
+      fill: false
+    }));
 
     const chartData = {
-      datasets: [{
-        label: 'Nombre de participants',
-        data: points,
-        backgroundColor: points.map((_, index) => generateColors(index).bg),
-        borderColor: points.map((_, index) => generateColors(index).border),
-        borderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: points.map((_, index) => generateColors(index).bg),
-        pointBorderColor: points.map((_, index) => generateColors(index).border),
-        pointHoverBackgroundColor: points.map((_, index) => generateColors(index).bg.replace('0.6', '0.8')),
-        pointHoverBorderColor: points.map((_, index) => generateColors(index).border),
-        showLine: true,
-        tension: 0.3,
-        parsing: {
-          xAxisKey: 'x',
-          yAxisKey: 'y'
-        }
-      }]
+      datasets
     };
 
-    // Ajouter cette interface pour les éléments du graphique
-    interface ChartDataElement {
-      hidden?: boolean;
-      _datasetIndex?: number;
-      _index?: number;
-    }
-
-    // Dans la fonction renderAgeChart, modifier le cast des éléments
     const options: ChartOptions<'scatter'> = {
       responsive: true,
       maintainAspectRatio: true,
@@ -3469,60 +3471,30 @@ const ResultsPage: React.FC = () => {
         legend: {
           display: true,
           position: 'right' as const,
-          align: 'start' as const,
-          onClick: function(e, legendItem, legend) {
-            if (!legend || !legend.chart) return;
-            
-            const index = legendItem.index;
-            if (index !== undefined) {
-              const chart = legend.chart;
-              const meta = chart.getDatasetMeta(0);
-              
-              // Utiliser le nouveau type pour le cast
-              const element = meta.data[index] as unknown as ChartDataElement;
-              if (element) {
-                element.hidden = !element.hidden;
-                
-                // Mettre à jour l'état dans notre tableau de points
-                points[index].hidden = element.hidden || false;
-                
-                // Forcer la mise à jour du graphique
-                chart.update();
-              }
-            }
-          },
           labels: {
-            generateLabels: function(chart) {
-              const dataset = chart.data.datasets[0];
-              return points.map((point, index) => {
-                // Utiliser le nouveau type pour le cast
-                const element = chart.getDatasetMeta(0).data[index] as unknown as ChartDataElement;
-                return {
-                  text: `${point.x}`, // Suppression de " ans"
-                  fillStyle: generateColors(index).bg,
-                  strokeStyle: generateColors(index).border,
-                  lineWidth: 1,
-                  hidden: element?.hidden || false,
-                  datasetIndex: 0,
-                  index: index
-                };
-              });
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: {
+              size: 12
             }
-          }
-        },
-        title: {
-          display: false, // Changé de true à false pour supprimer le titre redondant
-          text: 'Distribution des âges',
-          font: {
-            size: 16,
-            weight: 'bold'
           },
-          padding: 20
+          title: {
+            display: true,
+            text: 'Participants Age',
+            font: {
+              size: 14,
+              weight: 'bold'
+            },
+            padding: { bottom: 10 }
+          }
         },
         tooltip: {
           callbacks: {
-            label: function(context: any) {
-              return `${context.parsed.y} participant${context.parsed.y > 1 ? 's' : ''} de ${context.parsed.x} ans`;
+            label: (context: any) => {
+              const age = context.parsed.x;
+              const count = context.parsed.y;
+              return `${count} participant${count > 1 ? 's' : ''} ${age} years old`;
             }
           }
         }
@@ -3531,27 +3503,44 @@ const ResultsPage: React.FC = () => {
         x: {
           type: 'linear',
           position: 'bottom',
+          title: {
+            display: true,
+            text: 'Age',
+            font: {
+              size: 14,
+              weight: 'bold'
+            }
+          },
           min: 1,
           max: 100,
           ticks: {
             stepSize: 5,
-            callback: function(value) {
-              return value.toString();
+            callback: function(tickValue: number | string): string | number {
+              return Math.floor(Number(tickValue));
             }
           },
           grid: {
-            color: 'rgba(102, 126, 234, 0.1)',
-            display: true
+            color: 'rgba(102, 126, 234, 0.1)'
           }
         },
         y: {
+          type: 'linear',
+          position: 'left',
+          title: {
+            display: true,
+            text: 'Number of Participants',
+            font: {
+              size: 14,
+              weight: 'bold'
+            }
+          },
           beginAtZero: true,
           ticks: {
-            stepSize: 1
+            stepSize: 1,
+            precision: 0
           },
           grid: {
-            color: 'rgba(102, 126, 234, 0.1)',
-            display: true
+            color: 'rgba(102, 126, 234, 0.1)'
           }
         }
       },
@@ -3565,13 +3554,8 @@ const ResultsPage: React.FC = () => {
       <Box sx={{ 
         height: '400px', 
         width: '100%',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'scale(1.01)',
-          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)'
-        },
         display: 'flex',
-        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center'
       }}>
         <Scatter data={chartData} options={options} />
