@@ -893,18 +893,7 @@ const ResultsPage: React.FC = () => {
     }, [selectedSurvey, tempFilters, surveyAnswers]);
 
     return (
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }
-        }}
-      >
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
@@ -920,414 +909,388 @@ const ResultsPage: React.FC = () => {
             <ClearIcon />
           </IconButton>
         </DialogTitle>
-        
-        <DialogContent sx={{ mt: 2 }}>
-          {selectedSurvey?.questions.map(question => (
-            <Box 
-              key={question.id} 
-              sx={{ 
-                mb: 3,
-                p: 3,
-                borderRadius: 2,
-                backgroundColor: 'white',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
-                border: '1px solid rgba(102, 126, 234, 0.2)',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
-                  transform: 'translateY(-1px)'
-                }
-              }}
-            >
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#2d3748',
-                  mb: 2
-                }}
-              >
-                {question.text}
-              </Typography>
-              
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: '#667eea',
-                  display: 'block',
-                  mb: 2,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                Type: {question.type}
-              </Typography>
 
-              {/* Rules Section */}
-              {tempFilters[question.id]?.rules.map((rule, ruleIndex) => (
-                <Box 
-                  key={ruleIndex}
-                  sx={{ 
-                    mb: 2,
-                    p: 2,
+        <DialogContent>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            {selectedSurvey?.questions.map(question => (
+              <Grid item xs={12} key={question.id}>
+                <Box sx={{ 
+                  p: 3,
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(102, 126, 234, 0.02)',
+                  border: '1px solid rgba(102, 126, 234, 0.08)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
                     backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                    borderRadius: 2,
-                    border: '1px solid rgba(102, 126, 234, 0.1)'
-                  }}
-                >
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={3}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Operator</InputLabel>
-                        <Select
-                          value={rule.operator}
-                          onChange={(e) => {
-                            setTempFilters(prev => ({
-                              ...prev,
-                              [question.id]: {
-                                ...prev[question.id],
-                                rules: prev[question.id].rules.map((r, idx) =>
-                                  idx === ruleIndex ? { ...r, operator: e.target.value } : r
-                                )
-                              }
-                            }));
-                          }}
-                        >
-                          {getOperatorsByType(question.type).map(op => (
-                            <MenuItem key={op} value={op}>
-                              {op.split('_').map(word => 
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                              ).join(' ')}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={8}>
-                      {/* Champs de valeur selon le type de question et l'opérateur */}
-                      {rule.operator === 'between' ? (
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          {question.type === 'rating' && (
-                            <>
-                              <Rating
-                                value={Number(rule.value || 0)}
-                                onChange={(_, newValue) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      questionId: question.id,
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, value: newValue } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                              />
-                              <Typography>et</Typography>
-                              <Rating
-                                value={Number(rule.secondValue || 0)}
-                                onChange={(_, newValue) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      questionId: question.id,
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, secondValue: newValue } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                              />
-                            </>
-                          )}
-
-                          {question.type === 'slider' && (
-                            <>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={rule.value || ''}
-                                onChange={(e) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      questionId: question.id,
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, value: Number(e.target.value) || null } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                                InputProps={{ inputProps: { min: 0, max: 100 } }}
-                              />
-                              <Typography>et</Typography>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={rule.secondValue || ''}
-                                onChange={(e) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      questionId: question.id,
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, secondValue: Number(e.target.value) || null } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                                InputProps={{ inputProps: { min: 0, max: 100 } }}
-                              />
-                            </>
-                          )}
-
-                          {question.type === 'date' && (
-                            <>
-                              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                                <DatePicker
-                                  value={rule.value ? new Date(rule.value.toString()) : null}
-                                  onChange={(newValue) => {
-                                    setTempFilters(prev => ({
-                                      ...prev,
-                                      [question.id]: {
-                                        questionId: question.id,
-                                        rules: prev[question.id].rules.map((r, idx) =>
-                                          idx === ruleIndex ? { ...r, value: newValue?.toISOString() || null } : r
-                                        )
-                                      }
-                                    }));
-                                  }}
-                                  renderInput={(params) => (
-                                    <TextField {...params} size="small" />
-                                  )}
-                                />
-                                <Typography sx={{ mx: 1 }}>et</Typography>
-                                <DatePicker
-                                  value={rule.secondValue ? new Date(rule.secondValue.toString()) : null}
-                                  onChange={(newValue) => {
-                                    setTempFilters(prev => ({
-                                      ...prev,
-                                      [question.id]: {
-                                        questionId: question.id,
-                                        rules: prev[question.id].rules.map((r, idx) =>
-                                          idx === ruleIndex ? { ...r, secondValue: newValue?.toISOString() || null } : r
-                                        )
-                                      }
-                                    }));
-                                  }}
-                                  renderInput={(params) => (
-                                    <TextField {...params} size="small" />
-                                  )}
-                                />
-                              </LocalizationProvider>
-                            </>
-                          )}
-                        </Stack>
-                      ) : (
-                        // Code existant pour les autres opérateurs
-                        <>
-                          {question.type === 'rating' && (
-                            <Rating
-                              value={Number(rule.value || 0)}
-                              onChange={(_, newValue) => {
-                                setTempFilters(prev => ({
-                                  ...prev,
-                                  [question.id]: {
-                                    questionId: question.id,
-                                    rules: prev[question.id].rules.map((r, idx) =>
-                                      idx === ruleIndex ? { ...r, value: newValue } : r
-                                    )
-                                  }
-                                }));
-                              }}
-                            />
-                          )}
-
-                          {question.type === 'slider' && (
-                            <Slider
-                              value={typeof rule.value === 'number' ? rule.value : 0}
-                              min={0}
-                              max={100}
-                              valueLabelDisplay="auto"
-                              onChange={(event: Event, newValue: number | number[]) => {
-                                setTempFilters(prev => ({
-                                  ...prev,
-                                  [question.id]: {
-                                    questionId: question.id,
-                                    rules: prev[question.id].rules.map((r, idx) =>
-                                      idx === ruleIndex ? { 
-                                        ...r, 
-                                        value: typeof newValue === 'number' ? newValue : null 
-                                      } : r
-                                    )
-                                  }
-                                }));
-                              }}
-                            />
-                          )}
-
-                          {(question.type === 'text' || question.type === 'open-ended') && (
-                            <TextField
-                              fullWidth
-                              size="small"
-                              value={rule.value?.toString() || ''}
-                              onChange={(e) => {
-                                setTempFilters(prev => ({
-                                  ...prev,
-                                  [question.id]: {
-                                    questionId: question.id,
-                                    rules: prev[question.id].rules.map((r, idx) =>
-                                      idx === ruleIndex ? { 
-                                        ...r, 
-                                        value: e.target.value || null 
-                                      } : r
-                                    )
-                                  }
-                                }));
-                              }}
-                            />
-                          )}
-
-                          {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={rule.value || ''}
-                                onChange={(e) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      ...prev[question.id],
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, value: e.target.value } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                              >
-                                {question.options?.map((option: string) => (
-                                  <MenuItem key={option} value={option}>
-                                    {option}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          )}
-
-                          {question.type === 'yes-no' && (
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={rule.value || ''}
-                                onChange={(e) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      ...prev[question.id],
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { ...r, value: e.target.value } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                              >
-                                <MenuItem value="yes">Yes</MenuItem>
-                                <MenuItem value="no">No</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-
-                          {question.type === 'date' && (
-                            <LocalizationProvider dateAdapter={AdapterDateFns}>
-                              <DatePicker
-                                value={rule.value ? new Date(rule.value.toString()) : null}
-                                onChange={(newValue) => {
-                                  setTempFilters(prev => ({
-                                    ...prev,
-                                    [question.id]: {
-                                      questionId: question.id,
-                                      rules: prev[question.id].rules.map((r, idx) =>
-                                        idx === ruleIndex ? { 
-                                          ...r, 
-                                          value: newValue ? newValue.toISOString() : null 
-                                        } : r
-                                      )
-                                    }
-                                  }));
-                                }}
-                                renderInput={(params) => (
-                                  <TextField {...params} size="small" fullWidth />
-                                )}
-                              />
-                            </LocalizationProvider>
-                          )}
-
-                          {question.type === 'color-picker' && (
-                            <TextField
-                              type="color"
-                              fullWidth
-                              size="small"
-                              value={rule.value || '#000000'}
+                    borderColor: 'rgba(102, 126, 234, 0.15)'
+                  }
+                }}>
+                  <Typography variant="subtitle1" sx={{ 
+                    color: '#4a5568', 
+                    fontWeight: 600,
+                    mb: 2 
+                  }}>
+                    {question.text}
+                  </Typography>
+                  
+                  {/* Règles existantes */}
+                  {tempFilters[question.id]?.rules.map((rule, ruleIndex) => (
+                    <Box key={ruleIndex} sx={{ 
+                      mb: 2,
+                      p: 2,
+                      backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                      borderRadius: 2,
+                      border: '1px solid rgba(102, 126, 234, 0.1)'
+                    }}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={3}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Operator</InputLabel>
+                            <Select
+                              value={rule.operator}
                               onChange={(e) => {
                                 setTempFilters(prev => ({
                                   ...prev,
                                   [question.id]: {
                                     ...prev[question.id],
                                     rules: prev[question.id].rules.map((r, idx) =>
-                                      idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                      idx === ruleIndex ? { ...r, operator: e.target.value } : r
                                     )
                                   }
                                 }));
                               }}
-                            />
+                            >
+                              {getOperatorsByType(question.type).map(op => (
+                                <MenuItem key={op} value={op}>
+                                  {op.split('_').map(word => 
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                  ).join(' ')}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        <Grid item xs={8}>
+                          {/* Champs de valeur selon le type de question et l'opérateur */}
+                          {rule.operator === 'between' ? (
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              {question.type === 'rating' && (
+                                <>
+                                  <Rating
+                                    value={Number(rule.value || 0)}
+                                    onChange={(_, newValue) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          questionId: question.id,
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, value: newValue } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                  <Typography>et</Typography>
+                                  <Rating
+                                    value={Number(rule.secondValue || 0)}
+                                    onChange={(_, newValue) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          questionId: question.id,
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, secondValue: newValue } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                </>
+                              )}
+
+                              {question.type === 'slider' && (
+                                <>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={rule.value || ''}
+                                    onChange={(e) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          questionId: question.id,
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, value: Number(e.target.value) || null } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    InputProps={{ inputProps: { min: 0, max: 100 } }}
+                                  />
+                                  <Typography>et</Typography>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={rule.secondValue || ''}
+                                    onChange={(e) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          questionId: question.id,
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, secondValue: Number(e.target.value) || null } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    InputProps={{ inputProps: { min: 0, max: 100 } }}
+                                  />
+                                </>
+                              )}
+
+                              {question.type === 'date' && (
+                                <>
+                                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                    <DatePicker
+                                      value={rule.value ? new Date(rule.value.toString()) : null}
+                                      onChange={(newValue) => {
+                                        setTempFilters(prev => ({
+                                          ...prev,
+                                          [question.id]: {
+                                            questionId: question.id,
+                                            rules: prev[question.id].rules.map((r, idx) =>
+                                              idx === ruleIndex ? { ...r, value: newValue?.toISOString() || null } : r
+                                            )
+                                          }
+                                        }));
+                                      }}
+                                      renderInput={(params) => (
+                                        <TextField {...params} size="small" />
+                                      )}
+                                    />
+                                    <Typography sx={{ mx: 1 }}>et</Typography>
+                                    <DatePicker
+                                      value={rule.secondValue ? new Date(rule.secondValue.toString()) : null}
+                                      onChange={(newValue) => {
+                                        setTempFilters(prev => ({
+                                          ...prev,
+                                          [question.id]: {
+                                            questionId: question.id,
+                                            rules: prev[question.id].rules.map((r, idx) =>
+                                              idx === ruleIndex ? { ...r, secondValue: newValue?.toISOString() || null } : r
+                                            )
+                                          }
+                                        }));
+                                      }}
+                                      renderInput={(params) => (
+                                        <TextField {...params} size="small" />
+                                      )}
+                                    />
+                                  </LocalizationProvider>
+                                </>
+                              )}
+                            </Stack>
+                          ) : (
+                            // Code existant pour les autres opérateurs
+                            <>
+                              {question.type === 'rating' && (
+                                <Rating
+                                  value={Number(rule.value || 0)}
+                                  onChange={(_, newValue) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        questionId: question.id,
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { ...r, value: newValue } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                />
+                              )}
+
+                              {question.type === 'slider' && (
+                                <Slider
+                                  value={typeof rule.value === 'number' ? rule.value : 0}
+                                  min={0}
+                                  max={100}
+                                  valueLabelDisplay="auto"
+                                  onChange={(event: Event, newValue: number | number[]) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        questionId: question.id,
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { 
+                                            ...r, 
+                                            value: typeof newValue === 'number' ? newValue : null 
+                                          } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                />
+                              )}
+
+                              {(question.type === 'text' || question.type === 'open-ended') && (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  value={rule.value?.toString() || ''}
+                                  onChange={(e) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        questionId: question.id,
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { 
+                                            ...r, 
+                                            value: e.target.value || null 
+                                          } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                />
+                              )}
+
+                              {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
+                                <FormControl fullWidth size="small">
+                                  <Select
+                                    value={rule.value || ''}
+                                    onChange={(e) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          ...prev[question.id],
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                  >
+                                    {question.options?.map((option: string) => (
+                                      <MenuItem key={option} value={option}>
+                                        {option}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              )}
+
+                              {question.type === 'yes-no' && (
+                                <FormControl fullWidth size="small">
+                                  <Select
+                                    value={rule.value || ''}
+                                    onChange={(e) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          ...prev[question.id],
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                  >
+                                    <MenuItem value="yes">Yes</MenuItem>
+                                    <MenuItem value="no">No</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              )}
+
+                              {question.type === 'date' && (
+                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                  <DatePicker
+                                    value={rule.value ? new Date(rule.value.toString()) : null}
+                                    onChange={(newValue) => {
+                                      setTempFilters(prev => ({
+                                        ...prev,
+                                        [question.id]: {
+                                          questionId: question.id,
+                                          rules: prev[question.id].rules.map((r, idx) =>
+                                            idx === ruleIndex ? { 
+                                              ...r, 
+                                              value: newValue ? newValue.toISOString() : null 
+                                            } : r
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    renderInput={(params) => (
+                                      <TextField {...params} size="small" fullWidth />
+                                    )}
+                                  />
+                                </LocalizationProvider>
+                              )}
+
+                              {question.type === 'color-picker' && (
+                                <TextField
+                                  type="color"
+                                  fullWidth
+                                  size="small"
+                                  value={rule.value || '#000000'}
+                                  onChange={(e) => {
+                                    setTempFilters(prev => ({
+                                      ...prev,
+                                      [question.id]: {
+                                        ...prev[question.id],
+                                        rules: prev[question.id].rules.map((r, idx) =>
+                                          idx === ruleIndex ? { ...r, value: e.target.value } : r
+                                        )
+                                      }
+                                    }));
+                                  }}
+                                />
+                              )}
+                            </>
                           )}
-                        </>
-                      )}
-                    </Grid>
+                        </Grid>
 
-                    <Grid item xs={1}>
-                      <IconButton 
-                        onClick={() => removeRule(question.id, ruleIndex)}
-                        size="small"
-                        sx={{ color: 'error.main' }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Grid>
-                  </Grid>
+                        <Grid item xs={1}>
+                          <IconButton 
+                            onClick={() => removeRule(question.id, ruleIndex)}
+                            size="small"
+                            sx={{ color: 'error.main' }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  ))}
+
+                  {/* Bouton d'ajout de règle */}
+                  <Button
+                    startIcon={<AddIcon />}
+                    onClick={() => addRuleToQuestion(question.id)}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      mt: 2,
+                      color: '#667eea',
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      '&:hover': {
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                      }
+                    }}
+                  >
+                    Add Rule
+                  </Button>
                 </Box>
-              ))}
-
-              <Button
-                startIcon={<AddIcon />}
-                onClick={() => addRuleToQuestion(question.id)}
-                variant="outlined"
-                size="small"
-                sx={{ 
-                  mt: 2,
-                  color: '#667eea',
-                  borderColor: 'rgba(102, 126, 234, 0.5)',
-                  backgroundColor: 'white',
-                  '&:hover': {
-                    borderColor: '#764ba2',
-                    backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                    transform: 'translateY(-1px)'
-                  },
-                  transition: 'all 0.2s ease',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  px: 3
-                }}
-              >
-                Add Rule
-              </Button>
-            </Box>
-          ))}
+              </Grid>
+            ))}
+          </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ 
-          p: 3, 
-          borderTop: '1px solid rgba(0,0,0,0.1)'
-        }}>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
           <Button 
             onClick={onClose}
             sx={{
@@ -3743,18 +3706,91 @@ const ResultsPage: React.FC = () => {
               <FilterPanel />
             )}
 
-           
-
-            {/* Answer Filter section - Ajout ici */}
-            <Box sx={{ mt: 3, mb: 3 }}>
-              <AnswerFilterPanel 
-                open={answerFilterDialogOpen}
-                onClose={() => setAnswerFilterDialogOpen(false)}
-                selectedSurvey={selectedSurvey}
-                answerFilters={answerFilters}
-                setAnswerFilters={setAnswerFilters}
-              />
-            </Box>
+            {/* Answer Filter section */}
+            {!selectedSurvey?.demographicEnabled && (
+              <Box sx={{ 
+                mb: 4,
+                p: 3,
+                borderRadius: 2,
+                backgroundColor: 'white',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
+                border: '1px solid rgba(102, 126, 234, 0.2)',
+              }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 3 
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                    }}
+                  >
+                    Filter Responses
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setAnswerFilters({})}
+                    startIcon={<ClearIcon />}
+                    disabled={Object.keys(answerFilters).length === 0}
+                    sx={{
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                      color: '#667eea',
+                      '&:hover': {
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                      },
+                      '&.Mui-disabled': {
+                        borderColor: 'rgba(0, 0, 0, 0.12)',
+                        color: 'rgba(0, 0, 0, 0.26)'
+                      }
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </Box>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Button
+                    startIcon={<FilterListIcon />}
+                    onClick={() => setAnswerFilterDialogOpen(true)}
+                    variant="contained"
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 3,
+                      py: 1,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                      }
+                    }}
+                  >
+                    Configure Filters
+                  </Button>
+                  {Object.keys(answerFilters).length > 0 && (
+                    <Chip
+                      label={`${Object.keys(answerFilters).length} active filter(s)`}
+                      onDelete={() => setAnswerFilters({})}
+                      color="primary"
+                      sx={{
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        color: '#667eea',
+                        '& .MuiChip-deleteIcon': {
+                          color: '#667eea'
+                        }
+                      }}
+                    />
+                  )}
+                </Stack>
+              </Box>
+            )}
 
             {/* Questions section */}
             <Box sx={{ mb: 4 }}>
@@ -3932,6 +3968,15 @@ const ResultsPage: React.FC = () => {
         <DemographicFilterPanel 
           open={demographicFilterDialogOpen}
           onClose={() => setDemographicFilterDialogOpen(false)}
+        />
+
+        {/* Ajouter le dialogue des filtres de réponses */}
+        <AnswerFilterPanel
+          open={answerFilterDialogOpen}
+          onClose={() => setAnswerFilterDialogOpen(false)}
+          selectedSurvey={selectedSurvey}
+          answerFilters={answerFilters}
+          setAnswerFilters={setAnswerFilters}
         />
       </Box>
     );
@@ -4292,6 +4337,32 @@ const calculateAge = (birthDate: Date): number => {
   }
   
   return age;
+};
+
+// Ajouter cette fonction avant le composant ResultsPage
+const formatFilterValue = (value: any): string => {
+  if (value === null || value === undefined) {
+    return 'N/A';
+  }
+
+  if (Array.isArray(value)) {
+    return `${value[0]}-${value[1]}`;
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+
+  // Pour les chaînes de caractères
+  return value.toString().charAt(0).toUpperCase() + value.toString().slice(1);
 };
 
 export default ResultsPage;
