@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +23,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const router = useRouter();
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -87,6 +88,7 @@ const LoginPage = () => {
       );
       const { accessToken, refreshToken } = response.data;
       login(accessToken, refreshToken);
+      onLoginSuccess();
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Invalid email or password');
@@ -97,6 +99,25 @@ const LoginPage = () => {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onLoginSuccess = async () => {
+    try {
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
+        // Utiliser le router.push au lieu de window.location
+        router.push(redirectPath);
+      } else {
+        // Redirection par défaut vers la racine
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Erreur de redirection:', error);
+      // En cas d'erreur, rediriger vers la racine
+      router.push('/');
     }
   };
 

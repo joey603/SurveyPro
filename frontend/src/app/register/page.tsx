@@ -12,8 +12,9 @@ import {
   CircularProgress,
   Container,
 } from '@mui/material';
+import { useAuth } from '@/utils/AuthContext';
 
-const RegisterPage = () => {
+const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +23,7 @@ const RegisterPage = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const { register } = useAuth();
 
   const validatePassword = (value: string) => {
     if (value.length < 8) {
@@ -71,6 +73,25 @@ const RegisterPage = () => {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRegisterSuccess = async () => {
+    try {
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
+        // Utiliser le router.push au lieu de window.location
+        router.push(redirectPath);
+      } else {
+        // Redirection par défaut vers la racine
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Erreur de redirection:', error);
+      // En cas d'erreur, rediriger vers la racine
+      router.push('/');
     }
   };
 

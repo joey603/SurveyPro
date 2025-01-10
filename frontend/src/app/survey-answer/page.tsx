@@ -18,7 +18,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
   IconButton,
   Chip,
   Stack,
@@ -27,7 +26,9 @@ import {
   Paper,
   Alert,
   FormHelperText,
-  TextFieldProps,
+  Menu,
+  MenuItem,
+  TextFieldProps
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -43,6 +44,14 @@ import Image from 'next/image';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { ChromePicker, ColorResult } from 'react-color';
 import ReactPlayer from 'react-player';
+import ShareIcon from '@mui/icons-material/Share';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import TwitterIcon from '@mui/icons-material/Twitter';
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import EmailIcon from '@mui/icons-material/Email';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { useRouter } from 'next/navigation';
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -105,6 +114,9 @@ interface FormData {
 type FieldPath = `answers.${string}` | keyof FormData | `demographic.${keyof FormData['demographic']}`;
 
 const SurveyAnswerPage: React.FC = () => {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const [urlToRedirect, setUrlToRedirect] = useState<string | null>(null);
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
@@ -129,7 +141,6 @@ const SurveyAnswerPage: React.FC = () => {
     end: null
   });
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const { isAuthenticated } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [cities, setCities] = useState<string[]>([]);
@@ -147,6 +158,35 @@ const SurveyAnswerPage: React.FC = () => {
   const [answeredSurveys, setAnsweredSurveys] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
   const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: number }>({});
+  const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
+  const [currentSurveyToShare, setCurrentSurveyToShare] = useState<Survey | null>(null);
+
+  useEffect(() => {
+    // Sauvegarder l'URL actuelle si elle contient un surveyId
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedSurveyId = urlParams.get('surveyId');
+    
+    if (sharedSurveyId && !isAuthenticated) {
+      // Sauvegarder uniquement le surveyId et le pathname
+      const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
+      localStorage.setItem('redirectAfterLogin', redirectPath);
+      // Rediriger vers la page de connexion
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur vient de se connecter et a une URL de redirection
+    if (isAuthenticated) {
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
+        // Rediriger vers l'URL sauvegardée
+        window.location.href = redirectUrl;
+      }
+    }
+  }, [isAuthenticated]);
 
   const fetchCities = async () => {
     try {
@@ -174,35 +214,29 @@ const SurveyAnswerPage: React.FC = () => {
 
   useEffect(() => {
     const loadSurveys = async () => {
-      console.log('Début du chargement des sondages');
-      
       try {
         setLoading(true);
         setError(null);
         
         const token = localStorage.getItem('accessToken');
-        console.log('Token récupéré:', token ? 'Token présent' : 'Pas de token');
-        
         if (!token) {
           throw new Error('Aucun token d\'authentification trouvé');
         }
 
-        console.log('Appel de fetchAvailableSurveys');
         const data = await fetchAvailableSurveys(token);
-        console.log('Données reçues:', data);
-        
-        if (!Array.isArray(data)) {
-          console.error('Format de données invalide:', data);
-          throw new Error('Format de données invalide reçu du serveur');
-        }
-
-        console.log('Mise à jour des sondages:', data.length, 'sondages trouvés');
         setSurveys(data);
+
+        // Vérifier s'il y a un ID de survey dans l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSurveyId = urlParams.get('surveyId');
+        
+        if (sharedSurveyId) {
+          const sharedSurvey = data.find(survey => survey._id === sharedSurveyId);
+          if (sharedSurvey) {
+            setSelectedSurvey(sharedSurvey);
+          }
+        }
       } catch (error: any) {
-        console.error('Erreur complète:', error);
-        console.error('Type d\'erreur:', typeof error);
-        console.error('Message d\'erreur:', error.message);
-        console.error('Stack trace:', error.stack);
         setError(error.message || 'Échec du chargement des sondages');
       } finally {
         setLoading(false);
@@ -835,6 +869,88 @@ const SurveyAnswerPage: React.FC = () => {
     fetchSurveyResponses();
   }, []);
 
+  const handleShareClick = (event: React.MouseEvent<HTMLButtonElement>, survey: Survey) => {
+    console.log('Share button clicked', event.currentTarget); // Debug log
+    console.log('Survey to share:', survey); // Debug log
+    event.preventDefault();
+    event.stopPropagation();
+    setShareAnchorEl(event.currentTarget);
+    setCurrentSurveyToShare(survey);
+  };
+
+  const handleShareClose = () => {
+    setShareAnchorEl(null);
+    setCurrentSurveyToShare(null);
+  };
+
+  const getShareUrl = (survey: Survey) => {
+    return `${window.location.origin}${window.location.pathname}?surveyId=${survey._id}`;
+  };
+
+  const shareOptions = [
+    {
+      name: 'WhatsApp',
+      icon: <WhatsAppIcon />,
+      action: (survey: Survey) => {
+        const url = encodeURIComponent(getShareUrl(survey));
+        window.open(`https://wa.me/?text=${encodeURIComponent('Check out this survey: ')}${url}`);
+      }
+    },
+    {
+      name: 'Facebook',
+      icon: <FacebookIcon />,
+      action: (survey: Survey) => {
+        const url = encodeURIComponent(getShareUrl(survey));
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+      }
+    },
+    {
+      name: 'Twitter',
+      icon: <TwitterIcon />,
+      action: (survey: Survey) => {
+        const url = encodeURIComponent(getShareUrl(survey));
+        window.open(`https://twitter.com/intent/tweet?url=${url}&text=${encodeURIComponent('Check out this survey!')}`);
+      }
+    },
+    {
+      name: 'LinkedIn',
+      icon: <LinkedInIcon />,
+      action: (survey: Survey) => {
+        const url = encodeURIComponent(getShareUrl(survey));
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`);
+      }
+    },
+    {
+      name: 'Email',
+      icon: <EmailIcon />,
+      action: (survey: Survey) => {
+        const url = getShareUrl(survey);
+        window.location.href = `mailto:?subject=Check out this survey&body=I thought you might be interested in this survey: ${url}`;
+      }
+    },
+    {
+      name: 'Copy Link',
+      icon: <ContentCopyIcon />,
+      action: (survey: Survey) => {
+        navigator.clipboard.writeText(getShareUrl(survey))
+          .then(() => {
+            setNotification({
+              message: "Lien copié dans le presse-papiers !",
+              severity: 'success',
+              open: true
+            });
+          })
+          .catch(() => {
+            setNotification({
+              message: "Erreur lors de la copie du lien",
+              severity: 'error',
+              open: true
+            });
+          });
+      }
+    }
+  ];
+
   if (!selectedSurvey) {
     return (
       <Box sx={{
@@ -1116,10 +1232,26 @@ const SurveyAnswerPage: React.FC = () => {
                       borderColor: 'divider',
                       backgroundColor: 'action.hover',
                       display: 'flex',
-                      justifyContent: 'flex-end',
+                      justifyContent: 'space-between',
                       position: 'relative',
                       zIndex: 1
                     }}>
+                      <Button
+                        onClick={(e) => handleShareClick(e, survey)}
+                        variant="outlined"
+                        size="small"
+                        startIcon={<ShareIcon />}
+                        sx={{
+                          borderColor: '#667eea',
+                          color: '#667eea',
+                          '&:hover': {
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          },
+                        }}
+                      >
+                        Share 
+                      </Button>
                       <Button
                         onClick={() => setSelectedSurvey(survey)}
                         variant="contained"
@@ -1148,6 +1280,68 @@ const SurveyAnswerPage: React.FC = () => {
             )}
           </Box>
         </Paper>
+
+        {notification.open && (
+          <Box sx={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            minWidth: 300
+          }}>
+            <Alert 
+              severity={notification.severity}
+              onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+              sx={{ 
+                backgroundColor: 'white',
+                boxShadow: 3,
+                borderRadius: 2
+              }}
+            >
+              {notification.message}
+            </Alert>
+          </Box>
+        )}
+
+        <Menu
+          anchorEl={shareAnchorEl}
+          open={Boolean(shareAnchorEl)}
+          onClose={handleShareClose}
+          PaperProps={{
+            elevation: 3,
+            sx: {
+              borderRadius: 2,
+              minWidth: 200,
+            }
+          }}
+        >
+          {shareOptions.map((option) => (
+            <MenuItem
+              key={option.name}
+              onClick={() => {
+                if (currentSurveyToShare) {
+                  option.action(currentSurveyToShare);
+                }
+                handleShareClose();
+              }}
+              sx={{
+                py: 1.5,
+                gap: 2,
+                '&:hover': {
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                }
+              }}
+            >
+              {React.cloneElement(option.icon, {
+                sx: { color: '#667eea' }
+              })}
+              <Typography variant="body2">
+                {option.name}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Menu>
       </Box>
     );
   }
@@ -1274,28 +1468,6 @@ const SurveyAnswerPage: React.FC = () => {
           </form>
         </Box>
       </Paper>
-      {notification.open && (
-        <Box sx={{
-          position: 'fixed',
-          top: 24,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9999,
-          minWidth: 300
-        }}>
-          <Alert 
-            severity={notification.severity}
-            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-            sx={{ 
-              backgroundColor: 'white',
-              boxShadow: 3,
-              borderRadius: 2
-            }}
-          >
-            {notification.message}
-          </Alert>
-        </Box>
-      )}
     </Box>
   );
 };
