@@ -893,7 +893,8 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <WhatsAppIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://wa.me/?text=${encodeURIComponent('Check out this survey: ')}${url}`);
+        const text = encodeURIComponent(`${survey.title} - Check out this survey: `);
+        window.open(`https://wa.me/?text=${text}${url}`);
       }
     },
     {
@@ -901,7 +902,7 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <FacebookIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+        window.open(`https://www.facebook.com/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
       }
     },
     {
@@ -909,7 +910,8 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <TwitterIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://twitter.com/intent/tweet?url=${url}&text=${encodeURIComponent('Check out this survey!')}`);
+        const text = encodeURIComponent(`${survey.title}`);
+        window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400');
       }
     },
     {
@@ -917,15 +919,7 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <LinkedInIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`);
-      }
-    },
-    {
-      name: 'Email',
-      icon: <EmailIcon />,
-      action: (survey: Survey) => {
-        const url = getShareUrl(survey);
-        window.location.href = `mailto:?subject=Check out this survey&body=I thought you might be interested in this survey: ${url}`;
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
       }
     },
     {
