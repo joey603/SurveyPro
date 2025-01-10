@@ -893,7 +893,7 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <WhatsAppIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        const text = encodeURIComponent(`${survey.title} - Check out this survey: `);
+        const text = encodeURIComponent(`📋 ${survey.title}\n\n🔍 Take part in this interesting survey!\n\n👉 Your opinion matters and will only take a few minutes.\n\n📊 Survey link: `);
         window.open(`https://wa.me/?text=${text}${url}`);
       }
     },
