@@ -4472,11 +4472,14 @@ const ResultsPage: React.FC = () => {
                       flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
-                      opacity: survey.status === 'pending' ? 0.7 : 1, // Ajout de l'opacité
                       '&:hover': {
                         boxShadow: 3,
-                        transform: 'translateY(-2px)',
-                        opacity: survey.status === 'pending' ? 0.8 : 1, // Opacité au survol
+                        zIndex: 1,
+                        '& .hover-content': {
+                          opacity: 1,
+                          visibility: 'visible',
+                          transform: 'translateY(0)',
+                        }
                       }
                     }}
                   >
@@ -4492,20 +4495,56 @@ const ResultsPage: React.FC = () => {
                         sx={{ 
                           mb: 2,
                           color: 'primary.main',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3,
+                          height: '2.6em'
                         }}
                       >
                         {survey.title}
-                        </Typography>
+                      </Typography>
+                        
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          mb: 2,
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.5,
+                          height: '4.5em'
+                        }}
+                      >
+                        {survey.description || 'No description available'}
+                      </Typography>
                         
                       {/* Badges section */}
-                      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          '& .MuiChip-root': {
+                            margin: '0 !important'
+                          }
+                        }}
+                      >
                         <Chip
                           size="small"
                           label={`${responses.length} Responses`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
+                            height: '24px'
                           }}
                         />
                         <Chip
@@ -4514,31 +4553,20 @@ const ResultsPage: React.FC = () => {
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
+                            height: '24px'
                           }}
                         />
                         <Chip
                           size="small"
                           label={survey.demographicEnabled ? "Demographic" : "No Demographic"}
                           sx={{
-                            backgroundColor: survey.demographicEnabled ? 
-                              'rgba(72, 187, 120, 0.1)' : 'rgba(237, 100, 100, 0.1)',
-                            color: survey.demographicEnabled ? 
-                              'rgb(72, 187, 120)' : 'rgb(237, 100, 100)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
                           }}
                         />
                       </Stack>
 
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary"
-                        sx={{ 
-                          mb: 2,
-                          flex: 1
-                        }}
-                      >
-                        {survey.description || 'No description available'}
-                        </Typography>
-                        
                       <Box
                         className="hover-content"
                         sx={{
@@ -4592,8 +4620,8 @@ const ResultsPage: React.FC = () => {
                           }}
                         >
                           {survey.description || 'No description available'}
-                          </Typography>
-                        </Box>
+                        </Typography>
+                      </Box>
                         
                       <Stack 
                         direction="column"
