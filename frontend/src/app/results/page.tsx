@@ -37,7 +37,6 @@ import {
   LinearProgress,
   Tooltip as MuiTooltip,
   TooltipProps,
-  Menu,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -94,11 +93,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
 import { respondToSurveyShare } from '@/utils/surveyShareService';
 import EmailIcon from '@mui/icons-material/Email';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import FacebookIcon from '@mui/icons-material/Facebook';
-import TwitterIcon from '@mui/icons-material/Twitter';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 ChartJS.register(
   CategoryScale,
@@ -3983,61 +3977,6 @@ const ResultsPage: React.FC = () => {
     }
   };
 
-  // Ajouter cet état avec les autres états au début du composant
-  const [notification, setNotification] = useState<{
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-    open: boolean;
-  }>({
-    message: '',
-    severity: 'success',
-    open: false
-  });
-
-  // Ajouter cette fonction pour gérer la fermeture de la notification
-  const handleNotificationClose = () => {
-    setNotification(prev => ({ ...prev, open: false }));
-  };
-
-  // Ajouter le composant Alert pour afficher la notification (juste avant le Menu de partage)
-  {notification.open && (
-    <Alert
-      severity={notification.severity}
-      onClose={handleNotificationClose}
-      sx={{
-        position: 'fixed',
-        bottom: 24,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        borderRadius: 2,
-      }}
-    >
-      {notification.message}
-    </Alert>
-  )}
-
-  // Ajouter la fonction handleShareClick ici, au même niveau que les autres fonctions du composant
-  const handleShareClick = async (event: React.MouseEvent<HTMLElement>, survey: Survey) => {
-    try {
-      const surveyLink = `${window.location.origin}/survey-answer?surveyId=${survey._id}`;
-      await navigator.clipboard.writeText(surveyLink);
-      
-      setNotification({
-        message: 'Link copied to clipboard!',
-        severity: 'success',
-        open: true
-      });
-    } catch (error) {
-      setNotification({
-        message: 'Failed to copy link',
-        severity: 'error',
-        open: true
-      });
-    }
-  };
-
   if (loading) {
     return (
       <Box sx={{
@@ -4066,8 +4005,8 @@ const ResultsPage: React.FC = () => {
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',
-          maxWidth: '800px', // Ajout de la largeur maximale comme dans survey-answer
+          width: '100%',  
+          maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
           mb: 4,
         }}>
           <Box sx={{
@@ -4076,273 +4015,366 @@ const ResultsPage: React.FC = () => {
             px: 4,
             color: 'white',
             textAlign: 'center',
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
           }}>
-            <IconButton
-              onClick={handleBack}
-              sx={{
-                color: 'white',
-              }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-            
             <Typography variant="h4" fontWeight="bold">
-              {selectedSurvey.title}
+              My Surveys
             </Typography>
-
-            <Button
-              onClick={() => setShareDialogOpen(true)}
-              startIcon={<ShareIcon />}
-              variant="contained"
-              sx={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.3)',
-                }
-              }}
-            >
-              Share
-            </Button>
           </Box>
 
-          <Box sx={{ p: 3 }}>
-            {/* Demographic Filter section */}
-            {selectedSurvey?.demographicEnabled && (
-              <FilterPanel />
-            )}
-
-            {/* Answer Filter section */}
-            {!selectedSurvey?.demographicEnabled && (
-              <Box sx={{ 
-                mb: 4,
-                p: 3,
-                borderRadius: 2,
-                backgroundColor: 'white',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
-                border: '1px solid rgba(102, 126, 234, 0.2)',
-              }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  mb: 3 
-                }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent',
-                    }}
-                  >
-                    Filter Responses
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setAnswerFilters({})}
-                    startIcon={<ClearIcon />}
-                    disabled={Object.keys(answerFilters).length === 0}
-                    sx={{
-                      borderColor: 'rgba(102, 126, 234, 0.3)',
-                      color: '#667eea',
-                      '&:hover': {
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.04)'
-                      },
-                      '&.Mui-disabled': {
-                        borderColor: 'rgba(0, 0, 0, 0.12)',
-                        color: 'rgba(0, 0, 0, 0.26)'
-                      }
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </Box>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Button
-                    startIcon={<FilterListIcon />}
-                    onClick={() => setAnswerFilterDialogOpen(true)}
-                    variant="contained"
-                    sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      px: 3,
-                      py: 1,
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                      }
-                    }}
-                  >
-                    Configure Filters
-                  </Button>
-                  {Object.keys(answerFilters).length > 0 && (
-                    <Chip
-                      label={`${Object.keys(answerFilters).length} active filter(s)`}
-                      onDelete={() => setAnswerFilters({})}
-                      color="primary"
-                      sx={{
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        color: '#667eea',
-                        '& .MuiChip-deleteIcon': {
-                          color: '#667eea'
-                        }
-                      }}
-                    />
-                  )}
-                </Stack>
-              </Box>
-            )}
-
-            {/* Questions section */}
-            <Box sx={{ mb: 4 }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  mb: 3, 
-                  fontWeight: 'bold',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  color: 'transparent',
-                  display: 'inline-block',
+          <Box sx={{ p: 4, backgroundColor: 'white' }}>
+            {/* Nouvelle section de filtres */}
+            <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search surveys by title or description..."
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={clearFilters}>
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
-              >
-                Survey Questions
+              />
+
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Chip
+                  icon={<FilterListIcon />}
+                  label="Date Filter"
+                  onClick={() => setShowDateFilter(!showDateFilter)}
+                  color={showDateFilter ? "primary" : "default"}
+                  variant={showDateFilter ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={`${sortBy === 'date' ? 'Popularity' : 'Popularity'}`}
+                  onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                  color={sortBy === 'popular' ? "primary" : "default"}
+                  variant={sortBy === 'popular' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+              </Stack>
+
+              {showDateFilter && (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                    <DatePicker
+                      label="Start Date"
+                      value={dateRange.start}
+                      onChange={(newValue: Date | null) => {
+                        setDateRange(prev => ({
+                          ...prev,
+                          start: newValue
+                        }));
+                      }}
+                      renderInput={(params: TextFieldProps) => (
+                        <TextField {...params} size="small" />
+                      )}
+                    />
+                    <DatePicker
+                      label="End Date"
+                      value={dateRange.end}
+                      onChange={(newValue: Date | null) => {
+                        setDateRange(prev => ({
+                          ...prev,
+                          end: newValue
+                        }));
+                      }}
+                      renderInput={(params: TextFieldProps) => (
+                        <TextField {...params} size="small" />
+                      )}
+                      minDate={dateRange.start || undefined}
+                    />
+                  </Stack>
+                </LocalizationProvider>
+              )}
+            </Box>
+
+            {error ? (
+              <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+                {error}
               </Typography>
-              {selectedSurvey.questions.map((question, index) => {
-                const stats = calculateQuestionStats(selectedSurvey._id, question.id);
-                
-                return (
-                  <Paper 
-                    key={question.id} 
+            ) : (
+              <Box sx={{ 
+                display: 'grid', 
+                gap: 3, 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                maxWidth: '100%',  // Assure que la grille ne dépasse pas la largeur du Paper
+              }}>
+                {filteredSurveys.map((survey) => (
+                  <Paper
+                    key={survey._id}
                     elevation={1}
-                    sx={{
-                      mb: 3,
-                      p: 3,
+                    sx={{ 
                       borderRadius: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      overflow: 'hidden',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease-in-out',
+                      position: 'relative',
+                      opacity: survey.status === 'pending' ? 0.7 : 1,
+                      '&:hover': {
+                        boxShadow: 3,
+                        zIndex: 1,
+                        '& .hover-content': {
+                          opacity: 1,
+                          visibility: 'visible',
+                          transform: 'translateY(0)',
+                        }
+                      }
                     }}
                   >
                     <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start', 
-                      mb: 2 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative'
                     }}>
-                      <Box>
-                        <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                          Question {index + 1}: {question.text}
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          mb: 2,
+                          color: 'primary.main',
+                          fontWeight: 500,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3,
+                          height: '2.6em'
+                        }}
+                      >
+                        {survey.title}
+                      </Typography>
+
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          mb: 2,
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.5,
+                          height: '4.5em'
+                        }}
+                      >
+                        {survey.description || 'No description available'}
+                      </Typography>
+
+                      {/* Stats section avec shared by */}
+                      <Stack 
+                        direction="column" 
+                        spacing={1} 
+                        sx={{ 
+                          mb: 2,
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          noWrap
+                        >
+                          Created on {new Date(survey.createdAt).toLocaleDateString()}
                         </Typography>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                          Type: {question.type}
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="contained"
-                        startIcon={<BarChartIcon />}
-                        onClick={() => handleQuestionClick(question.id)}
-                        disabled={stats.total === 0} // Désactivé uniquement s'il n'y a pas de réponses
+                        {survey.sharedBy && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'text.secondary',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1
+                            }}
+                          >
+                            <EmailIcon sx={{ fontSize: 16 }} />
+                            Shared by: {survey.sharedBy}
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      {/* Badges section */}
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
                         sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                          },
-                          '&.Mui-disabled': {
-                            background: 'rgba(0, 0, 0, 0.12)',
-                            color: 'rgba(0, 0, 0, 0.26)'
+                          display: 'flex',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          mt: 'auto',
+                          '& .MuiChip-root': {
+                            margin: '0 !important'
                           }
                         }}
                       >
-                        View Details ({stats.total} responses)
-                      </Button>
+                        <Chip
+                          size="small"
+                          label={`${survey.questions?.length || 0} questions`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={`${(surveyAnswers[survey._id] || []).length} responses`}
+                          sx={{
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            color: '#667eea',
+                            height: '24px'
+                          }}
+                        />
+                      </Stack>
+
+                      {/* Hover content reste inchangé */}
+                      <Box
+                        className="hover-content"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'white',
+                          p: 3,
+                          opacity: 0,
+                          visibility: 'hidden',
+                          transform: 'translateY(-10px)',
+                          transition: 'all 0.3s ease-in-out',
+                          boxShadow: 3,
+                          borderRadius: 2,
+                          zIndex: 2,
+                          overflowY: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#f1f1f1',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#888',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: '#666',
+                            },
+                          },
+                        }}
+                      >
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            mb: 2 
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            mb: 2,
+                            lineHeight: 1.6 
+                          }}
+                        >
+                          {survey.description || 'No description available'}
+                        </Typography>
+                      </Box>
                     </Box>
 
-                    <Divider sx={{ my: 2 }} />
-
-                    <Box sx={{ mt: 2 }}>
-                      {renderQuestionSummary(question)}
+                    {/* Actions section - suppression du shared by en double */}
+                    <Box sx={{ 
+                      p: 2, 
+                      borderTop: 1, 
+                      borderColor: 'divider',
+                      backgroundColor: 'action.hover',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
+                      {survey.status === 'pending' ? (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleShareResponse(survey._id, true)}
+                            sx={{
+                              backgroundColor: '#4caf50',
+                              '&:hover': { backgroundColor: '#388e3c' }
+                            }}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleShareResponse(survey._id, false)}
+                            sx={{
+                              backgroundColor: '#f44336',
+                              '&:hover': { backgroundColor: '#d32f2f' }
+                            }}
+                          >
+                            Reject
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Button
+                          onClick={() => handleViewResults(survey)}
+                          variant="contained"
+                          size="small"
+                          sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                            }
+                          }}
+                        >
+                          View Results
+                        </Button>
+                      )}
                     </Box>
                   </Paper>
-                );
-              })}
-            </Box>
-
-            {/* Export Buttons */}
-            <Box sx={{ 
-              mt: 6, 
-              pt: 4, 
-              borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}>
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<TableViewIcon />}
-                  onClick={exportAllToCSV}
-                  sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                    }
-                  }}
-                >
-                  Export All to CSV
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<CodeIcon />}
-                  onClick={exportAllToJSON}
-                  sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                    }
-                  }}
-                >
-                  Export All to JSON
-                </Button>
-              </Stack>
-            </Box>
-
-            {/* Demographic Stats Button and Content */}
-            {selectedSurvey?.demographicEnabled && (
-              <Box sx={{ 
-                mt: 6, 
-                pt: 4, 
-                borderTop: '1px solid rgba(0,0,0,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}>
-                <Box
-                  sx={{
-                    width: '100%',
-                    animation: 'fadeIn 0.3s ease-in-out',
-                    '@keyframes fadeIn': {
-                      '0%': {
-                        opacity: 0,
-                        transform: 'translateY(10px)'
-                      },
-                      '100%': {
-                        opacity: 1,
-                        transform: 'translateY(0)'
-                      }
-                    }
-                  }}
-                >
-                  {renderDemographicStats()}
-                </Box>
+                ))}
               </Box>
             )}
           </Box>
@@ -4410,8 +4442,8 @@ const ResultsPage: React.FC = () => {
         borderRadius: 3,
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '800px', // Ajout de la largeur maximale comme dans survey-answer
+        width: '100%',  
+        maxWidth: '800px',  // Ajout de cette ligne pour limiter la largeur
         mb: 4,
       }}>
         <Box sx={{
@@ -4512,19 +4544,24 @@ const ResultsPage: React.FC = () => {
                 </Stack>
               </LocalizationProvider>
             )}
-              </Box>
+          </Box>
 
           {error ? (
             <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
               {error}
             </Typography>
           ) : (
-            <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+            <Box sx={{ 
+              display: 'grid', 
+              gap: 3, 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              maxWidth: '100%',  // Assure que la grille ne dépasse pas la largeur du Paper
+            }}>
               {filteredSurveys.map((survey) => (
                 <Paper
                   key={survey._id}
                   elevation={1}
-                  sx={{
+                  sx={{ 
                     borderRadius: 2,
                     overflow: 'hidden',
                     height: '100%',
@@ -4585,6 +4622,40 @@ const ResultsPage: React.FC = () => {
                       {survey.description || 'No description available'}
                     </Typography>
 
+                    {/* Stats section avec shared by */}
+                    <Stack 
+                      direction="column" 
+                      spacing={1} 
+                      sx={{ 
+                        mb: 2,
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    >
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        noWrap
+                      >
+                        Created on {new Date(survey.createdAt).toLocaleDateString()}
+                      </Typography>
+                      {survey.sharedBy && (
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}
+                        >
+                          <EmailIcon sx={{ fontSize: 16 }} />
+                          Shared by: {survey.sharedBy}
+                        </Typography>
+                      )}
+                    </Stack>
+
+                    {/* Badges section */}
                     <Stack 
                       direction="row" 
                       spacing={1} 
@@ -4593,7 +4664,7 @@ const ResultsPage: React.FC = () => {
                         flexDirection: 'row',
                         flexWrap: 'wrap',
                         gap: '8px',
-                        mb: 2,
+                        mt: 'auto',
                         '& .MuiChip-root': {
                           margin: '0 !important'
                         }
@@ -4628,6 +4699,7 @@ const ResultsPage: React.FC = () => {
                       />
                     </Stack>
 
+                    {/* Hover content reste inchangé */}
                     <Box
                       className="hover-content"
                       sx={{
@@ -4683,70 +4755,20 @@ const ResultsPage: React.FC = () => {
                         {survey.description || 'No description available'}
                       </Typography>
                     </Box>
-
-                    <Stack 
-                      direction="column"
-                      spacing={1}
-                      sx={{ 
-                        mt: 'auto',
-                        position: 'relative',
-                        zIndex: 1
-                      }}
-                    >
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        noWrap
-                      >
-                        Created on {new Date(survey.createdAt).toLocaleDateString()}
-                      </Typography>
-                      
-                      {survey.sharedBy && (
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: 'text.secondary',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1
-                          }}
-                        >
-                          <EmailIcon sx={{ fontSize: 16 }} />
-                          Shared by: {survey.sharedBy}
-                        </Typography>
-                      )}
-                    </Stack>
                   </Box>
 
+                  {/* Actions section - suppression du shared by en double */}
                   <Box sx={{ 
                     p: 2, 
                     borderTop: 1, 
                     borderColor: 'divider',
                     backgroundColor: 'action.hover',
                     display: 'flex',
-                    justifyContent: 'space-between', // Changé pour espacer les boutons
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: 2,
                     position: 'relative',
                     zIndex: 1
                   }}>
-                    <Button
-                      onClick={(e) => handleShareClick(e, survey)}
-                      variant="outlined"
-                      size="small"
-                      startIcon={<ShareIcon />}
-                      sx={{
-                        borderColor: '#667eea',
-                        color: '#667eea',
-                        '&:hover': {
-                          borderColor: '#764ba2',
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        },
-                      }}
-                    >
-                      Share 
-                    </Button>
-                    
                     {survey.status === 'pending' ? (
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button
@@ -4791,8 +4813,8 @@ const ResultsPage: React.FC = () => {
                 </Paper>
               ))}
             </Box>
-            )}
-          </Box>
+          )}
+        </Box>
       </Paper>
     </Box>
   );

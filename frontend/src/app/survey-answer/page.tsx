@@ -78,10 +78,12 @@ interface Question {
 interface Survey {
   _id: string;
   title: string;
-  description: string;
+  description?: string;
   questions: Question[];
-  demographicEnabled: boolean;
-  createdAt: Date;
+  createdAt: string;
+  status?: 'pending' | 'accepted' | 'rejected';
+  demographicEnabled?: boolean;
+  sharedBy?: string;
 }
 
 interface DemographicData {
