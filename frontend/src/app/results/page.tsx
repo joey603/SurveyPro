@@ -3827,10 +3827,11 @@ const ResultsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const response = await fetch('http://localhost:5041/api/survey-shares', {
+        const response = await fetch('http://localhost:5041/api/survey-shares/share', {  // Modifié ici
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}` // Ajouté l'en-tête d'autorisation
           },
           body: JSON.stringify({
             surveyId,
