@@ -7,8 +7,9 @@ const surveyShareSchema = new mongoose.Schema({
     required: true
   },
   sharedBy: {
-    type: String, // Email de l'expéditeur
-    required: true
+    type: String,
+    required: false,
+    default: 'system@surveypro.com'
   },
   sharedWith: {
     type: mongoose.Schema.Types.ObjectId,

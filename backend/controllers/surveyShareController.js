@@ -41,7 +41,7 @@ exports.shareSurvey = async (req, res) => {
     // Créer le nouveau partage
     const share = new SurveyShare({
       surveyId,
-      sharedBy: null, // On peut laisser null ou mettre une valeur par défaut
+      sharedBy: req.body.senderEmail || 'system@surveypro.com',
       sharedWith: recipient._id
     });
 
