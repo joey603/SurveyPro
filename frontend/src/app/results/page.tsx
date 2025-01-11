@@ -88,8 +88,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import type { ReactElement } from 'react';
 import ShareIcon from '@mui/icons-material/Share';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// Enregistrer les éléments nécessaires
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -146,6 +147,7 @@ interface Survey {
   questions: Question[];
   createdAt: string;
   demographicEnabled: boolean;
+  status?: string;
 }
 
 interface QuestionStats {
@@ -2476,7 +2478,7 @@ const ResultsPage: React.FC = () => {
       gender: {},
       education: {},
       city: {},
-      ageDistribution: []
+      ageDistribution: Array(10).fill(0)
     };
 
     answers.forEach(answer => {
@@ -2497,7 +2499,10 @@ const ResultsPage: React.FC = () => {
         
         if (dateOfBirth) {
           const age = calculateAge(new Date(dateOfBirth));
-          stats.ageDistribution.push(age);
+          const ageGroup = Math.floor(age / 10);
+          if (ageGroup >= 0 && ageGroup < 10) {
+            stats.ageDistribution[ageGroup]++;
+          }
         }
       }
     });
@@ -3292,7 +3297,7 @@ const ResultsPage: React.FC = () => {
         answerGender: demographic.gender,
         filterGender: filters.demographic.gender?.toLowerCase(), // Convertir en minuscules
         matches: !filters.demographic.gender || 
-                demographic.gender === filters.demographic.gender?.toLowerCase()
+                demographic.gender === filters.demographic.gender.toLowerCase()
       });
 
       // Filtre par genre - Comparaison insensible à la casse
@@ -3919,6 +3924,42 @@ const ResultsPage: React.FC = () => {
   // Dans le composant ResultsPage, ajouter cet état
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  // Ajoutez la fonction handleShareResponse avant le return du composant
+  const handleShareResponse = async (surveyId: string, accept: boolean) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5041/api/survey-shares/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          shareId: surveyId,
+          accept
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to respond to share request');
+      }
+
+      // Recharger les sondages en utilisant fetchSurveys
+      const updatedSurveys = await fetchSurveys(token);
+      setFilteredSurveys(updatedSurveys);
+      
+      toast.success(accept ? 'Survey accepted successfully' : 'Survey declined successfully');
+    } catch (error) {
+      console.error('Error responding to share:', error);
+      toast.error('Failed to respond to share request');
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{
@@ -4407,17 +4448,19 @@ const ResultsPage: React.FC = () => {
                   <Paper
                     key={survey._id}
                     elevation={1}
-                      sx={{ 
+                    sx={{ 
                       borderRadius: 2,
                       overflow: 'hidden',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
-                        '&:hover': {
+                      opacity: survey.status === 'pending' ? 0.7 : 1, // Ajout de l'opacité
+                      '&:hover': {
                         boxShadow: 3,
                         transform: 'translateY(-2px)',
+                        opacity: survey.status === 'pending' ? 0.8 : 1, // Opacité au survol
                       }
                     }}
                   >
@@ -4572,25 +4615,59 @@ const ResultsPage: React.FC = () => {
                       borderColor: 'divider',
                       backgroundColor: 'action.hover',
                       display: 'flex',
-                      justifyContent: 'flex-end',
+                      justifyContent: 'space-between', // Modifié pour aligner les boutons
+                      alignItems: 'center',
                       position: 'relative',
                       zIndex: 1
                     }}>
-                            <Button
-                        onClick={() => handleViewResults(survey)}
-                        variant="contained"
-                              size="small"
-                        sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                          }
-                        }}
-                      >
-                        View Results
-                            </Button>
+                      {survey.status === 'pending' ? (
+                        <>
+                          <Button
+                            onClick={() => handleShareResponse(survey._id, true)}
+                            variant="contained"
+                            size="small"
+                            color="success"
+                            sx={{
+                              background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
+                              }
+                            }}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleShareResponse(survey._id, false)}
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            sx={{
+                              background: 'linear-gradient(135deg, #f56565 0%, #e53e3e 100%)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #e53e3e 0%, #f56565 100%)',
+                              }
+                            }}
+                          >
+                            Decline
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          onClick={() => handleViewResults(survey)}
+                          variant="contained"
+                          size="small"
+                          sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                            }
+                          }}
+                        >
+                          View Results
+                        </Button>
+                      )}
                     </Box>
-                    </Paper>
+                  </Paper>
                 );
               })}
             </Box>
@@ -4606,7 +4683,7 @@ const educationLevels = [
   "High School",
   "Bachelor's Degree",
   "Master's Degree",
-  "Doctorate",
+  "PhD",
   "Other"
 ];
 
@@ -4616,7 +4693,6 @@ const cities = [
   "Marseille",
   "Bordeaux",
   "Toulouse",
-  "Nantes",
   // Ajoutez d'autres villes selon vos besoins
 ];
 
