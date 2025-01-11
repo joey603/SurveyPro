@@ -92,6 +92,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
 import { respondToSurveyShare } from '@/utils/surveyShareService';
+import EmailIcon from '@mui/icons-material/Email';
 
 ChartJS.register(
   CategoryScale,
@@ -146,10 +147,11 @@ interface Survey {
   _id: string;
   title: string;
   description?: string;
-  status?: string;
+  status?: 'pending' | 'accepted' | 'rejected';
   questions: Question[];
   createdAt: string;
   demographicEnabled: boolean;
+  sharedBy?: string;  // Ajoutez cette ligne
 }
 
 interface QuestionStats {
@@ -4630,42 +4632,51 @@ const ResultsPage: React.FC = () => {
                       borderColor: 'divider',
                       backgroundColor: 'action.hover',
                       display: 'flex',
-                      justifyContent: 'space-between', // Modifié pour aligner les boutons
-                      alignItems: 'center',
+                      flexDirection: 'column',  // Changé en column pour empiler les éléments
+                      gap: 2,
                       position: 'relative',
                       zIndex: 1
                     }}>
+                      {survey.sharedBy && (
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}
+                        >
+                          <EmailIcon sx={{ fontSize: 16 }} />
+                          Shared by: {survey.sharedBy}
+                        </Typography>
+                      )}
+                      
                       {survey.status === 'pending' ? (
-                        <>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
-                            onClick={() => handleShareResponse(survey._id, true)}
                             variant="contained"
                             size="small"
-                            color="success"
+                            onClick={() => handleShareResponse(survey._id, true)}
                             sx={{
-                              background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
-                              }
+                              backgroundColor: '#4caf50',
+                              '&:hover': { backgroundColor: '#388e3c' }
                             }}
                           >
                             Accept
                           </Button>
                           <Button
-                            onClick={() => handleShareResponse(survey._id, false)}
                             variant="contained"
                             size="small"
-                            color="error"
+                            onClick={() => handleShareResponse(survey._id, false)}
                             sx={{
-                              background: 'linear-gradient(135deg, #f56565 0%, #e53e3e 100%)',
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #e53e3e 0%, #f56565 100%)',
-                              }
+                              backgroundColor: '#f44336',
+                              '&:hover': { backgroundColor: '#d32f2f' }
                             }}
                           >
-                            Decline
+                            Reject
                           </Button>
-                        </>
+                        </Box>
                       ) : (
                         <Button
                           onClick={() => handleViewResults(survey)}

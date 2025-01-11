@@ -14,6 +14,12 @@ exports.shareSurvey = async (req, res) => {
       });
     }
 
+    // Récupérer l'utilisateur qui partage
+    const sender = await User.findById(req.user.id);
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
     // Vérifier si le sondage existe
     const survey = await Survey.findById(surveyId);
     if (!survey) {
@@ -38,10 +44,10 @@ exports.shareSurvey = async (req, res) => {
       });
     }
 
-    // Créer le nouveau partage
+    // Créer le nouveau partage avec l'email de l'expéditeur
     const share = new SurveyShare({
       surveyId,
-      sharedBy: req.body.senderEmail || 'system@surveypro.com',
+      sharedBy: sender.email, // Utiliser l'email de l'expéditeur
       sharedWith: recipient._id
     });
 
