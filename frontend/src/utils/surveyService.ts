@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5041";
+export const BASE_URL = "http://localhost:5041";
 
 if (!BASE_URL) {
   throw new Error("Environment variable NEXT_PUBLIC_BASE_URL is not defined");
@@ -207,6 +207,33 @@ export const fetchPendingShares = async (token: string): Promise<any> => {
     return response.data;
   } catch (error: any) {
     console.error('Error fetching pending shares:', error);
+    throw error.response?.data || error;
+  }
+};
+
+export const respondToSurveyShare = async (shareId: string, accept: boolean, token: string): Promise<any> => {
+  try {
+    console.log('Envoi de la réponse au partage:', { shareId, accept });
+    
+    const response = await axios.post(
+      `${BASE_URL}/api/survey-shares/respond`,
+      { 
+        shareId: shareId,
+        accept 
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('Réponse reçue:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erreur lors de la réponse au partage:', error);
+    console.error('Détails de l\'erreur:', error.response?.data);
     throw error.response?.data || error;
   }
 };

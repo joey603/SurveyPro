@@ -40,7 +40,7 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import { fetchSurveys, getSurveyAnswers, fetchPendingShares } from '@/utils/surveyService';
+import { fetchSurveys, getSurveyAnswers, fetchPendingShares, BASE_URL } from '@/utils/surveyService';
 import { Bar, Line, Pie, Doughnut, Radar, Scatter, Bubble } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -90,6 +90,8 @@ import ShareIcon from '@mui/icons-material/Share';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
+import { respondToSurveyShare } from '@/utils/surveyShareService';
 
 ChartJS.register(
   CategoryScale,
@@ -143,11 +145,11 @@ interface DemographicStats {
 interface Survey {
   _id: string;
   title: string;
-  description: string;
+  description?: string;
+  status?: string;
   questions: Question[];
   createdAt: string;
   demographicEnabled: boolean;
-  status?: string;
 }
 
 interface QuestionStats {
@@ -665,6 +667,7 @@ const ResultsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
+  const [filteredResults, setFilteredResults] = useState<Survey[]>([]);
   const [dialogView, setDialogView] = useState<'list' | 'chart'>('list');
   const [chartType, setChartType] = useState<'bar' | 'pie' | 'line' | 'doughnut'>('bar');
   const [surveyAnswers, setSurveyAnswers] = useState<{
@@ -3925,7 +3928,7 @@ const ResultsPage: React.FC = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Ajoutez la fonction handleShareResponse avant le return du composant
-  const handleShareResponse = async (surveyId: string, accept: boolean) => {
+  const handleShareResponse = async (shareId: string, accept: boolean) => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
       toast.error('Authentication required');
@@ -3933,30 +3936,35 @@ const ResultsPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5041/api/survey-shares/respond', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          shareId: surveyId,
-          accept
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to respond to share request');
+      // Utiliser le bon ID de partage depuis les partages en attente
+      const pendingShares = await fetchPendingShares(token);
+      const targetShare = pendingShares.find((share: { surveyId: { _id: string } }) => share.surveyId._id === shareId);
+      
+      if (!targetShare) {
+        toast.error('Partage non trouvé');
+        return;
       }
 
-      // Recharger les sondages en utilisant fetchSurveys
-      const updatedSurveys = await fetchSurveys(token);
-      setFilteredSurveys(updatedSurveys);
-      
-      toast.success(accept ? 'Survey accepted successfully' : 'Survey declined successfully');
-    } catch (error) {
-      console.error('Error responding to share:', error);
-      toast.error('Failed to respond to share request');
+      const response = await respondToSurveyShare(targetShare._id, accept, token);
+
+      if (response) {
+        setSurveys((prevSurveys: Survey[]) => 
+          prevSurveys.map((survey: Survey) => 
+            survey._id === shareId 
+              ? { ...survey, status: accept ? 'accepted' : 'rejected' }
+              : survey
+          )
+        );
+        
+        toast.success(accept ? 'Sondage accepté avec succès' : 'Sondage refusé avec succès');
+        
+        // Recharger les sondages
+        const updatedSurveys = await fetchSurveys(token);
+        setSurveys(updatedSurveys);
+      }
+    } catch (error: any) {
+      console.error('Erreur détaillée:', error);
+      toast.error(error.response?.data?.message || 'Erreur lors de la réponse au partage');
     }
   };
 

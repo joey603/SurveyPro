@@ -41,6 +41,11 @@ const surveySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected', 'active'],
+    default: 'active'
+  },
   questions: [questionSchema],
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -50,7 +55,18 @@ const surveySchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  sharedWith: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    }
+  }]
 });
 
 module.exports = mongoose.model('Survey', surveySchema);

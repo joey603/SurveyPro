@@ -4,16 +4,20 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 
-type AuthContextType = {
+interface AuthContextType {
+  accessToken: string | null;
+  user: any;
   isAuthenticated: boolean;
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -33,9 +37,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (token && !isTokenExpired(token)) {
+      setAccessToken(token);
       setIsAuthenticated(true);
+      try {
+        const decoded = jwtDecode(token);
+        setUser(decoded);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
     } else {
       setIsAuthenticated(false);
+      setAccessToken(null);
+      setUser(null);
       if (!publicRoutes.includes(pathname)) {
         router.push("/login");
       }

@@ -8,8 +8,7 @@ const surveyShareSchema = new mongoose.Schema({
   },
   sharedBy: {
     type: String,
-    required: false,
-    default: 'system@surveypro.com'
+    required: true
   },
   sharedWith: {
     type: mongoose.Schema.Types.ObjectId,
@@ -21,7 +20,7 @@ const surveyShareSchema = new mongoose.Schema({
     enum: ['pending', 'accepted', 'rejected'],
     default: 'pending'
   },
-  sharedAt: {
+  createdAt: {
     type: Date,
     default: Date.now
   }
