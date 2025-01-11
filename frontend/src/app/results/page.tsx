@@ -4459,6 +4459,7 @@ const ResultsPage: React.FC = () => {
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
               {filteredSurveys.map((survey) => {
                 const responses = surveyAnswers[survey._id] || [];
+                const isPending = survey.status === 'pending';
                 
                 return (
                   <Paper
@@ -4472,8 +4473,10 @@ const ResultsPage: React.FC = () => {
                       flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
+                      opacity: isPending ? 0.8 : 1, // Ajout de l'opacité pour les sondages en attente
                       '&:hover': {
                         boxShadow: 3,
+                        opacity: 1, // Restaure l'opacité au survol
                         zIndex: 1,
                         '& .hover-content': {
                           opacity: 1,
@@ -4483,6 +4486,28 @@ const ResultsPage: React.FC = () => {
                       }
                     }}
                   >
+                    {/* Badge "Pending" */}
+                    {isPending && (
+                      <Chip
+                        label="Pending"
+                        sx={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          zIndex: 2,
+                          backgroundColor: 'rgba(102, 126, 234, 0.9)',
+                          color: 'white',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                          height: '24px',
+                          '& .MuiChip-label': {
+                            px: 1,
+                          }
+                        }}
+                      />
+                    )}
+
+                    {/* Reste du contenu de la carte */}
                     <Box sx={{ 
                       p: 3,
                       flex: 1,
@@ -4533,8 +4558,11 @@ const ResultsPage: React.FC = () => {
                           flexDirection: 'row',
                           flexWrap: 'wrap',
                           gap: '8px',
+                          mt: 2,
+                          mb: 2,
                           '& .MuiChip-root': {
-                            margin: '0 !important'
+                            margin: '0 !important',
+                            opacity: 1  // Assure que tous les badges sont opaques
                           }
                         }}
                       >
@@ -4544,7 +4572,8 @@ const ResultsPage: React.FC = () => {
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            height: '24px'
+                            height: '24px',
+                            flex: '1 1 auto'  // Permet au badge de s'étendre
                           }}
                         />
                         <Chip
@@ -4553,7 +4582,8 @@ const ResultsPage: React.FC = () => {
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            height: '24px'
+                            height: '24px',
+                            flex: '1 1 auto'  // Permet au badge de s'étendre
                           }}
                         />
                         <Chip
@@ -4562,7 +4592,8 @@ const ResultsPage: React.FC = () => {
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            height: '24px'
+                            height: '24px',
+                            flex: '1 1 auto'  // Permet au badge de s'étendre
                           }}
                         />
                       </Stack>
@@ -4669,14 +4700,22 @@ const ResultsPage: React.FC = () => {
                       zIndex: 1
                     }}>
                       {survey.status === 'pending' ? (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: 1,
+                          opacity: 1  // Assure que les boutons sont opaques
+                        }}>
                           <Button
                             variant="contained"
                             size="small"
                             onClick={() => handleShareResponse(survey._id, true)}
                             sx={{
                               backgroundColor: '#4caf50',
-                              '&:hover': { backgroundColor: '#388e3c' }
+                              opacity: 1,
+                              '&:hover': { 
+                                backgroundColor: '#388e3c',
+                                opacity: 1
+                              }
                             }}
                           >
                             Accept
@@ -4687,7 +4726,11 @@ const ResultsPage: React.FC = () => {
                             onClick={() => handleShareResponse(survey._id, false)}
                             sx={{
                               backgroundColor: '#f44336',
-                              '&:hover': { backgroundColor: '#d32f2f' }
+                              opacity: 1,
+                              '&:hover': { 
+                                backgroundColor: '#d32f2f',
+                                opacity: 1
+                              }
                             }}
                           >
                             Reject
