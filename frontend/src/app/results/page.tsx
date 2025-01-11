@@ -1495,16 +1495,17 @@ const ResultsPage: React.FC = () => {
     );
   }, [selectedSurvey, chartTypes, prepareChartData, chartRef]);
 
+  // Ajout d'un intervalle de rafraîchissement (en millisecondes)
+  const REFRESH_INTERVAL = 30000; // 10 secondes
+
+  // Modifier le useEffect existant pour le rafraîchissement périodique
   useEffect(() => {
     const loadSurveysAndAnswers = async () => {
       try {
-        setLoading(true);
         const token = localStorage.getItem('accessToken') || '';
         
-        // Charger les sondages créés par l'utilisateur et les sondages partagés (acceptés)
+        // Charger les sondages
         const surveysData = await fetchSurveys(token);
-        
-        // Charger les sondages en attente
         const pendingShares = await fetchPendingShares(token);
         const pendingSurveys = pendingShares.map((share: any) => ({
           ...share.surveyId,
@@ -1513,11 +1514,10 @@ const ResultsPage: React.FC = () => {
           status: 'pending'
         }));
 
-        // Combiner tous les sondages
         const allSurveys = [...surveysData, ...pendingSurveys];
         setSurveys(allSurveys);
 
-        // Charger les réponses pour chaque sondage
+        // Charger les réponses
         const answersPromises = allSurveys.map((survey: Survey) => 
           getSurveyAnswers(survey._id, token)
             .then(answers => ({ [survey._id]: answers }))
@@ -1530,7 +1530,6 @@ const ResultsPage: React.FC = () => {
         }), {});
 
         setSurveyAnswers(answersMap);
-        console.log('Loaded answers:', answersMap); // Debug log
       } catch (error: unknown) {
         console.error('Error loading surveys and answers:', error);
         setError(error instanceof Error ? error.message : 'An error occurred');
@@ -1539,8 +1538,15 @@ const ResultsPage: React.FC = () => {
       }
     };
 
+    // Chargement initial
     loadSurveysAndAnswers();
-  }, []);
+
+    // Mettre en place l'intervalle de rafraîchissement
+    const intervalId = setInterval(loadSurveysAndAnswers, REFRESH_INTERVAL);
+
+    // Nettoyer l'intervalle lors du démontage du composant
+    return () => clearInterval(intervalId);
+  }, []); // Dépendances vides pour ne s'exécuter qu'au montage
 
   console.log('Current state - Surveys:', surveys);
   console.log('Current state - Answers:', surveyAnswers);
@@ -3870,13 +3876,13 @@ const ResultsPage: React.FC = () => {
           gap: 1
         }}>
           <PersonAddIcon />
-          Partager les résultats
+          share the results
         </DialogTitle>
         
         <DialogContent sx={{ mt: 2 }}>
           <TextField
             fullWidth
-            label="Email du destinataire"
+            label="Destinatory Mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={!!error}
@@ -3894,7 +3900,7 @@ const ResultsPage: React.FC = () => {
           
           {success && (
             <Alert severity="success" sx={{ mt: 2 }}>
-              Invitation envoyée avec succès !
+              Invitation sends successfuly!
             </Alert>
           )}
         </DialogContent>
@@ -3905,7 +3911,7 @@ const ResultsPage: React.FC = () => {
             disabled={loading}
             sx={{ color: '#64748b' }}
           >
-            Annuler
+            Cancel
           </Button>
           <Button
             onClick={handleShare}
@@ -4036,7 +4042,7 @@ const ResultsPage: React.FC = () => {
                 }
               }}
             >
-              Partager
+              Share
             </Button>
           </Box>
 
@@ -4697,12 +4703,12 @@ const educationLevels = [
 ];
 
 const cities = [
-  "Paris",
-  "Lyon",
-  "Marseille",
-  "Bordeaux",
-  "Toulouse",
-  // Ajoutez d'autres villes selon vos besoins
+  "New York",
+  "Los Angeles",
+  "Chicago",
+  "Houston",
+  "Phoenix",
+  // Add other cities as needed
 ];
 
 // Ajouter la fonction pour calculer l'âge

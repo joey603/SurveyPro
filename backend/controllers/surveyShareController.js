@@ -10,20 +10,20 @@ exports.shareSurvey = async (req, res) => {
     
     if (!surveyId || !recipientEmail) {
       return res.status(400).json({ 
-        message: "Le surveyId et l'email du destinataire sont requis" 
+        message: "Survey ID and recipient email are required" 
       });
     }
 
     // Vérifier si le sondage existe
     const survey = await Survey.findById(surveyId);
     if (!survey) {
-      return res.status(404).json({ message: "Sondage non trouvé" });
+      return res.status(404).json({ message: "Survey not found" });
     }
 
     // Vérifier si l'utilisateur destinataire existe
     const recipient = await User.findOne({ email: recipientEmail });
     if (!recipient) {
-      return res.status(404).json({ message: "Destinataire non trouvé" });
+      return res.status(404).json({ message: "Recipient not found" });
     }
 
     // Vérifier si le partage existe déjà
@@ -34,7 +34,7 @@ exports.shareSurvey = async (req, res) => {
 
     if (existingShare) {
       return res.status(400).json({ 
-        message: "Ce sondage est déjà partagé avec cet utilisateur" 
+        message: "This survey is already shared with this user" 
       });
     }
 
@@ -49,13 +49,13 @@ exports.shareSurvey = async (req, res) => {
     console.log('Nouveau partage créé:', share);
 
     res.status(201).json({
-      message: "Invitation de partage envoyée avec succès",
+      message: "Share invitation sent successfully",
       share
     });
   } catch (error) {
     console.error('Erreur lors du partage:', error);
     res.status(500).json({ 
-      message: "Erreur lors du partage", 
+      message: "Error while sharing", 
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
@@ -73,7 +73,7 @@ exports.getSharedSurveys = async (req, res) => {
 
     res.status(200).json(shares);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la récupération des partages", error: error.message });
+    res.status(500).json({ message: "Error retrieving shares", error: error.message });
   }
 };
 
@@ -83,7 +83,7 @@ exports.getPendingShares = async (req, res) => {
     
     if (!req.user || !req.user.id) {
       return res.status(401).json({ 
-        message: "Utilisateur non authentifié",
+        message: "User not authenticated",
         debug: { user: req.user }
       });
     }
@@ -101,7 +101,7 @@ exports.getPendingShares = async (req, res) => {
   } catch (error) {
     console.error('Error in getPendingShares:', error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des invitations", 
+      message: "Error retrieving invitations", 
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
