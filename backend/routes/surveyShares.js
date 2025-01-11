@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
 const {
   shareSurvey,
   getSharedSurveys,
@@ -17,10 +18,10 @@ router.use((req, res, next) => {
   next();
 });
 
-// Enlever authMiddleware de la route de partage
+// Ajouter authMiddleware à toutes les routes qui en ont besoin
 router.post('/', shareSurvey);
-router.get('/shared-with-me', getSharedSurveys);
-router.get('/pending', getPendingShares);
-router.post('/respond', respondToShare);
+router.get('/shared-with-me', authMiddleware, getSharedSurveys);
+router.get('/pending', authMiddleware, getPendingShares);
+router.post('/respond', authMiddleware, respondToShare);
 
 module.exports = router; 

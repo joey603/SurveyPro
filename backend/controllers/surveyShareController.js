@@ -79,16 +79,32 @@ exports.getSharedSurveys = async (req, res) => {
 
 exports.getPendingShares = async (req, res) => {
   try {
+    console.log('Getting pending shares for user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        message: "Utilisateur non authentifié",
+        debug: { user: req.user }
+      });
+    }
+
     const pendingShares = await SurveyShare.find({
       sharedWith: req.user.id,
       status: 'pending'
     })
-    .populate('surveyId', 'title description')
+    .populate('surveyId', 'title description questions demographicEnabled createdAt')
     .populate('sharedBy', 'username email');
+
+    console.log('Found pending shares:', pendingShares);
 
     res.status(200).json(pendingShares);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la récupération des invitations", error: error.message });
+    console.error('Error in getPendingShares:', error);
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des invitations", 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 

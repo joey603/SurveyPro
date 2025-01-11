@@ -40,7 +40,7 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import { fetchSurveys, getSurveyAnswers } from '@/utils/surveyService';
+import { fetchSurveys, getSurveyAnswers, fetchPendingShares } from '@/utils/surveyService';
 import { Bar, Line, Pie, Doughnut, Radar, Scatter, Bubble } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -1496,12 +1496,24 @@ const ResultsPage: React.FC = () => {
         setLoading(true);
         const token = localStorage.getItem('accessToken') || '';
         
-        // Charger les sondages
+        // Charger les sondages créés par l'utilisateur et les sondages partagés (acceptés)
         const surveysData = await fetchSurveys(token);
-        setSurveys(surveysData);
+        
+        // Charger les sondages en attente
+        const pendingShares = await fetchPendingShares(token);
+        const pendingSurveys = pendingShares.map((share: any) => ({
+          ...share.surveyId,
+          isOwner: false,
+          sharedBy: share.sharedBy,
+          status: 'pending'
+        }));
+
+        // Combiner tous les sondages
+        const allSurveys = [...surveysData, ...pendingSurveys];
+        setSurveys(allSurveys);
 
         // Charger les réponses pour chaque sondage
-        const answersPromises = surveysData.map((survey: Survey) => 
+        const answersPromises = allSurveys.map((survey: Survey) => 
           getSurveyAnswers(survey._id, token)
             .then(answers => ({ [survey._id]: answers }))
         );

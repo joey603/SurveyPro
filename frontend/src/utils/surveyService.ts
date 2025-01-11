@@ -195,3 +195,18 @@ export const getSurveyById = async (id: string, token: string): Promise<any> => 
     throw error;
   }
 };
+
+export const fetchPendingShares = async (token: string): Promise<any> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/survey-shares/pending`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching pending shares:', error);
+    throw error.response?.data || error;
+  }
+};
