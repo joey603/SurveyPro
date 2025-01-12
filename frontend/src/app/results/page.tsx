@@ -1905,6 +1905,41 @@ const ResultsPage: React.FC = () => {
 
   // Créer le composant DemographicFilterPanel
   const DemographicFilterPanel = ({ open, onClose }: { open: boolean, onClose: () => void }) => {
+    const [cities, setCities] = useState<string[]>([]);
+    const [isLoadingCities, setIsLoadingCities] = useState(false);
+
+    const fetchCities = async () => {
+      try {
+        setIsLoadingCities(true);
+        const response = await fetch(
+          "https://countriesnow.space/api/v0.1/countries/cities",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ country: "Israel" }),
+          }
+        );
+        const data = await response.json();
+
+        if (data && data.data) {
+          setCities(data.data);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des villes :", error);
+        setCities(cities); // Garde les villes par défaut en cas d'erreur
+      } finally {
+        setIsLoadingCities(false);
+      }
+    };
+
+    useEffect(() => {
+      if (open) {
+        fetchCities();
+      }
+    }, [open]);
+
     // Ajouter un état temporaire pour stocker les filtres avant de les appliquer
     const [tempFilters, setTempFilters] = useState(() => ({
       gender: filters.demographic.gender,
@@ -2023,31 +2058,24 @@ const ResultsPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth>
                 <InputLabel>City</InputLabel>
                 <Select
-                  value={tempFilters.city || ''}
-                  onChange={(e) => {
-                    setTempFilters(prev => ({
-                      ...prev,
-                      city: e.target.value
-                    }));
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(102, 126, 234, 0.2)',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(102, 126, 234, 0.4)',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#667eea',
-                    }
-                  }}
+                  value={tempFilters.city}
+                  onChange={(e) => setTempFilters(prev => ({
+                    ...prev,
+                    city: e.target.value
+                  }))}
+                  label="City"
+                  disabled={isLoadingCities}
                 >
-                  <MenuItem value="">All Cities</MenuItem>
+                  <MenuItem value="">
+                    <em>{isLoadingCities ? 'Loading cities...' : 'None'}</em>
+                  </MenuItem>
                   {cities.map((city) => (
-                    <MenuItem key={city} value={city}>{city}</MenuItem>
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
