@@ -151,7 +151,8 @@ interface Survey {
   questions: Question[];
   createdAt: string;
   demographicEnabled: boolean;
-  sharedBy?: string;  // Ajoutez cette ligne
+  sharedBy?: string;
+  isRemoving?: boolean;  // Ajout de cette propriété
 }
 
 interface QuestionStats {
@@ -3945,7 +3946,6 @@ const ResultsPage: React.FC = () => {
     }
 
     try {
-      // Utiliser le bon ID de partage depuis les partages en attente
       const pendingShares = await fetchPendingShares(token);
       const targetShare = pendingShares.find((share: { surveyId: { _id: string } }) => share.surveyId._id === shareId);
       
@@ -3954,28 +3954,47 @@ const ResultsPage: React.FC = () => {
         return;
       }
 
-      const response = await respondToSurveyShare(targetShare._id, accept, token);
-
-      if (response) {
-        setSurveys((prevSurveys: Survey[]) => 
+      if (!accept) {
+        // Mettre à jour uniquement le sondage spécifique
+        setSurveys(prevSurveys => 
           prevSurveys.map((survey: Survey) => 
             survey._id === shareId 
-              ? { ...survey, status: accept ? 'accepted' : 'rejected' }
+              ? { ...survey, isRemoving: true }
               : survey
           )
         );
         
-        toast.success(accept ? 'Sondage accepté avec succès' : 'Sondage refusé avec succès');
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      const response = await respondToSurveyShare(targetShare._id, accept, token);
+
+      if (response) {
+        if (accept) {
+          setSurveys(prevSurveys => 
+            prevSurveys.map((survey: Survey) => 
+              survey._id === shareId 
+                ? { ...survey, status: 'accepted' }
+                : survey
+            )
+          );
+        } else {
+          // Supprimer uniquement le sondage spécifique
+          setSurveys(prevSurveys => 
+            prevSurveys.filter((survey: Survey) => survey._id !== shareId)
+          );
+        }
         
-        // Recharger les sondages
-        const updatedSurveys = await fetchSurveys(token);
-        setSurveys(updatedSurveys);
+        toast.success(accept ? 'Sondage accepté avec succès' : 'Sondage refusé avec succès');
       }
     } catch (error: any) {
       console.error('Erreur détaillée:', error);
       toast.error(error.response?.data?.message || 'Erreur lors de la réponse au partage');
     }
   };
+
+  // Ajoutez cet état pour gérer les animations de suppression
+  const [removingSurveyId, setRemovingSurveyId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -4475,13 +4494,16 @@ const ResultsPage: React.FC = () => {
                       flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
-                      opacity: isPending ? 0.85 : 1,
+                      opacity: removingSurveyId === survey._id ? 0 : (isPending ? 0.85 : 1),
+                      transform: removingSurveyId === survey._id ? 'scale(0.9)' : 'scale(1)',
                       border: isPending ? '2px solid rgba(102, 126, 234, 0.3)' : 'none',
                       backgroundColor: isPending ? 'rgba(102, 126, 234, 0.02)' : 'white',
                       '&:hover': {
                         boxShadow: 3,
-                        opacity: 1,
-                        transform: isPending ? 'scale(1.02)' : 'none',
+                        opacity: removingSurveyId === survey._id ? 0 : 1,
+                        transform: removingSurveyId === survey._id ? 
+                          'scale(0.9)' : 
+                          (isPending ? 'scale(1.02)' : 'none'),
                         zIndex: 1,
                         '& .hover-content': {
                           opacity: 1,
