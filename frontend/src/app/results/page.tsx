@@ -1746,56 +1746,17 @@ const ResultsPage: React.FC = () => {
   const handleQuestionClick = useCallback((questionId: string) => {
     if (!selectedSurvey) return;
 
-    // Obtenir toutes les réponses pour ce sondage
     const allAnswers = surveyAnswers[selectedSurvey._id] || [];
-    
-    // Filtrer les réponses selon les filtres actifs
-    const filteredAnswers = allAnswers.filter(answer => {
-      // Vérifier les filtres démographiques
-      if (Object.keys(filters.demographic).length > 0) {
-        const demographic = answer.respondent?.demographic;
-        if (!demographic) return false;
-
-        if (filters.demographic.gender && 
-            demographic.gender !== filters.demographic.gender.toLowerCase()) {
-          return false;
-        }
-
-        if (filters.demographic.educationLevel && 
-            demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        if (filters.demographic.city && 
-            demographic.city !== filters.demographic.city) {
-          return false;
-        }
-
-        if (filters.demographic.age && demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
-      }
-
-      // Vérifier les filtres de réponses
-      if (Object.keys(answerFilters).length > 0) {
-        return Object.entries(answerFilters).every(([filteredQuestionId, filter]) => {
-          const answerValue = answer.answers.find(a => a.questionId === filteredQuestionId)?.answer;
-          return filter.rules.every(rule => evaluateRule(answerValue, rule));
-        });
-      }
-
-      return true;
-    });
+    const questionAnswers = allAnswers.filter(answer => 
+      answer.answers.some(a => a.questionId === questionId)
+    );
 
     setSelectedQuestion({
       questionId,
-      answers: filteredAnswers // Utiliser les réponses filtrées au lieu de toutes les réponses
+      answers: questionAnswers
     });
     setDialogOpen(true);
-  }, [selectedSurvey, surveyAnswers, filters.demographic, answerFilters, calculateAge]);
+  }, [selectedSurvey, surveyAnswers]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -3041,14 +3002,35 @@ const ResultsPage: React.FC = () => {
   const renderQuestionDetails = useCallback(() => {
     if (!selectedQuestion || !selectedSurvey) return null;
 
+    // Obtenir toutes les réponses pour ce sondage
+    const allAnswers = surveyAnswers[selectedSurvey._id] || [];
+    
+    // Filtrer les réponses pour la question sélectionnée
+    const questionAnswers = allAnswers.map(answer => {
+      const questionAnswer = answer.answers.find(a => a.questionId === selectedQuestion.questionId);
+      if (questionAnswer) {
+        return {
+          ...answer,
+          answers: [questionAnswer] // Garder uniquement la réponse pertinente
+        };
+      }
+      return null;
+    }).filter(answer => answer !== null);
+
+    // Mettre à jour selectedQuestion avec les réponses filtrées
+    const updatedSelectedQuestion = {
+      ...selectedQuestion,
+      answers: questionAnswers
+    };
+
     // Obtenir le nombre total de réponses (non filtrées)
-    const totalAnswers = surveyAnswers[selectedSurvey._id]?.length || 0;
-    const filteredAnswersCount = selectedQuestion.answers.length;
+    const totalAnswers = allAnswers.length;
+    const filteredAnswersCount = questionAnswers.length;
 
     const question = selectedSurvey.questions.find(q => q.id === selectedQuestion.questionId);
     if (!question) return null;
 
-    const mostCommonAnswer = getMostCommonAnswer(selectedQuestion.answers, selectedQuestion.questionId);
+    const mostCommonAnswer = getMostCommonAnswer(questionAnswers, selectedQuestion.questionId);
     const availableChartTypes = getAvailableChartTypes(question.type);
 
     return (
@@ -3168,10 +3150,8 @@ const ResultsPage: React.FC = () => {
 
           {currentView === 'list' ? (
             <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-              {selectedQuestion.answers.map((answer, index) => {
-                const questionAnswer = answer.answers.find(
-                  a => a.questionId === selectedQuestion.questionId
-                );
+              {questionAnswers.map((answer, index) => {
+                const questionAnswer = answer.answers[0]; // La réponse est déjà filtrée
                 return (
                   <AnswerTooltip 
                     key={index}
@@ -3183,7 +3163,7 @@ const ResultsPage: React.FC = () => {
             </List>
           ) : (
             <ChartView 
-              data={getQuestionData(selectedQuestion.questionId, selectedQuestion.answers)}
+              data={getQuestionData(selectedQuestion.questionId, questionAnswers)}
               question={question}
             />
           )}
@@ -4898,11 +4878,20 @@ const cities = [
 // Ajouter la fonction pour calculer l'âge
 const calculateAge = (birthDate: Date): number => {
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const birthDateObj = new Date(birthDate); // Assure que birthDate est un objet Date
   
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  let age = today.getFullYear() - birthDateObj.getFullYear();
+  const monthDiff = today.getMonth() - birthDateObj.getMonth();
+  
+  // Ajustement plus précis pour le jour du mois
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
     age--;
+  }
+  
+  // Validation supplémentaire
+  if (age < 0 || age > 120) {
+    console.warn('Age calculation resulted in invalid age:', age, 'for birthDate:', birthDate);
+    return 0; // ou une autre valeur par défaut appropriée
   }
   
   return age;
