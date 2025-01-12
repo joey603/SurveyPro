@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
+import React, { useEffect, useState, useCallback, useRef, memo, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -664,7 +664,7 @@ interface AnswerValue {
 }
 
 const ResultsPage: React.FC = () => {
-  // États existants
+  // Déplacer la déclaration de showPendingOnly au début avec les autres états
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -673,6 +673,7 @@ const ResultsPage: React.FC = () => {
   const [filteredResults, setFilteredResults] = useState<Survey[]>([]);
   const [dialogView, setDialogView] = useState<'list' | 'chart'>('list');
   const [chartType, setChartType] = useState<'bar' | 'pie' | 'line' | 'doughnut'>('bar');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [surveyAnswers, setSurveyAnswers] = useState<{
     [key: string]: SurveyAnswer[];
   }>({});
@@ -1374,34 +1375,55 @@ const ResultsPage: React.FC = () => {
   };
 
   // Ajouter cette fonction de filtrage
-  const filteredSurveys = surveys
-    .filter(survey => {
-      const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                         (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+  const filteredSurveys = useMemo(() => {
+    let filtered = [...surveys];
 
-      if (dateRange.start && dateRange.end) {
+    // Filtre de recherche
+    if (searchQuery) {
+      filtered = filtered.filter(survey =>
+        survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (survey.description && survey.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Filtre de date
+    if (dateRange.start || dateRange.end) {
+      filtered = filtered.filter(survey => {
         const surveyDate = new Date(survey.createdAt);
-        const isInDateRange = surveyDate >= dateRange.start && 
-                           surveyDate <= new Date(dateRange.end.setHours(23, 59, 59));
-        return matchesSearch && isInDateRange;
-      }
+        const isAfterStart = !dateRange.start || surveyDate >= dateRange.start;
+        const isBeforeEnd = !dateRange.end || surveyDate <= dateRange.end;
+        return isAfterStart && isBeforeEnd;
+      });
+    }
 
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'popular') {
+    // Filtre des sondages en attente
+    if (showPendingOnly) {
+      filtered = filtered.filter(survey => survey.status === 'pending');
+    }
+
+    // Tri
+    if (sortBy === 'popular') {
+      filtered.sort((a, b) => {
         const aResponses = surveyAnswers[a._id]?.length || 0;
         const bResponses = surveyAnswers[b._id]?.length || 0;
         return bResponses - aResponses;
-      } else {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
+      });
+    } else {
+      filtered.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
+    return filtered;
+  }, [surveys, searchQuery, dateRange, sortBy, surveyAnswers, showPendingOnly]);
 
   // Ajouter cette fonction pour réinitialiser les filtres
   const clearFilters = () => {
     setSearchQuery('');
     setDateRange({ start: null, end: null });
+    setShowDateFilter(false);
+    setShowPendingOnly(false);
+    setSortBy('date');
   };
 
   // Fonctions
@@ -4429,6 +4451,18 @@ const ResultsPage: React.FC = () => {
                 onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
                 color={sortBy === 'popular' ? "primary" : "default"}
                 variant={sortBy === 'popular' ? "filled" : "outlined"}
+                sx={{
+                  '&.MuiChip-filled': {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }}
+              />
+              <Chip
+                icon={<FilterListIcon />}
+                label="Pending"
+                onClick={() => setShowPendingOnly(!showPendingOnly)}
+                color={showPendingOnly ? "primary" : "default"}
+                variant={showPendingOnly ? "filled" : "outlined"}
                 sx={{
                   '&.MuiChip-filled': {
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
