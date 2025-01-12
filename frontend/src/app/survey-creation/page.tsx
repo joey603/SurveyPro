@@ -549,25 +549,46 @@ const SurveyCreationPage: React.FC = () => {
 
         {question.media && (
           <Box sx={{ mb: 2, textAlign: 'center' }}>
-            <ReactPlayer
-              url={question.media}
-              controls
-              width="50%"
-              height="200px"
-              style={{
-                margin: '0 auto',
-                borderRadius: '8px',
-                overflow: 'hidden',
-              }}
-              onError={(e) => {
-                console.error('ReactPlayer error:', e);
-                setNotification({
-                  message: 'Error loading media in preview. Please check the URL.',
-                  severity: 'error',
-                  open: true
-                });
-              }}
-            />
+            {isImageFile(question.media) ? (
+              <img 
+                src={question.media}
+                alt="Question media"
+                style={{ 
+                  maxWidth: '50%',
+                  height: 'auto',
+                  margin: '0 auto',
+                  borderRadius: '8px',
+                  objectFit: 'contain'
+                }}
+                onError={() => {
+                  setNotification({
+                    message: 'Error loading image in preview. Please check the URL.',
+                    severity: 'error',
+                    open: true
+                  });
+                }}
+              />
+            ) : (
+              <ReactPlayer
+                url={question.media}
+                controls
+                width="50%"
+                height="200px"
+                style={{
+                  margin: '0 auto',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
+                onError={(e) => {
+                  console.error('ReactPlayer error:', e);
+                  setNotification({
+                    message: 'Error loading media in preview. Please check the URL.',
+                    severity: 'error',
+                    open: true
+                  });
+                }}
+              />
+            )}
           </Box>
         )}
 
@@ -717,6 +738,14 @@ const SurveyCreationPage: React.FC = () => {
     }
     return false;
   };
+
+  // Ajoutez cette fonction utilitaire pour détecter le type de média
+  const isImageFile = (url: string): boolean => {
+    return /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+  };
+
+  // Ajoutez cet état pour gérer le chargement des médias
+  const [loadingMedia, setLoadingMedia] = useState<{ [key: string]: boolean }>({});
 
   return (
     <Box
@@ -1044,7 +1073,12 @@ const SurveyCreationPage: React.FC = () => {
                       <Button
                         component="label"
                         variant="outlined"
-                        startIcon={<PhotoCameraIcon />}
+                        disabled={isUploading[field.id]}
+                        startIcon={isUploading[field.id] ? (
+                          <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                        ) : (
+                          <PhotoCameraIcon />
+                        )}
                         sx={{
                           color: '#667eea',
                           borderColor: '#667eea',
@@ -1052,9 +1086,10 @@ const SurveyCreationPage: React.FC = () => {
                             borderColor: '#764ba2',
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                           },
+                          minWidth: '150px', // Pour éviter que le bouton ne change de taille pendant le chargement
                         }}
                       >
-                        Upload Media
+                        {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
                         <input
                           type="file"
                           hidden
@@ -1117,8 +1152,31 @@ const SurveyCreationPage: React.FC = () => {
                     </Box>
                     {(field.media || field.mediaUrl) && (
                       <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                        {isUploading[field.id] ? (
-                          <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                        {isUploading[field.id] || loadingMedia[field.id] ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+                            <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                          </Box>
+                        ) : isImageFile(field.media) ? (
+                          <img 
+                            src={field.media}
+                            alt="Question media"
+                            style={{ 
+                              width: '100%', 
+                              height: 'auto',
+                              borderRadius: '8px',
+                              objectFit: 'contain'
+                            }}
+                            onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                            onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                            onError={() => {
+                              setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                              setNotification({
+                                message: 'Error loading image. Please check the URL.',
+                                severity: 'error',
+                                open: true
+                              });
+                            }}
+                          />
                         ) : (
                           <ReactPlayer
                             url={field.media}
@@ -1126,7 +1184,10 @@ const SurveyCreationPage: React.FC = () => {
                             width="100%"
                             height="auto"
                             style={{ borderRadius: '8px' }}
+                            onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                            onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
                             onError={(e) => {
+                              setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
                               console.error('Error loading media:', e);
                               setNotification({
                                 message: 'Error loading media. Please check the URL.',
