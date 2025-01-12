@@ -4005,7 +4005,8 @@ const ResultsPage: React.FC = () => {
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',  // Ajout de cette ligne pour limiter la largeur
+          width: '100%',
+          maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
           mb: 4,
         }}>
           <Box sx={{
@@ -4348,7 +4349,8 @@ const ResultsPage: React.FC = () => {
         borderRadius: 3,
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',  // Ajout de cette ligne pour limiter la largeur
+        width: '100%',
+        maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
         mb: 4,
       }}>
         <Box sx={{
