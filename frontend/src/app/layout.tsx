@@ -2,7 +2,7 @@
 
 import "./globals.css";
 import { AuthProvider } from "../utils/AuthContext";
-import NavBar from "./component/NavBar";
+import NavBar from "./components/NavBar";
 import { CircularProgress, Backdrop } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
