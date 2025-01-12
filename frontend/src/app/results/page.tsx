@@ -4475,10 +4475,13 @@ const ResultsPage: React.FC = () => {
                       flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
                       position: 'relative',
-                      opacity: isPending ? 0.8 : 1, // Ajout de l'opacité pour les sondages en attente
+                      opacity: isPending ? 0.85 : 1,
+                      border: isPending ? '2px solid rgba(102, 126, 234, 0.3)' : 'none',
+                      backgroundColor: isPending ? 'rgba(102, 126, 234, 0.02)' : 'white',
                       '&:hover': {
                         boxShadow: 3,
-                        opacity: 1, // Restaure l'opacité au survol
+                        opacity: 1,
+                        transform: isPending ? 'scale(1.02)' : 'none',
                         zIndex: 1,
                         '& .hover-content': {
                           opacity: 1,
@@ -4488,7 +4491,7 @@ const ResultsPage: React.FC = () => {
                       }
                     }}
                   >
-                    {/* Badge "Pending" */}
+                    {/* Badge "Pending" amélioré */}
                     {isPending && (
                       <Chip
                         label="Pending"
@@ -4497,13 +4500,27 @@ const ResultsPage: React.FC = () => {
                           top: 12,
                           right: 12,
                           zIndex: 2,
-                          backgroundColor: 'rgba(102, 126, 234, 0.9)',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           color: 'white',
-                          fontWeight: 500,
+                          fontWeight: 600,
                           fontSize: '0.75rem',
                           height: '24px',
+                          boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
                           '& .MuiChip-label': {
-                            px: 1,
+                            px: 1.5,
+                            letterSpacing: '0.5px'
+                          },
+                          animation: 'pulse 2s infinite',
+                          '@keyframes pulse': {
+                            '0%': {
+                              boxShadow: '0 0 0 0 rgba(102, 126, 234, 0.4)'
+                            },
+                            '70%': {
+                              boxShadow: '0 0 0 6px rgba(102, 126, 234, 0)'
+                            },
+                            '100%': {
+                              boxShadow: '0 0 0 0 rgba(102, 126, 234, 0)'
+                            }
                           }
                         }}
                       />
