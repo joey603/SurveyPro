@@ -4660,13 +4660,21 @@ const ResultsPage: React.FC = () => {
                         sx={{ 
                           mt: 'auto',
                           position: 'relative',
-                          zIndex: 1
+                          zIndex: 1,
+                          minHeight: '40px',  // Hauteur minimale fixe pour la zone de date
+                          display: 'flex',
+                          justifyContent: 'flex-end'  // Aligne le contenu en bas
                         }}
                       >
                         <Typography 
                           variant="caption" 
                           color="text.secondary"
-                          noWrap
+                          sx={{
+                            display: 'block',  // Assure que le texte occupe toute la largeur
+                            whiteSpace: 'nowrap',  // Empêche le retour à la ligne
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
                         >
                           Created on {new Date(survey.createdAt).toLocaleDateString()}
                         </Typography>
@@ -4679,7 +4687,10 @@ const ResultsPage: React.FC = () => {
                               color: 'text.secondary',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 1
+                              gap: 1,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}
                           >
                             <EmailIcon sx={{ fontSize: 16 }} />
