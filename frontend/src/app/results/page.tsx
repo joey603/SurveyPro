@@ -4088,7 +4088,7 @@ const ResultsPage: React.FC = () => {
                 }
               }}
             >
-              Share
+              Add viewer
             </Button>
           </Box>
 
