@@ -1050,11 +1050,7 @@ const SurveyAnswerPage: React.FC = () => {
               )}
             </Box>
 
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                <CircularProgress sx={{ color: '#667eea' }} />
-              </Box>
-            ) : error ? (
+            {error ? (
               <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
                 {error}
               </Typography>

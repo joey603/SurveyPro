@@ -4026,17 +4026,11 @@ const ResultsPage: React.FC = () => {
   // Ajoutez cet état pour gérer les animations de suppression
   const [removingSurveyId, setRemovingSurveyId] = useState<string | null>(null);
 
-  if (loading) {
+  if (error) {
     return (
-      <Box sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <CircularProgress sx={{ color: '#667eea' }} />
-      </Box>
+      <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+        {error}
+      </Typography>
     );
   }
 

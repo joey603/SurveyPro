@@ -368,20 +368,6 @@ const SurveyHistoryPage: React.FC = () => {
     setDateRange({ start: null, end: null });
   };
 
-  if (loading) {
-    return (
-      <Box sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <CircularProgress sx={{ color: '#667eea' }} />
-      </Box>
-    );
-  }
-
   if (error) {
     return (
       <Box sx={{
