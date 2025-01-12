@@ -11,3 +11,6 @@ logs/
 # Ignorer les fichiers compilés
 dist/
 build/
+
+# Ignorer les fichiers de sauvegarde
+backend/uploads/
