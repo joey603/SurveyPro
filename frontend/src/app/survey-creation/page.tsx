@@ -37,6 +37,10 @@ import { createSurvey, uploadMedia } from '../../utils/surveyService';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility'; // Ajouté pour le bouton Preview
+import InfoIcon from '@mui/icons-material/Info';
+import Tooltip from '@mui/material/Tooltip';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import Zoom from '@mui/material/Zoom';
 
 type Question = {
   id: string;
@@ -788,9 +792,19 @@ const SurveyCreationPage: React.FC = () => {
         <Box sx={{ p: 4, backgroundColor: 'white' }}>
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Section des informations de base */}
-            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-              Basic Information
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                Basic Information
+              </Typography>
+              <Tooltip 
+                title="Cette section contient les informations générales de votre sondage"
+                placement="right"
+                TransitionComponent={Zoom}
+                arrow
+              >
+                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+              </Tooltip>
+            </Box>
 
             <Controller
               name="title"
@@ -850,30 +864,45 @@ const SurveyCreationPage: React.FC = () => {
               )}
             />
 
-            <Controller
-              name="demographicEnabled"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={field.value}
-                      onChange={field.onChange}
-                      color="primary"
-                    />
-                  }
-                  label="Enable Demographic Questions"
-                  sx={{ mb: 3 }}
-                />
-              )}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={watch('demographicEnabled')}
+                    onChange={(e) => {
+                      setValue('demographicEnabled', e.target.checked);
+                    }}
+                    color="primary"
+                  />
+                }
+                label="Enable Demographic Questions"
+              />
+              <Tooltip 
+                title="Activez cette option pour collecter des informations démographiques (âge, genre, éducation, ville)"
+                placement="right"
+                TransitionComponent={Zoom}
+                arrow
+              >
+                <HelpOutlineIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+              </Tooltip>
+            </Box>
 
             <Divider sx={{ my: 4 }} />
 
             {/* Section des questions */}
-            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-              Survey Questions
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                Survey Questions
+              </Typography>
+              <Tooltip 
+                title="Ajoutez autant de questions que nécessaire. Chaque question peut avoir un type différent et inclure des médias"
+                placement="right"
+                TransitionComponent={Zoom}
+                arrow
+              >
+                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+              </Tooltip>
+            </Box>
 
             {/* Liste des questions */}
             {fields.map((field, index) => (
@@ -1415,6 +1444,24 @@ const SurveyCreationPage: React.FC = () => {
           </Alert>
         </Box>
       )}
+
+      <Box sx={{ 
+        position: 'fixed', 
+        bottom: 20, 
+        right: 20, 
+        backgroundColor: '#667eea',
+        color: 'white',
+        padding: '8px 16px',
+        borderRadius: '20px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1
+      }}>
+        <Typography variant="body2">
+          Questions: {fields.length}
+        </Typography>
+      </Box>
     </Box>
   );
 };
