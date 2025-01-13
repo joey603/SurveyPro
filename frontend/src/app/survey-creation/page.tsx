@@ -1247,14 +1247,15 @@ const SurveyCreationPage: React.FC = () => {
             >
               <Button
                 onClick={() => handleResetSurvey(null)}
-                variant="outlined"
+                variant="contained"
                 startIcon={<DeleteIcon />}
                 sx={{
-                  color: '#ef4444',
-                  borderColor: '#ef4444',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  color: 'white',
+                  boxShadow: 'none',
                   '&:hover': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    borderColor: '#ef4444',
+                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                    boxShadow: 'none',
                   },
                 }}
               >
@@ -1263,14 +1264,15 @@ const SurveyCreationPage: React.FC = () => {
 
               <Button
                 onClick={() => setShowPreview(true)}
-                variant="outlined"
+                variant="contained"
                 startIcon={<VisibilityIcon />}
                 sx={{
-                  color: '#667eea',
-                  borderColor: '#667eea',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  boxShadow: 'none',
                   '&:hover': {
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderColor: '#667eea',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+                    boxShadow: 'none',
                   },
                 }}
               >
@@ -1288,12 +1290,16 @@ const SurveyCreationPage: React.FC = () => {
                 )}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    background: 'linear-gradient(135deg, #5a71d9 0%, #6a4494 100%)',
+                    boxShadow: 'none',
                   },
                   '&.Mui-disabled': {
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     opacity: 0.7,
+                    color: 'white',
                   }
                 }}
               >
