@@ -1372,7 +1372,7 @@ const SurveyCreationPage: React.FC = () => {
                         or
                       </Typography>
                       <TextField
-                        value={field.media ? 'Media uploaded' : field.mediaUrl || ''}
+                        value={field.media ? '' : field.mediaUrl || ''}
                         onChange={(e) => {
                           const url = e.target.value;
                           if (url === '' || isValidMediaURL(url)) {
