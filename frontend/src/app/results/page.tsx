@@ -3586,7 +3586,7 @@ const ResultsPage: React.FC = () => {
     }
 
     const datasets = Object.entries(ageDistribution).map(([age, count]) => ({
-      label: `${age} ans`, // Modification uniquement de ce libellé
+      label: `${age} `, // Modification uniquement de ce libellé
       data: [{
         x: parseInt(age),
         y: count
@@ -3611,21 +3611,13 @@ const ResultsPage: React.FC = () => {
           display: true,
           position: 'right' as const,
           labels: {
-            padding: 20,
+            padding: 15,
             usePointStyle: true,
             pointStyle: 'circle',
             font: {
               size: 12
             }
           },
-          title: {
-            display: true,
-            font: {
-              size: 14,
-              weight: 'bold'
-            },
-            padding: { bottom: 10 }
-          }
         },
         tooltip: {
           callbacks: {
@@ -3643,7 +3635,7 @@ const ResultsPage: React.FC = () => {
           position: 'bottom',
           title: {
             display: true,
-            text: 'Age',
+            text: 'Years old',
             font: {
               size: 14,
               weight: 'bold'
