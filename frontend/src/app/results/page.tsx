@@ -1624,6 +1624,26 @@ const ResultsPage: React.FC = () => {
 
   const handleViewResults = (survey: Survey) => {
     setSelectedSurvey(survey);
+    const token = localStorage.getItem('accessToken') || '';
+    
+    // Ajouter un indicateur de chargement
+    setLoading(true);
+    
+    getSurveyAnswers(survey._id, token)
+      .then(answers => {
+        console.log('Loaded answers:', answers); // Debug log
+        setSurveyAnswers(prev => ({
+          ...prev,
+          [survey._id]: answers
+        }));
+      })
+      .catch(error => {
+        console.error('Error loading survey answers:', error);
+        toast.error('Échec du chargement des réponses');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   const handleBack = () => {
@@ -1724,9 +1744,19 @@ const ResultsPage: React.FC = () => {
     if (!selectedSurvey) return null;
 
     const allAnswers = surveyAnswers[selectedSurvey._id] || [];
-    const filteredAnswers = filterAnswers(allAnswers);
     
-    // Calculer les statistiques avec les réponses filtrées
+    // Vérifier si nous avons des réponses
+    if (allAnswers.length === 0) {
+      return (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            No responses available
+          </Typography>
+        </Box>
+      );
+    }
+
+    const filteredAnswers = filterAnswers(allAnswers);
     const stats = calculateQuestionStats(selectedSurvey._id, question.id, filteredAnswers);
 
     // Ajouter un indicateur visuel pour montrer si des filtres sont actifs
@@ -3058,63 +3088,24 @@ const ResultsPage: React.FC = () => {
   const renderQuestionDetails = useCallback(() => {
     if (!selectedQuestion || !selectedSurvey) return null;
 
-    // Obtenir les réponses filtrées en fonction des filtres actifs
+    // Modification de la récupération des réponses
     const allAnswers = surveyAnswers[selectedSurvey._id] || [];
-    let filteredAnswers = allAnswers;
+    let filteredAnswers = [...allAnswers]; // Créer une copie pour éviter les mutations
 
-    // Appliquer les filtres démographiques
-    if (Object.keys(filters.demographic).length > 0) {
-      filteredAnswers = filteredAnswers.filter(answer => {
-        const demographic = answer.respondent?.demographic;
-        if (!demographic) return false;
-
-        if (filters.demographic.gender && 
-            demographic.gender !== filters.demographic.gender.toLowerCase()) {
-          return false;
-        }
-
-        if (filters.demographic.educationLevel && 
-            demographic.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        if (filters.demographic.city && 
-            demographic.city !== filters.demographic.city) {
-          return false;
-        }
-
-        if (filters.demographic.age && demographic.dateOfBirth) {
-          const age = calculateAge(new Date(demographic.dateOfBirth));
-          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-    }
-
-    // Appliquer les filtres de réponses
-    if (Object.keys(answerFilters).length > 0) {
-      filteredAnswers = filteredAnswers.filter(answer => {
-        return Object.entries(answerFilters).every(([questionId, filter]) => {
-          const answerValue = answer.answers.find(a => a.questionId === questionId)?.answer;
-          return filter.rules.every(rule => evaluateRule(answerValue, rule));
-        });
-      });
-    }
-    
-    // Filtrer les réponses pour la question sélectionnée
-    const questionAnswers = filteredAnswers.map(answer => {
-      const questionAnswer = answer.answers.find(a => a.questionId === selectedQuestion.questionId);
-      if (questionAnswer) {
+    // Vérifier si les réponses existent pour la question sélectionnée
+    const questionAnswers = filteredAnswers
+      .map(answer => {
+        const questionAnswer = answer.answers.find(
+          a => a.questionId === selectedQuestion.questionId
+        );
+        if (!questionAnswer) return null;
+        
         return {
           ...answer,
-          answers: [questionAnswer]
+          specificAnswer: questionAnswer.answer // Garder la réponse spécifique
         };
-      }
-      return null;
-    }).filter(answer => answer !== null);
+      })
+      .filter(answer => answer !== null);
 
     // Mettre à jour selectedQuestion avec les réponses filtrées
     const updatedSelectedQuestion = {
@@ -3122,7 +3113,11 @@ const ResultsPage: React.FC = () => {
       answers: questionAnswers
     };
 
-    // Obtenir le nombre total de réponses (non filtrées et filtrées)
+    // Log pour debug
+    console.log('Question answers:', questionAnswers);
+    console.log('Updated selected question:', updatedSelectedQuestion);
+
+    // Obtenir le nombre total de réponses
     const totalAnswers = allAnswers.length;
     const filteredAnswersCount = questionAnswers.length;
 
