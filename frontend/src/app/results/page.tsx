@@ -2789,6 +2789,10 @@ const ResultsPage: React.FC = () => {
               border: '1px solid rgba(0,0,0,0.1)',
               borderRadius: 2,
               transition: 'all 0.3s ease',
+              display: 'flex',           // Ajout de flexbox
+              flexDirection: 'column',   // Organisation verticale
+              alignItems: 'center',      // Centrage horizontal
+              justifyContent: 'center',  // Centrage vertical
               '&:hover': {
                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                 transform: 'translateY(-2px)'
@@ -2806,7 +2810,13 @@ const ResultsPage: React.FC = () => {
               >
                 Distribution by City
               </Typography>
-              <Box sx={{ height: 'calc(100% - 60px)' }}>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',           // Utiliser toute la largeur disponible
+                display: 'flex',         // Ajout de flexbox
+                justifyContent: 'center',// Centrage horizontal
+                alignItems: 'center'     // Centrage vertical
+              }}>
                 <Doughnut
                   data={{
                     labels: Object.keys(filteredStats?.city || stats.city),
@@ -3518,28 +3528,24 @@ const ResultsPage: React.FC = () => {
     
     const chartColors = {
       backgrounds: [
-        'rgba(54, 162, 235, 0.5)',
-        'rgba(255, 99, 132, 0.5)',
-        'rgba(75, 192, 192, 0.5)',
-        'rgba(255, 206, 86, 0.5)',
-        'rgba(153, 102, 255, 0.5)',
-        'rgba(255, 159, 64, 0.5)',
+        'rgba(102, 126, 234, 0.6)',
+        'rgba(118, 75, 162, 0.6)',
+        'rgba(75, 192, 192, 0.6)',
+        'rgba(255, 159, 64, 0.6)',
+        'rgba(255, 99, 132, 0.6)',
       ],
       borders: [
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 99, 132, 1)',
+        'rgba(102, 126, 234, 1)',
+        'rgba(118, 75, 162, 1)',
         'rgba(75, 192, 192, 1)',
-        'rgba(255, 206, 86, 1)',
-        'rgba(153, 102, 255, 1)',
         'rgba(255, 159, 64, 1)',
+        'rgba(255, 99, 132, 1)',
       ]
     };
     
     if (selectedSurvey) {
-      // Utiliser les réponses filtrées si disponibles, sinon utiliser toutes les réponses
       let answers = surveyAnswers[selectedSurvey._id] || [];
       
-      // Appliquer les filtres démographiques
       if (Object.keys(filters.demographic).length > 0) {
         answers = answers.filter(answer => {
           const demographic = answer.respondent?.demographic;
@@ -3564,7 +3570,6 @@ const ResultsPage: React.FC = () => {
         });
       }
 
-      // Appliquer les filtres de réponses
       if (Object.keys(answerFilters).length > 0) {
         answers = answers.filter(answer => {
           return Object.entries(answerFilters).every(([questionId, filter]) => {
@@ -3574,7 +3579,6 @@ const ResultsPage: React.FC = () => {
         });
       }
       
-      // Calculer la distribution d'âge à partir des réponses filtrées
       answers.forEach(answer => {
         if (answer.respondent?.demographic?.dateOfBirth) {
           const age = calculateAge(new Date(answer.respondent.demographic.dateOfBirth));
@@ -3585,14 +3589,17 @@ const ResultsPage: React.FC = () => {
       });
     }
 
-    const datasets = Object.entries(ageDistribution).map(([age, count]) => ({
-      label: `${age} `, // Modification uniquement de ce libellé
+    // Trier les âges pour une attribution cohérente des couleurs
+    const sortedAges = Object.keys(ageDistribution).sort((a, b) => parseInt(a) - parseInt(b));
+    
+    const datasets = sortedAges.map((age, index) => ({
+      label: `${age} ans`,
       data: [{
         x: parseInt(age),
-        y: count
+        y: ageDistribution[age]
       }],
-      backgroundColor: chartColors.backgrounds[parseInt(age) % chartColors.backgrounds.length],
-      borderColor: chartColors.borders[parseInt(age) % chartColors.borders.length],
+      backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
+      borderColor: chartColors.borders[index % chartColors.borders.length],
       borderWidth: 2,
       pointRadius: 8,
       pointHoverRadius: 10,
