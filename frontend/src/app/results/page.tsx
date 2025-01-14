@@ -3586,7 +3586,7 @@ const ResultsPage: React.FC = () => {
     }
 
     const datasets = Object.entries(ageDistribution).map(([age, count]) => ({
-      label: `${age} ans - ${count} participant${count > 1 ? 's' : ''}`,
+      label: `${age} ans`, // Modification uniquement de ce libellé
       data: [{
         x: parseInt(age),
         y: count
@@ -3620,7 +3620,6 @@ const ResultsPage: React.FC = () => {
           },
           title: {
             display: true,
-            text: 'Participants Age',
             font: {
               size: 14,
               weight: 'bold'
@@ -3667,7 +3666,6 @@ const ResultsPage: React.FC = () => {
           position: 'left',
           title: {
             display: true,
-            text: 'Number of Participants',
             font: {
               size: 14,
               weight: 'bold'
