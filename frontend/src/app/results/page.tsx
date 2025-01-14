@@ -1521,9 +1521,9 @@ const ResultsPage: React.FC = () => {
   }, [selectedSurvey, chartTypes, prepareChartData, chartRef]);
 
   // Ajout d'un intervalle de rafraîchissement (en millisecondes)
-  const REFRESH_INTERVAL = 30000; // 10 secondes
+  const REFRESH_INTERVAL = 3000; // 10 secondes
 
-  // Modifier le useEffect existant pour le rafraîchissement périodique
+  // Modifier l'useEffect pour le rafraîchissement périodique
   useEffect(() => {
     const loadSurveysAndAnswers = async () => {
       try {
@@ -1542,7 +1542,7 @@ const ResultsPage: React.FC = () => {
         const allSurveys = [...surveysData, ...pendingSurveys];
         setSurveys(allSurveys);
 
-        // Charger les réponses
+        // Charger les réponses pour tous les sondages
         const answersPromises = allSurveys.map((survey: Survey) => 
           getSurveyAnswers(survey._id, token)
             .then(answers => ({ [survey._id]: answers }))
@@ -1556,7 +1556,7 @@ const ResultsPage: React.FC = () => {
 
         setSurveyAnswers(answersMap);
       } catch (error: unknown) {
-        console.error('Error loading surveys and answers:', error);
+        console.error('Error loading surveys:', error);
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -1566,12 +1566,58 @@ const ResultsPage: React.FC = () => {
     // Chargement initial
     loadSurveysAndAnswers();
 
-    // Mettre en place l'intervalle de rafraîchissement
-    const intervalId = setInterval(loadSurveysAndAnswers, REFRESH_INTERVAL);
+    // Mettre en place l'intervalle de rafraîchissement uniquement pour la vue liste
+    let intervalId: NodeJS.Timeout | null = null;
+    if (!selectedSurvey && !loading) {
+      intervalId = setInterval(() => {
+        // Rafraîchir la liste des sondages et leurs réponses
+        const refreshSurveyListAndAnswers = async () => {
+          try {
+            const token = localStorage.getItem('accessToken') || '';
+            
+            // Récupérer les sondages mis à jour
+            const surveysData = await fetchSurveys(token);
+            const pendingShares = await fetchPendingShares(token);
+            const pendingSurveys = pendingShares.map((share: any) => ({
+              ...share.surveyId,
+              isOwner: false,
+              sharedBy: share.sharedBy,
+              status: 'pending'
+            }));
+            const allSurveys = [...surveysData, ...pendingSurveys];
+            setSurveys(allSurveys);
+
+            // Mettre à jour uniquement les réponses des sondages affichés
+            const answersPromises = allSurveys.map((survey: Survey) => 
+              getSurveyAnswers(survey._id, token)
+                .then(answers => ({ [survey._id]: answers }))
+            );
+
+            const allAnswers = await Promise.all(answersPromises);
+            const answersMap = allAnswers.reduce((acc, curr) => ({
+              ...acc,
+              ...curr
+            }), {});
+
+            setSurveyAnswers(prev => ({
+              ...prev,
+              ...answersMap
+            }));
+          } catch (error) {
+            console.error('Error refreshing survey list and answers:', error);
+          }
+        };
+        refreshSurveyListAndAnswers();
+      }, REFRESH_INTERVAL);
+    }
 
     // Nettoyer l'intervalle lors du démontage du composant
-    return () => clearInterval(intervalId);
-  }, []); // Dépendances vides pour ne s'exécuter qu'au montage
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [selectedSurvey, loading]); // Ajouter loading comme dépendance
 
   console.log('Current state - Surveys:', surveys);
   console.log('Current state - Answers:', surveyAnswers);
