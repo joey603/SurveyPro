@@ -145,14 +145,40 @@ exports.getSurveyById = async (req, res) => {
 exports.deleteMedia = async (req, res) => {
   try {
     const { publicId } = req.body;
+    console.log('Received delete request for public_id:', publicId);
+    
     if (!publicId) {
+      console.log('No public_id provided');
       return res.status(400).json({ message: "Public ID is required." });
     }
-    await deleteFileFromCloudinary(publicId);
-    res.status(200).json({ message: "File deleted successfully." });
+
+    // Nettoyer le public_id
+    const cleanPublicId = publicId.replace(/^uploads\//, '');
+    const fullPublicId = `uploads/${cleanPublicId}`;
+    
+    console.log('Attempting to delete with full public_id:', fullPublicId);
+
+    const result = await deleteFileFromCloudinary(fullPublicId);
+    console.log('Cloudinary deletion result:', result);
+
+    if (result.result === 'ok') {
+      res.status(200).json({ 
+        message: "File deleted successfully.",
+        result: result 
+      });
+    } else {
+      res.status(400).json({ 
+        message: "Failed to delete file",
+        result: result 
+      });
+    }
   } catch (error) {
-    console.error("Error deleting media:", error.message);
-    res.status(500).json({ message: "Failed to delete media.", error: error.message });
+    console.error("Error deleting media:", error);
+    res.status(500).json({ 
+      message: "Failed to delete media.", 
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 

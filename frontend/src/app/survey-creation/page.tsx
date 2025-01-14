@@ -243,14 +243,87 @@ const SurveyCreationPage: React.FC = () => {
     setLocalOptions((prev) => ({ ...prev, [id]: [] }));
   };
 
-  const handleDeleteQuestion = (index: number) => {
-    const questionId = fields[index].id;
+  const handleDeleteQuestion = async (index: number) => {
+    const question = fields[index];
+    
+    if (question.media) {
+      try {
+        // Marquer le média pour suppression
+        const newTracker = {
+          ...mediaTracker,
+          [question.media]: 'to_delete'
+        };
+        
+        setMediaTracker(newTracker);
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Récupérer le token et vérifier sa validité
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+
+        // Vérifier si le token est expiré
+        try {
+          const tokenData = JSON.parse(atob(token.split('.')[1]));
+          if (tokenData.exp * 1000 < Date.now()) {
+            throw new Error('Token expired');
+          }
+        } catch (e) {
+          throw new Error('Invalid token');
+        }
+
+        const parts = question.media.split('/');
+        const filename = parts[parts.length - 1];
+        const publicId = `uploads/${filename.split('.')[0]}`;
+        
+        const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ publicId }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Si le token est invalide, on peut rediriger vers la page de connexion
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login';
+            throw new Error('Session expired. Please login again.');
+          }
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to delete media: ${publicId}`);
+        }
+
+        // Réinitialiser le tracker pour ce média
+        setMediaTracker(prev => {
+          const newState = { ...prev };
+          delete newState[question.media as string];
+          return newState;
+        });
+
+        setNotification({
+          message: 'Media deleted successfully',
+          severity: 'success',
+          open: true
+        });
+
+      } catch (error) {
+        console.error('Error deleting media:', error);
+        setNotification({
+          message: error instanceof Error ? error.message : 'Error deleting media file',
+          severity: 'error',
+          open: true
+        });
+      }
+    }
+    
     remove(index);
-    setLocalOptions((prev) => {
-      const updated = { ...prev };
-      delete updated[questionId];
-      return updated;
-    });
   };
 
   const handleQuestionTypeChange = (index: number, newType: string) => {
@@ -267,23 +340,79 @@ const SurveyCreationPage: React.FC = () => {
     });
   };
 
-  const handleResetSurvey = (event?: React.MouseEvent<Element, MouseEvent> | null) => {
+  const handleResetSurvey = async (event: React.MouseEvent<HTMLButtonElement> | null) => {
     if (event) {
       event.preventDefault();
     }
+    
+    // Récupérer tous les médias des questions
+    const currentMedia = fields
+      .map(field => field.media)
+      .filter(media => media && media.trim() !== '');
+      
+    if (currentMedia.length > 0) {
+      console.log('Current media to mark for deletion:', currentMedia);
+      
+      // Marquer tous les médias pour suppression et attendre la mise à jour du state
+      const newTracker = {
+        ...mediaTracker,
+        ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
+      };
+      
+      // Mettre à jour le state et attendre que ce soit fait
+      setMediaTracker(newTracker);
+      
+      // Attendre que le state soit mis à jour
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      try {
+        // Nettoyer les médias avec le nouveau tracker
+        for (const media of currentMedia) {
+          if (!media) continue;
+          const parts = media.split('/');
+          const filename = parts[parts.length - 1];
+          const publicId = `uploads/${filename.split('.')[0]}`;
+          
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
+
+          const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ publicId }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to delete media: ${publicId}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting media:', error);
+        setNotification({
+          message: 'Error deleting media files',
+          severity: 'error',
+          open: true
+        });
+      }
+    }
+
+    // Réinitialiser le formulaire
     reset({
       title: '',
       description: '',
       demographicEnabled: false,
-      questions: [],
+      questions: []
     });
-    setLocalOptions({});
     
-    setNotification({
-      message: 'Form has been reset',
-      severity: 'info',
-      open: true
-    });
+    // Réinitialiser le tracker de médias
+    setMediaTracker({});
   };
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
@@ -295,13 +424,22 @@ const SurveyCreationPage: React.FC = () => {
         throw new Error('No authentication token found');
       }
 
-      const mediaUrl = await uploadMedia(file, token);
+      // Correction du chemin de l'API
+      const mediaUrl = await uploadMedia(file);
       
+      // Mise à jour du tracker de médias
+      setMediaTracker(prev => ({
+        ...prev,
+        [mediaUrl]: 'active'
+      }));
+
+      // Mise à jour de la question avec la nouvelle URL
       fields.forEach((field, index) => {
         if (field.id === questionId) {
           update(index, {
             ...field,
-            media: mediaUrl
+            media: mediaUrl,
+            mediaUrl: mediaUrl // Synchroniser les deux champs
           });
         }
       });
@@ -331,6 +469,103 @@ const SurveyCreationPage: React.FC = () => {
   }, [watch('questions')]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [mediaTracker, setMediaTracker] = useState<{ [key: string]: string }>({});
+
+  // Fonction pour gérer le changement de média
+  const handleMediaChange = async (index: number, newMediaUrl: string, field: any) => {
+    // Marquer l'ancien média pour suppression si nécessaire
+    if (field.media && field.media !== newMediaUrl) {
+      setMediaTracker(prev => ({
+        ...prev,
+        [field.media]: 'to_delete',
+        [newMediaUrl]: 'active' // Marquer le nouveau média comme actif
+      }));
+    }
+
+    // Mise à jour de la question
+    update(index, { 
+      ...field, 
+      mediaUrl: newMediaUrl,
+      media: newMediaUrl // Synchroniser les deux champs
+    });
+  };
+
+  // Fonction pour nettoyer les médias non utilisés
+  const cleanupUnusedMedia = async () => {
+    try {
+      // Ajouter un log pour voir l'état du mediaTracker
+      console.log('Current mediaTracker state:', mediaTracker);
+
+      const mediaToDelete = Object.entries(mediaTracker)
+        .filter(([_, status]) => status === 'to_delete')
+        .map(([url, _]) => {
+          try {
+            console.log('Processing URL:', url);
+            const parts = url.split('/');
+            const filename = parts[parts.length - 1];
+            const publicId = `uploads/${filename.split('.')[0]}`;
+            console.log('Extracted public_id:', publicId);
+            return publicId;
+          } catch (error) {
+            console.error('Error processing URL:', url, error);
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      console.log('Media to delete:', mediaToDelete);
+
+      if (mediaToDelete.length > 0) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        for (const publicId of mediaToDelete) {
+          try {
+            console.log('Sending delete request for:', publicId);
+            // Correction du chemin de l'API et ajout des headers CORS
+            const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+              },
+              credentials: 'include', // Ajouter cette ligne pour les cookies
+              body: JSON.stringify({ publicId }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(`Server error: ${errorData.message}`);
+            }
+
+            const result = await response.json();
+            console.log('Delete success:', result);
+          } catch (error) {
+            console.error(`Failed to delete media ${publicId}:`, error);
+            setNotification({
+              message: `Failed to delete media: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              severity: 'error',
+              open: true
+            });
+          }
+        }
+      }
+
+      // Réinitialiser le tracker après la suppression
+      setMediaTracker({});
+    } catch (error) {
+      console.error('Error in cleanup:', error);
+      setNotification({
+        message: 'Error cleaning up media files',
+        severity: 'error',
+        open: true
+      });
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitted(true);
@@ -431,6 +666,8 @@ const SurveyCreationPage: React.FC = () => {
       setTimeout(() => {
         handleResetSurvey(null);
       }, 2000);
+      
+      await cleanupUnusedMedia();
       
     } catch (error: any) {
       console.error('Error submitting survey:', error);
@@ -1115,7 +1352,7 @@ const SurveyCreationPage: React.FC = () => {
                             borderColor: '#764ba2',
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                           },
-                          minWidth: '150px', // Pour éviter que le bouton ne change de taille pendant le chargement
+                          minWidth: '150px',
                         }}
                       >
                         {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
@@ -1135,15 +1372,11 @@ const SurveyCreationPage: React.FC = () => {
                         or
                       </Typography>
                       <TextField
-                        value={field.mediaUrl || ''}
+                        value={field.media ? 'Media uploaded' : field.mediaUrl || ''}
                         onChange={(e) => {
                           const url = e.target.value;
                           if (url === '' || isValidMediaURL(url)) {
-                            update(index, { 
-                              ...field, 
-                              mediaUrl: url,
-                              media: url
-                            });
+                            handleMediaChange(index, url, field);
                           }
                         }}
                         placeholder="Enter media URL"
@@ -1160,23 +1393,6 @@ const SurveyCreationPage: React.FC = () => {
                             },
                           },
                         }}
-                        InputProps={{
-                          endAdornment: field.mediaUrl && (
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                update(index, { 
-                                  ...field, 
-                                  mediaUrl: '',
-                                  media: ''
-                                });
-                              }}
-                              sx={{ color: '#ef4444' }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          ),
-                        }}
                       />
                     </Box>
                     {(field.media || field.mediaUrl) && (
@@ -1185,9 +1401,9 @@ const SurveyCreationPage: React.FC = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
                             <CircularProgress size={40} sx={{ color: '#667eea' }} />
                           </Box>
-                        ) : isImageFile(field.media) ? (
+                        ) : isImageFile(field.media || '') ? (
                           <img 
-                            src={field.media}
+                            src={field.media || ''}
                             alt="Question media"
                             style={{ 
                               width: '100%', 

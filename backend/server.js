@@ -22,7 +22,12 @@ mongoose
 // Middleware
 app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3002'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Debug middleware amélioré
 app.use((req, res, next) => {
@@ -64,6 +69,16 @@ app.use((req, res) => {
     message: "Route not found",
     requestedPath: req.url,
     method: req.method
+  });
+});
+
+// Error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Something broke!',
+    error: err.message
   });
 });
 

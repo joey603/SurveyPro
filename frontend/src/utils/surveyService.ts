@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const API_BASE_URL = 'http://localhost:5041/api/surveys';
+
 export const BASE_URL = "http://localhost:5041";
 
 if (!BASE_URL) {
@@ -19,27 +21,88 @@ const DEFAULT_CITIES = [
   "Bnei Brak"
 ];
 
-export const uploadMedia = async (file: File, token: string): Promise<string> => {
-  const formData = new FormData();
-  formData.append('file', file);
-
+export const uploadMedia = async (file: File): Promise<string> => {
   try {
-    const response = await fetch(`${BASE_URL}/api/surveys/upload-media`, {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    console.log('Uploading media to:', `${API_BASE_URL}/upload-media`);
+
+    const response = await fetch(`${API_BASE_URL}/upload-media`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
       },
       body: formData,
+      mode: 'cors'
     });
 
+    console.log('Upload response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`Upload failed with status: ${response.status}`);
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message;
+      } catch (e) {
+        errorMessage = 'Failed to upload media';
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
+    console.log('Upload success, received URL:', data.url);
     return data.url;
   } catch (error) {
     console.error('Error uploading media:', error);
+    throw error;
+  }
+};
+
+export const deleteMedia = async (publicId: string): Promise<void> => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    console.log('Attempting to delete media with publicId:', publicId);
+    console.log('Using API URL:', `${API_BASE_URL}/delete-media`);
+
+    const response = await fetch(`${API_BASE_URL}/delete-media`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ publicId }),
+      mode: 'cors'
+    });
+
+    console.log('Delete response status:', response.status);
+
+    if (!response.ok) {
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message;
+      } catch (e) {
+        errorMessage = 'Failed to delete media';
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    console.log('Delete result:', result);
+  } catch (error) {
+    console.error('Error deleting media:', error);
     throw error;
   }
 };

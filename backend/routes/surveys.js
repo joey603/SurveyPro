@@ -21,7 +21,40 @@ router.post("/", authMiddleware, upload.any(), createSurvey);
 router.get("/", authMiddleware, getSurveys);
 router.get("/:id", authMiddleware, getSurveyById);
 
-router.post("/delete-media", authMiddleware, deleteMedia);
+router.post("/delete-media", authMiddleware, async (req, res) => {
+  try {
+    const { publicId } = req.body;
+    console.log('Received delete request for:', publicId);
+
+    if (!publicId) {
+      return res.status(400).json({ message: "Public ID is required" });
+    }
+
+    const result = await deleteFileFromCloudinary(publicId);
+    console.log('Cloudinary deletion result:', result);
+
+    if (result.result === 'ok') {
+      res.status(200).json({
+        success: true,
+        message: "File deleted successfully",
+        result
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Failed to delete file",
+        result
+      });
+    }
+  } catch (error) {
+    console.error('Error in delete-media route:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while deleting media",
+      error: error.message
+    });
+  }
+});
 
 
 // Route pour tester le téléchargement de fichiers vers Cloudinary
