@@ -3909,7 +3909,7 @@ const ResultsPage: React.FC = () => {
           gap: 1
         }}>
           <PersonAddIcon />
-          share the results
+          Collaborate with others
         </DialogTitle>
         
         <DialogContent sx={{ mt: 2 }}>
@@ -3957,7 +3957,7 @@ const ResultsPage: React.FC = () => {
               }
             }}
           >
-            {loading ? <CircularProgress size={24} /> : 'Partager'}
+            {loading ? <CircularProgress size={24} /> : 'send'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -4088,7 +4088,7 @@ const ResultsPage: React.FC = () => {
                 }
               }}
             >
-              Add viewer
+              Collaborate 
             </Button>
           </Box>
 
