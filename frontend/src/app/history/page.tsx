@@ -36,6 +36,8 @@ import { TextFieldProps } from '@mui/material';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CreateIcon from '@mui/icons-material/Create';
 
+const DEFAULT_IMAGE = '/placeholder-image.jpg';
+
 interface Survey {
   _id: string;
   title: string;
@@ -108,6 +110,7 @@ const SurveyHistoryPage: React.FC = () => {
   const [viewType, setViewType] = useState<'responses' | 'created'>('responses');
   const [createdSurveys, setCreatedSurveys] = useState<Survey[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [datePickerKey, setDatePickerKey] = useState(0);
 
   useEffect(() => {
     const fetchSurveyResponses = async () => {
@@ -481,7 +484,7 @@ const SurveyHistoryPage: React.FC = () => {
                     Question {index + 1}: {question.text}
                   </Typography>
 
-                  {question.media && question.media.url && (
+                  {question.media?.url && (
                     <Box sx={{ 
                       mb: 2,
                       display: 'flex',
@@ -496,10 +499,8 @@ const SurveyHistoryPage: React.FC = () => {
                             controls
                             width="100%"
                             height="auto"
-                            style={{ 
-                              borderRadius: '8px',
-                              overflow: 'hidden'
-                            }}
+                            onError={(e) => console.warn('Video loading error:', e)}
+                            fallback={<CircularProgress />}
                           />
                         </Box>
                       ) : (
@@ -510,16 +511,24 @@ const SurveyHistoryPage: React.FC = () => {
                           position: 'relative'
                         }}>
                           <Image
-                            src={question.media.url}
+                            src={question.media?.url || DEFAULT_IMAGE}
                             alt="Question media"
                             width={400}
                             height={300}
+                            onError={(e) => {
+                              console.warn('Image loading error:', e);
+                              const imgElement = e.currentTarget as HTMLImageElement;
+                              if (imgElement.src !== DEFAULT_IMAGE) {
+                                imgElement.src = DEFAULT_IMAGE;
+                              }
+                            }}
                             style={{ 
                               objectFit: 'contain',
                               width: '100%',
                               height: 'auto',
                               borderRadius: '8px'
                             }}
+                            unoptimized
                           />
                         </Box>
                       )}
@@ -862,6 +871,7 @@ const SurveyHistoryPage: React.FC = () => {
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
                   <DatePicker
+                    key={`start-${datePickerKey}`}
                     label="Start Date"
                     value={dateRange.start}
                     onChange={(newValue: Date | null) => {
@@ -870,11 +880,10 @@ const SurveyHistoryPage: React.FC = () => {
                         start: newValue
                       }));
                     }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
-                    )}
+                    renderInput={(params: TextFieldProps) => <TextField {...params} />}
                   />
                   <DatePicker
+                    key={`end-${datePickerKey}`}
                     label="End Date"
                     value={dateRange.end}
                     onChange={(newValue: Date | null) => {
@@ -883,10 +892,8 @@ const SurveyHistoryPage: React.FC = () => {
                         end: newValue
                       }));
                     }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
-                    )}
                     minDate={dateRange.start || undefined}
+                    renderInput={(params: TextFieldProps) => <TextField {...params} />}
                   />
                 </Stack>
               </LocalizationProvider>
