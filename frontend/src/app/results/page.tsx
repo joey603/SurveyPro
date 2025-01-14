@@ -3514,50 +3514,85 @@ const ResultsPage: React.FC = () => {
 
   // Modifier la fonction renderAgeChart
   const renderAgeChart = (data: number[]) => {
-    // Filtrer les âges invalides et les compter correctement
-    const ageDistribution = data.reduce((acc: { [key: number]: number }, age) => {
-      // S'assurer que l'âge est un nombre valide et positif
-      if (typeof age === 'number' && !isNaN(age) && age > 0 && age <= 120) {
-        const roundedAge = Math.floor(age);
-        acc[roundedAge] = (acc[roundedAge] || 0) + 1;
-      }
-      return acc;
-    }, {});
-
-    // Log pour debug
-    console.log('Age distribution data:', {
-      rawData: data,
-      processedDistribution: ageDistribution,
-      totalParticipants: Object.values(ageDistribution).reduce((sum, count) => sum + count, 0)
-    });
-
-    const cityColors = {
+    const ageDistribution: { [key: string]: number } = {};
+    
+    const chartColors = {
       backgrounds: [
-        'rgba(102, 126, 234, 0.6)',    // Bleu principal
-        'rgba(118, 75, 162, 0.6)',     // Violet
-        'rgba(75, 192, 192, 0.6)',     // Turquoise
-        'rgba(255, 159, 64, 0.6)',     // Orange
-        'rgba(255, 99, 132, 0.6)',     // Rose
+        'rgba(54, 162, 235, 0.5)',
+        'rgba(255, 99, 132, 0.5)',
+        'rgba(75, 192, 192, 0.5)',
+        'rgba(255, 206, 86, 0.5)',
+        'rgba(153, 102, 255, 0.5)',
+        'rgba(255, 159, 64, 0.5)',
       ],
       borders: [
-        'rgba(102, 126, 234, 1)',      // Bleu principal
-        'rgba(118, 75, 162, 1)',       // Violet
-        'rgba(75, 192, 192, 1)',       // Turquoise
-        'rgba(255, 159, 64, 1)',       // Orange
-        'rgba(255, 99, 132, 1)',       // Rose
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 99, 132, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)',
       ]
     };
+    
+    if (selectedSurvey) {
+      // Utiliser les réponses filtrées si disponibles, sinon utiliser toutes les réponses
+      let answers = surveyAnswers[selectedSurvey._id] || [];
+      
+      // Appliquer les filtres démographiques
+      if (Object.keys(filters.demographic).length > 0) {
+        answers = answers.filter(answer => {
+          const demographic = answer.respondent?.demographic;
+          if (!demographic) return false;
 
-    const ages = Object.keys(ageDistribution).map(Number).sort((a, b) => a - b);
+          if (filters.demographic.gender && 
+              demographic.gender !== filters.demographic.gender.toLowerCase()) {
+            return false;
+          }
 
-    const datasets = ages.map((age, index) => ({
-      label: `${age} ans - ${ageDistribution[age]} participant${ageDistribution[age] > 1 ? 's' : ''}`,
+          if (filters.demographic.educationLevel && 
+              demographic.educationLevel !== filters.demographic.educationLevel) {
+            return false;
+          }
+
+          if (filters.demographic.city && 
+              demographic.city !== filters.demographic.city) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Appliquer les filtres de réponses
+      if (Object.keys(answerFilters).length > 0) {
+        answers = answers.filter(answer => {
+          return Object.entries(answerFilters).every(([questionId, filter]) => {
+            const answerValue = answer.answers.find(a => a.questionId === questionId)?.answer;
+            return filter.rules.every(rule => evaluateRule(answerValue, rule));
+          });
+        });
+      }
+      
+      // Calculer la distribution d'âge à partir des réponses filtrées
+      answers.forEach(answer => {
+        if (answer.respondent?.demographic?.dateOfBirth) {
+          const age = calculateAge(new Date(answer.respondent.demographic.dateOfBirth));
+          if (age >= 0 && age <= 100) {
+            ageDistribution[age] = (ageDistribution[age] || 0) + 1;
+          }
+        }
+      });
+    }
+
+    const datasets = Object.entries(ageDistribution).map(([age, count]) => ({
+      label: `${age} ans - ${count} participant${count > 1 ? 's' : ''}`,
       data: [{
-        x: age,
-        y: ageDistribution[age]
+        x: parseInt(age),
+        y: count
       }],
-      backgroundColor: cityColors.backgrounds[index % cityColors.backgrounds.length],
-      borderColor: cityColors.borders[index % cityColors.borders.length],
+      backgroundColor: chartColors.backgrounds[parseInt(age) % chartColors.backgrounds.length],
+      borderColor: chartColors.borders[parseInt(age) % chartColors.borders.length],
       borderWidth: 2,
       pointRadius: 8,
       pointHoverRadius: 10,
