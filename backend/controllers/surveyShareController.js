@@ -4,9 +4,9 @@ const Survey = require('../models/Survey');
 
 exports.shareSurvey = async (req, res) => {
   try {
-    console.log('Début de la fonction shareSurvey');
+    console.log('Starting shareSurvey function');
     const { surveyId, recipientEmail } = req.body;
-    console.log('Données reçues:', { surveyId, recipientEmail });
+    console.log('Received data:', { surveyId, recipientEmail });
     
     if (!surveyId || !recipientEmail) {
       return res.status(400).json({ 
@@ -14,52 +14,61 @@ exports.shareSurvey = async (req, res) => {
       });
     }
 
-    // Récupérer l'utilisateur qui partage
+    // Get the sharing user
     const sender = await User.findById(req.user.id);
     if (!sender) {
       return res.status(404).json({ message: "Sender not found" });
     }
 
-    // Vérifier si le sondage existe
+    // Check if survey exists
     const survey = await Survey.findById(surveyId);
     if (!survey) {
       return res.status(404).json({ message: "Survey not found" });
     }
 
-    // Vérifier si l'utilisateur destinataire existe
+    // Check if recipient user exists
     const recipient = await User.findOne({ email: recipientEmail });
     if (!recipient) {
       return res.status(404).json({ message: "Recipient not found" });
     }
 
-    // Vérifier si le partage existe déjà
-    const existingShare = await SurveyShare.findOne({
-      surveyId,
-      sharedWith: recipient._id
-    });
-
-    if (existingShare) {
+    // Check if recipient is the survey owner
+    if (survey.userId.toString() === recipient._id.toString()) {
       return res.status(400).json({ 
-        message: "This survey is already shared with this user" 
+        message: "User is already the owner of this survey" 
       });
     }
 
-    // Créer le nouveau partage avec l'email de l'expéditeur
+    // Check if share already exists (pending or accepted)
+    const existingShare = await SurveyShare.findOne({
+      surveyId,
+      sharedWith: recipient._id,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    if (existingShare) {
+      const status = existingShare.status === 'pending' ? 'pending' : 'already accepted';
+      return res.status(400).json({ 
+        message: `This survey is ${status} by this user` 
+      });
+    }
+
+    // Create new share
     const share = new SurveyShare({
       surveyId,
-      sharedBy: sender.email, // Utiliser l'email de l'expéditeur
+      sharedBy: sender.email,
       sharedWith: recipient._id
     });
 
     await share.save();
-    console.log('Nouveau partage créé:', share);
+    console.log('New share created:', share);
 
     res.status(201).json({
       message: "Share invitation sent successfully",
       share
     });
   } catch (error) {
-    console.error('Erreur lors du partage:', error);
+    console.error('Error while sharing:', error);
     res.status(500).json({ 
       message: "Error while sharing", 
       error: error.message,
