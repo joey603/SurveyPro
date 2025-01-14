@@ -3002,16 +3002,59 @@ const ResultsPage: React.FC = () => {
   const renderQuestionDetails = useCallback(() => {
     if (!selectedQuestion || !selectedSurvey) return null;
 
-    // Obtenir toutes les réponses pour ce sondage
+    // Obtenir les réponses filtrées en fonction des filtres actifs
     const allAnswers = surveyAnswers[selectedSurvey._id] || [];
+    let filteredAnswers = allAnswers;
+
+    // Appliquer les filtres démographiques
+    if (Object.keys(filters.demographic).length > 0) {
+      filteredAnswers = filteredAnswers.filter(answer => {
+        const demographic = answer.respondent?.demographic;
+        if (!demographic) return false;
+
+        if (filters.demographic.gender && 
+            demographic.gender !== filters.demographic.gender.toLowerCase()) {
+          return false;
+        }
+
+        if (filters.demographic.educationLevel && 
+            demographic.educationLevel !== filters.demographic.educationLevel) {
+          return false;
+        }
+
+        if (filters.demographic.city && 
+            demographic.city !== filters.demographic.city) {
+          return false;
+        }
+
+        if (filters.demographic.age && demographic.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    // Appliquer les filtres de réponses
+    if (Object.keys(answerFilters).length > 0) {
+      filteredAnswers = filteredAnswers.filter(answer => {
+        return Object.entries(answerFilters).every(([questionId, filter]) => {
+          const answerValue = answer.answers.find(a => a.questionId === questionId)?.answer;
+          return filter.rules.every(rule => evaluateRule(answerValue, rule));
+        });
+      });
+    }
     
     // Filtrer les réponses pour la question sélectionnée
-    const questionAnswers = allAnswers.map(answer => {
+    const questionAnswers = filteredAnswers.map(answer => {
       const questionAnswer = answer.answers.find(a => a.questionId === selectedQuestion.questionId);
       if (questionAnswer) {
         return {
           ...answer,
-          answers: [questionAnswer] // Garder uniquement la réponse pertinente
+          answers: [questionAnswer]
         };
       }
       return null;
@@ -3023,7 +3066,7 @@ const ResultsPage: React.FC = () => {
       answers: questionAnswers
     };
 
-    // Obtenir le nombre total de réponses (non filtrées)
+    // Obtenir le nombre total de réponses (non filtrées et filtrées)
     const totalAnswers = allAnswers.length;
     const filteredAnswersCount = questionAnswers.length;
 
@@ -4049,7 +4092,7 @@ const ResultsPage: React.FC = () => {
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
-          maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
+          maxWidth: '1000px',  // Ajout de cette ligne pour correspondre à survey-answer
           mb: 4,
         }}>
           <Box sx={{
