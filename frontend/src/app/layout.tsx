@@ -6,6 +6,7 @@ import NavBar from "./components/NavBar";
 import { CircularProgress, Backdrop } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { colors } from '../theme/colors';
 
 export default function RootLayout({
   children,
@@ -30,15 +31,15 @@ export default function RootLayout({
         {isLoading && (
           <Backdrop
             sx={{
-              color: '#667eea',
+              color: colors.primary.main,
               zIndex: 9999,
-              backgroundColor: 'rgba(255, 255, 255, 0.7)'
+              backgroundColor: colors.background.overlay
             }}
             open={true}
           >
             <CircularProgress 
               sx={{
-                color: '#667eea'
+                color: colors.primary.main
               }}
             />
           </Backdrop>
