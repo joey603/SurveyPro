@@ -4179,7 +4179,7 @@ const ResultsPage: React.FC = () => {
             overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
             width: '100%',
-            maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
+            maxWidth: '1000px',  // Ajout de cette ligne pour correspondre à survey-answer
             mb: 4,
           }}
         >
