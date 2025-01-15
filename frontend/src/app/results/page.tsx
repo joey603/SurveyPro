@@ -4156,22 +4156,33 @@ const ResultsPage: React.FC = () => {
 
   if (selectedSurvey) {
     return (
-      <Box sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: { xs: 2, sm: 4 },
-      }}>
-        <Paper elevation={3} sx={{
-          borderRadius: 3,
-          overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',
-          maxWidth: '1000px',  // Ajout de cette ligne pour correspondre à survey-answer
-          mb: 4,
-        }}>
+      <Box 
+        component="section"  // Définit le type d'élément HTML
+        data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: { xs: 2, sm: 4 },
+          maxWidth: '1000px',
+          margin: '0 auto',
+        }}
+      >
+        <Paper 
+          component="article"  // Définit le type d'élément HTML
+          data-testid="results-content"  // Ajoute un identifiant pour les tests et l'inspection
+          elevation={3} 
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            width: '100%',
+            maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
+            mb: 4,
+          }}
+        >
           <Box sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             py: 4,
@@ -4500,22 +4511,33 @@ const ResultsPage: React.FC = () => {
 
   // Liste des sondages
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      padding: { xs: 2, sm: 4 },
-    }}>
-      <Paper elevation={3} sx={{
-        borderRadius: 3,
-        overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '800px',  // Ajout de cette ligne pour correspondre à survey-answer
-        mb: 4,
-      }}>
+    <Box 
+      component="section"  // Définit le type d'élément HTML
+      data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+        maxWidth: '1000px',
+        margin: '0 auto',
+      }}
+    >
+      <Paper 
+        component="article"  // Définit le type d'élément HTML
+        data-testid="results-content-Paper"  // Ajoute un identifiant pour les tests et l'inspection
+        elevation={3} 
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '1000px',  // Ajout de cette ligne pour correspondre à survey-answer
+          mb: 4,
+        }}
+      >
         <Box sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           py: 4,
