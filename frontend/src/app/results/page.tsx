@@ -94,6 +94,7 @@ import axios from 'axios';
 import { respondToSurveyShare } from '@/utils/surveyShareService';
 import EmailIcon from '@mui/icons-material/Email';
 import { colors } from '../../theme/colors';
+import { useAuth } from '@/utils/AuthContext';
 
 ChartJS.register(
   CategoryScale,
@@ -154,6 +155,7 @@ interface Survey {
   demographicEnabled: boolean;
   sharedBy?: string;
   isRemoving?: boolean;  // Ajout de cette propriété
+  userId: string; // Ajout de cette propriété
 }
 
 interface QuestionStats {
@@ -4147,6 +4149,35 @@ const ResultsPage: React.FC = () => {
   // Ajoutez cet état pour gérer les animations de suppression
   const [removingSurveyId, setRemovingSurveyId] = useState<string | null>(null);
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [surveyToDelete, setSurveyToDelete] = useState<string | null>(null);
+
+  // Ajouter cette fonction
+  const handleDeleteSurvey = async (surveyId: string) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      await axios.delete(`${BASE_URL}/api/surveys/${surveyId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Mettre à jour la liste des sondages
+      setSurveys(prevSurveys => prevSurveys.filter(s => s._id !== surveyId));
+      toast.success('Survey deleted successfully');
+      setDeleteDialogOpen(false);
+      setSurveyToDelete(null);
+    } catch (error) {
+      console.error('Error deleting survey:', error);
+      toast.error('Failed to delete survey');
+    }
+  };
+
+  const { user } = useAuth();
+
   if (error) {
     return (
       <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
@@ -4502,6 +4533,41 @@ const ResultsPage: React.FC = () => {
           onClose={() => setShareDialogOpen(false)}
           surveyId={selectedSurvey._id}
         />
+
+        {/* Ajouter la boîte de dialogue de confirmation */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setSurveyToDelete(null);
+          }}
+        >
+          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogContent>
+            <DialogContent>
+              Are you sure you want to delete this survey? This action will also remove it for all users who received it and delete all associated answers. This action cannot be undone.
+            </DialogContent>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSurveyToDelete(null);
+              }}
+              sx={{ color: '#64748b' }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => surveyToDelete && handleDeleteSurvey(surveyToDelete)}
+              variant="contained"
+              color="error"
+              autoFocus
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     );
   }
@@ -4927,7 +4993,7 @@ const ResultsPage: React.FC = () => {
                       position: 'relative',
                       zIndex: 1
                     }}>
-                      {survey.status === 'pending' ? (
+                      {isPending ? (
                         <Box sx={{ 
                           display: 'flex', 
                           gap: 1,
@@ -4965,19 +5031,42 @@ const ResultsPage: React.FC = () => {
                           </Button>
                         </Box>
                       ) : (
-                        <Button
-                          onClick={() => handleViewResults(survey)}
-                          variant="contained"
-                          size="small"
-                          sx={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                            }
-                          }}
-                        >
-                          View Results
-                        </Button>
+                        <Box sx={{ 
+                          display: 'flex',
+                          gap: 1,
+                          justifyContent: 'flex-end'
+                        }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleViewResults(survey)}
+                            sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
+                              }
+                            }}
+                          >
+                            View Results
+                          </Button>
+                          {survey.userId === user?.id && !survey.sharedBy && (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                setSurveyToDelete(survey._id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              sx={{
+                                backgroundColor: '#f44336',
+                                '&:hover': { backgroundColor: '#d32f2f' }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </Box>
                       )}
                     </Box>
                   </Paper>

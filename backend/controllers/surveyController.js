@@ -2,6 +2,7 @@ const Survey = require("../models/Survey");
 const { uploadFileToCloudinary, deleteFileFromCloudinary } = require("../cloudinaryConfig");
 const fs = require("fs");
 const SurveyShare = require('../models/SurveyShare');
+const SurveyAnswer = require('../models/SurveyAnswer');
 
 exports.createSurvey = async (req, res) => {
   try {
@@ -251,5 +252,32 @@ exports.getAllSurveysForAnswering = async (req, res) => {
         errorStack: error.stack
       }
     });
+  }
+};
+
+exports.deleteSurvey = async (req, res) => {
+  try {
+    const { surveyId } = req.params;
+    const userId = req.user.id;
+
+    // Vérifier si l'utilisateur est le propriétaire
+    const survey = await Survey.findOne({ _id: surveyId, userId });
+    if (!survey) {
+      return res.status(404).json({ message: "Survey not found or unauthorized" });
+    }
+
+    // Supprimer les réponses associées
+    await SurveyAnswer.deleteMany({ surveyId });
+    
+    // Supprimer les partages associés
+    await SurveyShare.deleteMany({ surveyId });
+    
+    // Supprimer le sondage
+    await Survey.deleteOne({ _id: surveyId });
+
+    res.status(200).json({ message: "Survey and related data deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting survey:", error);
+    res.status(500).json({ message: "Error deleting survey", error: error.message });
   }
 };

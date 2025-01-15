@@ -23,7 +23,7 @@ mongoose
 app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3002'],
+  origin: ['http://localhost:3000','http://localhost:3001' ,'http://localhost:3002'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

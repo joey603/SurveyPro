@@ -1,6 +1,6 @@
 //routes/survey.js
 const express = require("express");
-const { createSurvey, getSurveys, getSurveyById, uploadMedia, getAllSurveysForAnswering, deleteMedia } = require("../controllers/surveyController");
+const { createSurvey, getSurveys, getSurveyById, uploadMedia, getAllSurveysForAnswering, deleteMedia, deleteSurvey } = require("../controllers/surveyController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer"); // For handling file uploads
@@ -132,5 +132,7 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
       res.status(500).json({ message: "Cleanup test failed", error: error.message });
     }
   });
+
+  router.delete("/:surveyId", authMiddleware, deleteSurvey);
 
 module.exports = router;
