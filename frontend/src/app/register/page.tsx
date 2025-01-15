@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { colors } from '../../theme/colors';
 import {
   Box,
   TextField,
@@ -122,23 +123,20 @@ const RegisterPage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+            backgroundColor: colors.background.overlay,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             padding: 4,
-            color: 'white',
+            color: colors.text.light,
           }}
         >
           <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
-            Join us !
+            Join Us
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{ textAlign: 'center', maxWidth: '80%' }}
-          >
-            Create your account to access all our features
+          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
+            Create your account and start creating surveys
           </Typography>
         </Box>
       </Box>
@@ -150,7 +148,7 @@ const RegisterPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          backgroundColor: 'white',
+          backgroundColor: colors.background.paper,
           padding: 4,
           overflow: 'auto',
         }}
@@ -158,7 +156,7 @@ const RegisterPage: React.FC = () => {
         <Container maxWidth="sm">
           <Typography
             variant="h4"
-            sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
+            sx={{ fontWeight: 700, mb: 4, color: colors.text.primary }}
           >
             Sign up
           </Typography>
@@ -185,7 +183,7 @@ const RegisterPage: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
-                    borderColor: '#667eea',
+                    borderColor: colors.border.hover,
                   },
                 },
               }}
@@ -202,7 +200,7 @@ const RegisterPage: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
-                    borderColor: '#667eea',
+                    borderColor: colors.border.hover,
                   },
                 },
               }}
@@ -221,7 +219,7 @@ const RegisterPage: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
-                    borderColor: '#667eea',
+                    borderColor: colors.border.hover,
                   },
                 },
               }}
@@ -234,10 +232,9 @@ const RegisterPage: React.FC = () => {
               disabled={loading}
               sx={{
                 padding: '12px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: colors.primary.gradient,
                 '&:hover': {
-                  background:
-                    'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  background: colors.primary.hover,
                 },
                 textTransform: 'none',
                 fontSize: '1.1rem',
@@ -245,7 +242,7 @@ const RegisterPage: React.FC = () => {
                 mb: 2,
               }}
             >
-              {loading ? <CircularProgress size={24} /> : "Sign up"}
+              {loading ? <CircularProgress size={24} sx={{ color: colors.text.light }} /> : "Sign up"}
             </Button>
 
             <Typography align="center" sx={{ mt: 2 }}>
@@ -254,7 +251,7 @@ const RegisterPage: React.FC = () => {
                 href="/login"
                 sx={{
                   textTransform: 'none',
-                  color: '#667eea',
+                  color: colors.primary.main,
                   '&:hover': {
                     backgroundColor: 'transparent',
                     textDecoration: 'underline',
