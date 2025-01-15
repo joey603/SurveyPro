@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../utils/AuthContext';
 import { useRouter } from 'next/navigation';
+import { colors } from '../../theme/colors';
 import {
   TextField,
   Button,
@@ -148,22 +149,19 @@ const LoginPage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+            backgroundColor: colors.background.overlay,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             padding: 4,
-            color: 'white',
+            color: colors.text.light,
           }}
         >
           <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
             Welcome
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{ textAlign: 'center', maxWidth: '80%' }}
-          >
+          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
             Log in to access your personal space
           </Typography>
         </Box>
@@ -176,7 +174,7 @@ const LoginPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          backgroundColor: 'white',
+          backgroundColor: colors.background.paper,
           padding: 4,
           overflow: 'auto',
         }}
@@ -184,7 +182,7 @@ const LoginPage: React.FC = () => {
         <Container maxWidth="sm">
           <Typography
             variant="h4"
-            sx={{ fontWeight: 700, mb: 4, color: '#1a237e' }}
+            sx={{ fontWeight: 700, mb: 4, color: colors.text.primary }}
           >
             Log in
           </Typography>
@@ -205,7 +203,7 @@ const LoginPage: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
-                    borderColor: '#667eea',
+                    borderColor: colors.border.hover,
                   },
                 },
               }}
@@ -224,7 +222,7 @@ const LoginPage: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
-                    borderColor: '#667eea',
+                    borderColor: colors.border.hover,
                   },
                 },
               }}
@@ -237,9 +235,9 @@ const LoginPage: React.FC = () => {
               variant="contained"
               sx={{
                 padding: '12px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: colors.primary.gradient,
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  background: colors.primary.hover,
                 },
                 textTransform: 'none',
                 fontSize: '1.1rem',
@@ -248,7 +246,7 @@ const LoginPage: React.FC = () => {
               }}
             >
               {isLoading ? (
-                <CircularProgress size={24} sx={{ color: 'white' }} />
+                <CircularProgress size={24} sx={{ color: colors.text.light }} />
               ) : (
                 'Log in'
               )}
@@ -259,7 +257,7 @@ const LoginPage: React.FC = () => {
                 href="/forgot-password"
                 sx={{
                   textTransform: 'none',
-                  color: '#667eea',
+                  color: colors.primary.main,
                   '&:hover': {
                     backgroundColor: 'transparent',
                     textDecoration: 'underline',
@@ -276,7 +274,7 @@ const LoginPage: React.FC = () => {
                 href="/register"
                 sx={{
                   textTransform: 'none',
-                  color: '#667eea',
+                  color: colors.primary.main,
                   '&:hover': {
                     backgroundColor: 'transparent',
                     textDecoration: 'underline',
