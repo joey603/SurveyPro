@@ -674,16 +674,38 @@ const SurveyAnswerPage: React.FC = () => {
   );
 
   const renderDemographicFields = () => (
-    <Box sx={{ mb: 4, p: 3, border: "1px solid #ddd", borderRadius: "8px" }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>Demographic Information</Typography>
+    <Box 
+      component="section"
+      data-testid="demographic-section"
+      sx={{ mb: 4, p: 3, border: "1px solid #ddd", borderRadius: "8px" }}
+    >
+      <Typography 
+        component="h2"
+        data-testid="demographic-title"
+        variant="h5"
+        sx={{ mb: 3 }}
+      >
+        Demographic Information
+      </Typography>
       
       <Controller
         name="demographic.gender"
         control={control}
         defaultValue=""
         render={({ field }) => (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Gender</Typography>
+          <Box 
+            component="div"
+            data-testid="gender-field"
+            sx={{ mb: 3 }}
+          >
+            <Typography 
+              component="label"
+              data-testid="gender-label"
+              variant="subtitle1"
+              sx={{ mb: 1 }}
+            >
+              Gender
+            </Typography>
             <RadioGroup 
               {...field}
               onChange={(e) => {
@@ -709,7 +731,11 @@ const SurveyAnswerPage: React.FC = () => {
         name="demographic.dateOfBirth"
         control={control}
         render={({ field }) => (
-          <Box sx={{ mb: 3, width: '100%' }}>
+          <Box 
+            component="div"
+            data-testid="date-of-birth-field"
+            sx={{ mb: 3, width: '100%' }}
+          >
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Date of Birth"
@@ -737,7 +763,11 @@ const SurveyAnswerPage: React.FC = () => {
         control={control}
         defaultValue=""
         render={({ field }) => (
-          <Box sx={{ mb: 3 }}>
+          <Box 
+            component="div"
+            data-testid="education-level-field"
+            sx={{ mb: 3 }}
+          >
             <FormControl 
               fullWidth
               error={!!formErrors['demographic.educationLevel']}
@@ -773,6 +803,8 @@ const SurveyAnswerPage: React.FC = () => {
         defaultValue=""
         render={({ field }) => (
           <FormControl 
+            component="div"
+            data-testid="city-field"
             fullWidth
             error={!!formErrors['demographic.city']}
           >
@@ -979,37 +1011,66 @@ const SurveyAnswerPage: React.FC = () => {
 
   if (!selectedSurvey) {
     return (
-      <Box sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: { xs: 2, sm: 4 },
-      }}>
-        <Paper elevation={3} sx={{
-          borderRadius: 3,
-          overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',
-          maxWidth: '800px',
-          mb: 4,
-        }}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-          }}>
-            <Typography variant="h4" fontWeight="bold">
+      <Box 
+        component="main"
+        data-testid="survey-list-page"
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: { xs: 2, sm: 4 },
+        }}
+      >
+        <Paper 
+          component="article"
+          data-testid="survey-list-container"
+          elevation={3} 
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            width: '100%',
+            maxWidth: '1000px',
+            mb: 4,
+          }}
+        >
+          {/* En-tête */}
+          <Box 
+            component="header"
+            data-testid="survey-list-header"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              py: 4,
+              px: 4,
+              color: 'white',
+              textAlign: 'center',
+            }}
+          >
+            <Typography 
+              component="h1"
+              data-testid="survey-list-title"
+              variant="h4" 
+              fontWeight="bold"
+            >
               Available Surveys
             </Typography>
           </Box>
 
-          <Box sx={{ p: 4, backgroundColor: 'white' }}>
-            <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+          {/* Section de recherche et filtres */}
+          <Box 
+            component="section"
+            data-testid="survey-list-content"
+            sx={{ p: 4, backgroundColor: 'white' }}
+          >
+            <Box 
+              component="div"
+              data-testid="survey-search-filters"
+              sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}
+            >
               <TextField
+                data-testid="survey-search-input"
                 fullWidth
                 variant="outlined"
                 placeholder="Search surveys by title or description..."
@@ -1032,7 +1093,13 @@ const SurveyAnswerPage: React.FC = () => {
                 }}
               />
 
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack 
+                component="div"
+                data-testid="survey-filter-options"
+                direction="row" 
+                spacing={2} 
+                alignItems="center"
+              >
                 <Chip
                   icon={<FilterListIcon />}
                   label="Date Filter"
@@ -1061,7 +1128,13 @@ const SurveyAnswerPage: React.FC = () => {
 
               {showDateFilter && (
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                  <Stack 
+                    component="div"
+                    data-testid="date-filter-inputs"
+                    direction="row" 
+                    spacing={2} 
+                    sx={{ mt: 2 }}
+                  >
                     <DatePicker
                       label="Start Date"
                       value={dateRange.start}
@@ -1081,14 +1154,25 @@ const SurveyAnswerPage: React.FC = () => {
             </Box>
 
             {error ? (
-              <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+              <Typography 
+                component="p"
+                data-testid="error-message"
+                color="error"
+                sx={{ textAlign: 'center', my: 4 }}
+              >
                 {error}
               </Typography>
             ) : (
-              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              <Box 
+                component="section"
+                data-testid="survey-grid"
+                sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
+              >
                 {filteredSurveys.map((survey) => (
                   <Paper
                     key={survey._id}
+                    component="article"
+                    data-testid={`survey-card-${survey._id}`}
                     elevation={1}
                     sx={{
                       borderRadius: 2,
@@ -1109,14 +1193,20 @@ const SurveyAnswerPage: React.FC = () => {
                       }
                     }}
                   >
-                    <Box sx={{ 
-                      p: 3,
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative'
-                    }}>
+                    <Box 
+                      component="div"
+                      data-testid={`survey-card-content-${survey._id}`}
+                      sx={{ 
+                        p: 3,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative'
+                      }}
+                    >
                       <Typography 
+                        component="h2"
+                        data-testid={`survey-card-title-${survey._id}`}
                         variant="h6" 
                         sx={{ 
                           mb: 2,
@@ -1133,6 +1223,8 @@ const SurveyAnswerPage: React.FC = () => {
                         {survey.title}
                       </Typography>
                       <Typography 
+                        component="p"
+                        data-testid={`survey-card-description-${survey._id}`}
                         variant="body2" 
                         color="text.secondary"
                         sx={{ 
@@ -1184,6 +1276,8 @@ const SurveyAnswerPage: React.FC = () => {
                         }}
                       >
                         <Typography 
+                          component="h2"
+                          data-testid={`survey-card-title-${survey._id}`}
                           variant="h6" 
                           sx={{ 
                             color: 'primary.main',
@@ -1194,6 +1288,8 @@ const SurveyAnswerPage: React.FC = () => {
                           {survey.title}
                         </Typography>
                         <Typography 
+                          component="p"
+                          data-testid={`survey-card-description-${survey._id}`}
                           variant="body2" 
                           sx={{ 
                             color: 'text.secondary',
@@ -1206,6 +1302,8 @@ const SurveyAnswerPage: React.FC = () => {
                       </Box>
 
                       <Stack 
+                        component="div"
+                        data-testid={`survey-card-tags-${survey._id}`}
                         direction="row" 
                         spacing={1} 
                         sx={{
@@ -1248,16 +1346,20 @@ const SurveyAnswerPage: React.FC = () => {
                       </Stack>
                     </Box>
                     
-                    <Box sx={{ 
-                      p: 2, 
-                      borderTop: 1, 
-                      borderColor: 'divider',
-                      backgroundColor: 'action.hover',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      position: 'relative',
-                      zIndex: 1
-                    }}>
+                    <Box 
+                      component="footer"
+                      data-testid={`survey-card-actions-${survey._id}`}
+                      sx={{ 
+                        p: 2, 
+                        borderTop: 1, 
+                        borderColor: 'divider',
+                        backgroundColor: 'action.hover',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    >
                       <Button
                         onClick={(e) => handleShareClick(e, survey)}
                         variant="outlined"
@@ -1304,14 +1406,18 @@ const SurveyAnswerPage: React.FC = () => {
         </Paper>
 
         {notification.open && (
-          <Box sx={{
-            position: 'fixed',
-            top: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            minWidth: 300
-          }}>
+          <Box 
+            component="div"
+            data-testid="notification-container"
+            sx={{
+              position: 'fixed',
+              top: 24,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 9999,
+              minWidth: 300
+            }}
+          >
             <Alert 
               severity={notification.severity}
               onClose={() => setNotification(prev => ({ ...prev, open: false }))}
@@ -1369,30 +1475,44 @@ const SurveyAnswerPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      padding: { xs: 2, sm: 4 },
-    }}>
-      <Paper elevation={3} sx={{
-        borderRadius: 3,
-        overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '800px',
-        mb: 4,
-      }}>
-        <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          py: 4,
-          px: 4,
-          color: 'white',
-          textAlign: 'center',
-          position: 'relative'
-        }}>
+    <Box 
+      component="main"
+      data-testid="survey-form-page"
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 4 },
+      }}
+    >
+      <Paper 
+        component="article"
+        data-testid="survey-form-container"
+        elevation={3} 
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '800px',
+          mb: 4,
+        }}
+      >
+        {/* En-tête du formulaire */}
+        <Box 
+          component="header"
+          data-testid="survey-form-header"
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative'
+          }}
+        >
           <IconButton
             onClick={() => setSelectedSurvey(null)}
             sx={{
@@ -1405,66 +1525,120 @@ const SurveyAnswerPage: React.FC = () => {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography 
+            component="h1"
+            data-testid="survey-form-title"
+            variant="h4" 
+            fontWeight="bold"
+          >
             {selectedSurvey.title}
           </Typography>
-          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
+          <Typography 
+            component="p"
+            data-testid="survey-form-description"
+            variant="subtitle1"
+            sx={{ mt: 1, opacity: 0.9 }}
+          >
             {selectedSurvey.description}
           </Typography>
         </Box>
 
-        <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Contenu du formulaire */}
+        <Box 
+          component="section"
+          data-testid="survey-form-content"
+          sx={{ p: 4, backgroundColor: 'white' }}
+        >
+          <form 
+            onSubmit={handleSubmit(onSubmit)}
+            data-testid="survey-answer-form"
+          >
+            {/* Section démographique */}
             {selectedSurvey.demographicEnabled && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              <Box 
+                component="section"
+                data-testid="demographic-section"
+                sx={{ mb: 4 }}
+              >
+                <Typography 
+                  component="h2"
+                  data-testid="demographic-title"
+                  variant="h6"
+                  sx={{ mb: 3, color: '#1a237e' }}
+                >
                   Informations Démographiques
                 </Typography>
                 {renderDemographicFields()}
               </Box>
             )}
 
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+            {/* Questions du sondage */}
+            <Box 
+              component="section"
+              data-testid="questions-section"
+              sx={{ mb: 4 }}
+            >
+              <Typography 
+                component="h2"
+                data-testid="questions-title"
+                variant="h6"
+                sx={{ mb: 3, color: '#1a237e' }}
+              >
                 Survey Questions
               </Typography>
               {selectedSurvey.questions.map((question: Question) => (
                 <Paper
                   key={question.id}
+                  component="article"
+                  data-testid={`question-${question.id}`}
                   elevation={1}
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                  }}
+                  sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid rgba(0, 0, 0, 0.1)' }}
                 >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
+                  <Typography 
+                    component="h3"
+                    data-testid={`question-${question.id}-text`}
+                    variant="h6"
+                    sx={{ mb: 2 }}
+                  >
                     {question.text}
                   </Typography>
                   
                   {question.media && renderQuestionMedia(question.media)}
 
-                  <Box sx={{ mt: 2 }}>
+                  <Box 
+                    component="div"
+                    data-testid={`question-${question.id}-input`}
+                    sx={{ mt: 2 }}
+                  >
                     {renderQuestionInput(question)}
                   </Box>
                 </Paper>
               ))}
             </Box>
 
-            {submitError && (
-              <Typography color="error" sx={{ mt: 2, mb: 2 }}>
-                {submitError}
-              </Typography>
-            )}
+            {/* Footer du formulaire */}
+            <Box 
+              component="footer"
+              data-testid="survey-form-footer"
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'flex-end',
+                mt: 4,
+                pt: 4,
+                borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+              }}
+            >
+              {submitError && (
+                <Typography 
+                  component="p"
+                  data-testid="submit-error"
+                  color="error"
+                  sx={{ mt: 2, mb: 2 }}
+                >
+                  {submitError}
+                </Typography>
+              )}
 
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end',
-              mt: 4,
-              pt: 4,
-              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
-            }}>
               <Button
                 type="submit"
                 variant="contained"
@@ -1478,12 +1652,19 @@ const SurveyAnswerPage: React.FC = () => {
                 }}
               >
                 {isSubmitting ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: 'white' }} />
+                  <Box 
+                    component="div"
+                    data-testid="submit-loader"
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    <CircularProgress 
+                      size={20}
+                      sx={{ color: 'white' }}
+                    />
                     <span>Submitting...</span>
                   </Box>
                 ) : (
-                  'Submit Survey'
+                  <span>Submit Survey</span>
                 )}
               </Button>
             </Box>
