@@ -823,7 +823,7 @@ const SurveyHistoryPage: React.FC = () => {
                 ) : (
                   <>
                     <CreateIcon />
-                    Created Surveys
+                    My Surveys
                   </>
                 )}
               </Button>

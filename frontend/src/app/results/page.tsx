@@ -3095,17 +3095,21 @@ const ResultsPage: React.FC = () => {
     // Vérifier si les réponses existent pour la question sélectionnée
     const questionAnswers = filteredAnswers
       .map(answer => {
+        // Trouver la réponse spécifique pour la question sélectionnée
         const questionAnswer = answer.answers.find(
           a => a.questionId === selectedQuestion.questionId
         );
+        
+        // Si pas de réponse pour cette question, ignorer cette entrée
         if (!questionAnswer) return null;
         
+        // Retourner un nouvel objet avec la réponse spécifique
         return {
           ...answer,
-          specificAnswer: questionAnswer.answer // Garder la réponse spécifique
+          answers: [questionAnswer] // Remplacer le tableau de réponses par uniquement celle qui nous intéresse
         };
       })
-      .filter(answer => answer !== null);
+      .filter((answer): answer is SurveyAnswer => answer !== null); // Type guard pour TypeScript
 
     // Mettre à jour selectedQuestion avec les réponses filtrées
     const updatedSelectedQuestion = {
