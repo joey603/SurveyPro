@@ -86,7 +86,7 @@ const educationOptions = [
   'Other',
 ];
 
-const SurveyCreationPage: React.FC = () => {
+const SurveyCreationPage = () => {
   const { control, handleSubmit, setValue, getValues, reset, watch } =
     useForm<FormData>({
       defaultValues: {
@@ -990,28 +990,34 @@ const SurveyCreationPage: React.FC = () => {
 
   return (
     <Box
+      component="main"
+      data-testid="survey-creation-page"
       sx={{
         minHeight: '100vh',
         backgroundColor: '#f5f5f5',
         display: 'flex',
-        alignItems: 'flex-start', // Changé à flex-start pour un meilleur scroll
+        alignItems: 'flex-start',
         justifyContent: 'center',
         padding: { xs: 2, sm: 4 },
       }}
     >
       <Paper
+        component="article"
+        data-testid="survey-creation-container"
         elevation={3}
         sx={{
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
-          maxWidth: '800px', // Augmenté pour plus d'espace
+          maxWidth: '800px',
           mb: 4,
         }}
       >
         {/* Header avec gradient */}
         <Box
+          component="header"
+          data-testid="survey-creation-header"
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             py: 4,
@@ -1020,633 +1026,657 @@ const SurveyCreationPage: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          <Typography variant="h4" fontWeight="bold">
+          <Typography 
+            component="h1"
+            data-testid="survey-creation-title"
+            variant="h4" 
+            fontWeight="bold"
+          >
             Create New Survey
           </Typography>
         </Box>
 
         {/* Contenu du formulaire */}
-        <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+        <Box 
+          component="section"
+          data-testid="survey-creation-content"
+          sx={{ p: 4, backgroundColor: 'white' }}
+        >
+          <form 
+            onSubmit={handleSubmit(onSubmit)}
+            data-testid="survey-creation-form"
+          >
             {/* Section des informations de base */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                Basic Information
-              </Typography>
-              <Tooltip 
-                title="Cette section contient les informations générales de votre sondage"
-                placement="right"
-                TransitionComponent={Zoom}
-                arrow
-              >
-                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
-              </Tooltip>
-            </Box>
+            <Box 
+              component="section"
+              data-testid="survey-basic-info"
+              sx={{ mb: 4 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                  Basic Information
+                </Typography>
+                <Tooltip 
+                  title="Cette section contient les informations générales de votre sondage"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
 
-            <Controller
-              name="title"
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Survey Title"
-                  fullWidth
-                  sx={{ mb: 3 }}
-                  variant="outlined"
-                  error={isSubmitted && validationErrors.title}
-                  helperText={isSubmitted && validationErrors.title ? "Title is required" : ""}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    if (e.target.value.trim()) {
-                      setValidationErrors(prev => ({
-                        ...prev,
-                        title: false
-                      }));
-                    }
-                  }}
-                  InputProps={{
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
+              <Controller
+                name="title"
+                control={control}
+                defaultValue=""
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Survey Title"
+                    fullWidth
+                    sx={{ mb: 3 }}
+                    variant="outlined"
+                    error={isSubmitted && validationErrors.title}
+                    helperText={isSubmitted && validationErrors.title ? "Title is required" : ""}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value.trim()) {
+                        setValidationErrors(prev => ({
+                          ...prev,
+                          title: false
+                        }));
+                      }
+                    }}
+                    InputProps={{
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': {
+                            borderColor: isSubmitted && validationErrors.title ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: isSubmitted && validationErrors.title ? '#ef4444' : '#667eea',
+                          },
                         },
                       },
-                    },
-                  }}
-                />
-              )}
-            />
-
-            <Controller
-              name="description"
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Survey Description"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  sx={{ mb: 3 }}
-                  variant="outlined"
-                />
-              )}
-            />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={watch('demographicEnabled')}
-                    onChange={(e) => {
-                      setValue('demographicEnabled', e.target.checked);
                     }}
-                    color="primary"
                   />
-                }
-                label="Enable Demographic Questions"
+                )}
               />
-              <Tooltip 
-                title="Activez cette option pour collecter des informations démographiques (âge, genre, éducation, ville)"
-                placement="right"
-                TransitionComponent={Zoom}
-                arrow
-              >
-                <HelpOutlineIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
-              </Tooltip>
-            </Box>
 
-            <Divider sx={{ my: 4 }} />
-
-            {/* Section des questions */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                Survey Questions
-              </Typography>
-              <Tooltip 
-                title="Ajoutez autant de questions que nécessaire. Chaque question peut avoir un type différent et inclure des médias"
-                placement="right"
-                TransitionComponent={Zoom}
-                arrow
-              >
-                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
-              </Tooltip>
-            </Box>
-
-            {/* Liste des questions */}
-            {fields.map((field, index) => (
-              <Paper
-                key={field.id}
-                elevation={1}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: 2,
-                  border: isSubmitted && hasQuestionErrors(index)
-                    ? '2px solid #ef4444' 
-                    : '1px solid rgba(0, 0, 0, 0.1)',
-                }}
-              >
-                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                  <Controller
-                    name={`questions.${index}.type`}
-                    control={control}
-                    render={({ field: typeField }) => (
-                      <TextField
-                        select
-                        label="Question Type"
-                        {...typeField}
-                        onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-                        sx={{ minWidth: 200 }}
-                      >
-                        {questionTypes.map((type) => (
-                          <MenuItem key={type.value} value={type.value}>
-                            {type.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
+              <Controller
+                name="description"
+                control={control}
+                defaultValue=""
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Survey Description"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    sx={{ mb: 3 }}
+                    variant="outlined"
                   />
+                )}
+              />
 
-                  <Controller
-                    name={`questions.${index}.text`}
-                    control={control}
-                    render={({ field: textField }) => (
-                      <TextField
-                        {...textField}
-                        label="Question Text"
-                        fullWidth
-                        variant="outlined"
-                        error={getQuestionError(index)}
-                        helperText={getQuestionError(index) ? "Question text is required" : ""}
-                        onChange={(e) => {
-                          textField.onChange(e);
-                          const newValue = e.target.value.trim();
-                          const currentQuestion = validationErrors.questions[index];
-                          
-                          setValidationErrors(prev => ({
-                            ...prev,
-                            questions: {
-                              ...prev.questions,
-                              [index]: {
-                                ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                text: !newValue
-                              }
-                            }
-                          }));
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '& fieldset': {
-                              borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
-                            },
-                            '&:hover fieldset': {
-                              borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
-                            },
-                          },
-                        }}
-                      />
-                    )}
-                  />
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={watch('demographicEnabled')}
+                      onChange={(e) => {
+                        setValue('demographicEnabled', e.target.checked);
+                      }}
+                      color="primary"
+                    />
+                  }
+                  label="Enable Demographic Questions"
+                />
+                <Tooltip 
+                  title="Activez cette option pour collecter des informations démographiques (âge, genre, éducation, ville)"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <HelpOutlineIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Section des questions */}
+              <Box 
+                component="section"
+                data-testid="survey-questions-section"
+                sx={{ mb: 4 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                    Survey Questions
+                  </Typography>
+                  <Tooltip 
+                    title="Ajoutez autant de questions que nécessaire. Chaque question peut avoir un type différent et inclure des médias"
+                    placement="right"
+                    TransitionComponent={Zoom}
+                    arrow
+                  >
+                    <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                  </Tooltip>
                 </Box>
 
-                {/* Options pour les questions à choix multiples */}
-                {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
-                  <Box sx={{ ml: 2, mb: 2 }}>
-                    {field.options?.map((option, optionIndex) => (
-                      <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                        <Controller
-                          name={`questions.${index}.options.${optionIndex}`}
-                          control={control}
-                          defaultValue={option}
-                          render={({ field: optionField }) => (
-                            <TextField
-                              {...optionField}
-                              label={`Option ${optionIndex + 1}`}
-                              fullWidth
-                              variant="outlined"
-                              size="small"
-                              error={getOptionError(index, optionIndex)}
-                              helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
-                              onChange={(e) => {
-                                optionField.onChange(e);
-                                const newValue = e.target.value.trim();
+                {/* Liste des questions */}
+                {fields.map((field, index) => (
+                  <Paper
+                    key={field.id}
+                    component="article"
+                    data-testid={`question-card-${index}`}
+                    elevation={1}
+                    sx={{ p: 3, mb: 3, borderRadius: 2 }}
+                  >
+                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                      <Controller
+                        name={`questions.${index}.type`}
+                        control={control}
+                        render={({ field: typeField }) => (
+                          <TextField
+                            select
+                            label="Question Type"
+                            {...typeField}
+                            onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+                            sx={{ minWidth: 200 }}
+                          >
+                            {questionTypes.map((type) => (
+                              <MenuItem key={type.value} value={type.value}>
+                                {type.label}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        )}
+                      />
+
+                      <Controller
+                        name={`questions.${index}.text`}
+                        control={control}
+                        render={({ field: textField }) => (
+                          <TextField
+                            {...textField}
+                            label="Question Text"
+                            fullWidth
+                            variant="outlined"
+                            error={getQuestionError(index)}
+                            helperText={getQuestionError(index) ? "Question text is required" : ""}
+                            onChange={(e) => {
+                              textField.onChange(e);
+                              const newValue = e.target.value.trim();
+                              const currentQuestion = validationErrors.questions[index];
+                              
+                              setValidationErrors(prev => ({
+                                ...prev,
+                                questions: {
+                                  ...prev.questions,
+                                  [index]: {
+                                    ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                    text: !newValue
+                                  }
+                                }
+                              }));
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                '& fieldset': {
+                                  borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                },
+                              },
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+
+                    {/* Options pour les questions à choix multiples */}
+                    {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
+                      <Box sx={{ ml: 2, mb: 2 }}>
+                        {field.options?.map((option, optionIndex) => (
+                          <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                            <Controller
+                              name={`questions.${index}.options.${optionIndex}`}
+                              control={control}
+                              defaultValue={option}
+                              render={({ field: optionField }) => (
+                                <TextField
+                                  {...optionField}
+                                  label={`Option ${optionIndex + 1}`}
+                                  fullWidth
+                                  variant="outlined"
+                                  size="small"
+                                  error={getOptionError(index, optionIndex)}
+                                  helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
+                                  onChange={(e) => {
+                                    optionField.onChange(e);
+                                    const newValue = e.target.value.trim();
+                                    
+                                    setValidationErrors(prev => ({
+                                      ...prev,
+                                      questions: {
+                                        ...prev.questions,
+                                        [index]: {
+                                          ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                          options: {
+                                            ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
+                                            [optionIndex]: !newValue
+                                          }
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                      '& fieldset': {
+                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                      },
+                                      '&:hover fieldset': {
+                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                      },
+                                      '&.Mui-focused fieldset': {
+                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                      },
+                                    },
+                                  }}
+                                />
+                              )}
+                            />
+                            <IconButton
+                              onClick={() => {
+                                const values = getValues();
+                                const currentQuestionValues = values.questions[index];
+                                const newOptions = [...(currentQuestionValues.options ?? [])];
+                                newOptions.splice(optionIndex, 1);
                                 
+                                // Préserver l'état de validation actuel
+                                const currentValidationState = validationErrors.questions[index];
+                                const currentOptions = typeof currentValidationState === 'object' && 
+                                  currentValidationState.options ? { ...currentValidationState.options } : {};
+                                
+                                // Supprimer l'erreur de l'option supprimée et réindexer
+                                const newValidationOptions: { [key: number]: boolean } = {};
+                                Object.entries(currentOptions).forEach(([key, value]) => {
+                                  const keyNum = parseInt(key);
+                                  if (keyNum < optionIndex) {
+                                    newValidationOptions[keyNum] = value;
+                                  } else if (keyNum > optionIndex) {
+                                    newValidationOptions[keyNum - 1] = value;
+                                  }
+                                });
+
+                                // Mettre à jour l'état de validation
                                 setValidationErrors(prev => ({
                                   ...prev,
                                   questions: {
                                     ...prev.questions,
                                     [index]: {
                                       ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                      options: {
-                                        ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
-                                        [optionIndex]: !newValue
-                                      }
+                                      options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
                                     }
                                   }
                                 }));
+
+                                // Mettre à jour la question en préservant toutes les valeurs
+                                update(index, {
+                                  ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
+                                  options: newOptions,
+                                });
                               }}
-                              sx={{
-                                '& .MuiOutlinedInput-root': {
-                                  '& fieldset': {
-                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
-                                  },
-                                  '&:hover fieldset': {
-                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                  },
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                  },
-                                },
+                              color="error"
+                              size="small"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        ))}
+                        <Button
+                          onClick={() => handleAddOption(index)}
+                          startIcon={<AddIcon />}
+                          size="small"
+                          sx={{ mt: 1 }}
+                        >
+                          Add Option
+                        </Button>
+                      </Box>
+                    )}
+
+                    {/* Media Upload Section */}
+                    {field.type !== 'color-picker' && (
+                      <Box sx={{ mt: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                          <Button
+                            component="label"
+                            variant="outlined"
+                            disabled={isUploading[field.id]}
+                            startIcon={isUploading[field.id] ? (
+                              <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                            ) : (
+                              <PhotoCameraIcon />
+                            )}
+                            sx={{
+                              color: '#667eea',
+                              borderColor: '#667eea',
+                              '&:hover': {
+                                borderColor: '#764ba2',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              },
+                              minWidth: '150px',
+                            }}
+                          >
+                            {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
+                            <input
+                              type="file"
+                              hidden
+                              accept="image/*,video/*"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  const file = e.target.files[0];
+                                  handleFileUpload(file, field.id);
+                                }
                               }}
                             />
-                          )}
-                        />
-                        <IconButton
-                          onClick={() => {
-                            const values = getValues();
-                            const currentQuestionValues = values.questions[index];
-                            const newOptions = [...(currentQuestionValues.options ?? [])];
-                            newOptions.splice(optionIndex, 1);
-                            
-                            // Préserver l'état de validation actuel
-                            const currentValidationState = validationErrors.questions[index];
-                            const currentOptions = typeof currentValidationState === 'object' && 
-                              currentValidationState.options ? { ...currentValidationState.options } : {};
-                            
-                            // Supprimer l'erreur de l'option supprimée et réindexer
-                            const newValidationOptions: { [key: number]: boolean } = {};
-                            Object.entries(currentOptions).forEach(([key, value]) => {
-                              const keyNum = parseInt(key);
-                              if (keyNum < optionIndex) {
-                                newValidationOptions[keyNum] = value;
-                              } else if (keyNum > optionIndex) {
-                                newValidationOptions[keyNum - 1] = value;
+                          </Button>
+                          <Typography variant="body2" color="text.secondary">
+                            or
+                          </Typography>
+                          <TextField
+                            value={field.media ? '' : field.mediaUrl || ''}
+                            onChange={(e) => {
+                              const url = e.target.value;
+                              if (url === '' || isValidMediaURL(url)) {
+                                handleMediaChange(index, url, field);
                               }
-                            });
-
-                            // Mettre à jour l'état de validation
-                            setValidationErrors(prev => ({
-                              ...prev,
-                              questions: {
-                                ...prev.questions,
-                                [index]: {
-                                  ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                  options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
-                                }
-                              }
-                            }));
-
-                            // Mettre à jour la question en préservant toutes les valeurs
-                            update(index, {
-                              ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
-                              options: newOptions,
-                            });
-                          }}
-                          color="error"
-                          size="small"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    ))}
-                    <Button
-                      onClick={() => handleAddOption(index)}
-                      startIcon={<AddIcon />}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    >
-                      Add Option
-                    </Button>
-                  </Box>
-                )}
-
-                {/* Media Upload Section */}
-                {field.type !== 'color-picker' && (
-                  <Box sx={{ mt: 2 }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Button
-                        component="label"
-                        variant="outlined"
-                        disabled={isUploading[field.id]}
-                        startIcon={isUploading[field.id] ? (
-                          <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                        ) : (
-                          <PhotoCameraIcon />
-                        )}
-                        sx={{
-                          color: '#667eea',
-                          borderColor: '#667eea',
-                          '&:hover': {
-                            borderColor: '#764ba2',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                          },
-                          minWidth: '150px',
-                        }}
-                      >
-                        {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*,video/*"
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) {
-                              const file = e.target.files[0];
-                              handleFileUpload(file, field.id);
-                            }
-                          }}
-                        />
-                      </Button>
-                      <Typography variant="body2" color="text.secondary">
-                        or
-                      </Typography>
-                      <TextField
-                        value={field.media ? '' : field.mediaUrl || ''}
-                        onChange={(e) => {
-                          const url = e.target.value;
-                          if (url === '' || isValidMediaURL(url)) {
-                            handleMediaChange(index, url, field);
-                          }
-                        }}
-                        placeholder="Enter media URL"
-                        size="small"
-                        fullWidth
-                        sx={{
-                          maxWidth: '400px',
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover fieldset': {
-                              borderColor: '#667eea',
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: '#667eea',
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                    {(field.media || field.mediaUrl) && (
-                      <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                        {isUploading[field.id] || loadingMedia[field.id] ? (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
-                            <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                            }}
+                            placeholder="Enter media URL"
+                            size="small"
+                            fullWidth
+                            sx={{
+                              maxWidth: '400px',
+                              '& .MuiOutlinedInput-root': {
+                                '&:hover fieldset': {
+                                  borderColor: '#667eea',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: '#667eea',
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                        {(field.media || field.mediaUrl) && (
+                          <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                            {isUploading[field.id] || loadingMedia[field.id] ? (
+                              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+                                <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                              </Box>
+                            ) : isImageFile(field.media || '') ? (
+                              <img 
+                                src={field.media || ''}
+                                alt="Question media"
+                                style={{ 
+                                  width: '100%', 
+                                  height: 'auto',
+                                  borderRadius: '8px',
+                                  objectFit: 'contain'
+                                }}
+                                onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                onError={() => {
+                                  setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                  setNotification({
+                                    message: 'Error loading image. Please check the URL.',
+                                    severity: 'error',
+                                    open: true
+                                  });
+                                }}
+                              />
+                            ) : (
+                              <ReactPlayer
+                                url={field.media}
+                                controls
+                                width="100%"
+                                height="auto"
+                                style={{ borderRadius: '8px' }}
+                                onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                onError={(e) => {
+                                  setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                  console.error('Error loading media:', e);
+                                  setNotification({
+                                    message: 'Error loading media. Please check the URL.',
+                                    severity: 'error',
+                                    open: true
+                                  });
+                                }}
+                              />
+                            )}
                           </Box>
-                        ) : isImageFile(field.media || '') ? (
-                          <img 
-                            src={field.media || ''}
-                            alt="Question media"
-                            style={{ 
-                              width: '100%', 
-                              height: 'auto',
-                              borderRadius: '8px',
-                              objectFit: 'contain'
-                            }}
-                            onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                            onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                            onError={() => {
-                              setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                              setNotification({
-                                message: 'Error loading image. Please check the URL.',
-                                severity: 'error',
-                                open: true
-                              });
-                            }}
-                          />
-                        ) : (
-                          <ReactPlayer
-                            url={field.media}
-                            controls
-                            width="100%"
-                            height="auto"
-                            style={{ borderRadius: '8px' }}
-                            onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                            onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                            onError={(e) => {
-                              setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                              console.error('Error loading media:', e);
-                              setNotification({
-                                message: 'Error loading media. Please check the URL.',
-                                severity: 'error',
-                                open: true
-                              });
-                            }}
-                          />
                         )}
                       </Box>
                     )}
-                  </Box>
-                )}
 
-                {/* Delete Question Button */}
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    onClick={() => handleDeleteQuestion(index)}
-                    startIcon={<DeleteIcon />}
-                    color="error"
-                    variant="outlined"
-                    size="small"
-                  >
-                    Delete Question
-                  </Button>
-                </Box>
-              </Paper>
-            ))}
+                    {/* Delete Question Button */}
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        onClick={() => handleDeleteQuestion(index)}
+                        startIcon={<DeleteIcon />}
+                        color="error"
+                        variant="outlined"
+                        size="small"
+                      >
+                        Delete Question
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))}
 
-            {/* Bouton Add Question */}
-            <Button
-              onClick={handleAddQuestion}
-              variant="outlined"
-              startIcon={<AddIcon />}
-              sx={{
-                mb: 4,
-                color: '#667eea',
-                borderColor: '#667eea',
-                '&:hover': {
-                  borderColor: '#764ba2',
-                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                },
-              }}
-            >
-              Add Question
-            </Button>
+                {/* Bouton Add Question */}
+                <Button
+                  onClick={handleAddQuestion}
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  sx={{
+                    mb: 4,
+                    color: '#667eea',
+                    borderColor: '#667eea',
+                    '&:hover': {
+                      borderColor: '#764ba2',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    },
+                  }}
+                >
+                  Add Question
+                </Button>
+              </Box>
 
-            <Divider sx={{ my: 4 }} />
+              <Divider sx={{ my: 4 }} />
 
-            {/* Actions finales */}
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 2,
-                justifyContent: 'flex-end',
-              }}
-            >
-              <Button
-                onClick={() => handleResetSurvey(null)}
-                variant="contained"
-                startIcon={<DeleteIcon />}
+              {/* Actions finales */}
+              <Box
+                component="footer"
+                data-testid="survey-creation-actions"
                 sx={{
-                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                  color: 'white',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-                    boxShadow: 'none',
-                  },
+                  display: 'flex',
+                  gap: 2,
+                  justifyContent: 'flex-end',
                 }}
               >
-                Reset
-              </Button>
-
-              <Button
-                onClick={() => setShowPreview(true)}
-                variant="contained"
-                startIcon={<VisibilityIcon />}
-                sx={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  color: 'white',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-                    boxShadow: 'none',
-                  },
-                }}
-              >
-                Preview
-              </Button>
-
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={isSubmitting}
-                startIcon={isSubmitting ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  <CheckCircleIcon />
-                )}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5a71d9 0%, #6a4494 100%)',
-                    boxShadow: 'none',
-                  },
-                  '&.Mui-disabled': {
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    opacity: 0.7,
+                <Button
+                  onClick={() => handleResetSurvey(null)}
+                  variant="contained"
+                  startIcon={<DeleteIcon />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
                     color: 'white',
-                  }
-                }}
-              >
-                {isSubmitting ? 'Creating...' : 'Create Survey'}
-              </Button>
+                    boxShadow: 'none',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                      boxShadow: 'none',
+                    },
+                  }}
+                >
+                  Reset
+                </Button>
+
+                <Button
+                  onClick={() => setShowPreview(true)}
+                  variant="contained"
+                  startIcon={<VisibilityIcon />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+                      boxShadow: 'none',
+                    },
+                  }}
+                >
+                  Preview
+                </Button>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmitting}
+                  startIcon={isSubmitting ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <CheckCircleIcon />
+                  )}
+                  sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5a71d9 0%, #6a4494 100%)',
+                      boxShadow: 'none',
+                    },
+                    '&.Mui-disabled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      opacity: 0.7,
+                      color: 'white',
+                    }
+                  }}
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Survey'}
+                </Button>
+              </Box>
             </Box>
           </form>
         </Box>
       </Paper>
 
-      {/* La modal de prévisualisation reste la même */}
-      {showPreview && (
-        <Dialog
-          open={showPreview}
-          onClose={() => setShowPreview(false)}
-          maxWidth="md"
-          fullWidth
+      {/* Preview Dialog */}
+      <Dialog
+        data-testid="survey-preview-dialog"
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            textAlign: 'center',
+            fontWeight: 'bold',
+            fontSize: '1.5rem',
+            color: '#444',
+          }}
         >
-          <DialogTitle
+          Survey Preview
+        </DialogTitle>
+        <DialogContent sx={{ backgroundColor: '#f7f9fc', padding: '24px' }}>
+          <Typography
+            variant="h5"
+            sx={{ mb: 2, textAlign: 'center', color: '#555' }}
+          >
+            {watch('title') || 'Untitled Survey'}
+          </Typography>
+          <Typography
+            variant="subtitle1"
             sx={{
+              mb: 4,
               textAlign: 'center',
-              fontWeight: 'bold',
-              fontSize: '1.5rem',
-              color: '#444',
+              fontStyle: 'italic',
+              color: '#777',
+              borderBottom: '1px solid #ddd',
+              paddingBottom: '12px',
             }}
           >
-            Survey Preview
-          </DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#f7f9fc', padding: '24px' }}>
-            <Typography
-              variant="h5"
-              sx={{ mb: 2, textAlign: 'center', color: '#555' }}
-            >
-              {watch('title') || 'Untitled Survey'}
-            </Typography>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 4,
-                textAlign: 'center',
-                fontStyle: 'italic',
-                color: '#777',
-                borderBottom: '1px solid #ddd',
-                paddingBottom: '12px',
-              }}
-            >
-              {watch('description') || 'No description provided.'}
-            </Typography>
-            {renderPreviewQuestion()}
-          </DialogContent>
-          <DialogActions
-            sx={{ justifyContent: 'space-between', padding: '16px 24px' }}
+            {watch('description') || 'No description provided.'}
+          </Typography>
+          {renderPreviewQuestion()}
+        </DialogContent>
+        <DialogActions
+          sx={{ justifyContent: 'space-between', padding: '16px 24px' }}
+        >
+          <Button
+            onClick={() =>
+              setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))
+            }
+            disabled={currentPreviewIndex === 0}
+            variant="outlined"
+            color="primary"
           >
-            <Button
-              onClick={() =>
-                setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))
-              }
-              disabled={currentPreviewIndex === 0}
-              variant="outlined"
-              color="primary"
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() =>
-                setCurrentPreviewIndex((prev) =>
-                  Math.min(
-                    prev + 1,
-                    watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
-                  )
+            Previous
+          </Button>
+          <Button
+            onClick={() =>
+              setCurrentPreviewIndex((prev) =>
+                Math.min(
+                  prev + 1,
+                  watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
                 )
-              }
-              disabled={
-                currentPreviewIndex ===
-                watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
-              }
-              variant="outlined"
-              color="primary"
-            >
-              Next
-            </Button>
-            <Button
-              onClick={() => setShowPreview(false)}
-              variant="contained"
-              color="secondary"
-            >
-              Close
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
+              )
+            }
+            disabled={
+              currentPreviewIndex ===
+              watchedQuestions.length + (demographicEnabled ? 1 : 0) - 1
+            }
+            variant="outlined"
+            color="primary"
+          >
+            Next
+          </Button>
+          <Button
+            onClick={() => setShowPreview(false)}
+            variant="contained"
+            color="secondary"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Ajout du composant de notification */}
+      {/* Notification */}
       {notification.open && (
-        <Box sx={{
-          position: 'fixed',
-          top: 24,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9999,
-          minWidth: 300
-        }}>
+        <Box 
+          component="div"
+          data-testid="notification-container"
+          sx={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            minWidth: 300
+          }}
+        >
           <Alert 
             severity={notification.severity}
             onClose={() => setNotification(prev => ({ ...prev, open: false }))}
