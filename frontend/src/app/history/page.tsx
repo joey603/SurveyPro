@@ -400,7 +400,7 @@ const SurveyHistoryPage: React.FC = () => {
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
-          maxWidth: '800px',
+          maxWidth: '1000px',
           mb: 4,
         }}>
           <Box sx={{
@@ -732,7 +732,7 @@ const SurveyHistoryPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: '1000px ',
         mb: 4,
       }}>
         <Box sx={{
