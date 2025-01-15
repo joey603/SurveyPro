@@ -37,6 +37,7 @@ import {
   LinearProgress,
   Tooltip as MuiTooltip,
   TooltipProps,
+  DialogContentText
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -4149,34 +4150,62 @@ const ResultsPage: React.FC = () => {
   // Ajoutez cet état pour gérer les animations de suppression
   const [removingSurveyId, setRemovingSurveyId] = useState<string | null>(null);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // États pour la gestion du dialog de suppression
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [surveyToDelete, setSurveyToDelete] = useState<string | null>(null);
 
-  // Ajouter cette fonction
-  const handleDeleteSurvey = async (surveyId: string) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        toast.error('Authentication required');
-        return;
+  // Fonction pour ouvrir le dialog
+  const openDeleteDialog = (surveyId: string) => {
+    console.log('Opening delete dialog for survey:', surveyId);
+    setSurveyToDelete(surveyId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Fonction pour fermer le dialog
+  const closeDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setSurveyToDelete(null);
+  };
+
+  // Fonction pour gérer la suppression
+  const confirmDelete = async () => {
+    if (surveyToDelete) {
+      try {
+        await handleDeleteSurvey(surveyToDelete);
+        closeDeleteDialog();
+        // Rafraîchir la liste des sondages
+        setSurveys(prevSurveys => prevSurveys.filter(s => s._id !== surveyToDelete));
+      } catch (error) {
+        console.error('Error during deletion:', error);
+        toast.error('Failed to delete survey');
       }
-
-      await axios.delete(`${BASE_URL}/api/surveys/${surveyId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Mettre à jour la liste des sondages
-      setSurveys(prevSurveys => prevSurveys.filter(s => s._id !== surveyId));
-      toast.success('Survey deleted successfully');
-      setDeleteDialogOpen(false);
-      setSurveyToDelete(null);
-    } catch (error) {
-      console.error('Error deleting survey:', error);
-      toast.error('Failed to delete survey');
     }
   };
 
+  // Ajouter l'utilisation de useAuth
   const { user } = useAuth();
+
+  // Ajouter la fonction handleDeleteSurvey
+  const handleDeleteSurvey = async (surveyId: string) => {
+    try {
+      const response = await fetch(`http://localhost:5041/api/surveys/${surveyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete survey');
+      }
+
+      toast.success('Survey deleted successfully');
+    } catch (error) {
+      console.error('Error deleting survey:', error);
+      throw error;
+    }
+  };
 
   if (error) {
     return (
@@ -4536,30 +4565,28 @@ const ResultsPage: React.FC = () => {
 
         {/* Ajouter la boîte de dialogue de confirmation */}
         <Dialog
-          open={deleteDialogOpen}
-          onClose={() => {
-            setDeleteDialogOpen(false);
-            setSurveyToDelete(null);
-          }}
+          open={isDeleteDialogOpen}
+          onClose={closeDeleteDialog}
+          aria-labelledby="delete-dialog-title"
+          sx={{ zIndex: 9999 }}
         >
-          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogTitle id="delete-dialog-title">
+            Confirm Deletion
+          </DialogTitle>
           <DialogContent>
-            <DialogContent>
+            <DialogContentText>
               Are you sure you want to delete this survey? This action will also remove it for all users who received it and delete all associated answers. This action cannot be undone.
-            </DialogContent>
+            </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button 
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setSurveyToDelete(null);
-              }}
+              onClick={closeDeleteDialog} 
               sx={{ color: '#64748b' }}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={() => surveyToDelete && handleDeleteSurvey(surveyToDelete)}
+            <Button
+              onClick={confirmDelete}
               variant="contained"
               color="error"
               autoFocus
@@ -4712,7 +4739,7 @@ const ResultsPage: React.FC = () => {
                 </Stack>
               </LocalizationProvider>
             )}
-              </Box>
+          </Box>
 
           {error ? (
             <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
@@ -5054,10 +5081,7 @@ const ResultsPage: React.FC = () => {
                               variant="contained"
                               size="small"
                               color="error"
-                              onClick={() => {
-                                setSurveyToDelete(survey._id);
-                                setDeleteDialogOpen(true);
-                              }}
+                              onClick={() => openDeleteDialog(survey._id)}
                               sx={{
                                 backgroundColor: '#f44336',
                                 '&:hover': { backgroundColor: '#d32f2f' }
@@ -5073,9 +5097,42 @@ const ResultsPage: React.FC = () => {
                 );
               })}
             </Box>
-            )}
-          </Box>
+          )}
+        </Box>
       </Paper>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog
+        open={isDeleteDialogOpen}
+        onClose={closeDeleteDialog}
+        aria-labelledby="delete-dialog-title"
+        sx={{ zIndex: 9999 }}
+      >
+        <DialogTitle id="delete-dialog-title">
+          Confirm Deletion
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this survey? This action will also remove it for all users who received it and delete all associated answers. This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={closeDeleteDialog} 
+            sx={{ color: '#64748b' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
