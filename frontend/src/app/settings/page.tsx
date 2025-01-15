@@ -22,6 +22,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import axios from 'axios';
+import { colors } from '@mui/material';
 
 const Settings = () => {
   const [user, setUser] = useState<{ username: string; email: string } | null>(null);
