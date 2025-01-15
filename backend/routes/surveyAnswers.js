@@ -3,7 +3,8 @@ const {
   submitSurveyAnswer, 
   getSurveyAnswers,
   getUserSurveyResponses,
-  getUserSurveyResponseById
+  getUserSurveyResponseById,
+  getLastDemographicData
 } = require("../controllers/surveyAnswerController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -18,5 +19,8 @@ router.get("/:surveyId", authMiddleware, getSurveyAnswers);
 // Nouvelles routes pour l'historique
 router.get("/responses/user", authMiddleware, getUserSurveyResponses);
 router.get("/responses/:responseId", authMiddleware, getUserSurveyResponseById);
+
+// Nouvelle route pour récupérer les dernières données démographiques
+router.get("/last-demographic", authMiddleware, getLastDemographicData);
 
 module.exports = router;

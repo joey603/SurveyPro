@@ -162,6 +162,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: number }>({});
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
   const [currentSurveyToShare, setCurrentSurveyToShare] = useState<Survey | null>(null);
+  const [lastDemographicData, setLastDemographicData] = useState<DemographicData | null>(null);
 
   useEffect(() => {
     // Sauvegarder l'URL actuelle si elle contient un surveyId
@@ -231,9 +232,8 @@ const SurveyAnswerPage: React.FC = () => {
         // Vérifier s'il y a un ID de survey dans l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSurveyId = urlParams.get('surveyId');
-        
         if (sharedSurveyId) {
-          const sharedSurvey = data.find(survey => survey._id === sharedSurveyId);
+          const sharedSurvey = data.find((survey: { _id: string }) => survey._id === sharedSurveyId);
           if (sharedSurvey) {
             setSelectedSurvey(sharedSurvey);
           }
@@ -263,6 +263,7 @@ const SurveyAnswerPage: React.FC = () => {
     };
 
     if (selectedSurvey?.demographicEnabled) {
+      fetchLastDemographicData();
       loadCities();
     }
   }, [selectedSurvey]);
@@ -946,6 +947,35 @@ const SurveyAnswerPage: React.FC = () => {
       }
     }
   ];
+
+  const fetchLastDemographicData = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5041/api/survey-answers/last-demographic', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLastDemographicData(data);
+        // Mettre à jour les valeurs du formulaire avec les données récupérées
+        if (data) {
+          control._formValues.demographic = {
+            gender: data.gender || '',
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            educationLevel: data.educationLevel || '',
+            city: data.city || ''
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching last demographic data:', error);
+    }
+  };
 
   if (!selectedSurvey) {
     return (

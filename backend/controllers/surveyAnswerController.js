@@ -147,3 +147,29 @@ exports.getUserSurveyResponseById = async (req, res) => {
     });
   }
 };
+
+exports.getLastDemographicData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Rechercher la dernière réponse avec des données démographiques
+    const lastAnswer = await SurveyAnswer.findOne({
+      'respondent.userId': userId,
+      'respondent.demographic': { $exists: true, $ne: null }
+    })
+    .sort({ submittedAt: -1 })
+    .select('respondent.demographic');
+
+    if (!lastAnswer || !lastAnswer.respondent.demographic) {
+      return res.status(404).json({ message: "Aucune donnée démographique trouvée" });
+    }
+
+    res.status(200).json(lastAnswer.respondent.demographic);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données démographiques:", error);
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des données démographiques", 
+      error: error.message 
+    });
+  }
+};
