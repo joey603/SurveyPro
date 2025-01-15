@@ -41,6 +41,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import Tooltip from '@mui/material/Tooltip';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Zoom from '@mui/material/Zoom';
+import { colors } from '../../theme/colors';
 
 type Question = {
   id: string;
@@ -994,7 +995,7 @@ const SurveyCreationPage = () => {
       data-testid="survey-creation-page"
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.background.default,
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -1019,7 +1020,7 @@ const SurveyCreationPage = () => {
           component="header"
           data-testid="survey-creation-header"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: colors.primary.gradient,
             py: 4,
             px: 4,
             color: 'white',
@@ -1521,11 +1522,11 @@ const SurveyCreationPage = () => {
                   variant="contained"
                   startIcon={<DeleteIcon />}
                   sx={{
-                    background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                    background: colors.action.error.gradient,
                     color: 'white',
                     boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                      background: colors.action.error.hover,
                       boxShadow: 'none',
                     },
                   }}
@@ -1538,11 +1539,11 @@ const SurveyCreationPage = () => {
                   variant="contained"
                   startIcon={<VisibilityIcon />}
                   sx={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    background: colors.action.info.gradient,
                     color: 'white',
                     boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+                      background: colors.action.info.hover,
                       boxShadow: 'none',
                     },
                   }}
@@ -1560,15 +1561,15 @@ const SurveyCreationPage = () => {
                     <CheckCircleIcon />
                   )}
                   sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: colors.primary.gradient,
                     color: 'white',
                     boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #5a71d9 0%, #6a4494 100%)',
+                      background: colors.primary.hover,
                       boxShadow: 'none',
                     },
                     '&.Mui-disabled': {
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: colors.primary.gradient,
                       opacity: 0.7,
                       color: 'white',
                     }
@@ -1681,7 +1682,7 @@ const SurveyCreationPage = () => {
             severity={notification.severity}
             onClose={() => setNotification(prev => ({ ...prev, open: false }))}
             sx={{ 
-              backgroundColor: 'white',
+              backgroundColor: colors.background.paper,
               boxShadow: 3,
               borderRadius: 2
             }}
@@ -1695,7 +1696,7 @@ const SurveyCreationPage = () => {
         position: 'fixed', 
         bottom: 20, 
         right: 20, 
-        backgroundColor: '#667eea',
+        backgroundColor: colors.primary.main,
         color: 'white',
         padding: '8px 16px',
         borderRadius: '20px',

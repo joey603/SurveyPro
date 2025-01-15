@@ -52,6 +52,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import EmailIcon from '@mui/icons-material/Email';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from 'next/navigation';
+import { colors } from '../../theme/colors';
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -1475,200 +1476,163 @@ const SurveyAnswerPage: React.FC = () => {
   }
 
   return (
-    <Box 
+    <Box
       component="main"
-      data-testid="survey-form-page"
+      data-testid="survey-answer-page"
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.background.default,
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
         padding: { xs: 2, sm: 4 },
       }}
     >
-      <Paper 
+      <Paper
         component="article"
-        data-testid="survey-form-container"
-        elevation={3} 
+        data-testid="survey-answer-container"
+        elevation={3}
         sx={{
-          borderRadius: 3,
+          borderRadius: '16px',
           overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
-          maxWidth: '800px',
+          maxWidth: '1000px',
           mb: 4,
+          backgroundColor: colors.background.paper,
         }}
       >
-        {/* En-tête du formulaire */}
-        <Box 
+        {/* Header avec gradient */}
+        <Box
           component="header"
-          data-testid="survey-form-header"
+          data-testid="survey-answer-header"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: colors.primary.gradient,
             py: 4,
             px: 4,
-            color: 'white',
+            color: colors.text.light,
             textAlign: 'center',
-            position: 'relative'
           }}
         >
-          <IconButton
-            onClick={() => setSelectedSurvey(null)}
-            sx={{
-              position: 'absolute',
-              left: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'white',
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography 
-            component="h1"
-            data-testid="survey-form-title"
-            variant="h4" 
-            fontWeight="bold"
-          >
-            {selectedSurvey.title}
-          </Typography>
-          <Typography 
-            component="p"
-            data-testid="survey-form-description"
-            variant="subtitle1"
-            sx={{ mt: 1, opacity: 0.9 }}
-          >
-            {selectedSurvey.description}
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            Answer Survey
           </Typography>
         </Box>
 
-        {/* Contenu du formulaire */}
-        <Box 
-          component="section"
-          data-testid="survey-form-content"
-          sx={{ p: 4, backgroundColor: 'white' }}
-        >
-          <form 
-            onSubmit={handleSubmit(onSubmit)}
-            data-testid="survey-answer-form"
-          >
-            {/* Section démographique */}
-            {selectedSurvey.demographicEnabled && (
-              <Box 
-                component="section"
-                data-testid="demographic-section"
-                sx={{ mb: 4 }}
-              >
-                <Typography 
-                  component="h2"
-                  data-testid="demographic-title"
-                  variant="h6"
-                  sx={{ mb: 3, color: '#1a237e' }}
-                >
-                  Informations Démographiques
-                </Typography>
-                {renderDemographicFields()}
-              </Box>
-            )}
-
-            {/* Questions du sondage */}
+        {/* Contenu */}
+        <Box sx={{ p: 4 }}>
+          {/* Section démographique si activée */}
+          {selectedSurvey?.demographicEnabled && (
             <Box 
               component="section"
-              data-testid="questions-section"
+              data-testid="demographic-section"
               sx={{ mb: 4 }}
             >
               <Typography 
                 component="h2"
-                data-testid="questions-title"
                 variant="h6"
-                sx={{ mb: 3, color: '#1a237e' }}
-              >
-                Survey Questions
-              </Typography>
-              {selectedSurvey.questions.map((question: Question) => (
-                <Paper
-                  key={question.id}
-                  component="article"
-                  data-testid={`question-${question.id}`}
-                  elevation={1}
-                  sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid rgba(0, 0, 0, 0.1)' }}
-                >
-                  <Typography 
-                    component="h3"
-                    data-testid={`question-${question.id}-text`}
-                    variant="h6"
-                    sx={{ mb: 2 }}
-                  >
-                    {question.text}
-                  </Typography>
-                  
-                  {question.media && renderQuestionMedia(question.media)}
-
-                  <Box 
-                    component="div"
-                    data-testid={`question-${question.id}-input`}
-                    sx={{ mt: 2 }}
-                  >
-                    {renderQuestionInput(question)}
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-
-            {/* Footer du formulaire */}
-            <Box 
-              component="footer"
-              data-testid="survey-form-footer"
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end',
-                mt: 4,
-                pt: 4,
-                borderTop: '1px solid rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              {submitError && (
-                <Typography 
-                  component="p"
-                  data-testid="submit-error"
-                  color="error"
-                  sx={{ mt: 2, mb: 2 }}
-                >
-                  {submitError}
-                </Typography>
-              )}
-
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={isSubmitting}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  },
-                  minWidth: 200
+                sx={{ 
+                  mb: 3, 
+                  color: colors.text.primary,
+                  fontWeight: 600
                 }}
               >
-                {isSubmitting ? (
-                  <Box 
-                    component="div"
-                    data-testid="submit-loader"
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                  >
-                    <CircularProgress 
-                      size={20}
-                      sx={{ color: 'white' }}
-                    />
-                    <span>Submitting...</span>
-                  </Box>
-                ) : (
-                  <span>Submit Survey</span>
-                )}
-              </Button>
+                Demographic Information
+              </Typography>
+              
+              {renderDemographicFields()}
             </Box>
-          </form>
+          )}
+
+          {/* Questions du sondage */}
+          <Box 
+            component="section"
+            data-testid="questions-section"
+            sx={{ mb: 4 }}
+          >
+            <Typography 
+              component="h2"
+              variant="h6"
+              sx={{ 
+                mb: 3, 
+                color: colors.text.primary,
+                fontWeight: 600
+              }}
+            >
+              Survey Questions
+            </Typography>
+            {selectedSurvey.questions.map((question: Question) => (
+              <Paper
+                key={question.id}
+                component="article"
+                elevation={1}
+                sx={{ 
+                  p: 3, 
+                  mb: 3, 
+                  borderRadius: 2,
+                  border: `1px solid ${colors.border.main}`,
+                  backgroundColor: colors.background.paper
+                }}
+              >
+                <Typography 
+                  component="h3"
+                  variant="h6"
+                  sx={{ 
+                    mb: 2,
+                    color: colors.text.primary
+                  }}
+                >
+                  {question.text}
+                </Typography>
+                
+                {question.media && renderQuestionMedia(question.media)}
+
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(question)}
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+
+          {/* Footer du formulaire */}
+          <Box 
+            component="footer"
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end',
+              mt: 4,
+              pt: 4,
+              borderTop: `1px solid ${colors.border.main}`
+            }}
+          >
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              sx={{
+                background: colors.primary.gradient,
+                '&:hover': {
+                  background: colors.primary.hover,
+                },
+                minWidth: 200,
+                color: colors.text.light,
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+              }}
+            >
+              {isSubmitting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress 
+                    size={20}
+                    sx={{ color: colors.text.light }}
+                  />
+                  <span>Submitting...</span>
+                </Box>
+              ) : (
+                <span>Submit Survey</span>
+              )}
+            </Button>
+          </Box>
         </Box>
       </Paper>
     </Box>

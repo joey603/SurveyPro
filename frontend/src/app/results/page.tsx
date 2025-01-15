@@ -93,6 +93,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
 import { respondToSurveyShare } from '@/utils/surveyShareService';
 import EmailIcon from '@mui/icons-material/Email';
+import { colors } from '../../theme/colors';
 
 ChartJS.register(
   CategoryScale,
@@ -4161,7 +4162,7 @@ const ResultsPage: React.FC = () => {
         data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
         sx={{
           minHeight: '100vh',
-          backgroundColor: '#f5f5f5',
+          backgroundColor: colors.background.default,
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
@@ -4175,7 +4176,8 @@ const ResultsPage: React.FC = () => {
           data-testid="results-content"  // Ajoute un identifiant pour les tests et l'inspection
           elevation={3} 
           sx={{
-            borderRadius: 3,
+            borderRadius: '16px',
+            backgroundColor: colors.background.paper,
             overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
             width: '100%',
@@ -4184,10 +4186,10 @@ const ResultsPage: React.FC = () => {
           }}
         >
           <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: colors.primary.gradient,
             py: 4,
             px: 4,
-            color: 'white',
+            color: colors.text.light,
             textAlign: 'center',
             position: 'relative',
             display: 'flex',
@@ -4467,18 +4469,13 @@ const ResultsPage: React.FC = () => {
             onClose={() => {
               setDialogOpen(false);
             }}
-            maxWidth="md"
+            maxWidth="lg"
             fullWidth
-            TransitionProps={{
-              onExited: () => {
-                setSelectedQuestion(null);
-                setCurrentView('list');
-              }
-            }}
             sx={{
               '& .MuiDialog-paper': {
-                overflow: 'visible'
-              }
+                backgroundColor: colors.background.paper,
+                borderRadius: '16px',
+              },
             }}
           >
             {selectedQuestion && renderQuestionDetails()}
@@ -4516,7 +4513,7 @@ const ResultsPage: React.FC = () => {
       data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.background.default,
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -4530,7 +4527,8 @@ const ResultsPage: React.FC = () => {
         data-testid="results-content-Paper"  // Ajoute un identifiant pour les tests et l'inspection
         elevation={3} 
         sx={{
-          borderRadius: 3,
+          borderRadius: '16px',
+          backgroundColor: colors.background.paper,
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
@@ -4539,10 +4537,10 @@ const ResultsPage: React.FC = () => {
         }}
       >
         <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: colors.primary.gradient,
           py: 4,
           px: 4,
-          color: 'white',
+          color: colors.text.light,
           textAlign: 'center',
         }}>
           <Typography variant="h4" fontWeight="bold">
