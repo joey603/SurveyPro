@@ -7,6 +7,10 @@ const multer = require("multer"); // For handling file uploads
 const { uploadFileToCloudinary } = require("../cloudinaryConfig");
 const { deleteFileFromCloudinary } = require("../cloudinaryConfig");
 
+const Survey = require("../models/Survey");
+const SurveyAnswer = require("../models/SurveyAnswer");
+const SurveyShare = require("../models/SurveyShare");
+
 const router = express.Router();
 
 // Configure Multer pour gérer les fichiers uploadés
@@ -133,6 +137,31 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
     }
   });
 
-  router.delete("/:surveyId", authMiddleware, deleteSurvey);
+  router.delete("/:surveyId", authMiddleware, async (req, res) => {
+    try {
+      const { surveyId } = req.params;
+      const userId = req.user.id;
+
+      // Vérifier si l'utilisateur est le propriétaire
+      const survey = await Survey.findOne({ _id: surveyId, userId });
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found or unauthorized" });
+      }
+
+      // Supprimer les réponses associées
+      await SurveyAnswer.deleteMany({ surveyId });
+      
+      // Supprimer les partages associés
+      await SurveyShare.deleteMany({ surveyId });
+      
+      // Supprimer le sondage
+      await Survey.deleteOne({ _id: surveyId });
+
+      res.status(200).json({ message: "Survey and related data deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Error deleting survey", error: error.message });
+    }
+  });
 
 module.exports = router;

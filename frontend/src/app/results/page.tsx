@@ -4167,17 +4167,27 @@ const ResultsPage: React.FC = () => {
     setSurveyToDelete(null);
   };
 
-  // Fonction pour gérer la suppression
+  // Modifier la fonction confirmDelete
   const confirmDelete = async () => {
     if (surveyToDelete) {
       try {
+        console.log('Starting delete process for survey:', surveyToDelete);
+        
         await handleDeleteSurvey(surveyToDelete);
+        
+        // Mettre à jour la liste des sondages localement
+        setSurveys(prevSurveys => 
+          prevSurveys.filter(survey => survey._id !== surveyToDelete)
+        );
+        
+        // Fermer le dialog
         closeDeleteDialog();
-        // Rafraîchir la liste des sondages
-        setSurveys(prevSurveys => prevSurveys.filter(s => s._id !== surveyToDelete));
+        
+        // Afficher un message de succès
+        toast.success('Survey deleted successfully');
       } catch (error) {
-        console.error('Error during deletion:', error);
-        toast.error('Failed to delete survey');
+        console.error('Delete process failed:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to delete survey');
       }
     }
   };
@@ -4188,21 +4198,38 @@ const ResultsPage: React.FC = () => {
   // Ajouter la fonction handleDeleteSurvey
   const handleDeleteSurvey = async (surveyId: string) => {
     try {
-      const response = await fetch(`http://localhost:5041/api/surveys/${surveyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete survey');
+      console.log('Sending delete request for survey:', surveyId);
+      
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
 
-      toast.success('Survey deleted successfully');
+      // Utiliser la même configuration que les autres appels API
+      const response = await fetch(`${BASE_URL}/api/surveys/${surveyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors'
+      });
+
+      console.log('Delete response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        throw new Error(errorData.message || `Failed to delete survey (Status: ${response.status})`);
+      }
+
+      // Retourner la réponse pour confirmation
+      const data = await response.json();
+      console.log('Delete successful:', data);
+      return data;
     } catch (error) {
-      console.error('Error deleting survey:', error);
+      console.error('Detailed error:', error);
       throw error;
     }
   };
@@ -4586,7 +4613,7 @@ const ResultsPage: React.FC = () => {
               Cancel
             </Button>
             <Button
-              onClick={confirmDelete}
+              onClick={() => confirmDelete()} // Modification ici
               variant="contained"
               color="error"
               autoFocus
@@ -5124,7 +5151,7 @@ const ResultsPage: React.FC = () => {
             Cancel
           </Button>
           <Button
-            onClick={confirmDelete}
+            onClick={() => confirmDelete()} // Modification ici
             variant="contained"
             color="error"
             autoFocus
