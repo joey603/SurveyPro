@@ -5043,7 +5043,7 @@ const ResultsPage: React.FC = () => {
                       borderColor: 'divider',
                       backgroundColor: 'action.hover',
                       display: 'flex',
-                      justifyContent: 'center',  // Centrer le bouton
+                      justifyContent: 'space-between',  // Changé de 'center' à 'space-between'
                       position: 'relative',
                       zIndex: 1
                     }}>
@@ -5051,7 +5051,7 @@ const ResultsPage: React.FC = () => {
                         <Box sx={{ 
                           display: 'flex', 
                           gap: 1,
-                          opacity: 1  // Assure que les boutons sont opaques
+                          opacity: 1
                         }}>
                           <Button
                             variant="contained"
@@ -5085,16 +5085,26 @@ const ResultsPage: React.FC = () => {
                           </Button>
                         </Box>
                       ) : (
-                        <Box sx={{ 
-                          display: 'flex',
-                          gap: 1,
-                          justifyContent: 'flex-end'
-                        }}>
+                        // Réorganisation des boutons Delete et View Results
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          {survey.userId === user?.id && !survey.sharedBy && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              color="error"
+                              onClick={() => openDeleteDialog(survey._id)}
+                              startIcon={<DeleteIcon />}  // Ajout de l'icône
+                              sx={{ mr: 'auto' }}
+                            >
+                              Delete
+                            </Button>
+                          )}
                           <Button
                             variant="contained"
                             size="small"
                             onClick={() => handleViewResults(survey)}
-                            sx={{
+                            sx={{ 
+                              ml: 'auto',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
                                 background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
@@ -5103,20 +5113,6 @@ const ResultsPage: React.FC = () => {
                           >
                             View Results
                           </Button>
-                          {survey.userId === user?.id && !survey.sharedBy && (
-                            <Button
-                              variant="contained"
-                              size="small"
-                              color="error"
-                              onClick={() => openDeleteDialog(survey._id)}
-                              sx={{
-                                backgroundColor: '#f44336',
-                                '&:hover': { backgroundColor: '#d32f2f' }
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          )}
                         </Box>
                       )}
                     </Box>
