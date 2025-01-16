@@ -1526,7 +1526,7 @@ const SurveyCreationPage = () => {
                     color: 'white',
                     boxShadow: 'none',
                     '&:hover': {
-                      background: colors.action.error.hover,
+                      background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
                       boxShadow: 'none',
                     },
                   }}
@@ -1543,7 +1543,7 @@ const SurveyCreationPage = () => {
                     color: 'white',
                     boxShadow: 'none',
                     '&:hover': {
-                      background: colors.action.info.hover,
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
                       boxShadow: 'none',
                     },
                   }}
