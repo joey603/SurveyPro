@@ -1010,6 +1010,8 @@ const SurveyAnswerPage: React.FC = () => {
           <Box sx={{ p: 4, backgroundColor: 'white' }}>
             <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
               <TextField
+                id="survey-search-input"
+                data-testid="survey-search-input"
                 fullWidth
                 variant="outlined"
                 placeholder="Search surveys by title or description..."
@@ -1034,6 +1036,8 @@ const SurveyAnswerPage: React.FC = () => {
 
               <Stack direction="row" spacing={2} alignItems="center">
                 <Chip
+                  id="date-filter-chip"
+                  data-testid="date-filter-chip"
                   icon={<FilterListIcon />}
                   label="Date Filter"
                   onClick={() => setShowDateFilter(!showDateFilter)}
@@ -1046,6 +1050,8 @@ const SurveyAnswerPage: React.FC = () => {
                   }}
                 />
                 <Chip
+                  id="sort-filter-chip"
+                  data-testid="sort-filter-chip"
                   icon={<FilterListIcon />}
                   label={` ${sortBy === 'date' ? 'Popularity' : 'Popular'}`}
                   onClick={(e) => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
@@ -1088,6 +1094,8 @@ const SurveyAnswerPage: React.FC = () => {
               <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {filteredSurveys.map((survey) => (
                   <Paper
+                    id={`survey-card-${survey._id}`}
+                    data-testid={`survey-card-${survey._id}`}
                     key={survey._id}
                     elevation={1}
                     sx={{
@@ -1117,6 +1125,8 @@ const SurveyAnswerPage: React.FC = () => {
                       position: 'relative'
                     }}>
                       <Typography 
+                        id={`survey-title-${survey._id}`}
+                        data-testid={`survey-title-${survey._id}`}
                         variant="h6" 
                         sx={{ 
                           mb: 2,
@@ -1252,13 +1262,15 @@ const SurveyAnswerPage: React.FC = () => {
                       p: 2, 
                       borderTop: 1, 
                       borderColor: 'divider',
-                      backgroundColor: 'action.hover',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       position: 'relative',
                       zIndex: 1
                     }}>
                       <Button
+                        id={`share-button-${survey._id}`}
+                        data-testid={`share-button-${survey._id}`}
                         onClick={(e) => handleShareClick(e, survey)}
                         variant="outlined"
                         size="small"
@@ -1275,6 +1287,8 @@ const SurveyAnswerPage: React.FC = () => {
                         Share 
                       </Button>
                       <Button
+                        id={`answer-button-${survey._id}`}
+                        data-testid={`answer-button-${survey._id}`}
                         onClick={() => setSelectedSurvey(survey)}
                         variant="contained"
                         size="small"
@@ -1327,6 +1341,8 @@ const SurveyAnswerPage: React.FC = () => {
         )}
 
         <Menu
+          id="share-menu"
+          data-testid="share-menu"
           anchorEl={shareAnchorEl}
           open={Boolean(shareAnchorEl)}
           onClose={handleShareClose}
@@ -1382,7 +1398,7 @@ const SurveyAnswerPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '1000px',
+        maxWidth: '1000px ',
         mb: 4,
       }}>
         <Box sx={{
@@ -1430,6 +1446,8 @@ const SurveyAnswerPage: React.FC = () => {
               </Typography>
               {selectedSurvey.questions.map((question: Question) => (
                 <Paper
+                  id={`question-container-${question.id}`}
+                  data-testid={`question-container-${question.id}`}
                   key={question.id}
                   elevation={1}
                   sx={{
@@ -1466,6 +1484,8 @@ const SurveyAnswerPage: React.FC = () => {
               borderTop: '1px solid rgba(0, 0, 0, 0.1)'
             }}>
               <Button
+                id="submit-survey-button"
+                data-testid="submit-survey-button"
                 type="submit"
                 variant="contained"
                 disabled={isSubmitting}
