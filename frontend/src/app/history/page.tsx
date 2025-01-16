@@ -1092,7 +1092,7 @@ const SurveyHistoryPage: React.FC = () => {
                         p: 2, 
                         borderTop: 1, 
                         borderColor: 'divider',
-                        backgroundColor: 'action.hover',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
                         display: 'flex',
                         justifyContent: 'flex-end',
                         position: 'relative',
