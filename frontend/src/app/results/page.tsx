@@ -285,6 +285,8 @@ const AnswerTooltip = ({ answer, questionAnswer }: {
 
   return (
     <ListItem
+      id={`answer-tooltip-${answer._id}`}
+      data-testid={`answer-tooltip-${answer._id}`}
       onMouseEnter={() => setIsTooltipOpen(true)}
       onMouseLeave={() => setIsTooltipOpen(false)}
       onMouseMove={handleMouseMove}
@@ -299,11 +301,15 @@ const AnswerTooltip = ({ answer, questionAnswer }: {
       }}
     >
       <ListItemText
+        id={`answer-text-${answer._id}`}
+        data-testid={`answer-text-${answer._id}`}
         primary={questionAnswer?.answer || 'No answer'}
         secondary={new Date(answer.submittedAt).toLocaleString()}
       />
       {isTooltipOpen && (
         <Box
+          id={`tooltip-content-${answer._id}`}
+          data-testid={`tooltip-content-${answer._id}`}
           sx={{
             position: 'fixed',
             left: tooltipPosition.x,
@@ -584,14 +590,17 @@ const ChartView = memo(({ data, question }: {
   };
 
   return (
-    <Box sx={{ 
-      height: '500px',
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      border: '1px solid #ddd',
-      p: 2,
-      bgcolor: 'white',
+    <Box
+      id={`chart-container-${question.id}`}
+      data-testid={`chart-container-${question.id}`}
+      sx={{ 
+        height: '500px',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        border: '1px solid #ddd',
+        p: 2,
+        bgcolor: 'white',
     }}>
       <Box sx={{ 
         flex: 1,
@@ -606,6 +615,8 @@ const ChartView = memo(({ data, question }: {
         {availableChartTypes.length > 0 ? (
           availableChartTypes.map((type) => (
             <Button
+              id={`chart-type-button-${type}`}
+              data-testid={`chart-type-button-${type}`}
               key={type}
               onClick={() => setChartType(type)}
               variant={chartType === type ? 'contained' : 'outlined'}
@@ -943,7 +954,14 @@ const ResultsPage: React.FC = () => {
     }, [selectedSurvey, tempFilters, surveyAnswers]);
 
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog
+        id="answer-filter-dialog"
+        data-testid="answer-filter-dialog"
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
@@ -994,7 +1012,12 @@ const ResultsPage: React.FC = () => {
                     }}>
                       <Grid container spacing={2} alignItems="center">
                         <Grid item xs={3}>
-                          <FormControl fullWidth size="small">
+                          <FormControl
+                            id={`answer-filter-operator-${question.id}-${ruleIndex}`}
+                            data-testid={`answer-filter-operator-${question.id}-${ruleIndex}`}
+                            fullWidth
+                            size="small"
+                          >
                             <InputLabel>Operator</InputLabel>
                             <Select
                               value={rule.operator}
@@ -1062,6 +1085,8 @@ const ResultsPage: React.FC = () => {
                               {question.type === 'slider' && (
                                 <>
                                   <TextField
+                                    id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                    data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
                                     type="number"
                                     size="small"
                                     value={rule.value || ''}
@@ -1080,6 +1105,8 @@ const ResultsPage: React.FC = () => {
                                   />
                                   <Typography>et</Typography>
                                   <TextField
+                                    id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                    data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
                                     type="number"
                                     size="small"
                                     value={rule.secondValue || ''}
@@ -1186,6 +1213,8 @@ const ResultsPage: React.FC = () => {
 
                               {(question.type === 'text' || question.type === 'open-ended') && (
                                 <TextField
+                                  id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
                                   fullWidth
                                   size="small"
                                   value={rule.value?.toString() || ''}
@@ -1207,7 +1236,12 @@ const ResultsPage: React.FC = () => {
                               )}
 
                               {(question.type === 'multiple-choice' || question.type === 'dropdown') && (
-                                <FormControl fullWidth size="small">
+                                <FormControl
+                                  id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  fullWidth
+                                  size="small"
+                                >
                                   <Select
                                     value={rule.value || ''}
                                     onChange={(e) => {
@@ -1232,7 +1266,12 @@ const ResultsPage: React.FC = () => {
                               )}
 
                               {question.type === 'yes-no' && (
-                                <FormControl fullWidth size="small">
+                                <FormControl
+                                  id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  fullWidth
+                                  size="small"
+                                >
                                   <Select
                                     value={rule.value || ''}
                                     onChange={(e) => {
@@ -1280,6 +1319,8 @@ const ResultsPage: React.FC = () => {
 
                               {question.type === 'color-picker' && (
                                 <TextField
+                                  id={`answer-filter-value-${question.id}-${ruleIndex}`}
+                                  data-testid={`answer-filter-value-${question.id}-${ruleIndex}`}
                                   type="color"
                                   fullWidth
                                   size="small"
@@ -1459,14 +1500,17 @@ const ResultsPage: React.FC = () => {
 
   // Définir le composant ChartContainer
   const ChartContainer: React.FC<ChartContainerProps> = ({ children }) => (
-    <Box sx={{ 
-      height: '400px',
-      width: '100%',
-      maxWidth: '800px',
-      margin: '0 auto',
-      position: 'relative',
-      p: 2
-    }}>
+    <Box
+      id="chart-container"
+      data-testid="chart-container"
+      sx={{ 
+        height: '400px',
+        width: '100%',
+        maxWidth: '800px',
+        margin: '0 auto',
+        position: 'relative',
+        p: 2
+      }}>
       {children}
     </Box>
   );
@@ -2022,7 +2066,14 @@ const ResultsPage: React.FC = () => {
     };
 
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog
+        id="demographic-filter-dialog"
+        data-testid="demographic-filter-dialog"
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Configure Demographic Filters</Typography>
@@ -2035,7 +2086,12 @@ const ResultsPage: React.FC = () => {
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
+              <FormControl
+                id="demographic-gender-filter"
+                data-testid="demographic-gender-filter"
+                fullWidth
+                size="small"
+              >
                 <InputLabel>Gender</InputLabel>
                 <Select
                   value={tempFilters.gender || ''}
@@ -2068,7 +2124,12 @@ const ResultsPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
+              <FormControl
+                id="demographic-education-filter"
+                data-testid="demographic-education-filter"
+                fullWidth
+                size="small"
+              >
                 <InputLabel>Education Level</InputLabel>
                 <Select
                   value={tempFilters.educationLevel || ''}
@@ -2099,7 +2160,11 @@ const ResultsPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl
+                id="demographic-city-filter"
+                data-testid="demographic-city-filter"
+                fullWidth
+              >
                 <InputLabel>City</InputLabel>
                 <Select
                   value={tempFilters.city}
@@ -2128,6 +2193,8 @@ const ResultsPage: React.FC = () => {
                   Age Range: {tempFilters.age?.[0] || 0} - {tempFilters.age?.[1] || 100} years
                 </Typography>
                 <Slider
+                  id="demographic-age-filter"
+                  data-testid="demographic-age-filter"
                   value={tempFilters.age || [0, 100]}
                   onChange={(_, newValue) => {
                     setTempFilters(prev => ({
@@ -2222,18 +2289,21 @@ const ResultsPage: React.FC = () => {
     };
 
     return (
-      <Box sx={{ 
-        mb: 4,
-        p: 3,
-        borderRadius: 2,
-        backgroundColor: 'white',
-        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.08)',
-        border: '1px solid rgba(102, 126, 234, 0.15)',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: '0 6px 24px rgba(102, 126, 234, 0.12)',
-          transform: 'translateY(-2px)'
-        }
+      <Box
+        id="filter-panel-container"
+        data-testid="filter-panel-container"
+        sx={{ 
+          mb: 4,
+          p: 3,
+          borderRadius: 2,
+          backgroundColor: 'white',
+          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.08)',
+          border: '1px solid rgba(102, 126, 234, 0.15)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: '0 6px 24px rgba(102, 126, 234, 0.12)',
+            transform: 'translateY(-2px)'
+          }
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -2370,6 +2440,8 @@ const ResultsPage: React.FC = () => {
               }}>
                 {filters.demographic.gender && (
                   <Chip
+                    id={`demographic-filter-chip-gender`}
+                    data-testid={`demographic-filter-chip-gender`}
                     label={`Gender: ${formatFilterValue(filters.demographic.gender)}`}
                     onDelete={() => {
                       setFilters(prev => ({
@@ -2391,6 +2463,8 @@ const ResultsPage: React.FC = () => {
                 )}
                 {filters.demographic.educationLevel && (
                   <Chip
+                    id={`demographic-filter-chip-educationLevel`}
+                    data-testid={`demographic-filter-chip-educationLevel`}
                     label={`Education: ${formatFilterValue(filters.demographic.educationLevel)}`}
                     onDelete={() => {
                       setFilters(prev => ({
@@ -2412,6 +2486,8 @@ const ResultsPage: React.FC = () => {
                 )}
                 {filters.demographic.city && (
                   <Chip
+                    id={`demographic-filter-chip-city`}
+                    data-testid={`demographic-filter-chip-city`}
                     label={`City: ${formatFilterValue(filters.demographic.city)}`}
                     onDelete={() => {
                       setFilters(prev => ({
@@ -2434,6 +2510,8 @@ const ResultsPage: React.FC = () => {
                 {filters.demographic.age && 
                  (filters.demographic.age[0] !== 0 || filters.demographic.age[1] !== 100) && (
                   <Chip
+                    id={`demographic-filter-chip-age`}
+                    data-testid={`demographic-filter-chip-age`}
                     label={`Age: ${filters.demographic.age[0]}-${filters.demographic.age[1]} years`}
                     onDelete={() => {
                       setFilters(prev => ({
@@ -2935,12 +3013,21 @@ const ResultsPage: React.FC = () => {
     const answers = surveyAnswers[selectedSurvey._id] || [];
 
     return (
-      <Box sx={{ mt: 4 }}>
+      <Box
+        id="individual-responses-container"
+        data-testid="individual-responses-container"
+        sx={{ mt: 4 }}
+      >
         <Typography variant="h6" gutterBottom>
           Individual Responses
         </Typography>
         {answers.map((answer: SurveyAnswer, index: number) => (
-          <Box key={answer._id} sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+          <Box
+            id={`individual-response-${answer._id}`}
+            data-testid={`individual-response-${answer._id}`}
+            key={answer._id}
+            sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}
+          >
             <Typography variant="subtitle1" gutterBottom>
               Response #{index + 1} - {new Date(answer.submittedAt).toLocaleDateString()}
             </Typography>
@@ -2954,6 +3041,8 @@ const ResultsPage: React.FC = () => {
                   {answer.respondent.demographic.gender && (
                     <ListItem>
                       <ListItemText 
+                        id={`individual-response-gender-${answer._id}`}
+                        data-testid={`individual-response-gender-${answer._id}`}
                         primary="Gender"
                         secondary={answer.respondent.demographic.gender}
                       />
@@ -2962,6 +3051,8 @@ const ResultsPage: React.FC = () => {
                   {answer.respondent.demographic.dateOfBirth && (
                     <ListItem>
                       <ListItemText 
+                        id={`individual-response-age-${answer._id}`}
+                        data-testid={`individual-response-age-${answer._id}`}
                         primary="Age"
                         secondary={calculateAge(new Date(answer.respondent.demographic.dateOfBirth))}
                       />
@@ -2970,6 +3061,8 @@ const ResultsPage: React.FC = () => {
                   {answer.respondent.demographic.educationLevel && (
                     <ListItem>
                       <ListItemText 
+                        id={`individual-response-education-${answer._id}`}
+                        data-testid={`individual-response-education-${answer._id}`}
                         primary="Education"
                         secondary={answer.respondent.demographic.educationLevel}
                       />
@@ -2978,6 +3071,8 @@ const ResultsPage: React.FC = () => {
                   {answer.respondent.demographic.city && (
                     <ListItem>
                       <ListItemText 
+                        id={`individual-response-city-${answer._id}`}
+                        data-testid={`individual-response-city-${answer._id}`}
                         primary="City"
                         secondary={answer.respondent.demographic.city}
                       />
@@ -3137,92 +3232,147 @@ const ResultsPage: React.FC = () => {
 
     return (
       <Dialog 
+        id="question-details-dialog"
+        data-testid="question-details-dialog"
         open={dialogOpen} 
         onClose={handleClose}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+        <DialogTitle
+          id="question-details-dialog-title"
+          data-testid="question-details-dialog-title"
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
           <Box>
-            <Typography variant="h6" component="div">
+            <Typography
+              id="question-text"
+              data-testid="question-text"
+              variant="h6"
+              component="div"
+            >
               {question.text}
             </Typography>
-            <Typography variant="subtitle2" sx={{ mt: 1, opacity: 0.9 }}>
+            <Typography
+              id="filtered-responses-count"
+              data-testid="filtered-responses-count"
+              variant="subtitle2"
+              sx={{ mt: 1, opacity: 0.9 }}
+            >
               {filteredAnswersCount} filtered responses out of {totalAnswers} total responses
             </Typography>
           </Box>
-          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+          <IconButton
+            id="close-dialog-button"
+            data-testid="close-dialog-button"
+            onClick={handleClose}
+            sx={{ color: 'white' }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 3 }}>
-          <Box sx={{ 
-            mb: 3, 
-            display: 'flex', 
-            gap: 2,
-            '&:hover > .MuiPaper-root:not(:hover)': {
-              opacity: 0.7,
-              transform: 'translateY(0)',
-              filter: 'blur(0.5px)'
-            }
-          }}>
-            {/* Premier carré - Most Common Answer */}
-            <Paper sx={{ 
-              p: 2,
-              flex: 1,
-              bgcolor: 'rgba(102, 126, 234, 0.05)',
-              border: '1px solid rgba(102, 126, 234, 0.1)',
-              borderRadius: 2,
-              transition: 'all 0.3s ease',
-              zIndex: 1,
-              '&:hover': {
-                bgcolor: 'rgba(102, 126, 234, 0.08)',
-                transform: 'translateY(-4px) scale(1.02)',
-                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
-                zIndex: 2
+        <DialogContent
+          id="question-details-dialog-content"
+          data-testid="question-details-dialog-content"
+          sx={{ p: 3 }}
+        >
+          <Box
+            id="stats-container"
+            data-testid="stats-container"
+            sx={{ 
+              mb: 3, 
+              display: 'flex', 
+              gap: 2,
+              '&:hover > .MuiPaper-root:not(:hover)': {
+                opacity: 0.7,
+                transform: 'translateY(0)',
+                filter: 'blur(0.5px)'
               }
             }}>
-              <Typography variant="subtitle2" color="primary" gutterBottom>
+            {/* Premier carré - Most Common Answer */}
+            <Paper
+              id="most-common-answer-card"
+              data-testid="most-common-answer-card"
+              sx={{ 
+                p: 2,
+                flex: 1,
+                bgcolor: 'rgba(102, 126, 234, 0.05)',
+                border: '1px solid rgba(102, 126, 234, 0.1)',
+                borderRadius: 2,
+                transition: 'all 0.3s ease',
+                zIndex: 1,
+                '&:hover': {
+                  bgcolor: 'rgba(102, 126, 234, 0.08)',
+                  transform: 'translateY(-4px) scale(1.02)',
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  zIndex: 2
+                }
+              }}>
+              <Typography
+                id="most-common-answer-label"
+                data-testid="most-common-answer-label"
+                variant="subtitle2"
+                color="primary"
+                gutterBottom
+              >
                 Most Common Answer
               </Typography>
-              <Typography variant="h6">
+              <Typography
+                id="most-common-answer-value"
+                data-testid="most-common-answer-value"
+                variant="h6"
+              >
                 {mostCommonAnswer || 'No responses yet'}
               </Typography>
             </Paper>
 
             {/* Deuxième carré - Responses Count */}
-            <Paper sx={{ 
-              p: 2,
-              flex: 1,
-              bgcolor: 'rgba(102, 126, 234, 0.05)',
-              border: '1px solid rgba(102, 126, 234, 0.1)',
-              borderRadius: 2,
-              transition: 'all 0.3s ease',
-              zIndex: 1,
-              '&:hover': {
-                bgcolor: 'rgba(102, 126, 234, 0.08)',
-                transform: 'translateY(-4px) scale(1.02)',
-                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
-                zIndex: 2
-              }
-            }}>
-              <Typography variant="subtitle2" color="primary" gutterBottom>
+            <Paper
+              id="responses-count-card"
+              data-testid="responses-count-card"
+              sx={{ 
+                p: 2,
+                flex: 1,
+                bgcolor: 'rgba(102, 126, 234, 0.05)',
+                border: '1px solid rgba(102, 126, 234, 0.1)',
+                borderRadius: 2,
+                transition: 'all 0.3s ease',
+                zIndex: 1,
+                '&:hover': {
+                  bgcolor: 'rgba(102, 126, 234, 0.08)',
+                  transform: 'translateY(-4px) scale(1.02)',
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  zIndex: 2
+                }
+              }}>
+              <Typography
+                id="responses-count-label"
+                data-testid="responses-count-label"
+                variant="subtitle2"
+                color="primary"
+                gutterBottom
+              >
                 Responses
               </Typography>
-              <Typography variant="h6">
+              <Typography
+                id="responses-count-value"
+                data-testid="responses-count-value"
+                variant="h6"
+              >
                 {selectedQuestion.answers.length} / {totalAnswers}
               </Typography>
             </Paper>
           </Box>
 
           <Tabs 
+            id="question-details-tabs"
+            data-testid="question-details-tabs"
             value={currentView} 
             onChange={(_, newValue) => setCurrentView(newValue)}
             sx={{
@@ -3235,6 +3385,8 @@ const ResultsPage: React.FC = () => {
             }}
           >
             <Tab 
+              id="responses-tab"
+              data-testid="responses-tab"
               label="Responses" 
               value="list"
               icon={<VisibilityIcon />}
@@ -3242,6 +3394,8 @@ const ResultsPage: React.FC = () => {
             />
             {availableChartTypes.length > 0 && (
               <Tab 
+                id="charts-tab"
+                data-testid="charts-tab"
                 label="Charts" 
                 value="chart"
                 icon={<BarChartIcon />}
@@ -3251,11 +3405,17 @@ const ResultsPage: React.FC = () => {
           </Tabs>
 
           {currentView === 'list' ? (
-            <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+            <List
+              id="responses-list"
+              data-testid="responses-list"
+              sx={{ maxHeight: 400, overflow: 'auto' }}
+            >
               {questionAnswers.map((answer, index) => {
                 const questionAnswer = answer.answers[0]; // La réponse est déjà filtrée
                 return (
                   <AnswerTooltip 
+                    id={`answer-tooltip-${answer._id}`}
+                    data-testid={`answer-tooltip-${answer._id}`}
                     key={index}
                     answer={answer}
                     questionAnswer={questionAnswer}
@@ -3265,20 +3425,27 @@ const ResultsPage: React.FC = () => {
             </List>
           ) : (
             <ChartView 
+              id={`chart-view-${question.id}`}
+              data-testid={`chart-view-${question.id}`}
               data={getQuestionData(selectedQuestion.questionId, questionAnswers)}
               question={question}
             />
           )}
         </DialogContent>
 
-        <DialogActions sx={{ 
-          p: 3, 
-          borderTop: '1px solid rgba(0,0,0,0.1)',
-          display: 'flex',
-          justifyContent: 'space-between'
-        }}>
+        <DialogActions
+          id="question-details-dialog-actions"
+          data-testid="question-details-dialog-actions"
+          sx={{ 
+            p: 3, 
+            borderTop: '1px solid rgba(0,0,0,0.1)',
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}>
           <Box>
             <Button
+              id="export-csv-button"
+              data-testid="export-csv-button"
               startIcon={<FileDownloadIcon />}
               onClick={exportCSV}
               variant="outlined"
@@ -3287,6 +3454,8 @@ const ResultsPage: React.FC = () => {
               Export CSV
             </Button>
             <Button
+              id="export-json-button"
+              data-testid="export-json-button"
               startIcon={<CodeIcon />}
               onClick={exportJSON}
               variant="outlined"
@@ -3295,6 +3464,8 @@ const ResultsPage: React.FC = () => {
             </Button>
           </Box>
           <Button
+            id="close-dialog-button"
+            data-testid="close-dialog-button"
             onClick={handleClose}
             variant="contained"
             sx={{
@@ -3736,13 +3907,16 @@ const ResultsPage: React.FC = () => {
     };
 
     return (
-      <Box sx={{ 
-        height: '400px', 
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-      }}>
+      <Box
+        id="age-chart-container"
+        data-testid="age-chart-container"
+        sx={{ 
+          height: '400px', 
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
         <Scatter data={chartData} options={options} />
       </Box>
     );
@@ -4024,20 +4198,36 @@ const ResultsPage: React.FC = () => {
     };
 
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
+      <Dialog
+        id="share-dialog"
+        data-testid="share-dialog"
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          id="share-dialog-title"
+          data-testid="share-dialog-title"
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
           <PersonAddIcon />
           Collaborate with others
         </DialogTitle>
         
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent
+          id="share-dialog-content"
+          data-testid="share-dialog-content"
+          sx={{ mt: 2 }}
+        >
           <TextField
+            id="email-input"
+            data-testid="email-input"
             fullWidth
             label="Destinatory Mail"
             value={email}
@@ -4056,14 +4246,25 @@ const ResultsPage: React.FC = () => {
           />
           
           {success && (
-            <Alert severity="success" sx={{ mt: 2 }}>
+            <Alert
+              id="success-alert"
+              data-testid="success-alert"
+              severity="success"
+              sx={{ mt: 2 }}
+            >
               Invitation sends successfuly!
             </Alert>
           )}
         </DialogContent>
         
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button 
+        <DialogActions
+          id="share-dialog-actions"
+          data-testid="share-dialog-actions"
+          sx={{ p: 2, pt: 0 }}
+        >
+          <Button
+            id="cancel-button"
+            data-testid="cancel-button"
             onClick={onClose}
             disabled={loading}
             sx={{ color: '#64748b' }}
@@ -4071,6 +4272,8 @@ const ResultsPage: React.FC = () => {
             Cancel
           </Button>
           <Button
+            id="send-button"
+            data-testid="send-button"
             onClick={handleShare}
             disabled={!email || loading || success}
             variant="contained"
@@ -4236,7 +4439,12 @@ const ResultsPage: React.FC = () => {
 
   if (error) {
     return (
-      <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+      <Typography
+        id="error-message"
+        data-testid="error-message"
+        color="error"
+        sx={{ textAlign: 'center', my: 4 }}
+      >
         {error}
       </Typography>
     );
@@ -4244,9 +4452,10 @@ const ResultsPage: React.FC = () => {
 
   if (selectedSurvey) {
     return (
-      <Box 
+      <Box
+        id="results-page-container"
+        data-testid="results-page-container"
         component="section"  // Définit le type d'élément HTML
-        data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
         sx={{
           minHeight: '100vh',
           backgroundColor: colors.background.default,
@@ -4284,6 +4493,8 @@ const ResultsPage: React.FC = () => {
             alignItems: 'center'
           }}>
             <IconButton
+              id="back-button"
+              data-testid="back-button"
               onClick={handleBack}
               sx={{
                 color: 'white',
@@ -4292,11 +4503,18 @@ const ResultsPage: React.FC = () => {
               <ArrowBackIcon />
             </IconButton>
             
-            <Typography variant="h4" fontWeight="bold">
+            <Typography
+              id="survey-title"
+              data-testid="survey-title"
+              variant="h4"
+              fontWeight="bold"
+            >
               {selectedSurvey.title}
             </Typography>
 
             <Button
+              id="share-button"
+              data-testid="share-button"
               onClick={() => setShareDialogOpen(true)}
               startIcon={<ShareIcon />}
               variant="contained"
@@ -4320,14 +4538,17 @@ const ResultsPage: React.FC = () => {
 
             {/* Answer Filter section */}
             {!selectedSurvey?.demographicEnabled && (
-              <Box sx={{ 
-                mb: 4,
-                p: 3,
-                borderRadius: 2,
-                backgroundColor: 'white',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
-                border: '1px solid rgba(102, 126, 234, 0.2)',
-              }}>
+              <Box
+                id="answer-filter-container"
+                data-testid="answer-filter-container"
+                sx={{ 
+                  mb: 4,
+                  p: 3,
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                }}>
                 <Box sx={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
@@ -4335,6 +4556,8 @@ const ResultsPage: React.FC = () => {
                   mb: 3 
                 }}>
                   <Typography 
+                    id="filter-responses-title"
+                    data-testid="filter-responses-title"
                     variant="h6" 
                     sx={{ 
                       fontWeight: 600,
@@ -4347,6 +4570,8 @@ const ResultsPage: React.FC = () => {
                     Filter Responses
                   </Typography>
                   <Button
+                    id="reset-filters-button"
+                    data-testid="reset-filters-button"
                     variant="outlined"
                     onClick={() => setAnswerFilters({})}
                     startIcon={<ClearIcon />}
@@ -4369,6 +4594,8 @@ const ResultsPage: React.FC = () => {
                 </Box>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Button
+                    id="configure-filters-button"
+                    data-testid="configure-filters-button"
                     startIcon={<FilterListIcon />}
                     onClick={() => setAnswerFilterDialogOpen(true)}
                     variant="contained"
@@ -4388,6 +4615,8 @@ const ResultsPage: React.FC = () => {
                   </Button>
                   {Object.keys(answerFilters).length > 0 && (
                     <Chip
+                      id="active-filters-chip"
+                      data-testid="active-filters-chip"
                       label={`${Object.keys(answerFilters).length} active filter(s)`}
                       onDelete={() => setAnswerFilters({})}
                       color="primary"
@@ -4407,6 +4636,8 @@ const ResultsPage: React.FC = () => {
             {/* Questions section */}
             <Box sx={{ mb: 4 }}>
               <Typography 
+                id="questions-title"
+                data-testid="questions-title"
                 variant="h6" 
                 sx={{ 
                   mb: 3, 
@@ -4425,6 +4656,8 @@ const ResultsPage: React.FC = () => {
                 
                 return (
                   <Paper 
+                    id={`question-container-${question.id}`}
+                    data-testid={`question-container-${question.id}`}
                     key={question.id} 
                     elevation={1}
                     sx={{
@@ -4441,14 +4674,27 @@ const ResultsPage: React.FC = () => {
                       mb: 2 
                     }}>
                       <Box>
-                        <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                        <Typography
+                          id={`question-text-${question.id}`}
+                          data-testid={`question-text-${question.id}`}
+                          variant="h6"
+                          sx={{ color: '#1a237e' }}
+                        >
                           Question {index + 1}: {question.text}
                         </Typography>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                        <Typography
+                          id={`question-type-${question.id}`}
+                          data-testid={`question-type-${question.id}`}
+                          variant="subtitle2"
+                          color="text.secondary"
+                          sx={{ mt: 1 }}
+                        >
                           Type: {question.type}
                         </Typography>
                       </Box>
                       <Button
+                        id={`view-details-button-${question.id}`}
+                        data-testid={`view-details-button-${question.id}`}
                         variant="contained"
                         startIcon={<BarChartIcon />}
                         onClick={() => handleQuestionClick(question.id)}
@@ -4489,6 +4735,8 @@ const ResultsPage: React.FC = () => {
             }}>
               <Stack direction="row" spacing={2}>
                 <Button
+                  id="export-all-csv-button"
+                  data-testid="export-all-csv-button"
                   variant="contained"
                   startIcon={<TableViewIcon />}
                   onClick={exportAllToCSV}
@@ -4502,6 +4750,8 @@ const ResultsPage: React.FC = () => {
                   Export All to CSV
                 </Button>
                 <Button
+                  id="export-all-json-button"
+                  data-testid="export-all-json-button"
                   variant="contained"
                   startIcon={<CodeIcon />}
                   onClick={exportAllToJSON}
@@ -4528,6 +4778,8 @@ const ResultsPage: React.FC = () => {
                 alignItems: 'center'
               }}>
                 <Box
+                  id="demographic-stats-container"
+                  data-testid="demographic-stats-container"
                   sx={{
                     width: '100%',
                     animation: 'fadeIn 0.3s ease-in-out',
@@ -4552,6 +4804,8 @@ const ResultsPage: React.FC = () => {
 
         {isDialogMounted && (
           <Dialog
+            id="question-details-dialog"
+            data-testid="question-details-dialog"
             open={dialogOpen}
             onClose={() => {
               setDialogOpen(false);
@@ -4571,12 +4825,16 @@ const ResultsPage: React.FC = () => {
         
         {/* Ajouter le dialogue des filtres démographiques */}
         <DemographicFilterPanel 
+          id="demographic-filter-panel"
+          data-testid="demographic-filter-panel"
           open={demographicFilterDialogOpen}
           onClose={() => setDemographicFilterDialogOpen(false)}
         />
 
         {/* Ajouter le dialogue des filtres de réponses */}
         <AnswerFilterPanel
+          id="answer-filter-panel"
+          data-testid="answer-filter-panel"
           open={answerFilterDialogOpen}
           onClose={() => setAnswerFilterDialogOpen(false)}
           selectedSurvey={selectedSurvey}
@@ -4585,6 +4843,8 @@ const ResultsPage: React.FC = () => {
         />
 
         <ShareDialog
+          id="share-dialog"
+          data-testid="share-dialog"
           open={shareDialogOpen}
           onClose={() => setShareDialogOpen(false)}
           surveyId={selectedSurvey._id}
@@ -4592,6 +4852,8 @@ const ResultsPage: React.FC = () => {
 
         {/* Ajouter la boîte de dialogue de confirmation */}
         <Dialog
+          id="delete-dialog"
+          data-testid="delete-dialog"
           open={isDeleteDialogOpen}
           onClose={closeDeleteDialog}
           aria-labelledby="delete-dialog-title"
@@ -4607,12 +4869,16 @@ const ResultsPage: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button 
+              id="cancel-delete-button"
+              data-testid="cancel-delete-button"
               onClick={closeDeleteDialog} 
               sx={{ color: '#64748b' }}
             >
               Cancel
             </Button>
             <Button
+              id="confirm-delete-button"
+              data-testid="confirm-delete-button"
               onClick={() => confirmDelete()} // Modification ici
               variant="contained"
               color="error"
@@ -4629,8 +4895,9 @@ const ResultsPage: React.FC = () => {
   // Liste des sondages
   return (
     <Box 
+      id="results-page-container"
+      data-testid="results-page-container"
       component="section"  // Définit le type d'élément HTML
-      data-testid="results-container"  // Ajoute un identifiant pour les tests et l'inspection
       sx={{
         minHeight: '100vh',
         backgroundColor: colors.background.default,
@@ -4643,8 +4910,9 @@ const ResultsPage: React.FC = () => {
       }}
     >
       <Paper 
+        id="results-content-paper"
+        data-testid="results-content-paper"
         component="article"  // Définit le type d'élément HTML
-        data-testid="results-content-Paper"  // Ajoute un identifiant pour les tests et l'inspection
         elevation={3} 
         sx={{
           borderRadius: '16px',
@@ -4656,22 +4924,40 @@ const ResultsPage: React.FC = () => {
           mb: 4,
         }}
       >
-        <Box sx={{
-          background: colors.primary.gradient,
-          py: 4,
-          px: 4,
-          color: colors.text.light,
-          textAlign: 'center',
-        }}>
-          <Typography variant="h4" fontWeight="bold">
+        <Box
+          id="results-header"
+          data-testid="results-header"
+          sx={{
+            background: colors.primary.gradient,
+            py: 4,
+            px: 4,
+            color: colors.text.light,
+            textAlign: 'center',
+          }}>
+          <Typography
+            id="results-title"
+            data-testid="results-title"
+            variant="h4"
+            fontWeight="bold"
+          >
             My Surveys
           </Typography>
         </Box>
 
-        <Box sx={{ p: 4, backgroundColor: 'white' }}>
+        <Box
+          id="results-content"
+          data-testid="results-content"
+          sx={{ p: 4, backgroundColor: 'white' }}
+        >
           {/* Nouvelle section de filtres */}
-          <Box sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}>
+          <Box
+            id="filter-panel"
+            data-testid="filter-panel"
+            sx={{ mb: 4, backgroundColor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 1 }}
+          >
             <TextField
+              id="survey-search-field"
+              data-testid="survey-search-field"
               fullWidth
               variant="outlined"
               placeholder="Search surveys by title or description..."
@@ -4686,7 +4972,12 @@ const ResultsPage: React.FC = () => {
                 ),
                 endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={clearFilters}>
+                    <IconButton
+                      id="clear-filters-button"
+                      data-testid="clear-filters-button"
+                      size="small"
+                      onClick={clearFilters}
+                    >
                       <ClearIcon />
                     </IconButton>
                   </InputAdornment>
@@ -4694,8 +4985,16 @@ const ResultsPage: React.FC = () => {
               }}
             />
 
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              id="filter-chips"
+              data-testid="filter-chips"
+              direction="row"
+              spacing={2}
+              alignItems="center"
+            >
               <Chip
+                id="date-filter-chip"
+                data-testid="date-filter-chip"
                 icon={<FilterListIcon />}
                 label="Date Filter"
                 onClick={() => setShowDateFilter(!showDateFilter)}
@@ -4708,6 +5007,8 @@ const ResultsPage: React.FC = () => {
                 }}
               />
               <Chip
+                id="popularity-filter-chip"
+                data-testid="popularity-filter-chip"
                 icon={<FilterListIcon />}
                 label={`${sortBy === 'date' ? 'Popularity' : 'Popularity'}`}
                 onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
@@ -4720,6 +5021,8 @@ const ResultsPage: React.FC = () => {
                 }}
               />
               <Chip
+                id="pending-filter-chip"
+                data-testid="pending-filter-chip"
                 icon={<FilterListIcon />}
                 label="Pending"
                 onClick={() => setShowPendingOnly(!showPendingOnly)}
@@ -4735,8 +5038,16 @@ const ResultsPage: React.FC = () => {
 
             {showDateFilter && (
               <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                <Stack
+                  id="date-filter-inputs"
+                  data-testid="date-filter-inputs"
+                  direction="row"
+                  spacing={2}
+                  sx={{ mt: 2 }}
+                >
                   <DatePicker
+                    id="start-date-picker"
+                    data-testid="start-date-picker"
                     label="Start Date"
                     value={dateRange.start}
                     onChange={(newValue: Date | null) => {
@@ -4746,10 +5057,17 @@ const ResultsPage: React.FC = () => {
                       }));
                     }}
                     renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
+                      <TextField
+                        id="start-date-input"
+                        data-testid="start-date-input"
+                        {...params}
+                        size="small"
+                      />
                     )}
                   />
                   <DatePicker
+                    id="end-date-picker"
+                    data-testid="end-date-picker"
                     label="End Date"
                     value={dateRange.end}
                     onChange={(newValue: Date | null) => {
@@ -4759,7 +5077,12 @@ const ResultsPage: React.FC = () => {
                       }));
                     }}
                     renderInput={(params: TextFieldProps) => (
-                      <TextField {...params} size="small" />
+                      <TextField
+                        id="end-date-input"
+                        data-testid="end-date-input"
+                        {...params}
+                        size="small"
+                      />
                     )}
                     minDate={dateRange.start || undefined}
                   />
@@ -4769,17 +5092,28 @@ const ResultsPage: React.FC = () => {
           </Box>
 
           {error ? (
-            <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
+            <Typography
+              id="error-message"
+              data-testid="error-message"
+              color="error"
+              sx={{ textAlign: 'center', my: 4 }}
+            >
               {error}
             </Typography>
           ) : (
-            <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+            <Box
+              id="survey-cards"
+              data-testid="survey-cards"
+              sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
+            >
               {filteredSurveys.map((survey) => {
                 const responses = surveyAnswers[survey._id] || [];
                 const isPending = survey.status === 'pending';
                 
                 return (
                   <Paper
+                    id={`survey-card-${survey._id}`}
+                    data-testid={`survey-card-${survey._id}`}
                     key={survey._id}
                     elevation={1}
                     sx={{ 
@@ -4812,6 +5146,8 @@ const ResultsPage: React.FC = () => {
                     {/* Badge "Pending" amélioré */}
                     {isPending && (
                       <Chip
+                        id={`pending-chip-${survey._id}`}
+                        data-testid={`pending-chip-${survey._id}`}
                         label="Pending"
                         sx={{
                           position: 'absolute',
@@ -4845,14 +5181,19 @@ const ResultsPage: React.FC = () => {
                     )}
 
                     {/* Reste du contenu de la carte */}
-                    <Box sx={{ 
-                      p: 3,
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative'
-                    }}>
+                    <Box
+                      id={`survey-card-content-${survey._id}`}
+                      data-testid={`survey-card-content-${survey._id}`}
+                      sx={{ 
+                        p: 3,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative'
+                      }}>
                       <Typography 
+                        id={`survey-title-${survey._id}`}
+                        data-testid={`survey-title-${survey._id}`}
                         variant="h6" 
                         sx={{ 
                           mb: 2,
@@ -4870,6 +5211,8 @@ const ResultsPage: React.FC = () => {
                       </Typography>
                         
                       <Typography 
+                        id={`survey-description-${survey._id}`}
+                        data-testid={`survey-description-${survey._id}`}
                         variant="body2" 
                         color="text.secondary"
                         sx={{ 
@@ -4888,6 +5231,8 @@ const ResultsPage: React.FC = () => {
                         
                       {/* Badges section */}
                       <Stack 
+                        id={`survey-badges-${survey._id}`}
+                        data-testid={`survey-badges-${survey._id}`}
                         direction="row" 
                         spacing={1} 
                         sx={{
@@ -4904,6 +5249,8 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         <Chip
+                          id={`responses-chip-${survey._id}`}
+                          data-testid={`responses-chip-${survey._id}`}
                           size="small"
                           label={`${responses.length} Responses`}
                           sx={{
@@ -4914,6 +5261,8 @@ const ResultsPage: React.FC = () => {
                           }}
                         />
                         <Chip
+                          id={`questions-chip-${survey._id}`}
+                          data-testid={`questions-chip-${survey._id}`}
                           size="small"
                           label={`${survey.questions.length} Questions`}
                           sx={{
@@ -4924,6 +5273,8 @@ const ResultsPage: React.FC = () => {
                           }}
                         />
                         <Chip
+                          id={`demographic-chip-${survey._id}`}
+                          data-testid={`demographic-chip-${survey._id}`}
                           size="small"
                           label={survey.demographicEnabled ? "Demographic" : "No Demographic"}
                           sx={{
@@ -4936,6 +5287,8 @@ const ResultsPage: React.FC = () => {
                       </Stack>
 
                       <Box
+                        id={`hover-content-${survey._id}`}
+                        data-testid={`hover-content-${survey._id}`}
                         className="hover-content"
                         sx={{
                           position: 'absolute',
@@ -4970,6 +5323,8 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         <Typography 
+                          id={`hover-title-${survey._id}`}
+                          data-testid={`hover-title-${survey._id}`}
                           variant="h6" 
                           sx={{ 
                             color: 'primary.main',
@@ -4980,6 +5335,8 @@ const ResultsPage: React.FC = () => {
                           {survey.title}
                         </Typography>
                         <Typography 
+                          id={`hover-description-${survey._id}`}
+                          data-testid={`hover-description-${survey._id}`}
                           variant="body2" 
                           sx={{ 
                             color: 'text.secondary',
@@ -4992,6 +5349,8 @@ const ResultsPage: React.FC = () => {
                       </Box>
                         
                       <Stack 
+                        id={`survey-footer-${survey._id}`}
+                        data-testid={`survey-footer-${survey._id}`}
                         direction="column"
                         spacing={1}
                         sx={{ 
@@ -5004,6 +5363,8 @@ const ResultsPage: React.FC = () => {
                         }}
                       >
                         <Typography 
+                          id={`created-date-${survey._id}`}
+                          data-testid={`created-date-${survey._id}`}
                           variant="caption" 
                           color="text.secondary"
                           sx={{
@@ -5019,6 +5380,8 @@ const ResultsPage: React.FC = () => {
                         {/* Ajout du "Shared by" ici */}
                         {survey.sharedBy && (
                           <Typography 
+                            id={`shared-by-${survey._id}`}
+                            data-testid={`shared-by-${survey._id}`}
                             variant="caption" 
                             sx={{ 
                               color: 'text.secondary',
@@ -5037,23 +5400,31 @@ const ResultsPage: React.FC = () => {
                       </Stack>
                     </Box>
                     
-                    <Box sx={{ 
-                      p: 2, 
-                      borderTop: 1, 
-                      borderColor: 'divider',
-                      backgroundColor: 'action.hover',
-                      display: 'flex',
-                      justifyContent: 'space-between',  // Changé de 'center' à 'space-between'
-                      position: 'relative',
-                      zIndex: 1
-                    }}>
+                    <Box
+                      id={`survey-actions-${survey._id}`}
+                      data-testid={`survey-actions-${survey._id}`}
+                      sx={{ 
+                        p: 2, 
+                        borderTop: 1, 
+                        borderColor: 'divider',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        display: 'flex',
+                        justifyContent: 'space-between',  // Changé de 'center' à 'space-between'
+                        position: 'relative',
+                        zIndex: 1
+                      }}>
                       {isPending ? (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          gap: 1,
-                          opacity: 1
-                        }}>
+                        <Box
+                          id={`pending-actions-${survey._id}`}
+                          data-testid={`pending-actions-${survey._id}`}
+                          sx={{ 
+                            display: 'flex', 
+                            gap: 1,
+                            opacity: 1
+                          }}>
                           <Button
+                            id={`accept-button-${survey._id}`}
+                            data-testid={`accept-button-${survey._id}`}
                             variant="contained"
                             size="small"
                             onClick={() => handleShareResponse(survey._id, true)}
@@ -5069,6 +5440,8 @@ const ResultsPage: React.FC = () => {
                             Accept
                           </Button>
                           <Button
+                            id={`reject-button-${survey._id}`}
+                            data-testid={`reject-button-${survey._id}`}
                             variant="contained"
                             size="small"
                             onClick={() => handleShareResponse(survey._id, false)}
@@ -5086,20 +5459,28 @@ const ResultsPage: React.FC = () => {
                         </Box>
                       ) : (
                         // Réorganisation des boutons Delete et View Results
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Box
+                          id={`actions-${survey._id}`}
+                          data-testid={`actions-${survey._id}`}
+                          sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
+                        >
                           {survey.userId === user?.id && !survey.sharedBy && (
                             <Button
+                              id={`delete-button-${survey._id}`}
+                              data-testid={`delete-button-${survey._id}`}
                               variant="outlined"
                               size="small"
                               color="error"
                               onClick={() => openDeleteDialog(survey._id)}
-                              startIcon={<DeleteIcon />}  // Ajout de l'icône
+                              startIcon={<DeleteIcon />} // Ajout de l'icône
                               sx={{ mr: 'auto' }}
                             >
                               Delete
                             </Button>
                           )}
                           <Button
+                            id={`view-results-button-${survey._id}`}
+                            data-testid={`view-results-button-${survey._id}`}
                             variant="contained"
                             size="small"
                             onClick={() => handleViewResults(survey)}
@@ -5126,27 +5507,39 @@ const ResultsPage: React.FC = () => {
 
       {/* Dialog de confirmation de suppression */}
       <Dialog
+        id="delete-dialog"
+        data-testid="delete-dialog"
         open={isDeleteDialogOpen}
         onClose={closeDeleteDialog}
         aria-labelledby="delete-dialog-title"
         sx={{ zIndex: 9999 }}
       >
-        <DialogTitle id="delete-dialog-title">
+        <DialogTitle
+          id="delete-dialog-title"
+          data-testid="delete-dialog-title"
+        >
           Confirm Deletion
         </DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText
+            id="delete-dialog-text"
+            data-testid="delete-dialog-text"
+          >
             Are you sure you want to delete this survey? This action will also remove it for all users who received it and delete all associated answers. This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button 
+            id="cancel-delete-button"
+            data-testid="cancel-delete-button"
             onClick={closeDeleteDialog} 
             sx={{ color: '#64748b' }}
           >
             Cancel
           </Button>
           <Button
+            id="confirm-delete-button"
+            data-testid="confirm-delete-button"
             onClick={() => confirmDelete()} // Modification ici
             variant="contained"
             color="error"
