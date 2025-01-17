@@ -17,6 +17,7 @@ import {
   Slider,
   Rating,
   Popover,
+  Checkbox,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -25,17 +26,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import ReactPlayer from 'react-player';
 
-const questionTypes = [
-  { value: 'multiple-choice', label: 'Multiple Choice' },
-  { value: 'text', label: 'Open-ended' },
-  { value: 'dropdown', label: 'Dropdown' },
-  { value: 'yes-no', label: 'Yes/No' },
-  { value: 'slider', label: 'Slider' },
-  { value: 'rating', label: 'Rating (Stars)' },
-  { value: 'date', label: 'Date Picker' },
-];
-
 interface QuestionData {
+  id: string;
   questionNumber: number;
   type: string;
   text: string;
@@ -43,6 +35,8 @@ interface QuestionData {
   media: string;
   mediaUrl: string;
   selectedDate?: Date | null;
+  isCritical: boolean;
+  onCreatePaths?: (sourceId: string, options: string[]) => void;
 }
 
 interface QuestionNodeProps {
@@ -50,16 +44,27 @@ interface QuestionNodeProps {
   isConnectable: boolean;
 }
 
+const questionTypes = [
+  { value: 'text', label: 'Open-ended' },
+  { value: 'yes-no', label: 'Yes/No' },
+  { value: 'dropdown', label: 'Dropdown' },
+  { value: 'multiple-choice', label: 'Multiple Choice' },
+  { value: 'slider', label: 'Slider' },
+  { value: 'rating', label: 'Rating (Stars)' },
+  { value: 'date', label: 'Date Picker' },
+];
+
+const criticalQuestionTypes = [
+  { value: 'yes-no', label: 'Yes/No' },
+  { value: 'dropdown', label: 'Dropdown' },
+];
+
 const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [questionData, setQuestionData] = useState({
-    type: data.type || 'text',
-    text: data.text || '',
-    options: data.options || [],
-    media: data.media || '',
-    mediaUrl: data.mediaUrl || '',
-    selectedDate: data.selectedDate || null,
+    ...data,
+    isCritical: data.isCritical || false,
   });
   const [loadingMedia, setLoadingMedia] = useState(false);
 
@@ -79,9 +84,53 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
     setAnchorEl(null);
   };
 
+  const handleCriticalChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const isCritical = event.target.checked;
+    const newData = { ...questionData, isCritical };
+    
+    // Si la question devient critique, réinitialiser le type et créer les chemins
+    if (isCritical) {
+      newData.type = 'yes-no';
+      newData.options = [];
+      if (data.onCreatePaths) {
+        data.onCreatePaths(data.id, ['Yes', 'No']);
+      }
+    } else {
+      // Si la question n'est plus critique, supprimer les chemins
+      if (data.onCreatePaths) {
+        data.onCreatePaths(data.id, []);
+      }
+    }
+    
+    updateNodeData(newData);
+  };
+
   const handleTypeSelect = (type: string) => {
-    updateNodeData({ ...questionData, type });
+    const newData = { ...questionData, type };
+    updateNodeData(newData);
     handleTypeClose();
+
+    // Créer les chemins selon le type pour les questions critiques
+    if (questionData.isCritical && data.onCreatePaths) {
+      if (type === 'yes-no') {
+        data.onCreatePaths(data.id, ['Yes', 'No']);
+      } else if (type === 'dropdown') {
+        // Pour dropdown, on attend que les options soient ajoutées
+        if (questionData.options.length > 0) {
+          data.onCreatePaths(data.id, questionData.options);
+        }
+      }
+    }
+  };
+
+  const handleOptionsChange = (newOptions: string[]) => {
+    const updatedData = { ...questionData, options: newOptions };
+    updateNodeData(updatedData);
+
+    // Mettre à jour les chemins pour les questions critiques de type dropdown
+    if (questionData.isCritical && questionData.type === 'dropdown' && data.onCreatePaths) {
+      data.onCreatePaths(data.id, newOptions);
+    }
   };
 
   const renderQuestionFields = () => {
@@ -180,6 +229,17 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
 
         {isEditing ? (
           <Box sx={{ mt: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={questionData.isCritical}
+                  onChange={handleCriticalChange}
+                />
+              }
+              label="Critical Question (creates different paths)"
+              sx={{ mb: 2 }}
+            />
+
             <Box
               onClick={handleTypeClick}
               sx={{
@@ -194,7 +254,8 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
               }}
             >
               <Typography>
-                {questionTypes.find(t => t.value === questionData.type)?.label || 'Select type'}
+                {(questionData.isCritical ? criticalQuestionTypes : questionTypes)
+                  .find(t => t.value === questionData.type)?.label || 'Select type'}
               </Typography>
             </Box>
 
@@ -220,7 +281,7 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
               }}
             >
               <Box sx={{ p: 1 }}>
-                {questionTypes.map((type) => (
+                {(questionData.isCritical ? criticalQuestionTypes : questionTypes).map((type) => (
                   <MenuItem
                     key={type.value}
                     onClick={() => handleTypeSelect(type.value)}

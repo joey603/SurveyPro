@@ -85,15 +85,96 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
     addNewQuestion();
   }, [onAddNode]);
 
+  const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
+    setNodes(nodes => nodes.filter(node => !node.id.startsWith(`${sourceId}-`)));
+    setEdges(edges => edges.filter(edge => !edge.source.startsWith(sourceId)));
+
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    if (!sourceNode) return;
+
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+    const spacing = 200;
+
+    options.forEach((option, index) => {
+      const newNode: Node = {
+        id: `${sourceId}-${index}`,
+        type: 'questionNode',
+        data: { 
+          id: `${sourceId}-${index}`,
+          questionNumber: nodes.length + newNodes.length + 1,
+          type: 'text',
+          text: '',
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+        },
+        position: { 
+          x: sourceNode.position.x + spacing,
+          y: sourceNode.position.y + (index - (options.length - 1) / 2) * spacing,
+        },
+      };
+      newNodes.push(newNode);
+
+      const newEdge: Edge = {
+        id: `e-${sourceId}-${index}`,
+        source: sourceId,
+        target: newNode.id,
+        label: option,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#667eea' },
+        labelStyle: { 
+          fill: '#667eea', 
+          fontWeight: 600,
+          fontSize: 12,
+        },
+        labelBgStyle: { 
+          fill: 'white',
+          fillOpacity: 0.9,
+          rx: 4,
+        },
+      };
+      newEdges.push(newEdge);
+    });
+
+    setNodes(nodes => [...nodes, ...newNodes]);
+    setEdges(edges => [...edges, ...newEdges]);
+  }, [nodes]);
+
+  const nodesWithCallbacks = nodes.map(node => ({
+    ...node,
+    data: {
+      ...node.data,
+      onCreatePaths: createPathsFromNode
+    }
+  }));
+
   return (
     <ReactFlow
-      nodes={nodes}
+      nodes={nodesWithCallbacks}
       edges={edges}
       nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       connectionMode={ConnectionMode.Loose}
+      defaultEdgeOptions={{
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#667eea' },
+        labelStyle: { 
+          fill: '#667eea', 
+          fontWeight: 600,
+          fontSize: 12,
+        },
+        labelBgStyle: { 
+          fill: 'white',
+          fillOpacity: 0.9,
+          rx: 4,
+        },
+      }}
       fitView
     >
       <Background />
