@@ -144,10 +144,21 @@ const SurveyFlow = forwardRef<{
     setEdges(edges => [...edges, ...newEdges]);
   }, [nodes]);
 
+  const handleNodeChange = useCallback((nodeId: string, newData: any) => {
+    setNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      )
+    );
+  }, []);
+
   const nodesWithCallbacks = nodes.map(node => ({
     ...node,
     data: {
       ...node.data,
+      onChange: (newData: any) => handleNodeChange(node.id, newData),
       onCreatePaths: createPathsFromNode
     }
   }));

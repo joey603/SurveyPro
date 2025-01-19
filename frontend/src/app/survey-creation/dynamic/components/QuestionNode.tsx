@@ -37,6 +37,7 @@ interface QuestionData {
   selectedDate?: Date | null;
   isCritical: boolean;
   onCreatePaths?: (sourceId: string, options: string[]) => void;
+  onChange?: (newData: QuestionData) => void;
 }
 
 interface QuestionNodeProps {
@@ -199,6 +200,7 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
               onChange={(newValue) => {
                 updateNodeData({ ...questionData, selectedDate: newValue });
               }}
+              renderInput={(params) => <TextField {...params} />}
             />
           </LocalizationProvider>
         );
@@ -210,7 +212,13 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
 
   const updateNodeData = (newData: typeof questionData) => {
     setQuestionData(newData);
-    // TODO: Ajouter ici la logique pour sauvegarder les changements dans le nœud parent
+    // Propager les changements au nœud parent
+    if (data.onChange) {
+      data.onChange({
+        ...data,
+        ...newData
+      });
+    }
   };
 
   return (

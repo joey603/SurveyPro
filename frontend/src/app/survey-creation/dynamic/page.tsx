@@ -65,6 +65,16 @@ interface SurveyFlowRef {
   addNewQuestion: () => void;
 }
 
+const questionTypes = [
+  { value: 'text', label: 'Texte libre' },
+  { value: 'yes-no', label: 'Oui/Non' },
+  { value: 'dropdown', label: 'Liste déroulante' },
+  { value: 'multiple-choice', label: 'Choix multiple' },
+  { value: 'slider', label: 'Curseur' },
+  { value: 'rating', label: 'Évaluation (Étoiles)' },
+  { value: 'date', label: 'Sélecteur de date' },
+];
+
 export default function DynamicSurveyCreation() {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -79,6 +89,23 @@ export default function DynamicSurveyCreation() {
       demographicEnabled: false,
     },
   });
+
+  // Ajouter l'état pour les réponses de prévisualisation
+  const [previewAnswers, setPreviewAnswers] = useState<{
+    [questionId: string]: any;
+  }>({});
+
+  // Ajout d'un état pour suivre le chemin des questions
+  const [questionPath, setQuestionPath] = useState<string[]>(['1']); // Commence avec la question 1
+
+  const findNextQuestions = (currentQuestionId: string, answer: any) => {
+    const edges = previewNodes.filter(node => 
+      node.id.startsWith(`${currentQuestionId}-`) || 
+      (node.data?.sourceHandle === currentQuestionId && node.data?.condition === answer)
+    );
+
+    return edges.map(edge => edge.id);
+  };
 
   const handleResetSurvey = () => {
     if (window.confirm('Are you sure you want to reset the survey? All progress will be lost.')) {
@@ -108,43 +135,11 @@ export default function DynamicSurveyCreation() {
     setShowPreview(false);
     setCurrentPreviewIndex(0);
     setPreviewNodes([]);
+    setPreviewAnswers({});
+    setQuestionPath(['1']); // Réinitialiser le chemin
   };
 
   const renderPreviewQuestion = () => {
-    const allQuestions = [];
-    
-    // Ajouter les questions démographiques si activées
-    if (watch('demographicEnabled')) {
-      allQuestions.push({
-        type: 'demographic',
-        text: 'Demographic Information',
-        options: [
-          { label: 'Age', type: 'text' },
-          { label: 'Gender', type: 'dropdown', options: ['Male', 'Female', 'Other', 'Prefer not to say'] },
-          { label: 'Education Level', type: 'dropdown', options: educationOptions },
-          { label: 'City', type: 'dropdown', options: cities || [] }
-        ] as DemographicOption[]
-      });
-    }
-    
-    // Ajouter les questions standard
-    const currentNodes = flowRef.current?.getNodes() || [];
-    allQuestions.push(...currentNodes);
-
-    if (allQuestions.length === 0) {
-      return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body1">
-            No questions available in this survey yet.
-          </Typography>
-        </Box>
-      );
-    }
-
-    const currentQuestion = allQuestions[currentPreviewIndex];
-    if (!currentQuestion) return null;
-
-    // Style commun pour les conteneurs de questions
     const questionContainerStyle = {
       p: 3,
       backgroundColor: 'white',
@@ -153,14 +148,12 @@ export default function DynamicSurveyCreation() {
       mb: 3
     };
 
-    // Style commun pour les titres de questions
     const questionTitleStyle = {
       color: '#1a237e',
       fontWeight: 500,
       mb: 2
     };
 
-    // Style commun pour les conteneurs de réponses
     const answerContainerStyle = {
       mt: 3,
       p: 3,
@@ -172,77 +165,155 @@ export default function DynamicSurveyCreation() {
       }
     };
 
-    // Rendu des questions démographiques
+    const allQuestions = [];
+    
+    // Vérifier si les questions démographiques sont activées et si nous sommes au début
+    if (watch('demographicEnabled') && currentPreviewIndex === 0) {
+      const demographicQuestion = {
+        id: 'demographic',
+        type: 'demographic',
+        text: 'Demographic Information',
+        data: {
+          type: 'demographic',
+          options: [
+            { label: 'Age', type: 'text' },
+            { label: 'Gender', type: 'dropdown', options: ['Male', 'Female', 'Other', 'Prefer not to say'] },
+            { label: 'Education Level', type: 'dropdown', options: educationOptions },
+            { label: 'City', type: 'dropdown', options: cities || [] }
+          ]
+        }
+      };
+      allQuestions.push(demographicQuestion);
+    } else {
+      // Obtenir les questions du flux
+      const currentNodes = flowRef.current?.getNodes() || [];
+      const currentQuestionId = questionPath[questionPath.length - 1];
+      const currentQuestion = currentNodes.find(node => node.id === currentQuestionId);
+      
+      if (currentQuestion) {
+        allQuestions.push(currentQuestion);
+      }
+    }
+
+    if (allQuestions.length === 0) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="body1">
+            No questions available in this survey yet.
+          </Typography>
+        </Box>
+      );
+    }
+
+    const currentQuestion = allQuestions[0];
+    if (!currentQuestion) return null;
+
+    // Si c'est une question démographique
     if (currentQuestion.type === 'demographic') {
       return (
         <Box sx={questionContainerStyle}>
           <Typography variant="h6" gutterBottom sx={questionTitleStyle}>
-            Section {currentPreviewIndex + 1} of {allQuestions.length}
-          </Typography>
-          <Typography variant="h5" gutterBottom sx={questionTitleStyle}>
-            {currentQuestion.text}
+            Demographic Information
           </Typography>
           
-          <Box sx={{ mt: 3 }}>
-            {currentQuestion.options.map((option: DemographicOption, idx: number) => (
-              <Box key={idx} sx={answerContainerStyle}>
-                <Typography variant="subtitle1" gutterBottom sx={questionTitleStyle}>
-                  {option.label}
-                </Typography>
-                
-                {option.type === 'text' ? (
-                  <TextField
-                    fullWidth
-                    placeholder={`Enter your ${option.label.toLowerCase()}`}
-                    variant="outlined"
-                    sx={{ 
-                      maxWidth: 400,
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: 'white'
-                      }
-                    }}
-                  />
-                ) : option.type === 'dropdown' ? (
-                  <Select
-                    fullWidth
-                    displayEmpty
-                    sx={{ 
-                      maxWidth: 400,
+          {currentQuestion.data.options.map((option: DemographicOption, index: number) => (
+            <Box key={index} sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                {option.label}
+              </Typography>
+              
+              {option.type === 'text' ? (
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder={`Enter your ${option.label.toLowerCase()}`}
+                  value={previewAnswers[`demographic_${option.label}`] || ''}
+                  onChange={(e) => setPreviewAnswers(prev => ({
+                    ...prev,
+                    [`demographic_${option.label}`]: e.target.value
+                  }))}
+                  sx={{ 
+                    maxWidth: 400,
+                    '& .MuiOutlinedInput-root': {
                       backgroundColor: 'white'
-                    }}
-                  >
-                    <MenuItem disabled value="">
-                      Select {option.label.toLowerCase()}
+                    }
+                  }}
+                />
+              ) : option.type === 'dropdown' && (
+                <Select
+                  fullWidth
+                  value={previewAnswers[`demographic_${option.label}`] || ''}
+                  onChange={(e) => setPreviewAnswers(prev => ({
+                    ...prev,
+                    [`demographic_${option.label}`]: e.target.value
+                  }))}
+                  sx={{ 
+                    maxWidth: 400,
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    Select {option.label.toLowerCase()}
+                  </MenuItem>
+                  {option.options?.map((opt: string, i: number) => (
+                    <MenuItem key={i} value={opt}>
+                      {opt}
                     </MenuItem>
-                    {option.options?.map((opt: string, i: number) => (
-                      <MenuItem key={i} value={opt}>
-                        {opt}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                ) : null}
-              </Box>
-            ))}
-          </Box>
+                  ))}
+                </Select>
+              )}
+            </Box>
+          ))}
         </Box>
       );
     }
+
+    const handleAnswerChange = (questionId: string, answer: any) => {
+      setPreviewAnswers(prev => ({
+        ...prev,
+        [questionId]: answer
+      }));
+
+      // Si c'est une question critique, mettre à jour le chemin
+      const currentNode = previewNodes.find(node => node.id === questionId);
+      if (currentNode?.data?.isCritical) {
+        const nextQuestions = findNextQuestions(questionId, answer);
+        if (nextQuestions.length > 0) {
+          setQuestionPath(prev => [...prev, nextQuestions[0]]);
+        }
+      } else {
+        // Pour les questions non critiques, passer simplement à la suivante dans l'ordre
+        const currentIndex = previewNodes.findIndex(node => node.id === questionId);
+        if (currentIndex < previewNodes.length - 1) {
+          setQuestionPath(prev => [...prev, previewNodes[currentIndex + 1].id]);
+        }
+      }
+    };
 
     // Rendu des questions standard
     return (
       <Box sx={questionContainerStyle}>
         <Typography variant="h6" gutterBottom sx={questionTitleStyle}>
-          Question {currentPreviewIndex + 1} of {allQuestions.length}
+          Question {currentPreviewIndex + 1}
         </Typography>
+        
+        {/* Affichage du type de question */}
+        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+          Type: {currentQuestion.data?.type ? 
+            questionTypes.find((t: { value: string; label: string }) => t.value === currentQuestion.data.type)?.label || currentQuestion.data.type 
+            : 'Non spécifié'}
+        </Typography>
+
+        {/* Affichage du texte de la question */}
         <Typography variant="body1" gutterBottom sx={{ 
           fontSize: '1.1rem',
           ...questionTitleStyle
         }}>
-          {currentQuestion.data.text || 'No question text provided'}
+          {currentQuestion.data?.text || 'Aucun texte de question fourni'}
         </Typography>
         
-        {/* Affichage du média s'il existe */}
-        {currentQuestion.data.media && (
+        {/* Affichage du média */}
+        {currentQuestion.data?.mediaUrl && (
           <Box sx={{ 
             mt: 2, 
             mb: 3, 
@@ -252,9 +323,9 @@ export default function DynamicSurveyCreation() {
             borderRadius: '8px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
           }}>
-            {isImageFile(currentQuestion.data.media) ? (
+            {isImageFile(currentQuestion.data.mediaUrl) ? (
               <img
-                src={currentQuestion.data.media}
+                src={currentQuestion.data.mediaUrl}
                 alt="Question media"
                 style={{
                   maxWidth: '100%',
@@ -265,7 +336,7 @@ export default function DynamicSurveyCreation() {
               />
             ) : (
               <ReactPlayer
-                url={currentQuestion.data.media}
+                url={currentQuestion.data.mediaUrl}
                 controls
                 width="100%"
                 height="auto"
@@ -277,23 +348,27 @@ export default function DynamicSurveyCreation() {
 
         {/* Rendu des options selon le type de question */}
         <Box sx={answerContainerStyle}>
-          {currentQuestion.data.type === 'multiple-choice' && (
-            <RadioGroup sx={{ gap: 1 }}>
+          {currentQuestion.data?.type === 'multiple-choice' && (
+            <RadioGroup
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+            >
               {currentQuestion.data.options?.map((option: string, index: number) => (
                 <FormControlLabel
                   key={index}
-                  control={<Radio disabled />}
+                  value={option}
+                  control={<Radio />}
                   label={option}
                 />
               ))}
             </RadioGroup>
           )}
 
-          {currentQuestion.data.type === 'dropdown' && (
+          {currentQuestion.data?.type === 'dropdown' && (
             <Select
-              disabled
-              displayEmpty
               fullWidth
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
               sx={{ mt: 2, maxWidth: 400 }}
             >
               <MenuItem disabled value="">
@@ -307,29 +382,35 @@ export default function DynamicSurveyCreation() {
             </Select>
           )}
 
-          {currentQuestion.data.type === 'yes-no' && (
-            <RadioGroup row sx={{ mt: 2 }}>
-              <FormControlLabel value="yes" control={<Radio disabled />} label="Yes" />
-              <FormControlLabel value="no" control={<Radio disabled />} label="No" />
+          {currentQuestion.data?.type === 'yes-no' && (
+            <RadioGroup
+              row
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+              sx={{ mt: 2 }}
+            >
+              <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+              <FormControlLabel value="no" control={<Radio />} label="No" />
             </RadioGroup>
           )}
 
-          {currentQuestion.data.type === 'text' && (
+          {currentQuestion.data?.type === 'text' && (
             <TextField
               fullWidth
-              disabled
-              placeholder="Enter your answer"
               multiline
               rows={3}
+              placeholder="Enter your answer"
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
               sx={{ mt: 2 }}
             />
           )}
 
-          {currentQuestion.data.type === 'slider' && (
+          {currentQuestion.data?.type === 'slider' && (
             <Box sx={{ mt: 4, mx: 2 }}>
               <Slider
-                disabled
-                defaultValue={50}
+                value={previewAnswers[currentQuestion.id] || 50}
+                onChange={(_, value) => handleAnswerChange(currentQuestion.id, value)}
                 valueLabelDisplay="auto"
                 step={1}
                 marks
@@ -339,20 +420,36 @@ export default function DynamicSurveyCreation() {
             </Box>
           )}
 
-          {currentQuestion.data.type === 'rating' && (
+          {currentQuestion.data?.type === 'rating' && (
             <Box sx={{ mt: 2 }}>
-              <Rating disabled />
+              <Rating
+                value={previewAnswers[currentQuestion.id] || null}
+                onChange={(_, value) => handleAnswerChange(currentQuestion.id, value)}
+              />
             </Box>
           )}
 
-          {currentQuestion.data.type === 'date' && (
+          {currentQuestion.data?.type === 'date' && (
             <Box sx={{ mt: 2 }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
-                  disabled
-                  value={null}
-                  onChange={() => {}}
-                  renderInput={(params) => <TextField {...params} />}
+                  value={previewAnswers[currentQuestion.id] || null}
+                  onChange={(newDate) => setPreviewAnswers(prev => ({
+                    ...prev,
+                    [currentQuestion.id]: newDate
+                  }))}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      sx={{ 
+                        width: '100%',
+                        maxWidth: 400,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    />
+                  )}
                 />
               </LocalizationProvider>
             </Box>
@@ -362,14 +459,24 @@ export default function DynamicSurveyCreation() {
     );
   };
 
-  const handlePrevious = () => {
-    setCurrentPreviewIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  const handleNext = () => {
+    const currentQuestionId = questionPath[questionPath.length - 1];
+    const answer = previewAnswers[currentQuestionId];
+    
+    if (answer) {
+      const nextQuestions = findNextQuestions(currentQuestionId, answer);
+      if (nextQuestions.length > 0) {
+        setQuestionPath(prev => [...prev, nextQuestions[0]]);
+        setCurrentPreviewIndex(prev => prev + 1);
+      }
+    }
   };
 
-  const handleNext = () => {
-    setCurrentPreviewIndex((prev) => 
-      prev < previewNodes.length - 1 ? prev + 1 : prev
-    );
+  const handlePrevious = () => {
+    if (questionPath.length > 1) {
+      setQuestionPath(prev => prev.slice(0, -1));
+      setCurrentPreviewIndex(prev => prev - 1);
+    }
   };
 
   const fetchCities = async () => {
