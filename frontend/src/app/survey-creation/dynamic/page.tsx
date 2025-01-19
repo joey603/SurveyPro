@@ -148,211 +148,72 @@ export default function DynamicSurveyCreation() {
       mb: 3
     };
 
-    const questionTitleStyle = {
-      color: '#1a237e',
-      fontWeight: 500,
-      mb: 2
-    };
-
-    const answerContainerStyle = {
-      mt: 3,
-      p: 3,
-      backgroundColor: '#f8f9fa',
-      borderRadius: 1,
-      transition: 'all 0.2s ease',
-      '&:hover': {
-        backgroundColor: '#f0f2f5'
-      }
-    };
-
-    const allQuestions = [];
-    
-    // Vérifier si les questions démographiques sont activées et si nous sommes au début
-    if (watch('demographicEnabled') && currentPreviewIndex === 0) {
-      const demographicQuestion = {
-        id: 'demographic',
-        type: 'demographic',
-        text: 'Demographic Information',
-        data: {
-          type: 'demographic',
-          options: [
-            { label: 'Age', type: 'text' },
-            { label: 'Gender', type: 'dropdown', options: ['Male', 'Female', 'Other', 'Prefer not to say'] },
-            { label: 'Education Level', type: 'dropdown', options: educationOptions },
-            { label: 'City', type: 'dropdown', options: cities || [] }
-          ]
-        }
-      };
-      allQuestions.push(demographicQuestion);
-    } else {
-      // Obtenir les questions du flux
-      const currentNodes = flowRef.current?.getNodes() || [];
-      const currentQuestionId = questionPath[questionPath.length - 1];
-      const currentQuestion = currentNodes.find(node => node.id === currentQuestionId);
-      
-      if (currentQuestion) {
-        allQuestions.push(currentQuestion);
-      }
-    }
-
-    if (allQuestions.length === 0) {
-      return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body1">
-            No questions available in this survey yet.
-          </Typography>
-        </Box>
-      );
-    }
-
-    const currentQuestion = allQuestions[0];
+    const currentQuestion = previewNodes[currentPreviewIndex];
     if (!currentQuestion) return null;
 
-    // Si c'est une question démographique
-    if (currentQuestion.type === 'demographic') {
-      return (
-        <Box sx={questionContainerStyle}>
-          <Typography variant="h6" gutterBottom sx={questionTitleStyle}>
-            Demographic Information
-          </Typography>
-          
-          {currentQuestion.data.options.map((option: DemographicOption, index: number) => (
-            <Box key={index} sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                {option.label}
-              </Typography>
-              
-              {option.type === 'text' ? (
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder={`Enter your ${option.label.toLowerCase()}`}
-                  value={previewAnswers[`demographic_${option.label}`] || ''}
-                  onChange={(e) => setPreviewAnswers(prev => ({
-                    ...prev,
-                    [`demographic_${option.label}`]: e.target.value
-                  }))}
-                  sx={{ 
-                    maxWidth: 400,
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'white'
-                    }
-                  }}
-                />
-              ) : option.type === 'dropdown' && (
-                <Select
-                  fullWidth
-                  value={previewAnswers[`demographic_${option.label}`] || ''}
-                  onChange={(e) => setPreviewAnswers(prev => ({
-                    ...prev,
-                    [`demographic_${option.label}`]: e.target.value
-                  }))}
-                  sx={{ 
-                    maxWidth: 400,
-                    backgroundColor: 'white'
-                  }}
-                >
-                  <MenuItem value="" disabled>
-                    Select {option.label.toLowerCase()}
-                  </MenuItem>
-                  {option.options?.map((opt: string, i: number) => (
-                    <MenuItem key={i} value={opt}>
-                      {opt}
-                    </MenuItem>
-                  ))}
-                </Select>
-              )}
-            </Box>
-          ))}
-        </Box>
-      );
-    }
-
-    const handleAnswerChange = (questionId: string, answer: any) => {
-      setPreviewAnswers(prev => ({
-        ...prev,
-        [questionId]: answer
-      }));
-
-      // Si c'est une question critique, mettre à jour le chemin
-      const currentNode = previewNodes.find(node => node.id === questionId);
-      if (currentNode?.data?.isCritical) {
-        const nextQuestions = findNextQuestions(questionId, answer);
-        if (nextQuestions.length > 0) {
-          setQuestionPath(prev => [...prev, nextQuestions[0]]);
-        }
-      } else {
-        // Pour les questions non critiques, passer simplement à la suivante dans l'ordre
-        const currentIndex = previewNodes.findIndex(node => node.id === questionId);
-        if (currentIndex < previewNodes.length - 1) {
-          setQuestionPath(prev => [...prev, previewNodes[currentIndex + 1].id]);
-        }
-      }
-    };
-
-    // Rendu des questions standard
     return (
       <Box sx={questionContainerStyle}>
-        <Typography variant="h6" gutterBottom sx={questionTitleStyle}>
-          Question {currentPreviewIndex + 1}
-        </Typography>
-        
-        {/* Affichage du type de question */}
+        {/* Type de question */}
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Type: {currentQuestion.data?.type ? 
-            questionTypes.find((t: { value: string; label: string }) => t.value === currentQuestion.data.type)?.label || currentQuestion.data.type 
-            : 'Non spécifié'}
+          Type: {questionTypes.find(t => t.value === currentQuestion.data?.type)?.label || 'Non spécifié'}
         </Typography>
 
-        {/* Affichage du texte de la question */}
-        <Typography variant="body1" gutterBottom sx={{ 
-          fontSize: '1.1rem',
-          ...questionTitleStyle
-        }}>
-          {currentQuestion.data?.text || 'Aucun texte de question fourni'}
+        {/* Texte de la question */}
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 2,
+            textAlign: 'center',
+            fontWeight: 'bold',
+            color: '#333',
+          }}
+        >
+          {currentQuestion.data?.text || 'Question sans titre'}
         </Typography>
-        
-        {/* Affichage du média */}
+
+        {/* Média de la question */}
         {currentQuestion.data?.mediaUrl && (
-          <Box sx={{ 
-            mt: 2, 
-            mb: 3, 
-            maxWidth: '100%', 
-            maxHeight: '300px', 
-            overflow: 'hidden',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}>
-            {isImageFile(currentQuestion.data.mediaUrl) ? (
-              <img
+          <Box sx={{ mb: 2, textAlign: 'center' }}>
+            {currentQuestion.data.media === 'image' ? (
+              <img 
                 src={currentQuestion.data.mediaUrl}
                 alt="Question media"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '300px',
-                  objectFit: 'contain',
-                  borderRadius: '8px'
+                style={{ 
+                  maxWidth: '50%',
+                  height: 'auto',
+                  margin: '0 auto',
+                  borderRadius: '8px',
+                  objectFit: 'contain'
                 }}
               />
             ) : (
               <ReactPlayer
                 url={currentQuestion.data.mediaUrl}
                 controls
-                width="100%"
-                height="auto"
-                style={{ borderRadius: '8px' }}
+                width="50%"
+                height="200px"
+                style={{
+                  margin: '0 auto',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
               />
             )}
           </Box>
         )}
 
-        {/* Rendu des options selon le type de question */}
-        <Box sx={answerContainerStyle}>
+        {/* Options de réponse */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            mt: 3
+          }}
+        >
           {currentQuestion.data?.type === 'multiple-choice' && (
-            <RadioGroup
-              value={previewAnswers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-            >
+            <RadioGroup>
               {currentQuestion.data.options?.map((option: string, index: number) => (
                 <FormControlLabel
                   key={index}
@@ -364,16 +225,16 @@ export default function DynamicSurveyCreation() {
             </RadioGroup>
           )}
 
+          {currentQuestion.data?.type === 'text' && (
+            <TextField 
+              fullWidth 
+              variant="outlined" 
+              placeholder="Votre réponse"
+            />
+          )}
+
           {currentQuestion.data?.type === 'dropdown' && (
-            <Select
-              fullWidth
-              value={previewAnswers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-              sx={{ mt: 2, maxWidth: 400 }}
-            >
-              <MenuItem disabled value="">
-                Select an option
-              </MenuItem>
+            <Select fullWidth>
               {currentQuestion.data.options?.map((option: string, index: number) => (
                 <MenuItem key={index} value={option}>
                   {option}
@@ -382,79 +243,43 @@ export default function DynamicSurveyCreation() {
             </Select>
           )}
 
-          {currentQuestion.data?.type === 'yes-no' && (
-            <RadioGroup
-              row
-              value={previewAnswers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-              sx={{ mt: 2 }}
-            >
-              <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-              <FormControlLabel value="no" control={<Radio />} label="No" />
-            </RadioGroup>
-          )}
-
-          {currentQuestion.data?.type === 'text' && (
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              placeholder="Enter your answer"
-              value={previewAnswers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-              sx={{ mt: 2 }}
+          {currentQuestion.data?.type === 'slider' && (
+            <Slider 
+              valueLabelDisplay="auto"
+              sx={{ width: '100%', maxWidth: 400 }}
             />
           )}
 
-          {currentQuestion.data?.type === 'slider' && (
-            <Box sx={{ mt: 4, mx: 2 }}>
-              <Slider
-                value={previewAnswers[currentQuestion.id] || 50}
-                onChange={(_, value) => handleAnswerChange(currentQuestion.id, value)}
-                valueLabelDisplay="auto"
-                step={1}
-                marks
-                min={0}
-                max={100}
-              />
-            </Box>
+          {currentQuestion.data?.type === 'rating' && (
+            <Rating />
           )}
 
-          {currentQuestion.data?.type === 'rating' && (
-            <Box sx={{ mt: 2 }}>
-              <Rating
-                value={previewAnswers[currentQuestion.id] || null}
-                onChange={(_, value) => handleAnswerChange(currentQuestion.id, value)}
-              />
-            </Box>
+          {currentQuestion.data?.type === 'yes-no' && (
+            <RadioGroup row>
+              <FormControlLabel value="yes" control={<Radio />} label="Oui" />
+              <FormControlLabel value="no" control={<Radio />} label="Non" />
+            </RadioGroup>
           )}
 
           {currentQuestion.data?.type === 'date' && (
-            <Box sx={{ mt: 2 }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  value={previewAnswers[currentQuestion.id] || null}
-                  onChange={(newDate) => setPreviewAnswers(prev => ({
-                    ...prev,
-                    [currentQuestion.id]: newDate
-                  }))}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      sx={{ 
-                        width: '100%',
-                        maxWidth: 400,
-                        '& .MuiOutlinedInput-root': {
-                          backgroundColor: 'white'
-                        }
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
-            </Box>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Sélectionnez une date"
+                value={null}
+                onChange={() => {}}
+                renderInput={(params) => <TextField {...params} />}
+              />
+            </LocalizationProvider>
           )}
         </Box>
+
+        {/* Numéro de question */}
+        <Typography
+          variant="body2"
+          sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
+        >
+          Question {currentPreviewIndex + 1} sur {previewNodes.length}
+        </Typography>
       </Box>
     );
   };

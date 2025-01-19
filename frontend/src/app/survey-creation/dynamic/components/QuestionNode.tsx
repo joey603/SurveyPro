@@ -72,9 +72,32 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // TODO: Implémenter la logique d'upload
-      console.log('File to upload:', file);
+      setLoadingMedia(true);
+      try {
+        // Simuler un upload vers un serveur
+        const fakeUploadUrl = URL.createObjectURL(file);
+        const newData = {
+          ...questionData,
+          mediaUrl: fakeUploadUrl,
+          media: file.type.startsWith('image/') ? 'image' : 'video'
+        };
+        updateNodeData(newData);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      } finally {
+        setLoadingMedia(false);
+      }
     }
+  };
+
+  const handleMediaUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    const mediaType = url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' : 'video';
+    updateNodeData({
+      ...questionData,
+      mediaUrl: url,
+      media: mediaType
+    });
   };
 
   const handleTypeClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -316,18 +339,19 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
               <input
                 accept="image/*,video/*"
                 style={{ display: 'none' }}
-                id={`media-upload-${data.questionNumber}`}
+                id={`media-upload-${data.id}`}
                 type="file"
                 onChange={handleFileUpload}
               />
-              <label htmlFor={`media-upload-${data.questionNumber}`}>
+              <label htmlFor={`media-upload-${data.id}`}>
                 <Button
                   component="span"
                   startIcon={<PhotoCameraIcon />}
                   variant="outlined"
                   size="small"
+                  disabled={loadingMedia}
                 >
-                  Upload Media
+                  {loadingMedia ? 'Uploading...' : 'Upload Media'}
                 </Button>
               </label>
 
@@ -335,10 +359,36 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
                 fullWidth
                 size="small"
                 label="Media URL"
-                value={questionData.mediaUrl}
-                onChange={(e) => updateNodeData({ ...questionData, mediaUrl: e.target.value })}
+                value={questionData.mediaUrl || ''}
+                onChange={handleMediaUrlChange}
                 sx={{ mt: 1 }}
               />
+
+              {/* Prévisualisation du média */}
+              {questionData.mediaUrl && (
+                <Box sx={{ mt: 2, maxWidth: '100%', maxHeight: '200px', overflow: 'hidden' }}>
+                  {questionData.media === 'image' ? (
+                    <img
+                      src={questionData.mediaUrl}
+                      alt="Question media"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'contain',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  ) : (
+                    <ReactPlayer
+                      url={questionData.mediaUrl}
+                      controls
+                      width="100%"
+                      height="auto"
+                      style={{ borderRadius: '4px' }}
+                    />
+                  )}
+                </Box>
+              )}
             </Box>
           </Box>
         ) : (
@@ -349,6 +399,30 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
             <Typography variant="body2">
               {questionData.text || 'No question text'}
             </Typography>
+            {questionData.mediaUrl && (
+              <Box sx={{ mt: 1, maxWidth: '100%', maxHeight: '150px', overflow: 'hidden' }}>
+                {questionData.media === 'image' ? (
+                  <img
+                    src={questionData.mediaUrl}
+                    alt="Question media"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '150px',
+                      objectFit: 'contain',
+                      borderRadius: '4px'
+                    }}
+                  />
+                ) : (
+                  <ReactPlayer
+                    url={questionData.mediaUrl}
+                    controls
+                    width="100%"
+                    height="auto"
+                    style={{ borderRadius: '4px' }}
+                  />
+                )}
+              </Box>
+            )}
           </Box>
         )}
 
