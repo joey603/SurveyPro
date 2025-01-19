@@ -14,6 +14,7 @@ import ReactFlow, {
   ConnectionMode,
   applyNodeChanges,
   applyEdgeChanges,
+  EdgeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
@@ -46,6 +47,7 @@ const initialEdges: Edge[] = [];
 const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -133,7 +135,6 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
         labelBgStyle: { 
           fill: 'white',
           fillOpacity: 0.9,
-          rx: 4,
         },
       };
       newEdges.push(newEdge);
@@ -151,36 +152,218 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
     }
   }));
 
+  const onEdgeDelete = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+  }, []);
+
+  const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
+    setEdges((els) => {
+      const updatedEdges = els.filter((edge) => edge.id !== oldEdge.id);
+      if (newConnection) {
+        const newEdge = {
+          ...oldEdge,
+          source: newConnection.source || oldEdge.source,
+          target: newConnection.target || oldEdge.target,
+        };
+        updatedEdges.push(newEdge);
+      }
+      return updatedEdges;
+    });
+  }, []);
+
+  interface CustomEdgeProps {
+    id: string;
+    sourceX: number;
+    sourceY: number;
+    targetX: number;
+    targetY: number;
+    label?: string;
+    style?: React.CSSProperties;
+    markerEnd?: string;
+  }
+
+  const edgeOptions = {
+    type: 'step',
+    animated: true,
+    style: { stroke: '#667eea', strokeWidth: 2 },
+    labelStyle: { 
+      fill: '#667eea', 
+      fontWeight: 600,
+      fontSize: 12,
+    },
+    labelBgStyle: { 
+      fill: 'white',
+      fillOpacity: 0.9,
+    },
+    deletable: true,
+    updatable: true,
+    interactionWidth: 60,
+    data: {
+      deleteIcon: true,
+    },
+  };
+
+  const CustomEdge: React.FC<CustomEdgeProps> = ({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    label,
+    style = {},
+    markerEnd,
+  }) => {
+    const isSelected = selectedEdge === id;
+    const midY = (sourceY + targetY) / 2;
+    const midX = (sourceX + targetX) / 2;
+    const edgePath = `M ${sourceX},${sourceY} 
+                      L ${sourceX},${midY} 
+                      L ${targetX},${midY} 
+                      L ${targetX},${targetY}`;
+
+    return (
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedEdge(isSelected ? null : id);
+        }}
+        className="react-flow__edge"
+      >
+        {/* Zone cliquable large et invisible */}
+        <path
+          className="react-flow__edge-hitbox"
+          d={edgePath}
+          strokeWidth={40}
+          stroke="transparent"
+          fill="none"
+        />
+        
+        {/* Tracé visible */}
+        <path
+          id={id}
+          className="react-flow__edge-path"
+          d={edgePath}
+          style={{
+            ...style,
+            strokeWidth: isSelected ? 3 : 2,
+            stroke: isSelected ? '#ff4444' : '#667eea',
+            pointerEvents: 'none',
+          }}
+          markerEnd={markerEnd}
+        />
+        {label && (
+          <text style={{ pointerEvents: 'none' }}>
+            <textPath 
+              href={`#${id}`} 
+              style={{ fontSize: '12px' }} 
+              startOffset="50%" 
+              textAnchor="middle"
+            >
+              {label}
+            </textPath>
+          </text>
+        )}
+      </g>
+    );
+  };
+
+  const edgeTypes = {
+    custom: CustomEdge as unknown as React.ComponentType<EdgeProps>,
+  };
+
+  const GlobalStyles = () => (
+    <style jsx global>{`
+      .react-flow__edge {
+        cursor: pointer;
+      }
+      .react-flow__edge-hitbox {
+        pointer-events: all;
+        stroke-opacity: 0;
+      }
+      .react-flow__edge-hitbox:hover + .react-flow__edge-path {
+        stroke: #ff4444;
+        stroke-width: 3px;
+      }
+      .react-flow__edge-path {
+        pointer-events: none;
+        transition: all 0.2s ease;
+      }
+    `}</style>
+  );
+
+  // Bouton de suppression flottant
+  const DeleteButton = () => {
+    if (!selectedEdge) return null;
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 1000,
+          backgroundColor: '#ff4444',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }}
+        onClick={() => {
+          onEdgeDelete(selectedEdge);
+          setSelectedEdge(null);
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#ff0000';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#ff4444';
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 6l12 12M6 18L18 6" />
+        </svg>
+        Delete Connection
+      </div>
+    );
+  };
+
+  // Gestionnaire de clic sur le fond pour désélectionner
+  const handlePaneClick = () => {
+    setSelectedEdge(null);
+  };
+
   return (
-    <ReactFlow
-      nodes={nodesWithCallbacks}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      connectionMode={ConnectionMode.Loose}
-      defaultEdgeOptions={{
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#667eea' },
-        labelStyle: { 
-          fill: '#667eea', 
-          fontWeight: 600,
-          fontSize: 12,
-        },
-        labelBgStyle: { 
-          fill: 'white',
-          fillOpacity: 0.9,
-          rx: 4,
-        },
-      }}
-      fitView
-    >
-      <Background />
-      <Controls />
-      <MiniMap />
-    </ReactFlow>
+    <>
+      <GlobalStyles />
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <DeleteButton />
+        <ReactFlow
+          nodes={nodesWithCallbacks}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onEdgeUpdate={onEdgeUpdate}
+          onPaneClick={handlePaneClick}
+          connectionMode={ConnectionMode.Loose}
+          defaultEdgeOptions={{
+            ...edgeOptions,
+            type: 'custom',
+          }}
+          fitView
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+    </>
   );
 };
 
