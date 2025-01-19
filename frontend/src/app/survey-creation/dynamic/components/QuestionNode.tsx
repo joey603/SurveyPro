@@ -110,51 +110,58 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
 
   const handleCriticalChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isCritical = event.target.checked;
-    const newData = { ...questionData, isCritical };
+    console.log("Critical change:", isCritical);
     
-    // Si la question devient critique, réinitialiser le type et créer les chemins
-    if (isCritical) {
-      newData.type = 'yes-no';
-      newData.options = [];
-      if (data.onCreatePaths) {
+    const newData = { 
+      ...questionData, 
+      isCritical,
+      type: isCritical ? 'yes-no' : 'text'
+    };
+    
+    updateNodeData(newData);
+    
+    // Créer les chemins après la mise à jour des données
+    if (data.onCreatePaths) {
+      if (isCritical) {
+        console.log("Creating Yes/No paths");
         data.onCreatePaths(data.id, ['Yes', 'No']);
-      }
-    } else {
-      // Si la question n'est plus critique, supprimer les chemins
-      if (data.onCreatePaths) {
+      } else {
+        console.log("Removing paths");
         data.onCreatePaths(data.id, []);
       }
     }
-    
-    updateNodeData(newData);
   };
 
   const handleTypeSelect = (type: string) => {
+    console.log("Type selected:", type);
+    
     const newData = { ...questionData, type };
-    updateNodeData(newData);
-    handleTypeClose();
-
-    // Créer les chemins selon le type pour les questions critiques
+    
     if (questionData.isCritical && data.onCreatePaths) {
       if (type === 'yes-no') {
+        console.log("Creating Yes/No paths");
         data.onCreatePaths(data.id, ['Yes', 'No']);
       } else if (type === 'dropdown') {
-        // Pour dropdown, on attend que les options soient ajoutées
-        if (questionData.options.length > 0) {
-          data.onCreatePaths(data.id, questionData.options);
-        }
+        const defaultOptions = ['Option 1', 'Option 2', 'Option 3'];
+        newData.options = defaultOptions;
+        console.log("Creating dropdown paths:", defaultOptions);
+        data.onCreatePaths(data.id, defaultOptions);
       }
     }
+    
+    updateNodeData(newData);
+    handleTypeClose();
   };
 
   const handleOptionsChange = (newOptions: string[]) => {
     const updatedData = { ...questionData, options: newOptions };
-    updateNodeData(updatedData);
-
-    // Mettre à jour les chemins pour les questions critiques de type dropdown
+    
+    // Mettre à jour les chemins pour les questions de type dropdown
     if (questionData.isCritical && questionData.type === 'dropdown' && data.onCreatePaths) {
       data.onCreatePaths(data.id, newOptions);
     }
+    
+    updateNodeData(updatedData);
   };
 
   const renderQuestionFields = () => {

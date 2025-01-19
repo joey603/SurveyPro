@@ -15,6 +15,8 @@ import ReactFlow, {
   applyNodeChanges,
   applyEdgeChanges,
   EdgeProps,
+  getBezierPath,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
@@ -33,11 +35,14 @@ const initialNodes: Node[] = [
     id: '1',
     type: 'questionNode',
     data: { 
+      id: '1',
       questionNumber: 1,
       type: 'text',
       text: '',
       options: [],
       media: '',
+      mediaUrl: '',
+      isCritical: false,
     },
     position: { x: 250, y: 0 },
   },
@@ -54,6 +59,96 @@ const SurveyFlow = forwardRef<{
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
 
+  const handleNodeChange = useCallback((nodeId: string, newData: any) => {
+    setNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      )
+    );
+  }, []);
+
+  const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
+    console.log("Creating paths for node:", sourceId, "with options:", options);
+    
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    if (!sourceNode) {
+      console.log("Source node not found");
+      return;
+    }
+
+    // Supprimer les anciens nœuds et edges
+    setNodes(prevNodes => prevNodes.filter(node => !node.id.startsWith(`${sourceId}_`)));
+    setEdges(prevEdges => prevEdges.filter(edge => edge.source !== sourceId));
+
+    if (options.length === 0) return;
+
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+    const spacing = 200;
+
+    options.forEach((option, index) => {
+      const newNodeId = `${sourceId}_${option}`;
+      console.log("Creating new node:", newNodeId);
+
+      // Créer un nouveau nœud
+      const newNode: Node = {
+        id: newNodeId,
+        type: 'questionNode',
+        data: { 
+          id: newNodeId,
+          questionNumber: nodes.length + newNodes.length + 1,
+          type: 'text',
+          text: `Question pour "${option}"`,
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+          onCreatePaths: createPathsFromNode,
+          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
+        },
+        position: { 
+          x: sourceNode.position.x + spacing,
+          y: sourceNode.position.y + (index - (options.length - 1) / 2) * spacing,
+        },
+      };
+      newNodes.push(newNode);
+
+      // Créer un edge
+      const newEdge: Edge = {
+        id: `e${sourceId}-${option}`,
+        source: sourceId,
+        target: newNodeId,
+        label: option,
+        type: 'default',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        style: { 
+          strokeWidth: 2,
+          stroke: '#667eea',
+        },
+        labelStyle: { 
+          fill: '#667eea', 
+          fontWeight: 600,
+          fontSize: 12,
+        },
+        labelBgStyle: { 
+          fill: 'white',
+          fillOpacity: 0.9,
+        },
+      };
+      newEdges.push(newEdge);
+    });
+
+    console.log("New nodes:", newNodes);
+    console.log("New edges:", newEdges);
+
+    setNodes(prevNodes => [...prevNodes, ...newNodes]);
+    setEdges(prevEdges => [...prevEdges, ...newEdges]);
+  }, [nodes, handleNodeChange]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
@@ -68,92 +163,6 @@ const SurveyFlow = forwardRef<{
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     []
   );
-
-  const addNewQuestion = useCallback(() => {
-    const newNode: Node = {
-      id: (nodes.length + 1).toString(),
-      type: 'questionNode',
-      data: { 
-        questionNumber: nodes.length + 1,
-        type: 'text',
-        text: '',
-        options: [],
-        media: '',
-      },
-      position: { 
-        x: 250,
-        y: nodes.length * 150,
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
-  }, [nodes.length]);
-
-  const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
-    setNodes(nodes => nodes.filter(node => !node.id.startsWith(`${sourceId}-`)));
-    setEdges(edges => edges.filter(edge => !edge.source.startsWith(sourceId)));
-
-    const sourceNode = nodes.find(n => n.id === sourceId);
-    if (!sourceNode) return;
-
-    const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
-    const spacing = 200;
-
-    options.forEach((option, index) => {
-      const newNode: Node = {
-        id: `${sourceId}-${index}`,
-        type: 'questionNode',
-        data: { 
-          id: `${sourceId}-${index}`,
-          questionNumber: nodes.length + newNodes.length + 1,
-          type: 'text',
-          text: '',
-          options: [],
-          media: '',
-          mediaUrl: '',
-          isCritical: false,
-        },
-        position: { 
-          x: sourceNode.position.x + spacing,
-          y: sourceNode.position.y + (index - (options.length - 1) / 2) * spacing,
-        },
-      };
-      newNodes.push(newNode);
-
-      const newEdge: Edge = {
-        id: `e-${sourceId}-${index}`,
-        source: sourceId,
-        target: newNode.id,
-        label: option,
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#667eea' },
-        labelStyle: { 
-          fill: '#667eea', 
-          fontWeight: 600,
-          fontSize: 12,
-        },
-        labelBgStyle: { 
-          fill: 'white',
-          fillOpacity: 0.9,
-        },
-      };
-      newEdges.push(newEdge);
-    });
-
-    setNodes(nodes => [...nodes, ...newNodes]);
-    setEdges(edges => [...edges, ...newEdges]);
-  }, [nodes]);
-
-  const handleNodeChange = useCallback((nodeId: string, newData: any) => {
-    setNodes(prevNodes => 
-      prevNodes.map(node => 
-        node.id === nodeId 
-          ? { ...node, data: { ...node.data, ...newData } }
-          : node
-      )
-    );
-  }, []);
 
   const nodesWithCallbacks = nodes.map(node => ({
     ...node,
@@ -183,104 +192,61 @@ const SurveyFlow = forwardRef<{
     });
   }, []);
 
-  interface CustomEdgeProps {
-    id: string;
-    sourceX: number;
-    sourceY: number;
-    targetX: number;
-    targetY: number;
-    label?: string;
-    style?: React.CSSProperties;
-    markerEnd?: string;
-  }
-
-  const edgeOptions = {
-    type: 'step',
-    animated: true,
-    style: { stroke: '#667eea', strokeWidth: 2 },
-    labelStyle: { 
-      fill: '#667eea', 
-      fontWeight: 600,
-      fontSize: 12,
-    },
-    labelBgStyle: { 
-      fill: 'white',
-      fillOpacity: 0.9,
-    },
-    deletable: true,
-    updatable: true,
-    interactionWidth: 60,
-    data: {
-      deleteIcon: true,
-    },
-  };
-
-  const CustomEdge: React.FC<CustomEdgeProps> = ({
+  const CustomEdge = ({
     id,
     sourceX,
     sourceY,
     targetX,
     targetY,
     label,
+    labelStyle,
+    labelBgStyle,
     style = {},
     markerEnd,
-  }) => {
-    const isSelected = selectedEdge === id;
-    const midY = (sourceY + targetY) / 2;
-    const midX = (sourceX + targetX) / 2;
-    const edgePath = `M ${sourceX},${sourceY} 
-                      L ${sourceX},${midY} 
-                      L ${targetX},${midY} 
-                      L ${targetX},${targetY}`;
+  }: EdgeProps) => {
+    const [edgePath, labelX, labelY] = getBezierPath({
+      sourceX,
+      sourceY,
+      targetX,
+      targetY,
+    });
 
     return (
-      <g
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedEdge(isSelected ? null : id);
-        }}
-        className="react-flow__edge"
-      >
-        {/* Zone cliquable large et invisible */}
-        <path
-          className="react-flow__edge-hitbox"
-          d={edgePath}
-          strokeWidth={40}
-          stroke="transparent"
-          fill="none"
-        />
-        
-        {/* Tracé visible */}
+      <>
         <path
           id={id}
+          style={style}
           className="react-flow__edge-path"
           d={edgePath}
-          style={{
-            ...style,
-            strokeWidth: isSelected ? 3 : 2,
-            stroke: isSelected ? '#ff4444' : '#667eea',
-            pointerEvents: 'none',
-          }}
           markerEnd={markerEnd}
         />
         {label && (
-          <text style={{ pointerEvents: 'none' }}>
-            <textPath 
-              href={`#${id}`} 
-              style={{ fontSize: '12px' }} 
-              startOffset="50%" 
+          <g transform={`translate(${labelX},${labelY})`}>
+            <rect
+              x="-20"
+              y="-10"
+              width="40"
+              height="20"
+              rx="5"
+              ry="5"
+              style={labelBgStyle}
+            />
+            <text
+              style={labelStyle}
+              dominantBaseline="middle"
               textAnchor="middle"
+              fill="#000"
             >
               {label}
-            </textPath>
-          </text>
+            </text>
+          </g>
         )}
-      </g>
+      </>
     );
   };
 
   const edgeTypes = {
-    custom: CustomEdge as unknown as React.ComponentType<EdgeProps>,
+    custom: CustomEdge,
   };
 
   const GlobalStyles = () => (
@@ -360,7 +326,26 @@ const SurveyFlow = forwardRef<{
       setEdges(initialEdges);
     },
     getNodes: () => nodes,
-    addNewQuestion
+    addNewQuestion: () => {
+      const newNode: Node = {
+        id: (nodes.length + 1).toString(),
+        type: 'questionNode',
+        data: { 
+          id: (nodes.length + 1).toString(),
+          questionNumber: nodes.length + 1,
+          type: 'text',
+          text: '',
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+          onCreatePaths: createPathsFromNode,
+          onChange: (newData: any) => handleNodeChange((nodes.length + 1).toString(), newData)
+        },
+        position: { x: 250, y: nodes.length * 150 },
+      };
+      setNodes(prevNodes => [...prevNodes, newNode]);
+    }
   }));
 
   return (
@@ -380,7 +365,6 @@ const SurveyFlow = forwardRef<{
           onPaneClick={handlePaneClick}
           connectionMode={ConnectionMode.Loose}
           defaultEdgeOptions={{
-            ...edgeOptions,
             type: 'custom',
           }}
           fitView
