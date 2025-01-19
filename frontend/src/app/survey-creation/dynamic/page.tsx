@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Paper, 
@@ -33,6 +33,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ReactPlayer from 'react-player';
+import { Edge } from 'reactflow';
 
 const educationOptions = [
   'High School',
@@ -65,6 +66,10 @@ interface SurveyFlowRef {
   addNewQuestion: () => void;
 }
 
+interface PreviewAnswer {
+  [key: string]: string;
+}
+
 const questionTypes = [
   { value: 'text', label: 'Texte libre' },
   { value: 'yes-no', label: 'Oui/Non' },
@@ -79,6 +84,7 @@ export default function DynamicSurveyCreation() {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [previewNodes, setPreviewNodes] = useState<any[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const flowRef = useRef<SurveyFlowRef | null>(null);
   
@@ -90,13 +96,9 @@ export default function DynamicSurveyCreation() {
     },
   });
 
-  // Ajouter l'état pour les réponses de prévisualisation
-  const [previewAnswers, setPreviewAnswers] = useState<{
-    [questionId: string]: any;
-  }>({});
+  const [previewAnswers, setPreviewAnswers] = useState<PreviewAnswer>({});
 
-  // Ajout d'un état pour suivre le chemin des questions
-  const [questionPath, setQuestionPath] = useState<string[]>(['1']); // Commence avec la question 1
+  const [questionPath, setQuestionPath] = useState<string[]>(['1']);
 
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
@@ -109,10 +111,8 @@ export default function DynamicSurveyCreation() {
 
   const handleResetSurvey = () => {
     if (window.confirm('Are you sure you want to reset the survey? All progress will be lost.')) {
-      // Reset les champs du formulaire
       reset();
       
-      // Reset le flow via la référence
       if (flowRef.current) {
         flowRef.current.resetFlow();
       }
@@ -125,10 +125,17 @@ export default function DynamicSurveyCreation() {
   };
 
   const handleOpenPreview = () => {
-    // Capture les nodes existants au moment d'ouvrir la prévisualisation
-    const currentNodes = flowRef.current?.getNodes() || [];
-    setPreviewNodes(currentNodes);
-    setShowPreview(true);
+    if (flowRef.current) {
+      const nodes = flowRef.current.getNodes();
+      setPreviewNodes(nodes);
+      
+      setTimeout(() => {
+        const orderedNodes = getOrderedNodes();
+        setPreviewNodes(orderedNodes);
+        setCurrentPreviewIndex(0);
+        setShowPreview(true);
+      }, 0);
+    }
   };
 
   const handleClosePreview = () => {
@@ -136,7 +143,7 @@ export default function DynamicSurveyCreation() {
     setCurrentPreviewIndex(0);
     setPreviewNodes([]);
     setPreviewAnswers({});
-    setQuestionPath(['1']); // Réinitialiser le chemin
+    setQuestionPath(['1']);
   };
 
   const renderPreviewQuestion = () => {
@@ -153,12 +160,10 @@ export default function DynamicSurveyCreation() {
 
     return (
       <Box sx={questionContainerStyle}>
-        {/* Type de question */}
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           Type: {questionTypes.find(t => t.value === currentQuestion.data?.type)?.label || 'Non spécifié'}
         </Typography>
 
-        {/* Texte de la question */}
         <Typography
           variant="h6"
           sx={{
@@ -171,7 +176,6 @@ export default function DynamicSurveyCreation() {
           {currentQuestion.data?.text || 'Question sans titre'}
         </Typography>
 
-        {/* Média de la question */}
         {currentQuestion.data?.mediaUrl && (
           <Box sx={{ mb: 2, textAlign: 'center' }}>
             {currentQuestion.data.media === 'image' ? (
@@ -202,7 +206,6 @@ export default function DynamicSurveyCreation() {
           </Box>
         )}
 
-        {/* Options de réponse */}
         <Box
           sx={{
             display: 'flex',
@@ -273,7 +276,6 @@ export default function DynamicSurveyCreation() {
           )}
         </Box>
 
-        {/* Numéro de question */}
         <Typography
           variant="body2"
           sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
@@ -285,22 +287,47 @@ export default function DynamicSurveyCreation() {
   };
 
   const handleNext = () => {
-    const currentQuestionId = questionPath[questionPath.length - 1];
-    const answer = previewAnswers[currentQuestionId];
+    const currentNode = previewNodes[currentPreviewIndex];
+    if (!currentNode) return;
+
+    const nextConnections = edges.filter((edge: Edge) => edge.source === currentNode.id);
     
-    if (answer) {
-      const nextQuestions = findNextQuestions(currentQuestionId, answer);
-      if (nextQuestions.length > 0) {
-        setQuestionPath(prev => [...prev, nextQuestions[0]]);
+    if (nextConnections.length === 0) {
+      if (currentPreviewIndex < previewNodes.length - 1) {
+        setCurrentPreviewIndex(prev => prev + 1);
+      }
+      return;
+    }
+
+    const answer = previewAnswers[currentNode.id];
+    const matchingConnection = nextConnections.find((edge: Edge) => edge.label === answer);
+    
+    if (matchingConnection) {
+      const nextNodeIndex = previewNodes.findIndex(node => node.id === matchingConnection.target);
+      if (nextNodeIndex !== -1) {
+        setCurrentPreviewIndex(nextNodeIndex);
+      }
+    } else {
+      if (currentPreviewIndex < previewNodes.length - 1) {
         setCurrentPreviewIndex(prev => prev + 1);
       }
     }
   };
 
   const handlePrevious = () => {
-    if (questionPath.length > 1) {
-      setQuestionPath(prev => prev.slice(0, -1));
-      setCurrentPreviewIndex(prev => prev - 1);
+    const currentNode = previewNodes[currentPreviewIndex];
+    if (!currentNode) return;
+
+    const previousConnections = edges.filter((edge: Edge) => edge.target === currentNode.id);
+    if (previousConnections.length > 0) {
+      const prevNodeIndex = previewNodes.findIndex(node => node.id === previousConnections[0].source);
+      if (prevNodeIndex !== -1) {
+        setCurrentPreviewIndex(prevNodeIndex);
+      }
+    } else {
+      if (currentPreviewIndex > 0) {
+        setCurrentPreviewIndex(prev => prev - 1);
+      }
     }
   };
 
@@ -329,9 +356,64 @@ export default function DynamicSurveyCreation() {
     fetchCities();
   }, []);
 
+  const getOrderedNodes = () => {
+    const orderedNodes: any[] = [];
+    const visited = new Set();
+    const edgeMap = new Map();
+
+    edges.forEach((edge: Edge) => {
+      if (!edgeMap.has(edge.source)) {
+        edgeMap.set(edge.source, []);
+      }
+      edgeMap.get(edge.source).push({
+        target: edge.target,
+        condition: edge.label
+      });
+    });
+
+    const traverse = (nodeId: string) => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+
+      const node = previewNodes.find(n => n.id === nodeId);
+      if (node) {
+        orderedNodes.push(node);
+      }
+
+      const connections = edgeMap.get(nodeId) || [];
+      connections.forEach(({ target }: { target: string }) => {
+        traverse(target);
+      });
+    };
+
+    traverse('1');
+
+    previewNodes.forEach(node => {
+      if (!visited.has(node.id)) {
+        orderedNodes.push(node);
+      }
+    });
+
+    return orderedNodes;
+  };
+
+  useEffect(() => {
+    if (showPreview && flowRef.current) {
+      const nodes = flowRef.current.getNodes();
+      setPreviewNodes(nodes);
+    }
+  }, [showPreview]);
+
+  const handleEdgesChange = useCallback((newEdges: Edge[]) => {
+    setEdges(newEdges);
+    if (showPreview) {
+      const orderedNodes = getOrderedNodes();
+      setPreviewNodes(orderedNodes);
+    }
+  }, [showPreview]);
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Basic Information Section */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
           Basic Information
@@ -378,14 +460,18 @@ export default function DynamicSurveyCreation() {
         />
       </Paper>
 
-      {/* Flow Editor */}
       <Paper sx={{ p: 3, mb: 3, height: '600px', position: 'relative' }}>
         <SurveyFlow 
           ref={flowRef}
-          onAddNode={() => {}} 
+          onAddNode={() => {
+            if (flowRef.current) {
+              const nodes = flowRef.current.getNodes();
+              setPreviewNodes(nodes);
+            }
+          }} 
+          onEdgesChange={handleEdgesChange}
         />
         
-        {/* Floating Add Question Button */}
         <Tooltip title="Add Question" placement="left">
           <Fab 
             color="primary" 
@@ -410,7 +496,6 @@ export default function DynamicSurveyCreation() {
         </Tooltip>
       </Paper>
 
-      {/* Action Buttons */}
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
           onClick={handleResetSurvey}
@@ -455,11 +540,10 @@ export default function DynamicSurveyCreation() {
         </Button>
       </Box>
 
-      {/* Preview Dialog */}
       <Dialog
         data-testid="survey-preview-dialog"
         open={showPreview}
-        onClose={() => setShowPreview(false)}
+        onClose={handleClosePreview}
         maxWidth="md"
         fullWidth
       >
@@ -504,7 +588,7 @@ export default function DynamicSurveyCreation() {
           }}
         >
           <Button
-            onClick={() => setCurrentPreviewIndex((prev) => Math.max(prev - 1, 0))}
+            onClick={handlePrevious}
             disabled={currentPreviewIndex === 0}
             variant="outlined"
             sx={{
@@ -519,10 +603,8 @@ export default function DynamicSurveyCreation() {
             Previous
           </Button>
           <Button
-            onClick={() => setCurrentPreviewIndex((prev) =>
-              Math.min(prev + 1, previewNodes.length + (watch('demographicEnabled') ? 1 : 0) - 1)
-            )}
-            disabled={currentPreviewIndex === previewNodes.length + (watch('demographicEnabled') ? 1 : 0) - 1}
+            onClick={handleNext}
+            disabled={currentPreviewIndex === previewNodes.length - 1}
             variant="outlined"
             sx={{
               color: '#1a237e',
@@ -536,7 +618,7 @@ export default function DynamicSurveyCreation() {
             Next
           </Button>
           <Button
-            onClick={() => setShowPreview(false)}
+            onClick={handleClosePreview}
             variant="contained"
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

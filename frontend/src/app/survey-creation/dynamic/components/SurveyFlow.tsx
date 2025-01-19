@@ -21,6 +21,7 @@ import QuestionNode from './QuestionNode';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
+  onEdgesChange: (edges: Edge[]) => void;
 }
 
 const nodeTypes = {
@@ -48,7 +49,7 @@ const SurveyFlow = forwardRef<{
   resetFlow: () => void;
   getNodes: () => any[];
   addNewQuestion: () => void;
-}, SurveyFlowProps>(({ onAddNode }, ref) => {
+}, SurveyFlowProps>(({ onAddNode, onEdgesChange }, ref) => {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
@@ -58,7 +59,7 @@ const SurveyFlow = forwardRef<{
     []
   );
 
-  const onEdgesChange = useCallback(
+  const onEdgesChangeCallback = useCallback(
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
@@ -347,6 +348,11 @@ const SurveyFlow = forwardRef<{
     setSelectedEdge(null);
   };
 
+  // Mettre à jour le parent quand les edges changent
+  useEffect(() => {
+    onEdgesChange(edges);
+  }, [edges, onEdgesChange]);
+
   // Expose la fonction de reset au parent
   useImperativeHandle(ref, () => ({
     resetFlow: () => {
@@ -368,7 +374,7 @@ const SurveyFlow = forwardRef<{
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onEdgesChange={onEdgesChangeCallback}
           onConnect={onConnect}
           onEdgeUpdate={onEdgeUpdate}
           onPaneClick={handlePaneClick}
