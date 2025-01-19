@@ -43,6 +43,9 @@ import Tooltip from '@mui/material/Tooltip';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Zoom from '@mui/material/Zoom';
 import { colors } from '../../theme/colors';
+import SurveyFlowVisualization from '../../components/SurveyFlowVisualization';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import CloseIcon from '@mui/icons-material/Close';
 
 type Question = {
   id: string;
@@ -706,12 +709,6 @@ const SurveyCreationPage = () => {
       const result = await createSurvey(surveyData, token);
       console.log('Survey created successfully:', result);
 
-      setNotification({
-        message: 'Survey created successfully!',
-        severity: 'success',
-        open: true,
-      });
-
       setTimeout(() => {
         handleResetSurvey(null);
       }, 2000);
@@ -1083,6 +1080,9 @@ const SurveyCreationPage = () => {
     });
   };
 
+  // Ajouter un état pour contrôler l'affichage de la visualisation
+  const [showFlowVisualization, setShowFlowVisualization] = useState(false);
+
   return (
     <Box
       component="main"
@@ -1305,9 +1305,27 @@ const SurveyCreationPage = () => {
                     component="article"
                     data-testid={`question-card-${index}`}
                     elevation={1}
-                    sx={{ p: 3, mb: 3, borderRadius: 2 }}
+                    sx={{ p: 3, mb: 3, borderRadius: 2, position: 'relative' }}
                   >
-                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -15,
+                        left: 20,
+                        backgroundColor: colors.primary.main,
+                        color: 'white',
+                        borderRadius: '20px',
+                        padding: '4px 12px',
+                        fontSize: '0.875rem',
+                        fontWeight: 'bold',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        zIndex: 1,
+                      }}
+                    >
+                      Question {index + 1}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 2 }}>
                       <Controller
                         name={`questions.${index}.type`}
                         control={control}
@@ -1430,11 +1448,11 @@ const SurveyCreationPage = () => {
                                             : {}),
                                           options: {
                                             ...((typeof prev.questions[
-                                              index
-                                            ] === 'object' &&
-                                              (prev.questions[index] as any)
-                                                .options) ||
-                                              {}),
+                                            index
+                                          ] === 'object' &&
+                                            (prev.questions[index] as any)
+                                              .options) ||
+                                            {}),
                                             [optionIndex]: !newValue,
                                           },
                                         },
@@ -1845,6 +1863,24 @@ const SurveyCreationPage = () => {
                 }}
               >
                 <Button
+                  onClick={() => setShowFlowVisualization(true)}
+                  variant="contained"
+                  startIcon={<AccountTreeIcon />}
+                  sx={{
+                    background: colors.action.info.gradient,
+                    color: 'white',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      background:
+                        'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+                      boxShadow: 'none',
+                    },
+                  }}
+                >
+                  View Flow
+                </Button>
+
+                <Button
                   onClick={() => handleResetSurvey(null)}
                   variant="contained"
                   startIcon={<DeleteIcon />}
@@ -2042,6 +2078,24 @@ const SurveyCreationPage = () => {
       >
         <Typography variant="body2">Questions: {fields.length}</Typography>
       </Box>
+
+      {/* Ajouter le Dialog pour la visualisation */}
+      <Dialog
+        open={showFlowVisualization}
+        onClose={() => setShowFlowVisualization(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Survey Flow Visualization
+          <IconButton onClick={() => setShowFlowVisualization(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ height: '600px' }}>
+          <SurveyFlowVisualization questions={fields} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
