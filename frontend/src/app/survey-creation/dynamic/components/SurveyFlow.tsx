@@ -86,13 +86,14 @@ const SurveyFlow = forwardRef<{
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const spacing = 200;
+    const verticalSpacing = 150; // Espacement vertical entre les nœuds
+    const horizontalOffset = 200; // Décalage horizontal par rapport au nœud parent
 
     options.forEach((option, index) => {
       const newNodeId = `${sourceId}_${option}`;
       console.log("Creating new node:", newNodeId);
 
-      // Créer un nouveau nœud
+      // Créer un nouveau nœud avec position verticale
       const newNode: Node = {
         id: newNodeId,
         type: 'questionNode',
@@ -109,8 +110,8 @@ const SurveyFlow = forwardRef<{
           onChange: (newData: any) => handleNodeChange(newNodeId, newData)
         },
         position: { 
-          x: sourceNode.position.x + spacing,
-          y: sourceNode.position.y + (index - (options.length - 1) / 2) * spacing,
+          x: sourceNode.position.x + horizontalOffset, // Décalage horizontal fixe
+          y: sourceNode.position.y + verticalSpacing * (index + 1), // Position verticale progressive
         },
       };
       newNodes.push(newNode);
