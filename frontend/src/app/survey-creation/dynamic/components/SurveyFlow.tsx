@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -44,7 +44,11 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
-const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
+const SurveyFlow = forwardRef<{ 
+  resetFlow: () => void;
+  getNodes: () => any[];
+  addNewQuestion: () => void;
+}, SurveyFlowProps>(({ onAddNode }, ref) => {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
@@ -82,10 +86,6 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
     };
     setNodes((nds) => [...nds, newNode]);
   }, [nodes.length]);
-
-  useEffect(() => {
-    addNewQuestion();
-  }, [onAddNode]);
 
   const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
     setNodes(nodes => nodes.filter(node => !node.id.startsWith(`${sourceId}-`)));
@@ -336,6 +336,16 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
     setSelectedEdge(null);
   };
 
+  // Expose la fonction de reset au parent
+  useImperativeHandle(ref, () => ({
+    resetFlow: () => {
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+    },
+    getNodes: () => nodes,
+    addNewQuestion
+  }));
+
   return (
     <>
       <GlobalStyles />
@@ -365,6 +375,6 @@ const SurveyFlow: React.FC<SurveyFlowProps> = ({ onAddNode }) => {
       </div>
     </>
   );
-};
+});
 
 export default SurveyFlow; 
