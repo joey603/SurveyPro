@@ -17,6 +17,8 @@ import ReactFlow, {
   EdgeProps,
   getBezierPath,
   MarkerType,
+  ReactFlowInstance,
+  Viewport,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
@@ -59,6 +61,7 @@ const SurveyFlow = forwardRef<{
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => 
@@ -398,7 +401,10 @@ const SurveyFlow = forwardRef<{
     const VERTICAL_SPACING = 150;
     const HORIZONTAL_SPACING = 450;
     const START_Y = 50;
-    const CENTER_X = 400;
+    
+    // Calculer le centre X en fonction de la largeur du conteneur
+    const containerWidth = 1200; // Largeur approximative du conteneur
+    const CENTER_X = containerWidth / 2;
     
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
@@ -470,6 +476,29 @@ const SurveyFlow = forwardRef<{
     
     calculateLayout();
     
+    // Calculer les dimensions totales du flow
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    
+    nodes.forEach(node => {
+      const level = nodeLevels.get(node.id) || 0;
+      const column = nodeColumns.get(node.id) || 0;
+      const x = CENTER_X + column * HORIZONTAL_SPACING;
+      const y = START_Y + level * VERTICAL_SPACING;
+      
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    });
+    
+    // Calculer les offsets pour centrer
+    const flowWidth = maxX - minX;
+    const flowHeight = maxY - minY;
+    const xOffset = (containerWidth - flowWidth) / 2 - minX;
+    
     setNodes(prevNodes => prevNodes.map(node => {
       const level = nodeLevels.get(node.id) || 0;
       const column = nodeColumns.get(node.id) || 0;
@@ -477,12 +506,29 @@ const SurveyFlow = forwardRef<{
       return {
         ...node,
         position: {
-          x: CENTER_X + column * HORIZONTAL_SPACING,
+          x: CENTER_X + column * HORIZONTAL_SPACING + xOffset,
           y: START_Y + level * VERTICAL_SPACING
         }
       };
     }));
-  }, [nodes, edges]);
+
+    // Ajuster le zoom et la position de la vue pour voir tout le flow
+    if (reactFlowInstance) {
+      const padding = 50;
+      const viewportWidth = containerWidth;
+      const viewportHeight = 600; // Hauteur approximative du conteneur
+      
+      const xScale = (viewportWidth - padding * 2) / (flowWidth + HORIZONTAL_SPACING);
+      const yScale = (viewportHeight - padding * 2) / (flowHeight + VERTICAL_SPACING);
+      const scale = Math.min(xScale, yScale, 1); // Limiter le zoom à 1
+      
+      reactFlowInstance.setViewport({
+        x: padding,
+        y: padding,
+        zoom: scale
+      });
+    }
+  }, [nodes, edges, reactFlowInstance]);
 
   // Ajouter le bouton de réorganisation
   const ReorganizeButton = () => (
@@ -577,6 +623,14 @@ const SurveyFlow = forwardRef<{
             },
           }}
           fitView
+          onInit={setReactFlowInstance}
+          onMove={(event, viewport) => {
+            setReactFlowInstance((prev) => ({
+              ...prev!,
+              viewportInitialized: true,
+              viewport,
+            } as ReactFlowInstance));
+          }}
         >
           <Background />
           <Controls />
