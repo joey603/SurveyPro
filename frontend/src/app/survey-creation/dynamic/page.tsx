@@ -67,7 +67,7 @@ interface SurveyFlowRef {
 }
 
 interface PreviewAnswer {
-  [key: string]: string;
+  [key: string]: string | number;
 }
 
 const questionTypes = [
@@ -154,8 +154,28 @@ export default function DynamicSurveyCreation() {
     const currentQuestion = previewNodes[currentPreviewIndex];
     if (!currentQuestion) return null;
 
+    const handleAnswerChange = (value: string | number) => {
+      setPreviewAnswers(prev => ({
+        ...prev,
+        [currentQuestion.id]: value
+      }));
+    };
+
+    const isCriticalQuestion = currentQuestion.data?.isCritical;
+    const currentAnswer = previewAnswers[currentQuestion.id];
+
     return (
       <Box sx={questionContainerStyle}>
+        {isCriticalQuestion && (
+          <Typography 
+            variant="subtitle2" 
+            color="error" 
+            sx={{ mb: 2 }}
+          >
+            * Cette question est critique - Une réponse est requise pour continuer
+          </Typography>
+        )}
+
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           Type: {questionTypes.find(t => t.value === currentQuestion.data?.type)?.label || 'Non spécifié'}
         </Typography>
@@ -212,7 +232,10 @@ export default function DynamicSurveyCreation() {
           }}
         >
           {currentQuestion.data?.type === 'multiple-choice' && (
-            <RadioGroup>
+            <RadioGroup
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(e.target.value)}
+            >
               {currentQuestion.data.options?.map((option: string, index: number) => (
                 <FormControlLabel
                   key={index}
@@ -254,7 +277,11 @@ export default function DynamicSurveyCreation() {
           )}
 
           {currentQuestion.data?.type === 'yes-no' && (
-            <RadioGroup row>
+            <RadioGroup
+              row
+              value={previewAnswers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(e.target.value)}
+            >
               <FormControlLabel value="yes" control={<Radio />} label="Oui" />
               <FormControlLabel value="no" control={<Radio />} label="Non" />
             </RadioGroup>
@@ -286,16 +313,34 @@ export default function DynamicSurveyCreation() {
     const currentNode = previewNodes[currentPreviewIndex];
     if (!currentNode) return;
 
-    const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
-    
-    if (outgoingEdges.length > 0) {
-      const nextNodeId = outgoingEdges[0].target;
-      const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
-      if (nextNodeIndex !== -1) {
-        setCurrentPreviewIndex(nextNodeIndex);
+    if (currentNode.data?.isCritical) {
+      const answer = previewAnswers[currentNode.id];
+      
+      if (!answer) {
+        return;
+      }
+
+      const outgoingEdges = edges.filter(edge => 
+        edge.source === currentNode.id && 
+        String(edge.label).toLowerCase() === String(answer).toLowerCase()
+      );
+
+      if (outgoingEdges.length > 0) {
+        const nextNodeId = outgoingEdges[0].target;
+        const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
+        if (nextNodeIndex !== -1) {
+          setCurrentPreviewIndex(nextNodeIndex);
+        }
       }
     } else {
-      if (currentPreviewIndex < previewNodes.length - 1) {
+      const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
+      if (outgoingEdges.length > 0) {
+        const nextNodeId = outgoingEdges[0].target;
+        const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
+        if (nextNodeIndex !== -1) {
+          setCurrentPreviewIndex(nextNodeIndex);
+        }
+      } else if (currentPreviewIndex < previewNodes.length - 1) {
         setCurrentPreviewIndex(prev => prev + 1);
       }
     }
@@ -306,17 +351,14 @@ export default function DynamicSurveyCreation() {
     if (!currentNode) return;
 
     const incomingEdges = edges.filter(edge => edge.target === currentNode.id);
-    
     if (incomingEdges.length > 0) {
       const prevNodeId = incomingEdges[0].source;
       const prevNodeIndex = previewNodes.findIndex(node => node.id === prevNodeId);
       if (prevNodeIndex !== -1) {
         setCurrentPreviewIndex(prevNodeIndex);
       }
-    } else {
-      if (currentPreviewIndex > 0) {
-        setCurrentPreviewIndex(prev => prev - 1);
-      }
+    } else if (currentPreviewIndex > 0) {
+      setCurrentPreviewIndex(prev => prev - 1);
     }
   };
 
@@ -564,43 +606,21 @@ export default function DynamicSurveyCreation() {
             onClick={handlePrevious}
             disabled={currentPreviewIndex === 0}
             variant="outlined"
-            sx={{
-              color: '#1a237e',
-              borderColor: '#1a237e',
-              '&:hover': {
-                borderColor: '#1a237e',
-                backgroundColor: 'rgba(26, 35, 126, 0.04)',
-              },
-            }}
           >
             Previous
           </Button>
           <Button
             onClick={handleNext}
-            disabled={currentPreviewIndex === previewNodes.length - 1}
+            disabled={
+              currentPreviewIndex === previewNodes.length - 1 ||
+              (previewNodes[currentPreviewIndex]?.data?.isCritical && 
+               !previewAnswers[previewNodes[currentPreviewIndex]?.id])
+            }
             variant="outlined"
-            sx={{
-              color: '#1a237e',
-              borderColor: '#1a237e',
-              '&:hover': {
-                borderColor: '#1a237e',
-                backgroundColor: 'rgba(26, 35, 126, 0.04)',
-              },
-            }}
           >
             Next
           </Button>
-          <Button
-            onClick={handleClosePreview}
-            variant="contained"
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              },
-            }}
-          >
+          <Button onClick={handleClosePreview} variant="contained">
             Close Preview
           </Button>
         </DialogActions>
