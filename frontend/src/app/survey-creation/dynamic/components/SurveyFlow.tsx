@@ -58,6 +58,7 @@ const SurveyFlow = forwardRef<{
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => 
@@ -167,18 +168,35 @@ const SurveyFlow = forwardRef<{
     []
   );
 
-  const nodesWithCallbacks = nodes.map(node => ({
-    ...node,
-    data: {
-      ...node.data,
-      onChange: (newData: any) => handleNodeChange(node.id, newData),
-      onCreatePaths: createPathsFromNode
-    }
-  }));
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.stopPropagation();
+    if (node.data.isCritical) return;
+    setSelectedNode(node.id);
+    setSelectedEdge(null);
+  }, []);
+
+  const onDeleteNode = useCallback((nodeId: string) => {
+    const nodeToDelete = nodes.find(n => n.id === nodeId);
+    if (nodeToDelete?.data.isCritical) return;
+
+    setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
+    setEdges(prevEdges => prevEdges.filter(edge => 
+      edge.source !== nodeId && edge.target !== nodeId
+    ));
+    setSelectedNode(null);
+  }, [nodes]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
+    // Vérifier si l'edge est connectée à une question critique
+    const edge = edges.find(e => e.id === edgeId);
+    if (edge) {
+      const sourceNode = nodes.find(node => node.id === edge.source);
+      if (sourceNode?.data?.isCritical) {
+        return; // Ne pas supprimer les edges des questions critiques
+      }
+    }
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
-  }, []);
+  }, [edges, nodes]);
 
   const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
     setEdges((els) => {
@@ -195,6 +213,16 @@ const SurveyFlow = forwardRef<{
     });
   }, []);
 
+  const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.stopPropagation();
+    // Vérifier si l'edge est connectée à une question critique
+    const sourceNode = nodes.find(node => node.id === edge.source);
+    if (sourceNode?.data?.isCritical) return;
+    
+    setSelectedEdge(edge.id);
+    setSelectedNode(null);
+  }, [nodes]);
+
   const CustomEdge = ({
     id,
     sourceX,
@@ -206,7 +234,8 @@ const SurveyFlow = forwardRef<{
     labelBgStyle,
     style = {},
     markerEnd,
-  }: EdgeProps) => {
+    source,
+  }: EdgeProps & { source: string }) => {
     const [edgePath, labelX, labelY] = getBezierPath({
       sourceX,
       sourceY,
@@ -214,14 +243,34 @@ const SurveyFlow = forwardRef<{
       targetY,
     });
 
+    const isSelected = id === selectedEdge;
+    const sourceNode = nodes.find(node => node.id === source);
+    const isCritical = sourceNode?.data?.isCritical;
+
     return (
       <>
         <path
           id={id}
-          style={style}
+          style={{
+            ...style,
+            strokeDasharray: isSelected ? '5,5' : 'none',
+            stroke: isCritical ? '#667eea' : (isSelected ? '#ff4444' : style.stroke),
+            strokeWidth: isSelected ? '3' : style.strokeWidth,
+            cursor: isCritical ? 'not-allowed' : 'pointer',
+          }}
           className="react-flow__edge-path"
           d={edgePath}
           markerEnd={markerEnd}
+        />
+        <path
+          d={edgePath}
+          fill="none"
+          strokeWidth="20"
+          stroke="transparent"
+          className="react-flow__edge-interaction"
+          style={{
+            cursor: isCritical ? 'not-allowed' : 'pointer',
+          }}
         />
         {label && (
           <g transform={`translate(${labelX},${labelY})`}>
@@ -249,7 +298,7 @@ const SurveyFlow = forwardRef<{
   };
 
   const edgeTypes = {
-    custom: CustomEdge,
+    default: CustomEdge,
   };
 
   const GlobalStyles = () => (
@@ -257,24 +306,37 @@ const SurveyFlow = forwardRef<{
       .react-flow__edge {
         cursor: pointer;
       }
-      .react-flow__edge-hitbox {
+      .react-flow__edge-interaction {
         pointer-events: all;
         stroke-opacity: 0;
       }
-      .react-flow__edge-hitbox:hover + .react-flow__edge-path {
+      .react-flow__edge-interaction:hover + .react-flow__edge-path:not([style*="not-allowed"]) {
         stroke: #ff4444;
         stroke-width: 3px;
       }
       .react-flow__edge-path {
         pointer-events: none;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
       }
     `}</style>
   );
 
-  // Bouton de suppression flottant
+  const nodesWithCallbacks = nodes.map(node => ({
+    ...node,
+    data: {
+      ...node.data,
+      onChange: (newData: any) => handleNodeChange(node.id, newData),
+      onCreatePaths: createPathsFromNode,
+      isSelected: node.id === selectedNode
+    },
+    style: {
+      ...node.style,
+      border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
+    }
+  }));
+
   const DeleteButton = () => {
-    if (!selectedEdge) return null;
+    if (!selectedEdge && !selectedNode) return null;
 
     return (
       <div
@@ -294,8 +356,13 @@ const SurveyFlow = forwardRef<{
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }}
         onClick={() => {
-          onEdgeDelete(selectedEdge);
-          setSelectedEdge(null);
+          if (selectedEdge) {
+            onEdgeDelete(selectedEdge);
+            setSelectedEdge(null);
+          }
+          if (selectedNode) {
+            onDeleteNode(selectedNode);
+          }
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = '#ff0000';
@@ -307,22 +374,20 @@ const SurveyFlow = forwardRef<{
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M6 6l12 12M6 18L18 6" />
         </svg>
-        Delete Connection
+        Delete {selectedEdge ? 'Connection' : 'Question'}
       </div>
     );
   };
 
-  // Gestionnaire de clic sur le fond pour désélectionner
   const handlePaneClick = () => {
     setSelectedEdge(null);
+    setSelectedNode(null);
   };
 
-  // Mettre à jour le parent quand les edges changent
   useEffect(() => {
     onEdgesChange(edges);
   }, [edges, onEdgesChange]);
 
-  // Expose la fonction de reset au parent
   useImperativeHandle(ref, () => ({
     resetFlow: () => {
       setNodes(initialNodes);
@@ -365,10 +430,16 @@ const SurveyFlow = forwardRef<{
           onEdgesChange={onEdgesChangeCallback}
           onConnect={onConnect}
           onEdgeUpdate={onEdgeUpdate}
+          onEdgeClick={onEdgeClick}
+          onNodeClick={onNodeClick}
           onPaneClick={handlePaneClick}
           connectionMode={ConnectionMode.Loose}
           defaultEdgeOptions={{
-            type: 'custom',
+            type: 'default',
+            style: {
+              strokeWidth: 2,
+              stroke: '#667eea',
+            },
           }}
           fitView
         >
