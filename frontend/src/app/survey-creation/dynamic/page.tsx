@@ -156,14 +156,25 @@ export default function DynamicSurveyCreation() {
     if (!currentQuestion) return null;
 
     const handleAnswerChange = (value: string | number) => {
-      setPreviewAnswers(prev => ({
-        ...prev,
-        [currentQuestion.id]: value
-      }));
+      console.log('Selected value:', value);
+      console.log('Current question ID:', currentQuestion.id);
+      
+      const normalizedValue = String(value).trim();
+      
+      setPreviewAnswers(prev => {
+        const newAnswers = {
+          ...prev,
+          [currentQuestion.id]: normalizedValue
+        };
+        console.log('Updated answers:', newAnswers);
+        return newAnswers;
+      });
     };
 
-    const isCriticalQuestion = currentQuestion.data?.isCritical;
     const currentAnswer = previewAnswers[currentQuestion.id];
+    console.log('Current answer for question:', currentQuestion.id, currentAnswer);
+
+    const isCriticalQuestion = currentQuestion.data?.isCritical;
 
     return (
       <Box sx={questionContainerStyle}>
@@ -234,7 +245,7 @@ export default function DynamicSurveyCreation() {
         >
           {currentQuestion.data?.type === 'multiple-choice' && (
             <RadioGroup
-              value={previewAnswers[currentQuestion.id] || ''}
+              value={currentAnswer || ''}
               onChange={(e) => handleAnswerChange(e.target.value)}
             >
               {currentQuestion.data.options?.map((option: string, index: number) => (
@@ -257,13 +268,29 @@ export default function DynamicSurveyCreation() {
           )}
 
           {currentQuestion.data?.type === 'dropdown' && (
-            <Select fullWidth>
-              {currentQuestion.data.options?.map((option: string, index: number) => (
-                <MenuItem key={index} value={option}>
-                  {option}
+            <>
+              <Select
+                fullWidth
+                value={previewAnswers[currentQuestion.id] || ''}
+                onChange={(e) => {
+                  console.log('Select onChange value:', e.target.value);
+                  handleAnswerChange(e.target.value);
+                }}
+                displayEmpty
+              >
+                <MenuItem value="" disabled>
+                  <em>Sélectionnez une option</em>
                 </MenuItem>
-              ))}
-            </Select>
+                {currentQuestion.data.options?.map((option: string, index: number) => (
+                  <MenuItem key={index} value={option.trim()}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" color="textSecondary">
+                Valeur sélectionnée: {previewAnswers[currentQuestion.id] || 'Aucune'}
+              </Typography>
+            </>
           )}
 
           {currentQuestion.data?.type === 'slider' && (
@@ -280,7 +307,7 @@ export default function DynamicSurveyCreation() {
           {currentQuestion.data?.type === 'yes-no' && (
             <RadioGroup
               row
-              value={previewAnswers[currentQuestion.id] || ''}
+              value={currentAnswer || ''}
               onChange={(e) => handleAnswerChange(e.target.value)}
             >
               <FormControlLabel value="yes" control={<Radio />} label="Oui" />
@@ -316,44 +343,19 @@ export default function DynamicSurveyCreation() {
 
     if (currentNode.data?.isCritical) {
       const answer = previewAnswers[currentNode.id];
-      
-      if (!answer) {
-        return;
-      }
+      const matchingEdges = edges.filter((edge) => {
+        const sourceMatch = edge.source === currentNode.id;
+        const labelMatch = edge.label?.toLowerCase() === answer?.toLowerCase();
+        return sourceMatch && labelMatch;
+      });
 
-      if (flowRef.current) {
-        const nodes = flowRef.current.getNodes();
-        const updatedNodes = getOrderedNodesFromFlow(nodes, currentNode.id, String(answer));
-        setPreviewNodes(updatedNodes);
-        
-        const outgoingEdges = edges.filter(edge => 
-          edge.source === currentNode.id && 
-          String(edge.label).toLowerCase() === String(answer).toLowerCase()
-        );
-
-        if (outgoingEdges.length > 0) {
-          const nextNodeId = outgoingEdges[0].target;
-          setQuestionPath(prev => [...prev, nextNodeId]);
-          const nextNodeIndex = updatedNodes.findIndex(node => node.id === nextNodeId);
-          if (nextNodeIndex !== -1) {
-            setCurrentPreviewIndex(nextNodeIndex);
-          }
-        }
+      if (matchingEdges.length > 0) {
+        const nextNodeId = matchingEdges[0].target;
+        const nextNodeIndex = previewNodes.findIndex((node) => node.id === nextNodeId);
+        setCurrentPreviewIndex(nextNodeIndex);
       }
     } else {
-      const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
-      if (outgoingEdges.length > 0) {
-        const nextNodeId = outgoingEdges[0].target;
-        setQuestionPath(prev => [...prev, nextNodeId]);
-        const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
-        if (nextNodeIndex !== -1) {
-          setCurrentPreviewIndex(nextNodeIndex);
-        }
-      } else if (currentPreviewIndex < previewNodes.length - 1) {
-        const nextNode = previewNodes[currentPreviewIndex + 1];
-        setQuestionPath(prev => [...prev, nextNode.id]);
-        setCurrentPreviewIndex(prev => prev + 1);
-      }
+      setCurrentPreviewIndex((prev) => prev + 1);
     }
   };
 
