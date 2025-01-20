@@ -100,6 +100,9 @@ export default function DynamicSurveyCreation() {
 
   const [questionPath, setQuestionPath] = useState<string[]>(['1']);
 
+  // Ajouter un state pour l'historique des questions
+  const [questionHistory, setQuestionHistory] = useState<string[]>(['1']);
+
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
       node.id.startsWith(`${currentQuestionId}-`) || 
@@ -344,11 +347,9 @@ export default function DynamicSurveyCreation() {
     const answer = previewAnswers[currentNode.id];
     console.log('Navigating with answer:', answer);
     
-    // Trouver le prochain nœud basé sur la réponse
     const matchingEdges = edges.filter((edge) => {
       const sourceMatch = edge.source === currentNode.id;
       const labelMatch = String(edge.label).toLowerCase() === String(answer).toLowerCase();
-      console.log('Edge check:', edge.source, edge.label, 'vs', currentNode.id, answer);
       return sourceMatch && labelMatch;
     });
 
@@ -356,42 +357,36 @@ export default function DynamicSurveyCreation() {
       const nextNodeId = matchingEdges[0].target;
       console.log('Next node found:', nextNodeId);
       
-      // Mettre à jour la liste des nœuds à afficher
+      // Mettre à jour l'historique
+      setQuestionHistory(prev => [...prev, nextNodeId]);
+      
       if (flowRef.current) {
         const nodes = flowRef.current.getNodes();
         const updatedNodes = getOrderedNodesFromFlow(nodes, nextNodeId);
-        console.log('Updated preview nodes:', updatedNodes);
         setPreviewNodes(updatedNodes);
         setCurrentPreviewIndex(0);
       }
     } else if (!currentNode.data?.isCritical) {
-      // Si pas d'edge correspondant et que ce n'est pas une question critique
       setCurrentPreviewIndex((prev) => prev + 1);
     }
   };
 
   const handlePrevious = () => {
-    if (questionPath.length <= 1) return;
+    if (questionHistory.length <= 1) return;
 
-    const newPath = [...questionPath];
-    newPath.pop();
-    setQuestionPath(newPath);
+    // Retirer la question actuelle de l'historique
+    const newHistory = [...questionHistory];
+    newHistory.pop();
+    setQuestionHistory(newHistory);
 
-    const previousNodeId = newPath[newPath.length - 1];
+    // Obtenir l'ID de la question précédente
+    const previousNodeId = newHistory[newHistory.length - 1];
     
     if (flowRef.current) {
       const nodes = flowRef.current.getNodes();
-      const previousNode = nodes.find(n => n.id === previousNodeId);
-      if (previousNode?.data?.isCritical) {
-        const answer = previewAnswers[previousNodeId];
-        const updatedNodes = getOrderedNodesFromFlow(nodes, previousNodeId, answer ? String(answer) : null);
-        setPreviewNodes(updatedNodes);
-      }
-    }
-
-    const previousNodeIndex = previewNodes.findIndex(node => node.id === previousNodeId);
-    if (previousNodeIndex !== -1) {
-      setCurrentPreviewIndex(previousNodeIndex);
+      const updatedNodes = getOrderedNodesFromFlow(nodes, previousNodeId);
+      setPreviewNodes(updatedNodes);
+      setCurrentPreviewIndex(0);
     }
   };
 
@@ -698,7 +693,7 @@ export default function DynamicSurveyCreation() {
         >
           <Button
             onClick={handlePrevious}
-            disabled={currentPreviewIndex === 0}
+            disabled={questionHistory.length <= 1}
             variant="outlined"
           >
             Previous
