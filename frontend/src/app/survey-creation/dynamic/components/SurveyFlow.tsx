@@ -393,99 +393,69 @@ const SurveyFlow = forwardRef<{
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
     
-    // Fonction pour vérifier si un nœud a un parent critique
-    const hasCriticalParent = (nodeId: string): boolean => {
-      const parentEdges = edges.filter(edge => edge.target === nodeId);
-      return parentEdges.some(edge => {
-        const parentNode = nodes.find(n => n.id === edge.source);
-        return parentNode?.data.isCritical;
-      });
+    const shouldBranchNode = (node: Node) => {
+      return node.data.type === 'Yes/No' || node.data.isCritical;
     };
     
-    const calculateLayout = () => {
-      let currentLevel = 0;
-      let processedNodes = new Set<string>();
+    const calculateBranchWidth = (nodeId: string, processedNodes = new Set<string>()): number => {
+      if (processedNodes.has(nodeId)) return 0;
+      processedNodes.add(nodeId);
       
-      // Traiter d'abord la première question
-      const firstNode = nodes.find(n => n.id === '1');
-      if (firstNode) {
-        nodeLevels.set('1', 0);
-        nodeColumns.set('1', 0);
-        processedNodes.add('1');
-        currentLevel++;
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return 0;
+      
+      const childEdges = edges.filter(edge => edge.source === nodeId);
+      if (childEdges.length === 0) return 1;
+      
+      // Si c'est un nœud qui doit avoir des branches
+      if (shouldBranchNode(node)) {
+        return childEdges.reduce((sum, edge) => {
+          return sum + calculateBranchWidth(edge.target, new Set(processedNodes));
+        }, 0);
       }
       
-      // Fonction pour traiter une branche non critique
-      const processNonCriticalBranch = (nodeId: string, startLevel: number, column: number) => {
-        const branch: string[] = [];
-        let currentBranchLevel = startLevel;
+      return 1; // Pour les nœuds non-branching
+    };
+
+    const calculateLayout = () => {
+      let processedNodes = new Set<string>();
+      
+      const processNode = (nodeId: string, level: number, startColumn: number): number => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node || processedNodes.has(nodeId)) return startColumn;
         
-        const traverse = (id: string) => {
-          const connectedEdges = edges.filter(edge => edge.source === id);
-          connectedEdges.forEach(edge => {
-            const targetNode = nodes.find(n => n.id === edge.target);
-            if (targetNode && !processedNodes.has(targetNode.id)) {
-              // Vérifier si le nœud a un parent critique
-              if (!hasCriticalParent(targetNode.id)) {
-                branch.push(targetNode.id);
-                nodeLevels.set(targetNode.id, currentBranchLevel);
-                nodeColumns.set(targetNode.id, column);
-                processedNodes.add(targetNode.id);
-                currentBranchLevel++;
-                traverse(targetNode.id);
-              }
-            }
+        processedNodes.add(nodeId);
+        nodeLevels.set(nodeId, level);
+        
+        const childEdges = edges.filter(edge => edge.source === nodeId);
+        if (childEdges.length === 0) {
+          nodeColumns.set(nodeId, startColumn);
+          return startColumn + 1;
+        }
+
+        // Utiliser shouldBranchNode pour vérifier si le nœud doit avoir des branches
+        if (shouldBranchNode(node)) {
+          const totalWidth = calculateBranchWidth(nodeId, new Set());
+          const centerColumn = startColumn + (totalWidth - 1) / 2;
+          nodeColumns.set(nodeId, centerColumn);
+          
+          let currentColumn = startColumn;
+          childEdges.forEach(edge => {
+            currentColumn = processNode(edge.target, level + 1, currentColumn);
           });
-        };
-        
-        traverse(nodeId);
-        return currentBranchLevel - startLevel;
+          
+          return startColumn + totalWidth;
+        } else {
+          nodeColumns.set(nodeId, startColumn);
+          let maxColumn = startColumn;
+          childEdges.forEach(edge => {
+            maxColumn = Math.max(maxColumn, processNode(edge.target, level + 1, startColumn));
+          });
+          return maxColumn;
+        }
       };
 
-      // Traiter d'abord toutes les questions critiques
-      const criticalNodes = nodes.filter(node => node.data.isCritical);
-      criticalNodes.forEach(criticalNode => {
-        if (processedNodes.has(criticalNode.id)) return;
-        
-        nodeLevels.set(criticalNode.id, currentLevel);
-        nodeColumns.set(criticalNode.id, 0);
-        processedNodes.add(criticalNode.id);
-        currentLevel++;
-        
-        const criticalEdges = edges.filter(edge => edge.source === criticalNode.id);
-        const numOptions = criticalEdges.length;
-        
-        if (numOptions > 0) {
-          const startX = -(numOptions - 1) / 2;
-          criticalEdges.forEach((edge, index) => {
-            const targetNode = nodes.find(n => n.id === edge.target);
-            if (targetNode && !processedNodes.has(targetNode.id)) {
-              const optionColumn = startX + index;
-              nodeLevels.set(targetNode.id, currentLevel);
-              nodeColumns.set(targetNode.id, optionColumn);
-              processedNodes.add(targetNode.id);
-              
-              const branchLength = processNonCriticalBranch(
-                targetNode.id,
-                currentLevel + 1,
-                optionColumn
-              );
-              currentLevel += branchLength;
-            }
-          });
-          currentLevel++;
-        }
-      });
-
-      // Traiter les nœuds restants
-      nodes.forEach(node => {
-        if (processedNodes.has(node.id)) return;
-        
-        nodeLevels.set(node.id, currentLevel);
-        nodeColumns.set(node.id, 0);
-        processedNodes.add(node.id);
-        currentLevel++;
-      });
+      processNode('1', 0, 0);
     };
     
     calculateLayout();
