@@ -394,7 +394,9 @@ const SurveyFlow = forwardRef<{
     const nodeColumns = new Map<string, number>();
     
     const shouldBranchNode = (node: Node) => {
-      return node.data.type === 'Yes/No' || node.data.isCritical;
+      return node.data.type === 'Yes/No' || 
+             node.data.type === 'dropdown' || 
+             node.data.isCritical;
     };
     
     const calculateBranchWidth = (nodeId: string, processedNodes = new Set<string>()): number => {
@@ -407,14 +409,13 @@ const SurveyFlow = forwardRef<{
       const childEdges = edges.filter(edge => edge.source === nodeId);
       if (childEdges.length === 0) return 1;
       
-      // Si c'est un nœud qui doit avoir des branches
       if (shouldBranchNode(node)) {
         return childEdges.reduce((sum, edge) => {
           return sum + calculateBranchWidth(edge.target, new Set(processedNodes));
         }, 0);
       }
       
-      return 1; // Pour les nœuds non-branching
+      return 1;
     };
 
     const calculateLayout = () => {
@@ -433,7 +434,6 @@ const SurveyFlow = forwardRef<{
           return startColumn + 1;
         }
 
-        // Utiliser shouldBranchNode pour vérifier si le nœud doit avoir des branches
         if (shouldBranchNode(node)) {
           const totalWidth = calculateBranchWidth(nodeId, new Set());
           const centerColumn = startColumn + (totalWidth - 1) / 2;
