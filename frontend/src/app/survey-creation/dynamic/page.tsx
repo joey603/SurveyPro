@@ -130,6 +130,7 @@ export default function DynamicSurveyCreation() {
       const orderedNodes = getOrderedNodesFromFlow(nodes);
       setPreviewNodes(orderedNodes);
       setCurrentPreviewIndex(0);
+      setQuestionPath(['1']);
       setShowPreview(true);
     }
   };
@@ -332,6 +333,7 @@ export default function DynamicSurveyCreation() {
 
         if (outgoingEdges.length > 0) {
           const nextNodeId = outgoingEdges[0].target;
+          setQuestionPath(prev => [...prev, nextNodeId]);
           const nextNodeIndex = updatedNodes.findIndex(node => node.id === nextNodeId);
           if (nextNodeIndex !== -1) {
             setCurrentPreviewIndex(nextNodeIndex);
@@ -342,29 +344,41 @@ export default function DynamicSurveyCreation() {
       const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
       if (outgoingEdges.length > 0) {
         const nextNodeId = outgoingEdges[0].target;
+        setQuestionPath(prev => [...prev, nextNodeId]);
         const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
         if (nextNodeIndex !== -1) {
           setCurrentPreviewIndex(nextNodeIndex);
         }
       } else if (currentPreviewIndex < previewNodes.length - 1) {
+        const nextNode = previewNodes[currentPreviewIndex + 1];
+        setQuestionPath(prev => [...prev, nextNode.id]);
         setCurrentPreviewIndex(prev => prev + 1);
       }
     }
   };
 
   const handlePrevious = () => {
-    const currentNode = previewNodes[currentPreviewIndex];
-    if (!currentNode) return;
+    if (questionPath.length <= 1) return;
 
-    const incomingEdges = edges.filter(edge => edge.target === currentNode.id);
-    if (incomingEdges.length > 0) {
-      const prevNodeId = incomingEdges[0].source;
-      const prevNodeIndex = previewNodes.findIndex(node => node.id === prevNodeId);
-      if (prevNodeIndex !== -1) {
-        setCurrentPreviewIndex(prevNodeIndex);
+    const newPath = [...questionPath];
+    newPath.pop();
+    setQuestionPath(newPath);
+
+    const previousNodeId = newPath[newPath.length - 1];
+    
+    if (flowRef.current) {
+      const nodes = flowRef.current.getNodes();
+      const previousNode = nodes.find(n => n.id === previousNodeId);
+      if (previousNode?.data?.isCritical) {
+        const answer = previewAnswers[previousNodeId];
+        const updatedNodes = getOrderedNodesFromFlow(nodes, previousNodeId, answer ? String(answer) : null);
+        setPreviewNodes(updatedNodes);
       }
-    } else if (currentPreviewIndex > 0) {
-      setCurrentPreviewIndex(prev => prev - 1);
+    }
+
+    const previousNodeIndex = previewNodes.findIndex(node => node.id === previousNodeId);
+    if (previousNodeIndex !== -1) {
+      setCurrentPreviewIndex(previousNodeIndex);
     }
   };
 
