@@ -303,7 +303,7 @@ export default function DynamicSurveyCreation() {
           variant="body2"
           sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
         >
-          Question {currentQuestion.data.questionNumber} sur {previewNodes.length}
+          Question {currentQuestion.data.questionNumber} sur {currentQuestion.data.totalQuestions}
         </Typography>
       </Box>
     );
@@ -396,6 +396,41 @@ export default function DynamicSurveyCreation() {
   const getOrderedNodesFromFlow = (nodes: any[], startNodeId: string = '1', answer: string | null = null) => {
     const orderedNodes: any[] = [];
     const visited = new Set();
+    let questionCounter = startNodeId === '1' ? 1 : 0;
+    let totalQuestions = 0;
+
+    const calculateTotalQuestions = (nodeId: string, visited = new Set()): number => {
+      if (visited.has(nodeId)) return 0;
+      visited.add(nodeId);
+
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return 0;
+
+      if (node.data?.isCritical && nodeId !== startNodeId) {
+        return 1;
+      }
+
+      let count = 1;
+      const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+      
+      if (node.data?.isCritical && answer) {
+        const matchingEdge = edges.find(edge => 
+          edge.source === nodeId && 
+          String(edge.label).toLowerCase() === String(answer).toLowerCase()
+        );
+        if (matchingEdge) {
+          count += calculateTotalQuestions(matchingEdge.target, visited);
+        }
+      } else {
+        outgoingEdges.forEach(edge => {
+          count += calculateTotalQuestions(edge.target, visited);
+        });
+      }
+
+      return count;
+    };
+
+    totalQuestions = calculateTotalQuestions(startNodeId);
 
     const traverse = (nodeId: string) => {
       if (visited.has(nodeId)) return;
@@ -403,14 +438,24 @@ export default function DynamicSurveyCreation() {
       const node = nodes.find(n => n.id === nodeId);
       if (node) {
         visited.add(nodeId);
+
+        if (questionCounter === 0) {
+          const startNode = nodes.find(n => n.id === startNodeId);
+          if (startNode) {
+            questionCounter = startNode.data.questionNumber;
+          }
+        }
+
         const updatedNode = {
           ...node,
           data: {
             ...node.data,
-            questionNumber: orderedNodes.length + 1
+            questionNumber: questionCounter,
+            totalQuestions: totalQuestions
           }
         };
         orderedNodes.push(updatedNode);
+        questionCounter++;
         
         if (node.data?.isCritical && answer) {
           const matchingEdge = edges.find(edge => 
