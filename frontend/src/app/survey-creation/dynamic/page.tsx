@@ -303,7 +303,7 @@ export default function DynamicSurveyCreation() {
           variant="body2"
           sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
         >
-          Question {currentPreviewIndex + 1} sur {previewNodes.length}
+          Question {currentQuestion.data.questionNumber} sur {previewNodes.length}
         </Typography>
       </Box>
     );
@@ -320,16 +320,22 @@ export default function DynamicSurveyCreation() {
         return;
       }
 
-      const outgoingEdges = edges.filter(edge => 
-        edge.source === currentNode.id && 
-        String(edge.label).toLowerCase() === String(answer).toLowerCase()
-      );
+      if (flowRef.current) {
+        const nodes = flowRef.current.getNodes();
+        const updatedNodes = getOrderedNodesFromFlow(nodes, currentNode.id, String(answer));
+        setPreviewNodes(updatedNodes);
+        
+        const outgoingEdges = edges.filter(edge => 
+          edge.source === currentNode.id && 
+          String(edge.label).toLowerCase() === String(answer).toLowerCase()
+        );
 
-      if (outgoingEdges.length > 0) {
-        const nextNodeId = outgoingEdges[0].target;
-        const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
-        if (nextNodeIndex !== -1) {
-          setCurrentPreviewIndex(nextNodeIndex);
+        if (outgoingEdges.length > 0) {
+          const nextNodeId = outgoingEdges[0].target;
+          const nextNodeIndex = updatedNodes.findIndex(node => node.id === nextNodeId);
+          if (nextNodeIndex !== -1) {
+            setCurrentPreviewIndex(nextNodeIndex);
+          }
         }
       }
     } else {
@@ -387,7 +393,7 @@ export default function DynamicSurveyCreation() {
     fetchCities();
   }, []);
 
-  const getOrderedNodesFromFlow = (nodes: any[]) => {
+  const getOrderedNodesFromFlow = (nodes: any[], startNodeId: string = '1', answer: string | null = null) => {
     const orderedNodes: any[] = [];
     const visited = new Set();
 
@@ -397,17 +403,33 @@ export default function DynamicSurveyCreation() {
       const node = nodes.find(n => n.id === nodeId);
       if (node) {
         visited.add(nodeId);
-        orderedNodes.push(node);
+        const updatedNode = {
+          ...node,
+          data: {
+            ...node.data,
+            questionNumber: orderedNodes.length + 1
+          }
+        };
+        orderedNodes.push(updatedNode);
         
-        const outgoingEdges = edges.filter(edge => edge.source === nodeId);
-        
-        outgoingEdges.forEach(edge => {
-          traverse(edge.target);
-        });
+        if (node.data?.isCritical && answer) {
+          const matchingEdge = edges.find(edge => 
+            edge.source === nodeId && 
+            String(edge.label).toLowerCase() === String(answer).toLowerCase()
+          );
+          if (matchingEdge) {
+            traverse(matchingEdge.target);
+          }
+        } else {
+          const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+          outgoingEdges.forEach(edge => {
+            traverse(edge.target);
+          });
+        }
       }
     };
 
-    traverse('1');
+    traverse(startNodeId);
     return orderedNodes;
   };
 
