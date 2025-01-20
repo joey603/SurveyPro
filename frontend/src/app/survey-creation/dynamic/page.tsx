@@ -127,14 +127,10 @@ export default function DynamicSurveyCreation() {
   const handleOpenPreview = () => {
     if (flowRef.current) {
       const nodes = flowRef.current.getNodes();
-      setPreviewNodes(nodes);
-      
-      setTimeout(() => {
-        const orderedNodes = getOrderedNodes();
-        setPreviewNodes(orderedNodes);
-        setCurrentPreviewIndex(0);
-        setShowPreview(true);
-      }, 0);
+      const orderedNodes = getOrderedNodesFromFlow(nodes);
+      setPreviewNodes(orderedNodes);
+      setCurrentPreviewIndex(0);
+      setShowPreview(true);
     }
   };
 
@@ -290,20 +286,11 @@ export default function DynamicSurveyCreation() {
     const currentNode = previewNodes[currentPreviewIndex];
     if (!currentNode) return;
 
-    const nextConnections = edges.filter((edge: Edge) => edge.source === currentNode.id);
+    const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
     
-    if (nextConnections.length === 0) {
-      if (currentPreviewIndex < previewNodes.length - 1) {
-        setCurrentPreviewIndex(prev => prev + 1);
-      }
-      return;
-    }
-
-    const answer = previewAnswers[currentNode.id];
-    const matchingConnection = nextConnections.find((edge: Edge) => edge.label === answer);
-    
-    if (matchingConnection) {
-      const nextNodeIndex = previewNodes.findIndex(node => node.id === matchingConnection.target);
+    if (outgoingEdges.length > 0) {
+      const nextNodeId = outgoingEdges[0].target;
+      const nextNodeIndex = previewNodes.findIndex(node => node.id === nextNodeId);
       if (nextNodeIndex !== -1) {
         setCurrentPreviewIndex(nextNodeIndex);
       }
@@ -318,9 +305,11 @@ export default function DynamicSurveyCreation() {
     const currentNode = previewNodes[currentPreviewIndex];
     if (!currentNode) return;
 
-    const previousConnections = edges.filter((edge: Edge) => edge.target === currentNode.id);
-    if (previousConnections.length > 0) {
-      const prevNodeIndex = previewNodes.findIndex(node => node.id === previousConnections[0].source);
+    const incomingEdges = edges.filter(edge => edge.target === currentNode.id);
+    
+    if (incomingEdges.length > 0) {
+      const prevNodeId = incomingEdges[0].source;
+      const prevNodeIndex = previewNodes.findIndex(node => node.id === prevNodeId);
       if (prevNodeIndex !== -1) {
         setCurrentPreviewIndex(prevNodeIndex);
       }
@@ -356,58 +345,42 @@ export default function DynamicSurveyCreation() {
     fetchCities();
   }, []);
 
-  const getOrderedNodes = () => {
+  const getOrderedNodesFromFlow = (nodes: any[]) => {
     const orderedNodes: any[] = [];
     const visited = new Set();
-    const edgeMap = new Map();
-
-    edges.forEach((edge: Edge) => {
-      if (!edgeMap.has(edge.source)) {
-        edgeMap.set(edge.source, []);
-      }
-      edgeMap.get(edge.source).push({
-        target: edge.target,
-        condition: edge.label
-      });
-    });
 
     const traverse = (nodeId: string) => {
       if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-
-      const node = previewNodes.find(n => n.id === nodeId);
+      
+      const node = nodes.find(n => n.id === nodeId);
       if (node) {
+        visited.add(nodeId);
         orderedNodes.push(node);
+        
+        const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+        
+        outgoingEdges.forEach(edge => {
+          traverse(edge.target);
+        });
       }
-
-      const connections = edgeMap.get(nodeId) || [];
-      connections.forEach(({ target }: { target: string }) => {
-        traverse(target);
-      });
     };
 
     traverse('1');
-
-    previewNodes.forEach(node => {
-      if (!visited.has(node.id)) {
-        orderedNodes.push(node);
-      }
-    });
-
     return orderedNodes;
   };
 
   useEffect(() => {
     if (showPreview && flowRef.current) {
       const nodes = flowRef.current.getNodes();
-      setPreviewNodes(nodes);
+      const orderedNodes = getOrderedNodesFromFlow(nodes);
+      setPreviewNodes(orderedNodes);
     }
-  }, [showPreview]);
+  }, [showPreview, edges]);
 
   const handleEdgesChange = useCallback((newEdges: Edge[]) => {
     setEdges(newEdges);
     if (showPreview) {
-      const orderedNodes = getOrderedNodes();
+      const orderedNodes = getOrderedNodesFromFlow(previewNodes);
       setPreviewNodes(orderedNodes);
     }
   }, [showPreview]);
