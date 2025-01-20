@@ -164,8 +164,18 @@ const SurveyFlow = forwardRef<{
   );
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    []
+    (params: Connection) => {
+      // Vérifier si le nœud source existe déjà dans une connexion
+      const sourceNode = nodes.find(n => n.id === params.source);
+      if (!sourceNode?.data.isCritical) {
+        const existingConnection = edges.find(edge => edge.source === params.source);
+        if (existingConnection) {
+          return edges; // Ne pas ajouter de nouvelle connexion
+        }
+      }
+      return setEdges((eds) => addEdge(params, eds));
+    },
+    [edges, nodes]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
