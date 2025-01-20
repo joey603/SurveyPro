@@ -44,7 +44,7 @@ const initialNodes: Node[] = [
       mediaUrl: '',
       isCritical: false,
     },
-    position: { x: 250, y: 0 },
+    position: { x: 400, y: 50 },
   },
 ];
 
@@ -384,6 +384,157 @@ const SurveyFlow = forwardRef<{
     setSelectedNode(null);
   };
 
+  const reorganizeFlow = useCallback(() => {
+    const VERTICAL_SPACING = 150;
+    const HORIZONTAL_SPACING = 450;
+    const START_Y = 50;
+    const CENTER_X = 400;
+    
+    const nodeLevels = new Map<string, number>();
+    const nodeColumns = new Map<string, number>();
+    
+    const calculateLayout = () => {
+      let currentLevel = 0;
+      let processedNodes = new Set<string>();
+      
+      // Traiter d'abord la première question
+      const firstNode = nodes.find(n => n.id === '1');
+      if (firstNode) {
+        nodeLevels.set('1', 0);
+        nodeColumns.set('1', 0);
+        processedNodes.add('1');
+        currentLevel++;
+      }
+      
+      // Fonction pour traiter une branche non critique
+      const processNonCriticalBranch = (nodeId: string, startLevel: number, column: number) => {
+        const branch: string[] = [];
+        let currentBranchLevel = startLevel;
+        
+        const traverse = (id: string) => {
+          const connectedEdges = edges.filter(edge => edge.source === id);
+          connectedEdges.forEach(edge => {
+            const targetNode = nodes.find(n => n.id === edge.target);
+            if (targetNode && !processedNodes.has(targetNode.id) && !targetNode.data.isCritical) {
+              branch.push(targetNode.id);
+              nodeLevels.set(targetNode.id, currentBranchLevel);
+              nodeColumns.set(targetNode.id, column);
+              processedNodes.add(targetNode.id);
+              currentBranchLevel++;
+              traverse(targetNode.id);
+            }
+          });
+        };
+        
+        traverse(nodeId);
+        return currentBranchLevel - startLevel; // Retourne la longueur de la branche
+      };
+      
+      // Traiter les nœuds un par un
+      nodes.forEach(node => {
+        if (processedNodes.has(node.id)) return;
+        
+        if (node.data.isCritical) {
+          // Positionner la question critique au centre
+          nodeLevels.set(node.id, currentLevel);
+          nodeColumns.set(node.id, 0);
+          processedNodes.add(node.id);
+          currentLevel++;
+          
+          // Traiter les options de la question critique
+          const criticalEdges = edges.filter(edge => edge.source === node.id);
+          const numOptions = criticalEdges.length;
+          
+          if (numOptions > 0) {
+            // Calculer la position de départ pour centrer les options
+            const startX = -(numOptions - 1) / 2;
+            
+            // Positionner chaque option et sa branche
+            criticalEdges.forEach((edge, index) => {
+              const targetNode = nodes.find(n => n.id === edge.target);
+              if (targetNode && !processedNodes.has(targetNode.id)) {
+                const optionColumn = startX + index;
+                
+                // Positionner l'option
+                nodeLevels.set(targetNode.id, currentLevel);
+                nodeColumns.set(targetNode.id, optionColumn);
+                processedNodes.add(targetNode.id);
+                
+                // Traiter la branche qui suit cette option
+                const branchLength = processNonCriticalBranch(
+                  targetNode.id,
+                  currentLevel + 1,
+                  optionColumn
+                );
+                
+                // Mettre à jour le niveau
+                currentLevel += branchLength;
+              }
+            });
+            
+            currentLevel++; // Incrémenter le niveau après toutes les options
+          }
+        } else {
+          // Pour les questions non critiques
+          nodeLevels.set(node.id, currentLevel);
+          nodeColumns.set(node.id, 0);
+          processedNodes.add(node.id);
+          currentLevel++;
+        }
+      });
+    };
+    
+    calculateLayout();
+    
+    // Appliquer les positions
+    setNodes(prevNodes => prevNodes.map(node => {
+      const level = nodeLevels.get(node.id) || 0;
+      const column = nodeColumns.get(node.id) || 0;
+      
+      return {
+        ...node,
+        position: {
+          x: CENTER_X + column * HORIZONTAL_SPACING,
+          y: START_Y + level * VERTICAL_SPACING
+        }
+      };
+    }));
+  }, [nodes, edges]);
+
+  // Ajouter le bouton de réorganisation
+  const ReorganizeButton = () => (
+    <div
+      style={{
+        position: 'absolute',
+        top: '20px',
+        left: '20px',
+        zIndex: 1000,
+        backgroundColor: '#667eea',
+        color: 'white',
+        padding: '8px 16px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+      }}
+      onClick={reorganizeFlow}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = '#4c5ec4';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = '#667eea';
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 4h16v16H4z" />
+        <path d="M4 12h16M12 4v16" />
+      </svg>
+      Réorganiser le flow
+    </div>
+  );
+
   useEffect(() => {
     onEdgesChange(edges);
   }, [edges, onEdgesChange]);
@@ -421,6 +572,7 @@ const SurveyFlow = forwardRef<{
       <GlobalStyles />
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <DeleteButton />
+        <ReorganizeButton />
         <ReactFlow
           nodes={nodesWithCallbacks}
           edges={edges}
