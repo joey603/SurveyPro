@@ -132,7 +132,7 @@ export default function DynamicSurveyCreation() {
       const nodes = flowRef.current.getNodes();
       const orderedNodes = getOrderedNodesFromFlow(nodes);
       setPreviewNodes(orderedNodes);
-      setCurrentPreviewIndex(0);
+      setCurrentPreviewIndex(watch('demographicEnabled') ? -1 : 0);
       setQuestionPath(['1']);
       setShowPreview(true);
     }
@@ -154,6 +154,67 @@ export default function DynamicSurveyCreation() {
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       mb: 3
     };
+
+    // Afficher les questions démographiques si on est à l'index -1
+    if (currentPreviewIndex === -1) {
+      return (
+        <Box sx={questionContainerStyle}>
+          <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+            Demographic Information
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <RadioGroup>
+              <FormControlLabel value="male" control={<Radio />} label="Male" />
+              <FormControlLabel value="female" control={<Radio />} label="Female" />
+              <FormControlLabel value="other" control={<Radio />} label="Other" />
+            </RadioGroup>
+
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Date of Birth"
+                value={null}
+                onChange={() => {}}
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+            </LocalizationProvider>
+
+            <Select fullWidth displayEmpty defaultValue="">
+              <MenuItem value="" disabled>
+                Select education level
+              </MenuItem>
+              {educationOptions.map((level, index) => (
+                <MenuItem key={index} value={level}>
+                  {level}
+                </MenuItem>
+              ))}
+            </Select>
+
+            <Select
+              fullWidth
+              displayEmpty
+              defaultValue=""
+            >
+              <MenuItem value="" disabled>
+                Select your city
+              </MenuItem>
+              {cities.map((city, index) => (
+                <MenuItem key={index} value={city}>
+                  {city}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
+          >
+            Demographic Questions
+          </Typography>
+        </Box>
+      );
+    }
 
     const currentQuestion = previewNodes[currentPreviewIndex];
     if (!currentQuestion) return null;
@@ -341,6 +402,13 @@ export default function DynamicSurveyCreation() {
   };
 
   const handleNext = () => {
+    if (currentPreviewIndex === -1) {
+      setCurrentPreviewIndex(0);
+      // Initialiser l'historique avec la première question
+      setQuestionHistory(['1']);
+      return;
+    }
+
     const currentNode = previewNodes[currentPreviewIndex];
     if (!currentNode) return;
 
@@ -357,7 +425,7 @@ export default function DynamicSurveyCreation() {
       const nextNodeId = matchingEdges[0].target;
       console.log('Next node found:', nextNodeId);
       
-      // Mettre à jour l'historique
+      // Mettre à jour l'historique avec le prochain nœud
       setQuestionHistory(prev => [...prev, nextNodeId]);
       
       if (flowRef.current) {
@@ -372,6 +440,13 @@ export default function DynamicSurveyCreation() {
   };
 
   const handlePrevious = () => {
+    // Si nous sommes sur la première question et que les questions démographiques sont activées
+    if (currentPreviewIndex === 0 && watch('demographicEnabled') && !questionHistory.length) {
+      setCurrentPreviewIndex(-1);
+      return;
+    }
+
+    // Si nous n'avons pas d'historique ou qu'un seul élément, ne rien faire
     if (questionHistory.length <= 1) return;
 
     // Retirer la question actuelle de l'historique
