@@ -393,6 +393,15 @@ const SurveyFlow = forwardRef<{
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
     
+    // Fonction pour vérifier si un nœud a un parent critique
+    const hasCriticalParent = (nodeId: string): boolean => {
+      const parentEdges = edges.filter(edge => edge.target === nodeId);
+      return parentEdges.some(edge => {
+        const parentNode = nodes.find(n => n.id === edge.source);
+        return parentNode?.data.isCritical;
+      });
+    };
+    
     const calculateLayout = () => {
       let currentLevel = 0;
       let processedNodes = new Set<string>();
@@ -415,78 +424,72 @@ const SurveyFlow = forwardRef<{
           const connectedEdges = edges.filter(edge => edge.source === id);
           connectedEdges.forEach(edge => {
             const targetNode = nodes.find(n => n.id === edge.target);
-            if (targetNode && !processedNodes.has(targetNode.id) && !targetNode.data.isCritical) {
-              branch.push(targetNode.id);
-              nodeLevels.set(targetNode.id, currentBranchLevel);
-              nodeColumns.set(targetNode.id, column);
-              processedNodes.add(targetNode.id);
-              currentBranchLevel++;
-              traverse(targetNode.id);
+            if (targetNode && !processedNodes.has(targetNode.id)) {
+              // Vérifier si le nœud a un parent critique
+              if (!hasCriticalParent(targetNode.id)) {
+                branch.push(targetNode.id);
+                nodeLevels.set(targetNode.id, currentBranchLevel);
+                nodeColumns.set(targetNode.id, column);
+                processedNodes.add(targetNode.id);
+                currentBranchLevel++;
+                traverse(targetNode.id);
+              }
             }
           });
         };
         
         traverse(nodeId);
-        return currentBranchLevel - startLevel; // Retourne la longueur de la branche
+        return currentBranchLevel - startLevel;
       };
-      
-      // Traiter les nœuds un par un
+
+      // Traiter d'abord toutes les questions critiques
+      const criticalNodes = nodes.filter(node => node.data.isCritical);
+      criticalNodes.forEach(criticalNode => {
+        if (processedNodes.has(criticalNode.id)) return;
+        
+        nodeLevels.set(criticalNode.id, currentLevel);
+        nodeColumns.set(criticalNode.id, 0);
+        processedNodes.add(criticalNode.id);
+        currentLevel++;
+        
+        const criticalEdges = edges.filter(edge => edge.source === criticalNode.id);
+        const numOptions = criticalEdges.length;
+        
+        if (numOptions > 0) {
+          const startX = -(numOptions - 1) / 2;
+          criticalEdges.forEach((edge, index) => {
+            const targetNode = nodes.find(n => n.id === edge.target);
+            if (targetNode && !processedNodes.has(targetNode.id)) {
+              const optionColumn = startX + index;
+              nodeLevels.set(targetNode.id, currentLevel);
+              nodeColumns.set(targetNode.id, optionColumn);
+              processedNodes.add(targetNode.id);
+              
+              const branchLength = processNonCriticalBranch(
+                targetNode.id,
+                currentLevel + 1,
+                optionColumn
+              );
+              currentLevel += branchLength;
+            }
+          });
+          currentLevel++;
+        }
+      });
+
+      // Traiter les nœuds restants
       nodes.forEach(node => {
         if (processedNodes.has(node.id)) return;
         
-        if (node.data.isCritical) {
-          // Positionner la question critique au centre
-          nodeLevels.set(node.id, currentLevel);
-          nodeColumns.set(node.id, 0);
-          processedNodes.add(node.id);
-          currentLevel++;
-          
-          // Traiter les options de la question critique
-          const criticalEdges = edges.filter(edge => edge.source === node.id);
-          const numOptions = criticalEdges.length;
-          
-          if (numOptions > 0) {
-            // Calculer la position de départ pour centrer les options
-            const startX = -(numOptions - 1) / 2;
-            
-            // Positionner chaque option et sa branche
-            criticalEdges.forEach((edge, index) => {
-              const targetNode = nodes.find(n => n.id === edge.target);
-              if (targetNode && !processedNodes.has(targetNode.id)) {
-                const optionColumn = startX + index;
-                
-                // Positionner l'option
-                nodeLevels.set(targetNode.id, currentLevel);
-                nodeColumns.set(targetNode.id, optionColumn);
-                processedNodes.add(targetNode.id);
-                
-                // Traiter la branche qui suit cette option
-                const branchLength = processNonCriticalBranch(
-                  targetNode.id,
-                  currentLevel + 1,
-                  optionColumn
-                );
-                
-                // Mettre à jour le niveau
-                currentLevel += branchLength;
-              }
-            });
-            
-            currentLevel++; // Incrémenter le niveau après toutes les options
-          }
-        } else {
-          // Pour les questions non critiques
-          nodeLevels.set(node.id, currentLevel);
-          nodeColumns.set(node.id, 0);
-          processedNodes.add(node.id);
-          currentLevel++;
-        }
+        nodeLevels.set(node.id, currentLevel);
+        nodeColumns.set(node.id, 0);
+        processedNodes.add(node.id);
+        currentLevel++;
       });
     };
     
     calculateLayout();
     
-    // Appliquer les positions
     setNodes(prevNodes => prevNodes.map(node => {
       const level = nodeLevels.get(node.id) || 0;
       const column = nodeColumns.get(node.id) || 0;
