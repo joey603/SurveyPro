@@ -341,20 +341,31 @@ export default function DynamicSurveyCreation() {
     const currentNode = previewNodes[currentPreviewIndex];
     if (!currentNode) return;
 
-    if (currentNode.data?.isCritical) {
-      const answer = previewAnswers[currentNode.id];
-      const matchingEdges = edges.filter((edge) => {
-        const sourceMatch = edge.source === currentNode.id;
-        const labelMatch = edge.label?.toLowerCase() === answer?.toLowerCase();
-        return sourceMatch && labelMatch;
-      });
+    const answer = previewAnswers[currentNode.id];
+    console.log('Navigating with answer:', answer);
+    
+    // Trouver le prochain nœud basé sur la réponse
+    const matchingEdges = edges.filter((edge) => {
+      const sourceMatch = edge.source === currentNode.id;
+      const labelMatch = String(edge.label).toLowerCase() === String(answer).toLowerCase();
+      console.log('Edge check:', edge.source, edge.label, 'vs', currentNode.id, answer);
+      return sourceMatch && labelMatch;
+    });
 
-      if (matchingEdges.length > 0) {
-        const nextNodeId = matchingEdges[0].target;
-        const nextNodeIndex = previewNodes.findIndex((node) => node.id === nextNodeId);
-        setCurrentPreviewIndex(nextNodeIndex);
+    if (matchingEdges.length > 0) {
+      const nextNodeId = matchingEdges[0].target;
+      console.log('Next node found:', nextNodeId);
+      
+      // Mettre à jour la liste des nœuds à afficher
+      if (flowRef.current) {
+        const nodes = flowRef.current.getNodes();
+        const updatedNodes = getOrderedNodesFromFlow(nodes, nextNodeId);
+        console.log('Updated preview nodes:', updatedNodes);
+        setPreviewNodes(updatedNodes);
+        setCurrentPreviewIndex(0);
       }
-    } else {
+    } else if (!currentNode.data?.isCritical) {
+      // Si pas d'edge correspondant et que ce n'est pas une question critique
       setCurrentPreviewIndex((prev) => prev + 1);
     }
   };
