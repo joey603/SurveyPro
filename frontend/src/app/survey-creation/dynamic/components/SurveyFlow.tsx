@@ -222,21 +222,17 @@ const SurveyFlow = forwardRef<{
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
-    if (node.data.isCritical) return;
     setSelectedNode(node.id);
     setSelectedEdge(null);
   }, []);
 
   const onDeleteNode = useCallback((nodeId: string) => {
-    const nodeToDelete = nodes.find(n => n.id === nodeId);
-    if (nodeToDelete?.data.isCritical) return;
-
     setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
     setEdges(prevEdges => prevEdges.filter(edge => 
       edge.source !== nodeId && edge.target !== nodeId
     ));
     setSelectedNode(null);
-  }, [nodes]);
+  }, []);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
     // Vérifier si l'edge est connectée à une question critique
@@ -614,11 +610,30 @@ const SurveyFlow = forwardRef<{
     },
     getNodes: () => nodes,
     addNewQuestion: () => {
+      const newNodeId = (nodes.length + 1).toString();
+      const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
+
+      // Si la question sélectionnée est critique, ne pas créer de connexion
+      if (selectedNodeData?.data.isCritical) {
+        setNotification({
+          show: true,
+          message: 'Impossible d\'ajouter une connexion à une question critique',
+          type: 'warning'
+        });
+        
+        // Masquer la notification après 3 secondes
+        setTimeout(() => {
+          setNotification(prev => ({ ...prev, show: false }));
+        }, 3000);
+        
+        return;
+      }
+
       const newNode: Node = {
-        id: (nodes.length + 1).toString(),
+        id: newNodeId,
         type: 'questionNode',
         data: { 
-          id: (nodes.length + 1).toString(),
+          id: newNodeId,
           questionNumber: nodes.length + 1,
           type: 'text',
           text: '',
@@ -627,11 +642,37 @@ const SurveyFlow = forwardRef<{
           mediaUrl: '',
           isCritical: false,
           onCreatePaths: createPathsFromNode,
-          onChange: (newData: any) => handleNodeChange((nodes.length + 1).toString(), newData)
+          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
         },
-        position: { x: 250, y: nodes.length * 150 },
+        position: { 
+          x: selectedNode 
+            ? nodes.find(n => n.id === selectedNode)?.position.x || 250
+            : 250, 
+          y: selectedNode 
+            ? (nodes.find(n => n.id === selectedNode)?.position.y || 0) + 150
+            : nodes.length * 150 
+        },
       };
+
       setNodes(prevNodes => [...prevNodes, newNode]);
+
+      // Créer une connexion uniquement si une question non critique est sélectionnée
+      if (selectedNode && !selectedNodeData?.data.isCritical) {
+        const newEdge: Edge = {
+          id: `e${selectedNode}-${newNodeId}`,
+          source: selectedNode,
+          target: newNodeId,
+          type: 'default',
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          style: { 
+            strokeWidth: 2,
+            stroke: '#667eea',
+          },
+        };
+        setEdges(prevEdges => [...prevEdges, newEdge]);
+      }
     }
   }));
 
