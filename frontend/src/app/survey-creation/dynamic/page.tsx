@@ -21,7 +21,8 @@ import {
   MenuItem,
   RadioGroup,
   Slider,
-  Rating
+  Rating,
+  Alert
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -34,6 +35,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ReactPlayer from 'react-player';
 import { Edge } from 'reactflow';
+import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
+import { useRouter } from 'next/navigation';
 
 const educationOptions = [
   'High School',
@@ -103,6 +106,19 @@ export default function DynamicSurveyCreation() {
   // Ajouter un state pour l'historique des questions
   const [questionHistory, setQuestionHistory] = useState<string[]>(['1']);
 
+  const router = useRouter();
+
+  // Ajouter l'état pour les notifications
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    show: false,
+    message: '',
+    type: 'info'
+  });
+
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
       node.id.startsWith(`${currentQuestionId}-`) || 
@@ -123,8 +139,128 @@ export default function DynamicSurveyCreation() {
   };
 
   const onSubmit = async (data: FormData) => {
-    console.log('Form submitted:', data);
-    // Backend integration will be added later
+    try {
+      // Validation côté client
+      if (!data.title?.trim()) {
+        // Si vous utilisez Material-UI, vous pouvez utiliser Snackbar ou Alert
+        setNotification({
+          show: true,
+          message: 'Le titre du sondage est requis',
+          type: 'error'
+        });
+        return;
+      }
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setNotification({
+          show: true,
+          message: 'Token d\'authentification non trouvé',
+          type: 'error'
+        });
+        return;
+      }
+
+      if (!flowRef.current) {
+        setNotification({
+          show: true,
+          message: 'Erreur de référence au flow',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Récupérer tous les nœuds
+      const allNodes = flowRef.current.getNodes();
+      const allEdges = edges;
+
+      // Trouver le premier nœud (généralement avec l'ID '1')
+      const firstNode = allNodes.find(node => node.id === '1');
+      if (!firstNode) {
+        setNotification({
+          show: true,
+          message: 'Première question non trouvée',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Fonction récursive pour construire le chemin des questions
+      const buildQuestionPath = (nodeId: string, visitedNodes = new Set<string>()): any[] => {
+        if (visitedNodes.has(nodeId)) return [];
+        visitedNodes.add(nodeId);
+
+        const currentNode = allNodes.find(node => node.id === nodeId);
+        if (!currentNode) return [];
+
+        // Trouver toutes les connexions sortantes de ce nœud
+        const connectedEdges = allEdges.filter(edge => edge.source === nodeId);
+        
+        const nodeData = {
+          id: currentNode.id,
+          type: currentNode.type,
+          data: {
+            ...currentNode.data,
+            onCreatePaths: undefined,
+            onChange: undefined
+          },
+          position: currentNode.position,
+          connections: connectedEdges.map(edge => ({
+            targetId: edge.target,
+            condition: edge.label
+          }))
+        };
+
+        // Récursivement obtenir les nœuds connectés
+        const connectedNodes = connectedEdges.flatMap(edge => 
+          buildQuestionPath(edge.target, visitedNodes)
+        );
+
+        return [nodeData, ...connectedNodes];
+      };
+
+      // Construire le chemin des questions à partir du premier nœud
+      const questionPath = buildQuestionPath('1');
+
+      console.log('Chemin des questions:', questionPath);
+
+      const surveyData = {
+        title: data.title.trim(),
+        description: data.description?.trim() || '',
+        demographicEnabled: data.demographicEnabled || false,
+        nodes: questionPath,
+        edges: allEdges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          type: edge.type
+        }))
+      };
+
+      console.log('Données à envoyer:', surveyData);
+
+      const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
+      console.log('Sondage créé avec succès:', response);
+
+      setNotification({
+        show: true,
+        message: 'Sondage créé avec succès',
+        type: 'success'
+      });
+
+      setTimeout(() => {
+        router.push('/'); // Redirection vers la page d'accueil
+      }, 1500);
+
+    } catch (error: any) {
+      console.error('Erreur lors de la création du sondage:', error);
+      setNotification({
+        show: true,
+        message: error.message || 'Erreur lors de la création du sondage',
+        type: 'error'
+      });
+    }
   };
 
   const handleOpenPreview = () => {
@@ -596,8 +732,76 @@ export default function DynamicSurveyCreation() {
     }
   }, [showPreview]);
 
+  // Pour récupérer tous les sondages
+  const fetchSurveys = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    
+    try {
+      const surveys = await dynamicSurveyService.getDynamicSurveys(token);
+      // Utiliser les données des sondages
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  // Pour récupérer un sondage spécifique
+  const fetchSurvey = async (id: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    
+    try {
+      const survey = await dynamicSurveyService.getDynamicSurveyById(id, token);
+      // Utiliser les données du sondage
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  // Pour mettre à jour un sondage
+  const updateSurvey = async (id: string, data: any) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    
+    try {
+      const updatedSurvey = await dynamicSurveyService.updateDynamicSurvey(id, data, token);
+      // Gérer la mise à jour réussie
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  // Pour supprimer un sondage
+  const deleteSurvey = async (id: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    
+    try {
+      await dynamicSurveyService.deleteDynamicSurvey(id, token);
+      // Gérer la suppression réussie
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Notification */}
+      {notification.show && (
+        <Alert 
+          severity={notification.type}
+          sx={{ 
+            position: 'fixed', 
+            top: 20, 
+            right: 20, 
+            zIndex: 9999 
+          }}
+          onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+        >
+          {notification.message}
+        </Alert>
+      )}
+
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
           Basic Information
@@ -606,12 +810,15 @@ export default function DynamicSurveyCreation() {
         <Controller
           name="title"
           control={control}
-          render={({ field }) => (
+          defaultValue=""
+          rules={{ required: 'Le titre est requis' }}
+          render={({ field, fieldState: { error } }) => (
             <TextField
               {...field}
               fullWidth
-              label="Survey Title"
-              variant="outlined"
+              label="Titre du sondage"
+              error={!!error}
+              helperText={error?.message}
               sx={{ mb: 2 }}
             />
           )}
