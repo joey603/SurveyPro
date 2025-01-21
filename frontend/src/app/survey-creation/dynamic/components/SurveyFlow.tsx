@@ -599,11 +599,12 @@ const SurveyFlow = forwardRef<{
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({
-          padding: 0.2, // 20% de padding autour du flow
-          duration: 800, // Animation de 800ms
-          maxZoom: 1, // Zoom maximum de 1
+          padding: 0.2,
+          duration: 800,
+          minZoom: 0.1,
+          maxZoom: 1,
         });
-      }, 50); // Petit délai pour laisser le temps aux nœuds de se repositionner
+      }, 50);
     }
   }, [nodes, edges, reactFlowInstance]);
 
@@ -755,6 +756,7 @@ const SurveyFlow = forwardRef<{
           onNodeClick={onNodeClick}
           onPaneClick={handlePaneClick}
           connectionMode={ConnectionMode.Loose}
+          minZoom={0.1}
           defaultEdgeOptions={{
             type: 'default',
             style: {
