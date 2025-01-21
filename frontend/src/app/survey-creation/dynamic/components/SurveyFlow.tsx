@@ -656,6 +656,24 @@ const SurveyFlow = forwardRef<{
       const newNodeId = (nodes.length + 1).toString();
       const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
 
+      // Vérifier si la question sélectionnée a déjà une connexion
+      if (selectedNode) {
+        const existingConnection = edges.find(edge => edge.source === selectedNode);
+        if (existingConnection && !selectedNodeData?.data.isCritical) {
+          setNotification({
+            show: true,
+            message: 'Cette question a déjà une connexion',
+            type: 'warning'
+          });
+          
+          setTimeout(() => {
+            setNotification(prev => ({ ...prev, show: false }));
+          }, 3000);
+          
+          return;
+        }
+      }
+
       // Si la question sélectionnée est critique, ne pas créer de connexion
       if (selectedNodeData?.data.isCritical) {
         setNotification({
@@ -664,7 +682,6 @@ const SurveyFlow = forwardRef<{
           type: 'warning'
         });
         
-        // Masquer la notification après 3 secondes
         setTimeout(() => {
           setNotification(prev => ({ ...prev, show: false }));
         }, 3000);
