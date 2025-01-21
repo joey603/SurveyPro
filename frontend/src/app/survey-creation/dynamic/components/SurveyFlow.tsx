@@ -62,6 +62,15 @@ const SurveyFlow = forwardRef<{
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'error' | 'warning' | 'info';
+  }>({
+    show: false,
+    message: '',
+    type: 'info'
+  });
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => 
@@ -168,6 +177,34 @@ const SurveyFlow = forwardRef<{
 
   const onConnect = useCallback(
     (params: Connection) => {
+      // Vérifier s'il y a une boucle potentielle
+      const hasCycle = (sourceId: string, targetId: string, visited = new Set<string>()): boolean => {
+        if (sourceId === targetId) return true;
+        if (visited.has(targetId)) return false;
+        
+        visited.add(targetId);
+        
+        // Vérifier les connexions existantes
+        const connectedEdges = edges.filter(edge => edge.source === targetId);
+        return connectedEdges.some(edge => hasCycle(sourceId, edge.target, new Set(visited)));
+      };
+
+      // Vérifier si la nouvelle connexion créerait une boucle
+      if (hasCycle(params.source!, params.target!)) {
+        setNotification({
+          show: true,
+          message: 'Impossible de créer une boucle dans le flow',
+          type: 'error'
+        });
+        
+        // Masquer la notification après 3 secondes
+        setTimeout(() => {
+          setNotification(prev => ({ ...prev, show: false }));
+        }, 3000);
+        
+        return edges;
+      }
+
       // Vérifier si le nœud source existe déjà dans une connexion
       const sourceNode = nodes.find(n => n.id === params.source);
       if (!sourceNode?.data.isCritical) {
@@ -176,6 +213,8 @@ const SurveyFlow = forwardRef<{
           return edges; // Ne pas ajouter de nouvelle connexion
         }
       }
+
+      // Ajouter la nouvelle connexion si aucune boucle n'est détectée
       return setEdges((eds) => addEdge(params, eds));
     },
     [edges, nodes]
@@ -600,6 +639,24 @@ const SurveyFlow = forwardRef<{
     <>
       <GlobalStyles />
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        {notification.show && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              padding: '10px 20px',
+              borderRadius: '4px',
+              backgroundColor: notification.type === 'error' ? '#ff4444' : '#667eea',
+              color: 'white',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            }}
+          >
+            {notification.message}
+          </div>
+        )}
         <DeleteButton />
         <ReorganizeButton />
         <ReactFlow
