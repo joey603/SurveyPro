@@ -595,21 +595,15 @@ const SurveyFlow = forwardRef<{
       };
     }));
 
-    // Ajuster le zoom et la position de la vue pour voir tout le flow
+    // Ajuster le zoom et la position de la vue
     if (reactFlowInstance) {
-      const padding = 50;
-      const viewportWidth = containerWidth;
-      const viewportHeight = 600; // Hauteur approximative du conteneur
-      
-      const xScale = (viewportWidth - padding * 2) / (flowWidth + HORIZONTAL_SPACING);
-      const yScale = (viewportHeight - padding * 2) / (flowHeight + BASE_VERTICAL_SPACING);
-      const scale = Math.min(xScale, yScale, 1); // Limiter le zoom à 1
-      
-      reactFlowInstance.setViewport({
-        x: padding,
-        y: padding,
-        zoom: scale
-      });
+      setTimeout(() => {
+        reactFlowInstance.fitView({
+          padding: 0.2, // 20% de padding autour du flow
+          duration: 800, // Animation de 800ms
+          maxZoom: 1, // Zoom maximum de 1
+        });
+      }, 50); // Petit délai pour laisser le temps aux nœuds de se repositionner
     }
   }, [nodes, edges, reactFlowInstance]);
 
