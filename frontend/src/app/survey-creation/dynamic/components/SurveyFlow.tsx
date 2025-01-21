@@ -433,17 +433,48 @@ const SurveyFlow = forwardRef<{
   };
 
   const reorganizeFlow = useCallback(() => {
-    const VERTICAL_SPACING = 150;
+    const BASE_VERTICAL_SPACING = 200;
     const HORIZONTAL_SPACING = 450;
     const START_Y = 50;
+    const IMAGE_HEIGHT = 200;
+    const BASE_NODE_HEIGHT = 100;
+    const EXTRA_SPACING_FOR_IMAGE = 50; // Espacement supplémentaire pour les parents avec image
     
-    // Calculer le centre X en fonction de la largeur du conteneur
-    const containerWidth = 1200; // Largeur approximative du conteneur
+    const containerWidth = 1200;
     const CENTER_X = containerWidth / 2;
     
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
+    const nodeHeights = new Map<string, number>();
+    const parentIds = new Map<string, string>(); // Pour tracker les relations parent-enfant
     
+    // Calculer la hauteur de chaque nœud
+    const calculateNodeHeight = (node: Node): number => {
+      const hasMedia = node.data.mediaUrl && node.data.mediaUrl.length > 0;
+      return hasMedia ? BASE_NODE_HEIGHT + IMAGE_HEIGHT : BASE_NODE_HEIGHT;
+    };
+    
+    // Calculer l'espacement vertical nécessaire entre deux niveaux
+    const calculateVerticalSpacing = (currentLevel: number, nodeId: string): number => {
+      const currentLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel);
+      const nextLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel + 1);
+      
+      const maxCurrentHeight = Math.max(
+        ...currentLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+      );
+      const maxNextHeight = Math.max(
+        ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+      );
+
+      // Vérifier si le parent a une image
+      const parentId = parentIds.get(nodeId);
+      const parentNode = parentId ? nodes.find(n => n.id === parentId) : null;
+      const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
+      
+      const baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
+      return parentHasImage ? baseSpacing + EXTRA_SPACING_FOR_IMAGE : baseSpacing;
+    };
+
     const shouldBranchNode = (node: Node) => {
       return node.data.type === 'Yes/No' || 
              node.data.type === 'dropdown' || 
@@ -471,6 +502,15 @@ const SurveyFlow = forwardRef<{
 
     const calculateLayout = () => {
       let processedNodes = new Set<string>();
+      
+      nodes.forEach(node => {
+        nodeHeights.set(node.id, calculateNodeHeight(node));
+      });
+
+      // Construire les relations parent-enfant
+      edges.forEach(edge => {
+        parentIds.set(edge.target, edge.source);
+      });
       
       const processNode = (nodeId: string, level: number, startColumn: number): number => {
         const node = nodes.find(n => n.id === nodeId);
@@ -511,7 +551,6 @@ const SurveyFlow = forwardRef<{
     
     calculateLayout();
     
-    // Calculer les dimensions totales du flow
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -520,16 +559,20 @@ const SurveyFlow = forwardRef<{
     nodes.forEach(node => {
       const level = nodeLevels.get(node.id) || 0;
       const column = nodeColumns.get(node.id) || 0;
+      
+      let y = START_Y;
+      for (let i = 0; i < level; i++) {
+        y += calculateVerticalSpacing(i, node.id);
+      }
+      
       const x = CENTER_X + column * HORIZONTAL_SPACING;
-      const y = START_Y + level * VERTICAL_SPACING;
       
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
       minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
+      maxY = Math.max(maxY, y + (nodeHeights.get(node.id) || BASE_NODE_HEIGHT));
     });
     
-    // Calculer les offsets pour centrer
     const flowWidth = maxX - minX;
     const flowHeight = maxY - minY;
     const xOffset = (containerWidth - flowWidth) / 2 - minX;
@@ -538,11 +581,16 @@ const SurveyFlow = forwardRef<{
       const level = nodeLevels.get(node.id) || 0;
       const column = nodeColumns.get(node.id) || 0;
       
+      let y = START_Y;
+      for (let i = 0; i < level; i++) {
+        y += calculateVerticalSpacing(i, node.id);
+      }
+      
       return {
         ...node,
         position: {
           x: CENTER_X + column * HORIZONTAL_SPACING + xOffset,
-          y: START_Y + level * VERTICAL_SPACING
+          y: y
         }
       };
     }));
@@ -554,7 +602,7 @@ const SurveyFlow = forwardRef<{
       const viewportHeight = 600; // Hauteur approximative du conteneur
       
       const xScale = (viewportWidth - padding * 2) / (flowWidth + HORIZONTAL_SPACING);
-      const yScale = (viewportHeight - padding * 2) / (flowHeight + VERTICAL_SPACING);
+      const yScale = (viewportHeight - padding * 2) / (flowHeight + BASE_VERTICAL_SPACING);
       const scale = Math.min(xScale, yScale, 1); // Limiter le zoom à 1
       
       reactFlowInstance.setViewport({

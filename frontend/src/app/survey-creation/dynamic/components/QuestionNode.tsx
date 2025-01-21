@@ -25,6 +25,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import EditIcon from '@mui/icons-material/Edit';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import ReactPlayer from 'react-player';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface QuestionData {
   id: string;
@@ -171,26 +172,38 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
         return (
           <Box>
             {questionData.options.map((option, index) => (
-              <TextField
-                key={index}
-                fullWidth
-                size="small"
-                label={`Option ${index + 1}`}
-                value={option}
-                onChange={(e) => {
-                  const newOptions = [...questionData.options];
-                  newOptions[index] = e.target.value;
-                  updateNodeData({ ...questionData, options: newOptions });
-                }}
-                sx={{ mb: 1 }}
-              />
+              <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Option ${index + 1}`}
+                  value={option}
+                  onChange={(e) => {
+                    const newOptions = [...questionData.options];
+                    newOptions[index] = e.target.value;
+                    handleOptionsChange(newOptions);
+                  }}
+                />
+                {questionData.isCritical && (
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const newOptions = questionData.options.filter((_, i) => i !== index);
+                      handleOptionsChange(newOptions);
+                    }}
+                    sx={{ color: '#ff4444' }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                )}
+              </Box>
             ))}
             <Button
               size="small"
-              onClick={() => updateNodeData({
-                ...questionData,
-                options: [...questionData.options, '']
-              })}
+              onClick={() => {
+                const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
+                handleOptionsChange(newOptions);
+              }}
             >
               Add Option
             </Button>
