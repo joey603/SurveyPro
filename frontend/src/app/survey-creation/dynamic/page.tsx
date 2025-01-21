@@ -132,18 +132,23 @@ export default function DynamicSurveyCreation() {
       const nodes = flowRef.current.getNodes();
       const orderedNodes = getOrderedNodesFromFlow(nodes);
       setPreviewNodes(orderedNodes);
+      // Réinitialiser tous les états liés au preview
       setCurrentPreviewIndex(watch('demographicEnabled') ? -1 : 0);
       setQuestionPath(['1']);
+      setQuestionHistory(['1']);
+      setPreviewAnswers({}); // Réinitialiser les réponses
       setShowPreview(true);
     }
   };
 
   const handleClosePreview = () => {
     setShowPreview(false);
+    // Réinitialiser tous les états
     setCurrentPreviewIndex(0);
     setPreviewNodes([]);
     setPreviewAnswers({});
     setQuestionPath(['1']);
+    setQuestionHistory(['1']);
   };
 
   const renderPreviewQuestion = () => {
