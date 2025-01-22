@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_BASE_URL = 'http://localhost:5041/api/surveys';
 
-export const BASE_URL = "http://localhost:5041";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
 if (!BASE_URL) {
   throw new Error("Environment variable NEXT_PUBLIC_BASE_URL is not defined");
@@ -125,22 +125,36 @@ export const createSurvey = async (data: any, token: string): Promise<any> => {
   }
 };
 
-export const submitSurveyAnswer = async (surveyId: string, data: any, token: string): Promise<any> => {
+export const submitSurveyAnswer = async (surveyId: string, data: any, token: string) => {
   try {
-    const response = await axios.post(
-      `${BASE_URL}/api/survey-answers/submit`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    if (data.isDynamic) {
+      return await axios.post(
+        `${BASE_URL}/dynamic-survey-answers/submit`,
+        {
+          surveyId,
+          answers: data.answers,
+          demographic: data.demographic
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
         }
-      }
-    );
-    return response.data;
-  } catch (error: any) {
-    console.error('Error submitting survey answers:', error);
-    throw error.response?.data || error;
+      );
+    } else {
+      return await axios.post(
+        `${BASE_URL}/survey-answers/submit`,
+        {
+          surveyId,
+          answers: data.answers,
+          demographic: data.demographic
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+    }
+  } catch (error) {
+    console.error('Erreur lors de la soumission de la réponse:', error);
+    throw error;
   }
 };
 
@@ -198,41 +212,38 @@ export const fetchCities = async (token: string): Promise<string[]> => {
   }
 };
 
-export const fetchAvailableSurveys = async (token: string): Promise<any> => {
-  console.log('Début fetchAvailableSurveys avec token:', token ? 'Token présent' : 'Pas de token');
-  
+export const fetchAvailableSurveys = async (token: string) => {
   try {
-    if (!token) {
-      throw new Error('Token d\'authentification requis');
-    }
+    console.log('Fetching surveys from:', BASE_URL); // Debug
 
-    console.log('Envoi de la requête à:', `${BASE_URL}/api/surveys/available`);
-    
-    const response = await axios.get(`${BASE_URL}/api/surveys/available`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+    // Récupérer les sondages classiques
+    const classicResponse = await axios.get(`${BASE_URL}/surveys/available`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    console.log('Classic surveys:', classicResponse.data); // Debug
 
-    console.log('Réponse reçue:', response);
-    console.log('Données reçues:', response.data);
+    // Récupérer les sondages dynamiques
+    const dynamicResponse = await axios.get(`${BASE_URL}/dynamic-surveys`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    console.log('Dynamic surveys:', dynamicResponse.data); // Debug
 
-    if (!response.data) {
-      throw new Error('Aucune donnée reçue du serveur');
-    }
+    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: true,
+      questions: survey.nodes.map((node: any) => ({
+        id: node.id,
+        text: node.data.text || node.data.label || 'Question sans texte',
+        type: node.type,
+        options: node.data.options || []
+      }))
+    }));
 
-    return response.data;
-  } catch (error: any) {
-    console.error("Erreur complète:", error);
-    console.error("Message d'erreur:", error.message);
-    console.error("Réponse d'erreur:", error.response);
-    console.error("Données d'erreur:", error.response?.data);
-    
-    if (error.response?.data) {
-      throw error.response.data;
-    }
-    throw new Error(error.message || 'Erreur lors de la récupération des sondages');
+    // Combiner et retourner tous les sondages
+    return [...classicResponse.data, ...dynamicSurveys];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages:', error);
+    throw error;
   }
 };
 

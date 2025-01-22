@@ -52,6 +52,9 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import EmailIcon from '@mui/icons-material/Email';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from 'next/navigation';
+import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
+import axios from 'axios';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -84,6 +87,9 @@ interface Survey {
   status?: 'pending' | 'accepted' | 'rejected';
   demographicEnabled?: boolean;
   sharedBy?: string;
+  isDynamic?: boolean;
+  nodes?: any[];
+  edges?: any[];
 }
 
 interface DemographicData {
@@ -163,6 +169,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
   const [currentSurveyToShare, setCurrentSurveyToShare] = useState<Survey | null>(null);
   const [lastDemographicData, setLastDemographicData] = useState<DemographicData | null>(null);
+  const [dynamicSurveys, setDynamicSurveys] = useState<any[]>([]);
 
   useEffect(() => {
     // Sauvegarder l'URL actuelle si elle contient un surveyId
@@ -226,19 +233,25 @@ const SurveyAnswerPage: React.FC = () => {
           throw new Error('Aucun token d\'authentification trouvé');
         }
 
-        const data = await fetchAvailableSurveys(token);
-        setSurveys(data);
+        // Utiliser le service modifié pour récupérer tous les sondages
+        const allSurveys = await fetchAvailableSurveys(token);
+        console.log('Sondages chargés:', allSurveys); // Debug
+
+        setSurveys(allSurveys);
 
         // Vérifier s'il y a un ID de survey dans l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSurveyId = urlParams.get('surveyId');
         if (sharedSurveyId) {
-          const sharedSurvey = data.find((survey: { _id: string }) => survey._id === sharedSurveyId);
+          const sharedSurvey = allSurveys.find(
+            (survey: { _id: string }) => survey._id === sharedSurveyId
+          );
           if (sharedSurvey) {
             setSelectedSurvey(sharedSurvey);
           }
         }
       } catch (error: any) {
+        console.error('Erreur lors du chargement des sondages:', error);
         setError(error.message || 'Échec du chargement des sondages');
       } finally {
         setLoading(false);
@@ -327,63 +340,44 @@ const SurveyAnswerPage: React.FC = () => {
   };
 
   const onSubmit = async (data: FormData) => {
-    if (!selectedSurvey) return;
-    
-    if (!validateForm(data)) {
-      setNotification({
-        message: "Please fill in all required fields",
-        severity: 'error',
-        open: true
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
     try {
-      const formattedAnswers = Object.entries(data.answers).map(([questionId, value]) => ({
-        questionId,
-        value
-      }));
-
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('No authentication token found');
+      if (!selectedSurvey) {
+        setSubmitError('Aucun sondage sélectionné');
+        return;
       }
 
-      const submissionData = {
-        surveyId: selectedSurvey._id,
-        answers: formattedAnswers,
-        demographic: selectedSurvey.demographicEnabled ? {
-          gender: data.demographic.gender,
-          dateOfBirth: data.demographic.dateOfBirth,
-          educationLevel: data.demographic.educationLevel,
-          city: data.demographic.city
-        } : undefined
-      };
+      setIsSubmitting(true);
+      setSubmitError(null);
 
-      await submitSurveyAnswer(selectedSurvey._id, submissionData, token);
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Token non trouvé');
 
-      setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+      // Utiliser le service unifié pour soumettre les réponses
+      await submitSurveyAnswer(
+        selectedSurvey._id,
+        {
+          isDynamic: selectedSurvey.isDynamic,
+          answers: selectedSurvey.isDynamic 
+            ? Object.entries(data.answers).map(([nodeId, value]) => ({
+                nodeId,
+                value
+              }))
+            : data.answers,
+          demographic: selectedSurvey.demographicEnabled ? data.demographic : undefined
+        },
+        token
+      );
 
       setNotification({
-        message: "Thank you for your responses!",
+        message: 'Réponse soumise avec succès',
         severity: 'success',
         open: true
       });
-      
-      setTimeout(() => {
-        setSelectedSurvey(null);
-      }, 2000);
 
+      setSelectedSurvey(null);
     } catch (error: any) {
-      console.error('Error submitting survey:', error);
-      setNotification({
-        message: error.message || 'An error occurred while submitting your responses',
-        severity: 'error',
-        open: true
-      });
+      console.error('Erreur lors de la soumission:', error);
+      setSubmitError(error.message || 'Erreur lors de la soumission du sondage');
     } finally {
       setIsSubmitting(false);
     }
@@ -977,6 +971,93 @@ const SurveyAnswerPage: React.FC = () => {
     }
   };
 
+  const renderSurveyForm = () => {
+    if (!selectedSurvey) {
+      return null;
+    }
+
+    return (
+      <Box sx={{ p: 4, backgroundColor: 'white' }}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {selectedSurvey.demographicEnabled && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Informations Démographiques
+              </Typography>
+              {renderDemographicFields()}
+            </Box>
+          )}
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Questions du sondage
+            </Typography>
+            {selectedSurvey.questions.map((question: Question) => (
+              <Paper
+                key={question.id}
+                elevation={1}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {question.text}
+                </Typography>
+                
+                {question.media && renderQuestionMedia(question.media)}
+
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(question)}
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+
+          {submitError && (
+            <Typography color="error" sx={{ mt: 2, mb: 2 }}>
+              {submitError}
+            </Typography>
+          )}
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            mt: 4,
+            pt: 4,
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+          }}>
+            <Button
+              id="submit-survey-button"
+              data-testid="submit-survey-button"
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+                minWidth: 200
+              }}
+            >
+              {isSubmitting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} sx={{ color: 'white' }} />
+                  <span>Submitting...</span>
+                </Box>
+              ) : (
+                'Submit Survey'
+              )}
+            </Button>
+          </Box>
+        </form>
+      </Box>
+    );
+  };
+
   if (!selectedSurvey) {
     return (
       <Box sx={{
@@ -1124,24 +1205,43 @@ const SurveyAnswerPage: React.FC = () => {
                       flexDirection: 'column',
                       position: 'relative'
                     }}>
-                      <Typography 
-                        id={`survey-title-${survey._id}`}
-                        data-testid={`survey-title-${survey._id}`}
-                        variant="h6" 
-                        sx={{ 
-                          mb: 2,
-                          color: 'primary.main',
-                          fontWeight: 500,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.3,
-                          height: '2.6em'
-                        }}
-                      >
-                        {survey.title}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Typography 
+                          id={`survey-title-${survey._id}`}
+                          data-testid={`survey-title-${survey._id}`}
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            flexGrow: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.3,
+                            height: '2.6em'
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        {survey.isDynamic && (
+                          <Chip
+                            icon={<AutoGraphIcon />}
+                            label="Dynamique"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              '& .MuiChip-icon': {
+                                color: '#667eea'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
+                      </Box>
                       <Typography 
                         variant="body2" 
                         color="text.secondary"
@@ -1398,7 +1498,7 @@ const SurveyAnswerPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '1000px ',
+        maxWidth: '1000px',
         mb: 4,
       }}>
         <Box sx={{
@@ -1429,86 +1529,7 @@ const SurveyAnswerPage: React.FC = () => {
           </Typography>
         </Box>
 
-        <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {selectedSurvey.demographicEnabled && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                  Informations Démographiques
-                </Typography>
-                {renderDemographicFields()}
-              </Box>
-            )}
-
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                Survey Questions
-              </Typography>
-              {selectedSurvey.questions.map((question: Question) => (
-                <Paper
-                  id={`question-container-${question.id}`}
-                  data-testid={`question-container-${question.id}`}
-                  key={question.id}
-                  elevation={1}
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    {question.text}
-                  </Typography>
-                  
-                  {question.media && renderQuestionMedia(question.media)}
-
-                  <Box sx={{ mt: 2 }}>
-                    {renderQuestionInput(question)}
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-
-            {submitError && (
-              <Typography color="error" sx={{ mt: 2, mb: 2 }}>
-                {submitError}
-              </Typography>
-            )}
-
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end',
-              mt: 4,
-              pt: 4,
-              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
-            }}>
-              <Button
-                id="submit-survey-button"
-                data-testid="submit-survey-button"
-                type="submit"
-                variant="contained"
-                disabled={isSubmitting}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  },
-                  minWidth: 200
-                }}
-              >
-                {isSubmitting ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: 'white' }} />
-                    <span>Submitting...</span>
-                  </Box>
-                ) : (
-                  'Submit Survey'
-                )}
-              </Button>
-            </Box>
-          </form>
-        </Box>
+        {renderSurveyForm()}
       </Paper>
     </Box>
   );
