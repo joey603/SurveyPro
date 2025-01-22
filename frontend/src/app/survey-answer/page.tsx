@@ -1138,34 +1138,28 @@ const SurveyAnswerPage: React.FC = () => {
     const shouldShowQuestion = (nodeId: string, allNodes: typeof selectedSurvey.nodes): boolean => {
       if (nodeId === '1') return true;
 
-      const currentIndex = allNodes.findIndex(n => n.id === nodeId);
+      // Trouver tous les chemins possibles vers ce nœud
+      const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
       
-      for (let i = 0; i < currentIndex; i++) {
-        const previousNode = allNodes[i];
-        if (isCriticalQuestion(previousNode.id)) {
-          if (!currentAnswers[previousNode.id]) {
-            if (nodeId === previousNode.id) return true;
-            return false;
-          }
-          
-          const edge = selectedSurvey.edges?.find(e => 
-            e.source === previousNode.id && 
-            e.target === nodeId &&
-            currentAnswers[previousNode.id] === e.label
-          );
-          
-          if (edge) continue;
-          
-          const alternativePath = selectedSurvey.edges?.some(e => 
-            e.source === previousNode.id && 
-            currentAnswers[previousNode.id] === e.label
-          );
-          
-          if (alternativePath) return false;
-        }
-      }
+      // Si aucun chemin d'entrée, la question ne devrait pas être visible
+      if (incomingEdges.length === 0) return false;
 
-      return true;
+      // Vérifier chaque chemin d'entrée possible
+      return incomingEdges.some(edge => {
+        const sourceNode = allNodes.find(n => n.id === edge.source);
+        
+        // Si le nœud source n'existe pas, ce chemin n'est pas valide
+        if (!sourceNode) return false;
+
+        // Si c'est une question critique (avec label sur l'arête)
+        if (edge.label) {
+          // La question doit être visible si la réponse correspond au label de l'arête
+          return currentAnswers[edge.source] === edge.label;
+        }
+
+        // Pour les connexions sans condition, vérifier si le nœud source est visible
+        return shouldShowQuestion(edge.source, allNodes);
+      });
     };
 
     const renderQuestionInput = (node: any) => {
