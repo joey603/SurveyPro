@@ -1,4 +1,5 @@
 import axios from "axios";
+import { dynamicSurveyService } from "./dynamicSurveyService";
 
 const API_BASE_URL = 'http://localhost:5041/api/surveys';
 
@@ -127,33 +128,61 @@ export const createSurvey = async (data: any, token: string): Promise<any> => {
 
 export const submitSurveyAnswer = async (surveyId: string, data: any, token: string) => {
   try {
+    console.log('Données à soumettre:', {
+      surveyId,
+      isDynamic: data.isDynamic,
+      data
+    });
+
     if (data.isDynamic) {
+      // Format pour les sondages dynamiques
+      const formattedData = {
+        surveyId,
+        answers: data.answers.map((answer: any) => ({
+          nodeId: answer.questionId || answer.nodeId,
+          value: answer.value || answer.answer
+        })),
+        demographic: data.demographic,
+        path: data.path || []
+      };
+
+      console.log('Données formatées (dynamique):', formattedData);
+
       return await axios.post(
         `${BASE_URL}/dynamic-survey-answers/submit`,
-        {
-          surveyId,
-          answers: data.answers,
-          demographic: data.demographic
-        },
+        formattedData,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
     } else {
+      // Format pour les sondages classiques
+      const formattedData = {
+        surveyId,
+        answers: Array.isArray(data.answers) 
+          ? data.answers.map((answer: any) => ({
+              questionId: answer.questionId,
+              value: answer.value
+            }))
+          : Object.entries(data.answers).map(([questionId, value]) => ({
+              questionId,
+              value
+            })),
+        demographic: data.demographic
+      };
+
+      console.log('Données formatées (classique):', formattedData);
+
       return await axios.post(
         `${BASE_URL}/survey-answers/submit`,
-        {
-          surveyId,
-          answers: data.answers,
-          demographic: data.demographic
-        },
+        formattedData,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
     }
-  } catch (error) {
-    console.error('Erreur lors de la soumission de la réponse:', error);
+  } catch (error: any) {
+    console.error('Erreur détaillée lors de la soumission:', error.response?.data || error);
     throw error;
   }
 };
@@ -309,5 +338,27 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
     console.error('Erreur lors de la réponse au partage:', error);
     console.error('Détails de l\'erreur:', error.response?.data);
     throw error.response?.data || error;
+  }
+};
+
+export const fetchAnsweredSurveys = async (token: string) => {
+  try {
+    // Récupérer les réponses aux sondages classiques
+    const classicResponse = await axios.get(`${BASE_URL}/survey-answers/responses/user`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const classicAnswers = classicResponse.data.map((response: any) => response.surveyId);
+
+    // Récupérer les réponses aux sondages dynamiques
+    const dynamicAnswers = await dynamicSurveyService.getUserAnsweredSurveys(token);
+
+    // Combiner les deux types de réponses
+    const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
+    console.log('Tous les sondages répondus:', allAnsweredSurveys);
+
+    return allAnsweredSurveys;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages répondus:', error);
+    return [];
   }
 };

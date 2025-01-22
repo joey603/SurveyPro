@@ -103,5 +103,24 @@ export const dynamicSurveyService = {
       console.error('Erreur lors de la suppression du sondage:', error);
       throw error.response?.data || error;
     }
+  },
+
+  // Ajouter cette nouvelle méthode
+  getUserAnsweredSurveys: async (token: string) => {
+    try {
+      const response = await axios.get(
+        `${BASE_URL}/dynamic-survey-answers/user`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      // Retourner uniquement les IDs des sondages répondus
+      return response.data.map((answer: any) => answer.surveyId);
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération des réponses:', error);
+      return [];
+    }
   }
 }; 
