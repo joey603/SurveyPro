@@ -1223,219 +1223,281 @@ const SurveyAnswerPage: React.FC = () => {
     };
 
     const renderQuestionInput = (node: any) => {
-      console.log('Question node:', {
-        id: node.id,
-        type: node.type,
-        data: node.data,
-        questionType: node.data?.questionType
-      });
+      // Ajouter le rendu du média avant le rendu de l'input
+      const renderNodeMedia = () => {
+        const mediaUrl = node.data?.mediaUrl || node.data?.media;
+        if (!mediaUrl) return null;
 
-      const effectiveType = node.data?.questionType || node.data?.type;
+        // Déterminer le type de média basé sur l'extension du fichier
+        const isVideo = mediaUrl.match(/\.(mp4|mov|webm)$/i);
+        const isImage = mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
 
-      switch (effectiveType?.toLowerCase()) {
-        case 'yes-no':
-        case 'yesno':
-        case 'boolean':
+        if (isVideo) {
           return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <RadioGroup
-                  {...field}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value);
-                    handleDynamicAnswerChange(node.id, value);
-                  }}
-                >
-                  <FormControlLabel value="Yes" control={<Radio />} label="Oui" />
-                  <FormControlLabel value="No" control={<Radio />} label="Non" />
-                </RadioGroup>
-              )}
-            />
+            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+              <ReactPlayer
+                url={mediaUrl}
+                controls
+                width="100%"
+                height="auto"
+                style={{ borderRadius: '8px' }}
+                config={{
+                  file: {
+                    attributes: {
+                      controlsList: 'nodownload',
+                      onContextMenu: (e: React.MouseEvent) => e.preventDefault()
+                    }
+                  }
+                }}
+                onError={(e) => console.error('Erreur de chargement vidéo:', e)}
+                onReady={() => console.log('Vidéo prête à être lue')}
+              />
+            </Box>
           );
+        }
 
-        case 'multiple-choice':
-        case 'multiplechoice':
-        case 'choice':
-        case 'radio':
+        if (isImage) {
           return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <RadioGroup
-                  {...field}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value);
-                    handleDynamicAnswerChange(node.id, value);
-                  }}
-                >
-                  {(node.data?.options || []).map((option: string) => (
-                    <FormControlLabel
-                      key={option}
-                      value={option}
-                      control={<Radio />}
-                      label={option}
-                    />
-                  ))}
-                </RadioGroup>
-              )}
-            />
+            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+              <Box
+                component="img"
+                src={mediaUrl}
+                alt="Question media"
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: '8px',
+                  objectFit: 'contain',
+                  maxHeight: '400px',
+                  backgroundColor: 'background.paper',
+                  boxShadow: 1
+                }}
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  console.error('Erreur de chargement image:', e);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={() => console.log('Image chargée avec succès')}
+              />
+            </Box>
           );
+        }
 
-        case 'text':
-        case 'textarea':
-        case 'string':
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  multiline
-                  rows={3}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    handleDynamicAnswerChange(node.id, e.target.value);
-                  }}
-                />
-              )}
-            />
-          );
+        return null;
+      };
 
-        case 'rating':
-        case 'stars':
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue={0}
-              render={({ field }) => (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Rating
-                    {...field}
-                    onChange={(_, value) => {
-                      field.onChange(value);
-                      handleDynamicAnswerChange(node.id, value);
-                    }}
+      return (
+        <Box sx={{ width: '100%' }}>
+          {renderNodeMedia()}
+          {/* Reste du code existant pour le rendu des inputs */}
+          {(() => {
+            const effectiveType = node.data?.questionType || node.data?.type;
+            switch (effectiveType?.toLowerCase()) {
+              case 'yes-no':
+              case 'yesno':
+              case 'boolean':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <RadioGroup
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          handleDynamicAnswerChange(node.id, value);
+                        }}
+                      >
+                        <FormControlLabel value="Yes" control={<Radio />} label="Oui" />
+                        <FormControlLabel value="No" control={<Radio />} label="Non" />
+                      </RadioGroup>
+                    )}
                   />
-                  <Typography>
-                    {field.value ? `${field.value} étoiles` : 'Aucune note'}
-                  </Typography>
-                </Box>
-              )}
-            />
-          );
+                );
 
-        case 'slider':
-        case 'range':
-        case 'number':
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue={0}
-              render={({ field }) => (
-                <Box sx={{ width: '100%', px: 2 }}>
-                  <Slider
-                    {...field}
-                    min={0}
-                    max={10}
-                    marks
-                    valueLabelDisplay="auto"
-                    onChange={(_, value) => {
-                      field.onChange(value);
-                      handleDynamicAnswerChange(node.id, value);
-                    }}
+              case 'multiple-choice':
+              case 'multiplechoice':
+              case 'choice':
+              case 'radio':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <RadioGroup
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          handleDynamicAnswerChange(node.id, value);
+                        }}
+                      >
+                        {(node.data?.options || []).map((option: string) => (
+                          <FormControlLabel
+                            key={option}
+                            value={option}
+                            control={<Radio />}
+                            label={option}
+                          />
+                        ))}
+                      </RadioGroup>
+                    )}
                   />
-                </Box>
-              )}
-            />
-          );
+                );
 
-        case 'date':
-        case 'datetime':
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue={null}
-              render={({ field }) => (
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    {...field}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                    onChange={(value) => {
-                      field.onChange(value);
-                      handleDynamicAnswerChange(node.id, value);
-                    }}
+              case 'text':
+              case 'textarea':
+              case 'string':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        multiline
+                        rows={3}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleDynamicAnswerChange(node.id, e.target.value);
+                        }}
+                      />
+                    )}
                   />
-                </LocalizationProvider>
-              )}
-            />
-          );
+                );
 
-        case 'dropdown':
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
-                  <Select
-                    {...field}
-                    label={node.data.text || 'Sélectionnez une option'}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value);
-                      handleDynamicAnswerChange(node.id, value);
-                    }}
-                  >
-                    {(node.data?.options || []).map((option: string) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            />
-          );
+              case 'rating':
+              case 'stars':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={0}
+                    render={({ field }) => (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Rating
+                          {...field}
+                          onChange={(_, value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                        <Typography>
+                          {field.value ? `${field.value} étoiles` : 'Aucune note'}
+                        </Typography>
+                      </Box>
+                    )}
+                  />
+                );
 
-        default:
-          console.warn(`Type de question non supporté: ${effectiveType}`, node);
-          // Si aucun type n'est spécifié, on utilise un champ texte par défaut
-          return (
-            <Controller
-              name={`answers.${node.id}`}
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  multiline
-                  rows={3}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    handleDynamicAnswerChange(node.id, e.target.value);
-                  }}
-                  placeholder="Votre réponse..."
-                />
-              )}
-            />
-          );
-      }
+              case 'slider':
+              case 'range':
+              case 'number':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={0}
+                    render={({ field }) => (
+                      <Box sx={{ width: '100%', px: 2 }}>
+                        <Slider
+                          {...field}
+                          min={0}
+                          max={10}
+                          marks
+                          valueLabelDisplay="auto"
+                          onChange={(_, value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                      </Box>
+                    )}
+                  />
+                );
+
+              case 'date':
+              case 'datetime':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={null}
+                    render={({ field }) => (
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                          {...field}
+                          renderInput={(params) => <TextField {...params} fullWidth />}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                      </LocalizationProvider>
+                    )}
+                  />
+                );
+
+              case 'dropdown':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
+                        <Select
+                          {...field}
+                          label={node.data.text || 'Sélectionnez une option'}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        >
+                          {(node.data?.options || []).map((option: string) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                );
+
+              default:
+                console.warn(`Type de question non supporté: ${effectiveType}`, node);
+                // Si aucun type n'est spécifié, on utilise un champ texte par défaut
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        multiline
+                        rows={3}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleDynamicAnswerChange(node.id, e.target.value);
+                        }}
+                        placeholder="Votre réponse..."
+                      />
+                    )}
+                  />
+                );
+            }
+          })()}
+        </Box>
+      );
     };
 
     // Trier les nœuds
@@ -1457,14 +1519,6 @@ const SurveyAnswerPage: React.FC = () => {
             const isVisible = shouldShowQuestion(node.id, orderedNodes);
             const isCritical = isCriticalQuestion(node.id);
 
-            console.log(`Node ${node.id} visibility:`, {
-              isVisible,
-              currentAnswers,
-              nodeId: node.id,
-              isCritical,
-              edges: selectedSurvey.edges?.filter(e => e.source === node.id || e.target === node.id)
-            });
-
             if (!isVisible) return null;
 
             return (
@@ -1484,7 +1538,8 @@ const SurveyAnswerPage: React.FC = () => {
                 </Typography>
 
                 <Box sx={{ mt: 2 }}>
-                  {renderQuestionInput(node)}                </Box>
+                  {renderQuestionInput(node)}
+                </Box>
               </Paper>
             );
           })}
