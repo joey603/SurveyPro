@@ -401,9 +401,9 @@ export default function DynamicSurveyCreation() {
                 onError={(e) => {
                   console.error('Image loading error:', e);
                   setNotification({
+                    show: true,
                     message: 'Error loading image in preview. Please check the URL.',
-                    severity: 'error',
-                    open: true
+                    type: 'error'
                   });
                 }}
               />
@@ -421,9 +421,9 @@ export default function DynamicSurveyCreation() {
                 onError={(e) => {
                   console.error('ReactPlayer error:', e);
                   setNotification({
+                    show: true,
                     message: 'Error loading media in preview. Please check the URL.',
-                    severity: 'error',
-                    open: true
+                    type: 'error'
                   });
                 }}
               />
