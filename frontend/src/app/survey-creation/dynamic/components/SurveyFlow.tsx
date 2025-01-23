@@ -22,6 +22,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
+import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
@@ -68,7 +69,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
-    type: 'error' | 'warning' | 'info';
+    type: 'error' | 'warning' | 'info' | 'success';
   }>({
     show: false,
     message: '',
@@ -229,13 +230,54 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     setSelectedEdge(null);
   }, []);
 
-  const onDeleteNode = useCallback((nodeId: string) => {
-    setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
-    setEdges(prevEdges => prevEdges.filter(edge => 
-      edge.source !== nodeId && edge.target !== nodeId
-    ));
-    setSelectedNode(null);
-  }, []);
+  const onDeleteNode = useCallback(async (nodeId: string) => {
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      // Trouver le nœud à supprimer
+      const nodeToDelete = nodes.find(node => node.id === nodeId);
+      
+      if (nodeToDelete?.data?.media) {
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            setNotification({
+              show: true,
+              message: 'Token d\'authentification non trouvé',
+              type: 'error'
+            });
+            return;
+          }
+
+          // Supprimer le média de Cloudinary
+          await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
+        } catch (error) {
+          console.error('Erreur lors de la suppression du média:', error);
+          setNotification({
+            show: true,
+            message: 'Erreur lors de la suppression du média',
+            type: 'error'
+          });
+        }
+      }
+
+      // Supprimer le nœud et ses connexions
+      setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
+      setEdges(prevEdges => prevEdges.filter(edge => 
+        edge.source !== nodeId && edge.target !== nodeId
+      ));
+      setSelectedNode(null);
+
+      setNotification({
+        show: true,
+        message: 'Question supprimée avec succès',
+        type: 'success'
+      });
+
+      // Masquer la notification après 3 secondes
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  }, [nodes]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
     // Vérifier si l'edge est connectée à une question critique
@@ -400,11 +442,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           color: 'white',
           padding: '8px 16px',
           borderRadius: '8px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          cursor: 'pointer'
         }}
         onClick={() => {
           if (selectedEdge) {
@@ -756,7 +794,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               zIndex: 1000,
               padding: '10px 20px',
               borderRadius: '4px',
-              backgroundColor: notification.type === 'error' ? '#ff4444' : '#667eea',
+              backgroundColor: notification.type === 'error' ? '#ff4444' : notification.type === 'success' ? '#66cc66' : '#667eea',
               color: 'white',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}

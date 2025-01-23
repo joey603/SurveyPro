@@ -113,7 +113,7 @@ export default function DynamicSurveyCreation() {
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
-    type: 'error' | 'success' | 'info';
+    type: 'error' | 'success' | 'info' | 'warning';
   }>({
     show: false,
     message: '',
@@ -129,12 +129,56 @@ export default function DynamicSurveyCreation() {
     return edges.map(edge => edge.id);
   };
 
-  const handleResetSurvey = () => {
+  const handleResetSurvey = async () => {
     if (window.confirm('Are you sure you want to reset the survey? All progress will be lost.')) {
-      reset();
-      
-      if (flowRef.current) {
-        flowRef.current.resetFlow();
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          setNotification({
+            show: true,
+            message: 'Token d\'authentification non trouvé',
+            type: 'error'
+          });
+          return;
+        }
+
+        if (flowRef.current) {
+          // Récupérer tous les nœuds
+          const nodes = flowRef.current.getNodes();
+          
+          // Supprimer les médias de toutes les questions qui en ont
+          for (const node of nodes) {
+            if (node.data?.media) {
+              try {
+                await dynamicSurveyService.deleteMedia(node.data.media, token);
+              } catch (error) {
+                console.error('Erreur lors de la suppression du média:', error);
+                setNotification({
+                  show: true,
+                  message: `Erreur lors de la suppression du média de la question ${node.data.questionNumber}`,
+                  type: 'warning'
+                });
+              }
+            }
+          }
+
+          // Réinitialiser le formulaire et le flow
+          reset();
+          flowRef.current.resetFlow();
+          
+          setNotification({
+            show: true,
+            message: 'Sondage réinitialisé avec succès',
+            type: 'success'
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors de la réinitialisation:', error);
+        setNotification({
+          show: true,
+          message: 'Erreur lors de la réinitialisation du sondage',
+          type: 'error'
+        });
       }
     }
   };
@@ -145,21 +189,41 @@ export default function DynamicSurveyCreation() {
     const nodes = flowRef.current.getNodes();
     const node = nodes[index];
     
+    // Vérifier si le nœud existe et a un média
     if (node?.data?.media) {
       try {
         const token = localStorage.getItem('accessToken');
-        if (!token) throw new Error('Token non trouvé');
+        if (!token) {
+          setNotification({
+            show: true,
+            message: 'Token d\'authentification non trouvé',
+            type: 'error'
+          });
+          return;
+        }
 
+        // Supprimer le média de Cloudinary
         await dynamicSurveyService.deleteMedia(node.data.media, token);
       } catch (error) {
         console.error('Erreur lors de la suppression du média:', error);
-        // Continuer malgré l'erreur
+        setNotification({
+          show: true,
+          message: 'Erreur lors de la suppression du média, mais la question sera supprimée',
+          type: 'warning'
+        });
       }
     }
 
     // Supprimer le nœud de la question
     const updatedNodes = nodes.filter((_, i) => i !== index);
     flowRef.current.setNodes(updatedNodes);
+
+    // Afficher une notification de succès
+    setNotification({
+      show: true,
+      message: 'Question supprimée avec succès',
+      type: 'success'
+    });
   };
 
   const onSubmit = async (data: FormData) => {
