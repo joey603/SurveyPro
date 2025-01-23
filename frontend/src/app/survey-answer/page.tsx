@@ -342,25 +342,24 @@ const SurveyAnswerPage: React.FC = () => {
 
     if (selectedSurvey?.isDynamic && selectedSurvey?.nodes) {
       // Pour les sondages dynamiques, vérifier uniquement les questions visibles
-      selectedSurvey.nodes.forEach(node => {
-        // Vérifier si la question doit être affichée selon la logique existante
-        const shouldShowQuestion = (nodeId: string): boolean => {
-          if (nodeId === '1') return true;
-          const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
-          if (incomingEdges.length === 0) return false;
-          return incomingEdges.some(edge => {
-            if (edge.label) {
-              return currentAnswers[edge.source] === edge.label;
-            }
-            return shouldShowQuestion(edge.source);
-          });
-        };
-
-        if (shouldShowQuestion(node.id)) {
-          const answer = data.answers[node.id];
-          if (answer === undefined || answer === '' || answer === null) {
-            errors[`answers.${node.id}`] = 'This question requires an answer';
+      const shouldShowQuestion = (nodeId: string): boolean => {
+        if (nodeId === '1') return true;
+        const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
+        if (incomingEdges.length === 0) return false;
+        return incomingEdges.some(edge => {
+          if (edge.label) {
+            return currentAnswers[edge.source] === edge.label;
           }
+          return shouldShowQuestion(edge.source);
+        });
+      };
+
+      // Vérifier uniquement les questions actuellement visibles
+      const visibleNodes = selectedSurvey.nodes.filter(node => shouldShowQuestion(node.id));
+      visibleNodes.forEach(node => {
+        const answer = data.answers[node.id];
+        if (answer === undefined || answer === '' || answer === null) {
+          errors[`answers.${node.id}`] = 'This question requires an answer';
         }
       });
     } else {
