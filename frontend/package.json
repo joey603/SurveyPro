@@ -41,7 +41,7 @@
     "reactflow": "^11.11.4"
   },
   "devDependencies": {
-    "@types/node": "^20.17.6",
+    "@types/node": "^20.17.16",
     "@types/react": "^18.3.12",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-color": "^3.0.13",

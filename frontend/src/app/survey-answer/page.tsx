@@ -555,31 +555,31 @@ const SurveyAnswerPage: React.FC = () => {
 
             case "dropdown":
               return (
-                <FormControl 
-                  fullWidth 
-                  error={!!formErrors[`answers.${question.id}`]}
-                >
-                  <InputLabel>{question.text}</InputLabel>
-                  <Select
-                    {...field}
-                    label={question.text}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
-                    }}
-                  >
-                    {question.options?.map((option, index) => (
-                      <MenuItem key={index} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors[`answers.${question.id}`] && (
-                    <FormHelperText error>
-                      {formErrors[`answers.${question.id}`]}
-                    </FormHelperText>
+                <Controller
+                  name={`answers.${question.id}`}
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <FormControl fullWidth>
+                      <InputLabel>{question.text || 'Sélectionnez une option'}</InputLabel>
+                      <Select
+                        {...field}
+                        label={question.text || 'Sélectionnez une option'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          validateField(`answers.${question.id}`, value);
+                        }}
+                      >
+                        {(question.options || []).map((option: string) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   )}
-                </FormControl>
+                />
               );
 
             case "yes-no":
@@ -1319,6 +1319,35 @@ const SurveyAnswerPage: React.FC = () => {
                     }}
                   />
                 </LocalizationProvider>
+              )}
+            />
+          );
+
+        case 'dropdown':
+          return (
+            <Controller
+              name={`answers.${node.id}`}
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
+                  <Select
+                    {...field}
+                    label={node.data.text || 'Sélectionnez une option'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value);
+                      handleDynamicAnswerChange(node.id, value);
+                    }}
+                  >
+                    {(node.data?.options || []).map((option: string) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               )}
             />
           );
