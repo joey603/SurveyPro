@@ -55,6 +55,7 @@ import { useRouter } from 'next/navigation';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import axios from 'axios';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -1803,6 +1804,23 @@ const SurveyAnswerPage: React.FC = () => {
                           <Chip
                             icon={<AutoGraphIcon />}
                             label="Dynamique"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              '& .MuiChip-icon': {
+                                color: '#667eea'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
+                        {!survey.isDynamic && (
+                          <Chip
+                            icon={<ListAltIcon />}
+                            label="Static"
                             size="small"
                             sx={{
                               ml: 1,
