@@ -395,34 +395,66 @@ const SurveyAnswerPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Token non trouvé');
 
-      // Préparer les données selon le type de sondage
-      const submissionData = {
-        isDynamic: selectedSurvey.isDynamic,
-        answers: selectedSurvey.isDynamic 
-          ? selectedSurvey.questions.map(question => ({
-              questionId: question.id,
-              value: data.answers[question.id]
-            }))
-          : Object.entries(data.answers).map(([questionId, value]) => ({
-              questionId,
-              value
-            })),
-        demographic: selectedSurvey.demographicEnabled ? {
-          gender: data.demographic?.gender,
-          dateOfBirth: data.demographic?.dateOfBirth,
-          educationLevel: data.demographic?.educationLevel,
-          city: data.demographic?.city
-        } : undefined,
-        path: selectedSurvey.isDynamic ? selectedSurvey.questions.map(q => q.id) : undefined
-      };
+      // Pour les sondages dynamiques, filtrer uniquement les réponses visibles
+      if (selectedSurvey.isDynamic && selectedSurvey.nodes) {
+        const shouldShowQuestion = (nodeId: string): boolean => {
+          if (nodeId === '1') return true;
+          const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
+          if (incomingEdges.length === 0) return false;
+          return incomingEdges.some(edge => {
+            if (edge.label) {
+              return currentAnswers[edge.source] === edge.label;
+            }
+            return shouldShowQuestion(edge.source);
+          });
+        };
 
-      console.log('Données à soumettre:', submissionData);
+        // Filtrer uniquement les réponses aux questions visibles
+        const visibleNodes = selectedSurvey.nodes.filter(node => shouldShowQuestion(node.id));
+        const visibleAnswers = visibleNodes.map(node => ({
+          nodeId: node.id,
+          value: data.answers[node.id]
+        }));
 
-      await submitSurveyAnswer(
-        selectedSurvey._id,
-        submissionData,
-        token
-      );
+        const submissionData = {
+          isDynamic: true,
+          answers: visibleAnswers,
+          demographic: selectedSurvey.demographicEnabled ? {
+            gender: data.demographic?.gender,
+            dateOfBirth: data.demographic?.dateOfBirth,
+            educationLevel: data.demographic?.educationLevel,
+            city: data.demographic?.city
+          } : undefined,
+          path: visibleNodes.map(node => node.id)
+        };
+
+        await submitSurveyAnswer(
+          selectedSurvey._id,
+          submissionData,
+          token
+        );
+      } else {
+        // Pour les sondages non dynamiques, garder la logique existante
+        const submissionData = {
+          isDynamic: false,
+          answers: Object.entries(data.answers).map(([questionId, value]) => ({
+            questionId,
+            value
+          })),
+          demographic: selectedSurvey.demographicEnabled ? {
+            gender: data.demographic?.gender,
+            dateOfBirth: data.demographic?.dateOfBirth,
+            educationLevel: data.demographic?.educationLevel,
+            city: data.demographic?.city
+          } : undefined
+        };
+
+        await submitSurveyAnswer(
+          selectedSurvey._id,
+          submissionData,
+          token
+        );
+      }
 
       setNotification({
         message: 'Réponse soumise avec succès',
@@ -430,10 +462,7 @@ const SurveyAnswerPage: React.FC = () => {
         open: true
       });
 
-      // Ajouter le sondage à la liste des sondages répondus
       setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
-      
-      // Réinitialiser le formulaire sans arguments
       reset();
       setSelectedSurvey(null);
     } catch (error: any) {
