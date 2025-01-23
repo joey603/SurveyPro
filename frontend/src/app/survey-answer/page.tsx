@@ -177,6 +177,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [questionHistory, setQuestionHistory] = useState<string[]>(['1']);
   const [currentAnswers, setCurrentAnswers] = useState<{ [key: string]: any }>({});
   const [orderedNodes, setOrderedNodes] = useState<any[]>([]);
+  const [surveyTypeFilter, setSurveyTypeFilter] = useState<'all' | 'dynamic' | 'static'>('all');
 
   useEffect(() => {
     // Sauvegarder l'URL actuelle si elle contient un surveyId
@@ -299,14 +300,18 @@ const SurveyAnswerPage: React.FC = () => {
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
+      const matchesType = surveyTypeFilter === 'all' || 
+                         (surveyTypeFilter === 'dynamic' && survey.isDynamic) ||
+                         (surveyTypeFilter === 'static' && !survey.isDynamic);
+
       if (dateRange.start && dateRange.end) {
         const surveyDate = new Date(survey.createdAt);
         const isInDateRange = surveyDate >= dateRange.start && 
                            surveyDate <= new Date(dateRange.end.setHours(23, 59, 59));
-        return matchesSearch && isInDateRange;
+        return matchesSearch && isInDateRange && matchesType;
       }
 
-      return matchesSearch;
+      return matchesSearch && matchesType;
     })
     .sort((a, b) => {
       if (sortBy === 'popular') {
@@ -321,6 +326,7 @@ const SurveyAnswerPage: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setDateRange({ start: null, end: null });
+    setSurveyTypeFilter('all');
   };
 
   const validateForm = (data: FormData): boolean => {
@@ -1710,10 +1716,33 @@ const SurveyAnswerPage: React.FC = () => {
                   id="sort-filter-chip"
                   data-testid="sort-filter-chip"
                   icon={<FilterListIcon />}
-                  label={` ${sortBy === 'date' ? 'Popularity' : 'Popular'}`}
-                  onClick={(e) => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                  label={`Sort by ${sortBy === 'date' ? 'Date' : 'Popular'}`}
+                  onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
                   color={sortBy === 'popular' ? "primary" : "default"}
                   variant={sortBy === 'popular' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  id="type-filter-chip"
+                  data-testid="type-filter-chip"
+                  icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
+                  label={`${surveyTypeFilter === 'all' ? 'All Types' : 
+                          surveyTypeFilter === 'dynamic' ? 'Dynamic' : 'Static'}`}
+                  onClick={() => {
+                    setSurveyTypeFilter(current => {
+                      switch (current) {
+                        case 'all': return 'dynamic';
+                        case 'dynamic': return 'static';
+                        case 'static': return 'all';
+                      }
+                    });
+                  }}
+                  color={surveyTypeFilter !== 'all' ? "primary" : "default"}
+                  variant={surveyTypeFilter !== 'all' ? "filled" : "outlined"}
                   sx={{
                     '&.MuiChip-filled': {
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1941,7 +1970,7 @@ const SurveyAnswerPage: React.FC = () => {
                         />
                         <Chip
                           size="small"
-                          label={`${surveyResponses[survey._id] || 0} responses`}
+                          label={`${survey.isDynamic ? surveyResponses[survey._id] || 0 : 0} responses`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
