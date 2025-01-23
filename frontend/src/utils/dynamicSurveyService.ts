@@ -122,5 +122,48 @@ export const dynamicSurveyService = {
       console.error('Erreur lors de la récupération des réponses:', error);
       return [];
     }
+  },
+
+  // Upload media file
+  uploadMedia: async (file: File, token: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(
+        `${BASE_URL}/dynamic-surveys/upload-media`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload du média:', error);
+      throw error.response?.data || error;
+    }
+  },
+
+  // Delete media file
+  deleteMedia: async (publicId: string, token: string) => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/dynamic-surveys/delete-media`,
+        { publicId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression du média:', error);
+      throw error.response?.data || error;
+    }
   }
 }; 

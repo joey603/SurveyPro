@@ -11,7 +11,9 @@ const nodeSchema = new mongoose.Schema({
   },
   data: {
     type: Object,
-    required: true
+    required: true,
+    mediaUrl: String,
+    media: String,
   },
   position: {
     x: Number,

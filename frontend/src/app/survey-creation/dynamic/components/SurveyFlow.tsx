@@ -28,6 +28,13 @@ interface SurveyFlowProps {
   onEdgesChange: (edges: Edge[]) => void;
 }
 
+interface SurveyFlowRef {
+  resetFlow: () => void;
+  getNodes: () => Node[];
+  addNewQuestion: () => void;
+  setNodes: (nodes: Node[]) => void;
+}
+
 const nodeTypes = {
   questionNode: QuestionNode,
 };
@@ -52,11 +59,7 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
-const SurveyFlow = forwardRef<{ 
-  resetFlow: () => void;
-  getNodes: () => any[];
-  addNewQuestion: () => void;
-}, SurveyFlowProps>(({ onAddNode, onEdgesChange }, ref) => {
+const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEdgesChange }, ref) => {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
@@ -733,6 +736,9 @@ const SurveyFlow = forwardRef<{
         };
         setEdges(prevEdges => [...prevEdges, newEdge]);
       }
+    },
+    setNodes: (newNodes: Node[]) => {
+      setNodes(newNodes);
     }
   }));
 

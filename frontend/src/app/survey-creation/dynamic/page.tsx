@@ -67,6 +67,7 @@ interface SurveyFlowRef {
   resetFlow: () => void;
   getNodes: () => any[];
   addNewQuestion: () => void;
+  setNodes: (nodes: any[]) => void;
 }
 
 interface PreviewAnswer {
@@ -138,6 +139,29 @@ export default function DynamicSurveyCreation() {
     }
   };
 
+  const handleDeleteQuestion = async (index: number) => {
+    if (!flowRef.current) return;
+    
+    const nodes = flowRef.current.getNodes();
+    const node = nodes[index];
+    
+    if (node?.data?.media) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) throw new Error('Token non trouvé');
+
+        await dynamicSurveyService.deleteMedia(node.data.media, token);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du média:', error);
+        // Continuer malgré l'erreur
+      }
+    }
+
+    // Supprimer le nœud de la question
+    const updatedNodes = nodes.filter((_, i) => i !== index);
+    flowRef.current.setNodes(updatedNodes);
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       // Validation côté client
@@ -170,72 +194,27 @@ export default function DynamicSurveyCreation() {
         return;
       }
 
-      // Récupérer tous les nœuds
       const allNodes = flowRef.current.getNodes();
-      const allEdges = edges;
-
-      // Trouver le premier nœud (généralement avec l'ID '1')
-      const firstNode = allNodes.find(node => node.id === '1');
-      if (!firstNode) {
-        setNotification({
-          show: true,
-          message: 'Première question non trouvée',
-          type: 'error'
-        });
-        return;
-      }
-
-      // Fonction récursive pour construire le chemin des questions
-      const buildQuestionPath = (nodeId: string, visitedNodes = new Set<string>()): any[] => {
-        if (visitedNodes.has(nodeId)) return [];
-        visitedNodes.add(nodeId);
-
-        const currentNode = allNodes.find(node => node.id === nodeId);
-        if (!currentNode) return [];
-
-        // Trouver toutes les connexions sortantes de ce nœud
-        const connectedEdges = allEdges.filter(edge => edge.source === nodeId);
-        
-        const nodeData = {
-          id: currentNode.id,
-          type: currentNode.type,
-          data: {
-            ...currentNode.data,
-            onCreatePaths: undefined,
-            onChange: undefined
-          },
-          position: currentNode.position,
-          connections: connectedEdges.map(edge => ({
-            targetId: edge.target,
-            condition: edge.label
-          }))
-        };
-
-        // Récursivement obtenir les nœuds connectés
-        const connectedNodes = connectedEdges.flatMap(edge => 
-          buildQuestionPath(edge.target, visitedNodes)
-        );
-
-        return [nodeData, ...connectedNodes];
-      };
-
-      // Construire le chemin des questions à partir du premier nœud
-      const questionPath = buildQuestionPath('1');
-
-      console.log('Chemin des questions:', questionPath);
+      
+      // Nettoyer les données des nœuds avant l'envoi
+      const cleanedNodes = allNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          mediaUrl: node.data.mediaUrl || '',
+          media: node.data.media || '',
+          // Supprimer les fonctions qui ne doivent pas être envoyées
+          onCreatePaths: undefined,
+          onChange: undefined
+        }
+      }));
 
       const surveyData = {
         title: data.title.trim(),
         description: data.description?.trim() || '',
         demographicEnabled: data.demographicEnabled || false,
-        nodes: questionPath,
-        edges: allEdges.map(edge => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          label: edge.label,
-          type: edge.type
-        }))
+        nodes: cleanedNodes,
+        edges
       };
 
       console.log('Données à envoyer:', surveyData);
@@ -382,21 +361,17 @@ export default function DynamicSurveyCreation() {
     const isCriticalQuestion = currentQuestion.data?.isCritical;
 
     return (
-      <Box sx={questionContainerStyle}>
-        {isCriticalQuestion && (
-          <Typography 
-            variant="subtitle2" 
-            color="error" 
-            sx={{ mb: 2 }}
-          >
-            * Cette question est critique - Une réponse est requise pour continuer
-          </Typography>
-        )}
-
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Type: {questionTypes.find(t => t.value === currentQuestion.data?.type)?.label || 'Non spécifié'}
-        </Typography>
-
+      <Box
+        sx={{
+          mt: 2,
+          p: 3,
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          position: 'relative',
+        }}
+      >
         <Typography
           variant="h6"
           sx={{
@@ -406,33 +381,50 @@ export default function DynamicSurveyCreation() {
             color: '#333',
           }}
         >
-          {currentQuestion.data?.text || 'Question sans titre'}
+          {currentQuestion.data?.text || 'Untitled Question'}
         </Typography>
 
         {currentQuestion.data?.mediaUrl && (
           <Box sx={{ mb: 2, textAlign: 'center' }}>
-            {currentQuestion.data.media === 'image' ? (
+            {isImageFile(currentQuestion.data.mediaUrl) ? (
               <img 
                 src={currentQuestion.data.mediaUrl}
                 alt="Question media"
                 style={{ 
-                  maxWidth: '50%',
+                  maxWidth: '100%',
                   height: 'auto',
                   margin: '0 auto',
                   borderRadius: '8px',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
+                  maxHeight: '400px'
+                }}
+                onError={(e) => {
+                  console.error('Image loading error:', e);
+                  setNotification({
+                    message: 'Error loading image in preview. Please check the URL.',
+                    severity: 'error',
+                    open: true
+                  });
                 }}
               />
             ) : (
               <ReactPlayer
                 url={currentQuestion.data.mediaUrl}
                 controls
-                width="50%"
-                height="200px"
+                width="100%"
+                height="300px"
                 style={{
                   margin: '0 auto',
                   borderRadius: '8px',
                   overflow: 'hidden',
+                }}
+                onError={(e) => {
+                  console.error('ReactPlayer error:', e);
+                  setNotification({
+                    message: 'Error loading media in preview. Please check the URL.',
+                    severity: 'error',
+                    open: true
+                  });
                 }}
               />
             )}

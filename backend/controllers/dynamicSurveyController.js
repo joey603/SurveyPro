@@ -1,5 +1,6 @@
 const DynamicSurvey = require("../models/DynamicSurvey");
 const { uploadFileToCloudinary, deleteFileFromCloudinary } = require("../cloudinaryConfig");
+const fs = require('fs');
 
 exports.createDynamicSurvey = async (req, res) => {
   try {
@@ -49,6 +50,7 @@ exports.createDynamicSurvey = async (req, res) => {
       }
     }
 
+    // Créer le sondage avec les médias
     const survey = new DynamicSurvey({
       title,
       description,
@@ -56,7 +58,11 @@ exports.createDynamicSurvey = async (req, res) => {
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.type,
-        data: node.data,
+        data: {
+          ...node.data,
+          mediaUrl: node.data.mediaUrl || '',
+          media: node.data.media || ''
+        },
         position: node.position
       })),
       edges: edges.map(edge => ({
@@ -172,6 +178,67 @@ exports.deleteDynamicSurvey = async (req, res) => {
     res.status(500).json({ 
       message: "Erreur lors de la suppression du sondage", 
       error: error.message 
+    });
+  }
+};
+
+// Upload media file
+exports.uploadMedia = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    const uploadResult = await uploadFileToCloudinary(req.file.path, "uploads");
+    fs.unlinkSync(req.file.path); // Remove temp file
+
+    res.status(200).json({
+      message: "File uploaded successfully!",
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+    });
+  } catch (error) {
+    console.error("Error uploading media:", error.message);
+    res.status(500).json({ message: "Media upload failed.", error: error.message });
+  }
+};
+
+// Delete unused media by public ID
+exports.deleteMedia = async (req, res) => {
+  try {
+    const { publicId } = req.body;
+    console.log('Received delete request for public_id:', publicId);
+    
+    if (!publicId) {
+      console.log('No public_id provided');
+      return res.status(400).json({ message: "Public ID is required." });
+    }
+
+    const cleanPublicId = publicId.replace(/^uploads\//, '');
+    const fullPublicId = `uploads/${cleanPublicId}`;
+    
+    console.log('Attempting to delete with full public_id:', fullPublicId);
+
+    const result = await deleteFileFromCloudinary(fullPublicId);
+    console.log('Cloudinary deletion result:', result);
+
+    if (result.result === 'ok') {
+      res.status(200).json({ 
+        message: "File deleted successfully.",
+        result: result 
+      });
+    } else {
+      res.status(400).json({ 
+        message: "Failed to delete file",
+        result: result 
+      });
+    }
+  } catch (error) {
+    console.error("Error deleting media:", error);
+    res.status(500).json({ 
+      message: "Failed to delete media.", 
+      error: error.message,
+      stack: error.stack
     });
   }
 }; 

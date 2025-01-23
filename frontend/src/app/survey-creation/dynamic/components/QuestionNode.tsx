@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Handle, Position } from 'reactflow';
 import {
   Box,
@@ -18,6 +18,7 @@ import {
   Rating,
   Popover,
   Checkbox,
+  CircularProgress
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -26,24 +27,27 @@ import EditIcon from '@mui/icons-material/Edit';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import ReactPlayer from 'react-player';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 
-interface QuestionData {
+interface QuestionNodeData {
   id: string;
-  questionNumber: number;
   type: string;
   text: string;
   options: string[];
-  media: string;
-  mediaUrl: string;
-  selectedDate?: Date | null;
+  media?: string;
+  mediaUrl?: string;
   isCritical: boolean;
-  onCreatePaths?: (sourceId: string, options: string[]) => void;
-  onChange?: (newData: QuestionData) => void;
+  questionNumber: number;
+  selectedDate?: Date | null;
+  onChange?: (data: Partial<QuestionNodeData>) => void;
+  onCreatePaths?: (nodeId: string, options: string[]) => void;
 }
 
 interface QuestionNodeProps {
-  data: QuestionData;
+  data: QuestionNodeData;
   isConnectable: boolean;
+  id: string;
 }
 
 const questionTypes = [
@@ -61,7 +65,7 @@ const criticalQuestionTypes = [
   { value: 'dropdown', label: 'Dropdown' },
 ];
 
-const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
+const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [questionData, setQuestionData] = useState({
@@ -69,6 +73,9 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
     isCritical: data.isCritical || false,
   });
   const [loadingMedia, setLoadingMedia] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [mediaTracker, setMediaTracker] = useState<Record<string, string>>({});
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -165,6 +172,68 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
     updateNodeData(updatedData);
   };
 
+  const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Token non trouvé');
+
+      const result = await dynamicSurveyService.uploadMedia(file, token);
+
+      // Marquer l'ancien média pour suppression si existe
+      if (data.media) {
+        setMediaTracker((prev) => ({
+          ...prev,
+          [data.media as string]: 'to_delete'
+        }));
+      }
+
+      // Vérifier si onChange existe avant de l'appeler
+      if (data.onChange) {
+        data.onChange({
+          ...data,
+          mediaUrl: result.url,
+          media: result.public_id
+        });
+      }
+
+    } catch (error) {
+      console.error('Erreur upload:', error);
+      setUploadError('Erreur lors de l\'upload du média');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleMediaDelete = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Token non trouvé');
+
+      if (data.media) {
+        await dynamicSurveyService.deleteMedia(data.media, token);
+      }
+
+      // Vérifier si onChange existe avant de l'appeler
+      if (data.onChange) {
+        data.onChange({
+          ...data,
+          mediaUrl: '',
+          media: ''
+        });
+      }
+
+    } catch (error) {
+      console.error('Erreur suppression:', error);
+      setUploadError('Erreur lors de la suppression du média');
+    }
+  };
+
   const renderQuestionFields = () => {
     switch (questionData.type) {
       case 'multiple-choice':
@@ -239,9 +308,15 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
         return (
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
+              label="Select Date"
               value={questionData.selectedDate}
               onChange={(newValue) => {
-                updateNodeData({ ...questionData, selectedDate: newValue });
+                if (data.onChange) {
+                  data.onChange({
+                    ...data,
+                    selectedDate: newValue
+                  });
+                }
               }}
               renderInput={(params) => <TextField {...params} />}
             />
@@ -357,54 +432,64 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data, isConnectable }) => {
 
             <Box sx={{ mt: 2 }}>
               <input
+                type="file"
+                id={`media-upload-${id}`}
                 accept="image/*,video/*"
                 style={{ display: 'none' }}
-                id={`media-upload-${data.id}`}
-                type="file"
-                onChange={handleFileUpload}
+                onChange={handleMediaUpload}
               />
-              <label htmlFor={`media-upload-${data.id}`}>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Button
-                  component="span"
-                  startIcon={<PhotoCameraIcon />}
+                  component="label"
+                  htmlFor={`media-upload-${id}`}
+                  startIcon={<AddPhotoAlternateIcon />}
                   variant="outlined"
                   size="small"
-                  disabled={loadingMedia}
+                  disabled={isUploading}
                 >
-                  {loadingMedia ? 'Uploading...' : 'Upload Media'}
+                  {isUploading ? 'Uploading...' : 'Add Media'}
                 </Button>
-              </label>
+                
+                {data.mediaUrl && (
+                  <IconButton 
+                    onClick={handleMediaDelete}
+                    size="small"
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                )}
+              </Box>
 
-              <TextField
-                fullWidth
-                size="small"
-                label="Media URL"
-                value={questionData.mediaUrl || ''}
-                onChange={handleMediaUrlChange}
-                sx={{ mt: 1 }}
-              />
+              {isUploading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="caption" sx={{ ml: 1 }}>
+                    Uploading media...
+                  </Typography>
+                </Box>
+              )}
 
-              {/* Prévisualisation du média */}
-              {questionData.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: '100%', maxHeight: '200px', overflow: 'hidden' }}>
-                  {questionData.media === 'image' ? (
-                    <img
-                      src={questionData.mediaUrl}
-                      alt="Question media"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '200px',
-                        objectFit: 'contain',
-                        borderRadius: '4px'
-                      }}
+              {uploadError && (
+                <Typography color="error" variant="caption">
+                  {uploadError}
+                </Typography>
+              )}
+
+              {data.mediaUrl && (
+                <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                  {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                    <img 
+                      src={data.mediaUrl} 
+                      alt="Question media" 
+                      style={{ width: '100%', borderRadius: '4px' }}
                     />
                   ) : (
-                    <ReactPlayer
-                      url={questionData.mediaUrl}
+                    <video 
+                      src={data.mediaUrl}
                       controls
-                      width="100%"
-                      height="auto"
-                      style={{ borderRadius: '4px' }}
+                      style={{ width: '100%', borderRadius: '4px' }}
                     />
                   )}
                 </Box>
