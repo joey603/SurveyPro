@@ -1189,39 +1189,78 @@ const SurveyAnswerPage: React.FC = () => {
   const renderDynamicSurveyQuestions = () => {
     if (!selectedSurvey?.isDynamic || !selectedSurvey.nodes) return null;
 
+    // Fonction pour obtenir l'ordre des nœuds selon le flux
+    const getOrderedNodes = () => {
+      const orderedNodes: any[] = [];
+      const visited = new Set<string>();
+      const nodesByLevel: { [key: string]: number } = {};
+
+      // Fonction pour calculer le niveau de profondeur de chaque nœud
+      const calculateDepth = (nodeId: string, depth: number = 0) => {
+        if (nodesByLevel[nodeId] === undefined || depth > nodesByLevel[nodeId]) {
+          nodesByLevel[nodeId] = depth;
+        }
+
+        const outgoingEdges = selectedSurvey?.edges?.filter(e => e.source === nodeId) || [];
+        outgoingEdges.forEach(edge => {
+          calculateDepth(edge.target, depth + 1);
+        });
+      };
+
+      // Calculer la profondeur en commençant par le nœud racine
+      calculateDepth('1');
+
+      // Fonction de parcours modifiée pour respecter la profondeur
+      const traverse = () => {
+        const nodes = selectedSurvey?.nodes || [];
+        
+        // Trier les nœuds par niveau de profondeur
+        const sortedNodeIds = Object.entries(nodesByLevel)
+          .sort(([, depthA], [, depthB]) => depthA - depthB)
+          .map(([nodeId]) => nodeId);
+
+        // Ajouter les nœuds dans l'ordre de profondeur
+        sortedNodeIds.forEach(nodeId => {
+          if (!visited.has(nodeId)) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+              visited.add(nodeId);
+              orderedNodes.push(node);
+            }
+          }
+        });
+      };
+
+      traverse();
+      return orderedNodes;
+    };
+
     // Fonction pour vérifier si c'est une question critique
     const isCriticalQuestion = (nodeId: string): boolean => {
       return selectedSurvey.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
     };
 
     // Fonction pour vérifier si une question doit être affichée
-    const shouldShowQuestion = (nodeId: string, allNodes: typeof selectedSurvey.nodes): boolean => {
+    const shouldShowQuestion = (nodeId: string): boolean => {
       if (nodeId === '1') return true;
 
-      // Trouver tous les chemins possibles vers ce nœud
       const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
-      
-      // Si aucun chemin d'entrée, la question ne devrait pas être visible
       if (incomingEdges.length === 0) return false;
 
-      // Vérifier chaque chemin d'entrée possible
       return incomingEdges.some(edge => {
-        const sourceNode = allNodes.find(n => n.id === edge.source);
-        
-        // Si le nœud source n'existe pas, ce chemin n'est pas valide
-        if (!sourceNode) return false;
-
-        // Si c'est une question critique (avec label sur l'arête)
         if (edge.label) {
-          // La question doit être visible si la réponse correspond au label de l'arête
+          // Si l'arête a une étiquette, vérifier si la réponse correspond
           return currentAnswers[edge.source] === edge.label;
         }
-
-        // Pour les connexions sans condition, vérifier si le nœud source est visible
-        return shouldShowQuestion(edge.source, allNodes);
+        // Si pas d'étiquette, vérifier si la question source est visible
+        return shouldShowQuestion(edge.source);
       });
     };
 
+    // Obtenir les nœuds ordonnés
+    const orderedNodes = getOrderedNodes();
+
+    // Modifier la fonction de rendu des questions pour les sondages dynamiques
     const renderQuestionInput = (node: any) => {
       // Ajouter le rendu du média avant le rendu de l'input
       const renderNodeMedia = () => {
@@ -1500,23 +1539,11 @@ const SurveyAnswerPage: React.FC = () => {
       );
     };
 
-    // Trier les nœuds
-    const orderedNodes = [...selectedSurvey.nodes].sort((a, b) => {
-      if (a.id === '1') return -1;
-      if (b.id === '1') return 1;
-      
-      const aNum = parseInt(a.id);
-      const bNum = parseInt(b.id);
-      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-      
-      return 0;
-    });
-
     return (
       <Box sx={{ p: 3 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {orderedNodes.map((node) => {
-            const isVisible = shouldShowQuestion(node.id, orderedNodes);
+            const isVisible = shouldShowQuestion(node.id);
             const isCritical = isCriticalQuestion(node.id);
 
             if (!isVisible) return null;
