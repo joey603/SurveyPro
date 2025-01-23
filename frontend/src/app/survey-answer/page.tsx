@@ -340,12 +340,38 @@ const SurveyAnswerPage: React.FC = () => {
       }
     }
 
-    selectedSurvey?.questions.forEach(question => {
-      const answer = data.answers[question.id];
-      if (answer === undefined || answer === '' || answer === null) {
-        errors[`answers.${question.id}`] = 'This question requires an answer';
-      }
-    });
+    if (selectedSurvey?.isDynamic && selectedSurvey?.nodes) {
+      // Pour les sondages dynamiques, vérifier uniquement les questions visibles
+      selectedSurvey.nodes.forEach(node => {
+        // Vérifier si la question doit être affichée selon la logique existante
+        const shouldShowQuestion = (nodeId: string): boolean => {
+          if (nodeId === '1') return true;
+          const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
+          if (incomingEdges.length === 0) return false;
+          return incomingEdges.some(edge => {
+            if (edge.label) {
+              return currentAnswers[edge.source] === edge.label;
+            }
+            return shouldShowQuestion(edge.source);
+          });
+        };
+
+        if (shouldShowQuestion(node.id)) {
+          const answer = data.answers[node.id];
+          if (answer === undefined || answer === '' || answer === null) {
+            errors[`answers.${node.id}`] = 'This question requires an answer';
+          }
+        }
+      });
+    } else {
+      // Pour les sondages non dynamiques, vérifier toutes les questions
+      selectedSurvey?.questions.forEach(question => {
+        const answer = data.answers[question.id];
+        if (answer === undefined || answer === '' || answer === null) {
+          errors[`answers.${question.id}`] = 'This question requires an answer';
+        }
+      });
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -355,6 +381,12 @@ const SurveyAnswerPage: React.FC = () => {
     try {
       if (!selectedSurvey) {
         setSubmitError('Aucun sondage sélectionné');
+        return;
+      }
+
+      // Valider le formulaire avant la soumission
+      if (!validateForm(data)) {
+        setSubmitError('Veuillez répondre à toutes les questions requises');
         return;
       }
 
@@ -1392,42 +1424,81 @@ const SurveyAnswerPage: React.FC = () => {
 
     return (
       <Box sx={{ p: 3 }}>
-        {orderedNodes.map((node) => {
-          const isVisible = shouldShowQuestion(node.id, orderedNodes);
-          const isCritical = isCriticalQuestion(node.id);
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {orderedNodes.map((node) => {
+            const isVisible = shouldShowQuestion(node.id, orderedNodes);
+            const isCritical = isCriticalQuestion(node.id);
 
-          console.log(`Node ${node.id} visibility:`, {
-            isVisible,
-            currentAnswers,
-            nodeId: node.id,
-            isCritical,
-            edges: selectedSurvey.edges?.filter(e => e.source === node.id || e.target === node.id)
-          });
+            console.log(`Node ${node.id} visibility:`, {
+              isVisible,
+              currentAnswers,
+              nodeId: node.id,
+              isCritical,
+              edges: selectedSurvey.edges?.filter(e => e.source === node.id || e.target === node.id)
+            });
 
-          if (!isVisible) return null;
+            if (!isVisible) return null;
 
-          return (
-            <Paper
-              key={node.id}
-              elevation={1}
+            return (
+              <Paper
+                key={node.id}
+                elevation={1}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  backgroundColor: isCritical ? '#fff8e1' : 'white'
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  {node.data.text || node.data.label || 'Question sans texte'}
+                </Typography>
+
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(node)}                </Box>
+              </Paper>
+            );
+          })}
+
+          {submitError && (
+            <Typography color="error" sx={{ mt: 2, mb: 2 }}>
+              {submitError}
+            </Typography>
+          )}
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            mt: 4,
+            pt: 4,
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+          }}>
+            <Button
+              id="submit-dynamic-survey-button"
+              data-testid="submit-dynamic-survey-button"
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
               sx={{
-                p: 3,
-                mb: 3,
-                borderRadius: 2,
-                border: '1px solid rgba(0, 0, 0, 0.1)',
-                backgroundColor: isCritical ? '#fff8e1' : 'white'
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+                minWidth: 200
               }}
             >
-              <Typography variant="h6" gutterBottom>
-                {node.data.text || node.data.label || 'Question sans texte'}
-              </Typography>
-
-              <Box sx={{ mt: 2 }}>
-                {renderQuestionInput(node)}
-              </Box>
-            </Paper>
-          );
-        })}
+              {isSubmitting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} sx={{ color: 'white' }} />
+                  <span>Submitting...</span>
+                </Box>
+              ) : (
+                'Submit Survey'
+              )}
+            </Button>
+          </Box>
+        </form>
       </Box>
     );
   };
