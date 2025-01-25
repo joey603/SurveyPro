@@ -138,7 +138,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit, watch, reset } = useForm<FormData>({
+  const { control, handleSubmit, watch, reset, setValue } = useForm<FormData>({
     defaultValues: {
       demographic: {
         gender: '',
@@ -352,7 +352,7 @@ const SurveyAnswerPage: React.FC = () => {
       }
     }
 
-    if (selectedSurvey?.isDynamic && selectedSurvey?.nodes) {
+    if (selectedSurvey?.isDynamic && selectedSurvey.nodes) {
       // Pour les sondages dynamiques, vérifier uniquement les questions visibles
       const shouldShowQuestion = (nodeId: string): boolean => {
         if (nodeId === '1') return true;
@@ -386,6 +386,73 @@ const SurveyAnswerPage: React.FC = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  // Ajouter une clé unique pour chaque sondage dans le localStorage
+  const getStorageKey = (surveyId: string) => `survey_answers_${surveyId}`;
+
+  // Modifier useEffect pour charger les réponses sauvegardées
+  useEffect(() => {
+    if (selectedSurvey?.isDynamic && selectedSurvey.nodes) {
+      const storageKey = getStorageKey(selectedSurvey._id);
+      const savedAnswers = localStorage.getItem(storageKey);
+      
+      if (savedAnswers) {
+        const parsedAnswers = JSON.parse(savedAnswers);
+        setCurrentAnswers(parsedAnswers);
+        
+        // Mettre à jour les valeurs du formulaire avec les réponses sauvegardées
+        Object.entries(parsedAnswers).forEach(([questionId, value]) => {
+          setValue(`answers.${questionId}`, value);
+        });
+      } else {
+        setCurrentAnswers({});
+      }
+    }
+  }, [selectedSurvey, setValue]);
+
+  // Modifier handleDynamicAnswerChange pour sauvegarder les réponses
+  const handleDynamicAnswerChange = (questionId: string, value: any) => {
+    console.log(`Setting answer for ${questionId}:`, value);
+    setCurrentAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: value
+      };
+      
+      // Sauvegarder dans le localStorage
+      if (selectedSurvey) {
+        const storageKey = getStorageKey(selectedSurvey._id);
+        localStorage.setItem(storageKey, JSON.stringify(newAnswers));
+      }
+      
+      console.log('Updated answers:', newAnswers);
+      return newAnswers;
+    });
+  };
+
+  // Modifier la fonction shouldShowQuestion pour utiliser currentAnswers
+  const shouldShowQuestion = (nodeId: string): boolean => {
+    if (nodeId === '1') return true;
+    
+    const incomingEdges = selectedSurvey?.edges?.filter(e => e.target === nodeId) || [];
+    if (incomingEdges.length === 0) return false;
+
+    return incomingEdges.some(edge => {
+      if (edge.label) {
+        const sourceAnswer = currentAnswers[edge.source];
+        return sourceAnswer === edge.label;
+      }
+      return shouldShowQuestion(edge.source);
+    });
+  };
+
+  // Ajouter une fonction pour nettoyer les réponses sauvegardées après soumission
+  const clearSavedAnswers = () => {
+    if (selectedSurvey) {
+      const storageKey = getStorageKey(selectedSurvey._id);
+      localStorage.removeItem(storageKey);
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -475,6 +542,7 @@ const SurveyAnswerPage: React.FC = () => {
       });
 
       setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+      clearSavedAnswers();
       reset();
       setSelectedSurvey(null);
     } catch (error: any) {
@@ -1066,12 +1134,10 @@ const SurveyAnswerPage: React.FC = () => {
         setLastDemographicData(data);
         // Mettre à jour les valeurs du formulaire avec les données récupérées
         if (data) {
-          control._formValues.demographic = {
-            gender: data.gender || '',
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-            educationLevel: data.educationLevel || '',
-            city: data.city || ''
-          };
+          setValue('demographic.gender', data.gender || '');
+          setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+          setValue('demographic.educationLevel', data.educationLevel || '');
+          setValue('demographic.city', data.city || '');
         }
       }
     } catch (error) {
@@ -1250,23 +1316,6 @@ const SurveyAnswerPage: React.FC = () => {
     // Fonction pour vérifier si c'est une question critique
     const isCriticalQuestion = (nodeId: string): boolean => {
       return selectedSurvey.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
-    };
-
-    // Fonction pour vérifier si une question doit être affichée
-    const shouldShowQuestion = (nodeId: string): boolean => {
-      if (nodeId === '1') return true;
-
-      const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
-      if (incomingEdges.length === 0) return false;
-
-      return incomingEdges.some(edge => {
-        if (edge.label) {
-          // Si l'arête a une étiquette, vérifier si la réponse correspond
-          return currentAnswers[edge.source] === edge.label;
-        }
-        // Si pas d'étiquette, vérifier si la question source est visible
-        return shouldShowQuestion(edge.source);
-      });
     };
 
     // Obtenir les nœuds ordonnés
@@ -1621,76 +1670,6 @@ const SurveyAnswerPage: React.FC = () => {
             </Button>
           </Box>
         </form>
-      </Box>
-    );
-  };
-
-  // Fonction pour gérer les réponses dynamiques
-  const handleDynamicAnswerChange = (questionId: string, value: any) => {
-    console.log(`Setting answer for ${questionId}:`, value);
-    setCurrentAnswers(prev => {
-      const newAnswers = {
-        ...prev,
-        [questionId]: value
-      };
-      console.log('Updated answers:', newAnswers);
-      return newAnswers;
-    });
-  };
-
-  // Modifier useEffect pour initialiser les états
-  useEffect(() => {
-    if (selectedSurvey?.isDynamic && selectedSurvey.nodes) {
-      setCurrentAnswers({});
-    }
-  }, [selectedSurvey]);
-
-  const renderDynamicSurveyList = () => {
-    return (
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Sondages disponibles
-        </Typography>
-        <Grid container spacing={3}>
-          {surveys.map((survey: any) => (
-            <Grid item xs={12} sm={6} md={4} key={survey._id}>
-              <Card 
-                sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3,
-                    transition: 'all 0.3s ease'
-                  }
-                }}
-              >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" gutterBottom>
-                    {survey.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Par: {survey.userId?.username || 'Anonyme'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {survey.description || 'Aucune description'}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    size="small" 
-                    color="primary"
-                    disabled={hasAnswered(survey._id)}
-                    onClick={() => setSelectedSurvey(survey)}
-                  >
-                    {hasAnswered(survey._id) ? 'Déjà répondu' : 'Répondre'}
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
       </Box>
     );
   };
