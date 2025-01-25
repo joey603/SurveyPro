@@ -165,5 +165,23 @@ export const dynamicSurveyService = {
       console.error('Erreur lors de la suppression du média:', error);
       throw error.response?.data || error;
     }
+  },
+
+  // Ajouter une nouvelle méthode pour récupérer les sondages de l'utilisateur connecté
+  getUserDynamicSurveys: async (token: string) => {
+    try {
+      const response = await axios.get(
+        `${BASE_URL}/dynamic-surveys/user`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération des sondages:', error);
+      throw error.response?.data || error;
+    }
   }
 }; 

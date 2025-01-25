@@ -91,8 +91,9 @@ exports.createDynamicSurvey = async (req, res) => {
 
 exports.getDynamicSurveys = async (req, res) => {
   try {
-    const surveys = await DynamicSurvey.find({ userId: req.user.id })
-      .select('title description demographicEnabled nodes edges createdAt')
+    const surveys = await DynamicSurvey.find()
+      .select('title description demographicEnabled nodes edges createdAt userId')
+      .populate('userId', 'username')
       .sort({ createdAt: -1 });
 
     res.status(200).json(surveys);

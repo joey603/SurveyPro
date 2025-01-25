@@ -28,7 +28,11 @@ import {
   FormHelperText,
   Menu,
   MenuItem,
-  TextFieldProps
+  TextFieldProps,
+  Grid,
+  Card,
+  CardContent,
+  CardActions
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -93,6 +97,7 @@ interface Survey {
   isDynamic?: boolean;
   nodes?: any[];
   edges?: any[];
+  userId?: { username: string };
 }
 
 interface DemographicData {
@@ -1639,6 +1644,56 @@ const SurveyAnswerPage: React.FC = () => {
       setCurrentAnswers({});
     }
   }, [selectedSurvey]);
+
+  const renderDynamicSurveyList = () => {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Sondages disponibles
+        </Typography>
+        <Grid container spacing={3}>
+          {surveys.map((survey: any) => (
+            <Grid item xs={12} sm={6} md={4} key={survey._id}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 3,
+                    transition: 'all 0.3s ease'
+                  }
+                }}
+              >
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" gutterBottom>
+                    {survey.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Par: {survey.userId?.username || 'Anonyme'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {survey.description || 'Aucune description'}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button 
+                    size="small" 
+                    color="primary"
+                    disabled={hasAnswered(survey._id)}
+                    onClick={() => setSelectedSurvey(survey)}
+                  >
+                    {hasAnswered(survey._id) ? 'Déjà répondu' : 'Répondre'}
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  };
 
   if (!selectedSurvey) {
     return (
