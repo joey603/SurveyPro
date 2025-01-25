@@ -95,7 +95,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       return;
     }
 
-    // Supprimer les anciens nœuds et edges
+    // Remove old nodes and edges
     setNodes(prevNodes => prevNodes.filter(node => !node.id.startsWith(`${sourceId}_`)));
     setEdges(prevEdges => prevEdges.filter(edge => edge.source !== sourceId));
 
@@ -103,8 +103,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const verticalSpacing = 150; // Espacement vertical
-    const horizontalSpacing = 200; // Espacement horizontal
+    const verticalSpacing = 150; // Vertical spacing
+    const horizontalSpacing = 200; // Horizontal spacing
 
     options.forEach((option, index) => {
       const newNodeId = `${sourceId}_${option}`;
@@ -121,7 +121,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           id: newNodeId,
           questionNumber: nodes.length + newNodes.length + 1,
           type: 'text',
-          text: `Question pour "${option}"`,
+          text: `Question for "${option}"`,
           options: [],
           media: '',
           mediaUrl: '',
@@ -241,7 +241,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           if (!token) {
             setNotification({
               show: true,
-              message: 'Token d\'authentification non trouvé',
+              message: 'Authentication token not found',
               type: 'error'
             });
             return;
@@ -253,7 +253,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           console.error('Erreur lors de la suppression du média:', error);
           setNotification({
             show: true,
-            message: 'Erreur lors de la suppression du média',
+            message: 'Error while deleting media',
             type: 'error'
           });
         }
@@ -268,7 +268,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
       setNotification({
         show: true,
-        message: 'Question supprimée avec succès',
+        message: 'Question deleted successfully',
         type: 'success'
       });
 
@@ -679,7 +679,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         <path d="M4 4h16v16H4z" />
         <path d="M4 12h16M12 4v16" />
       </svg>
-      Réorganiser le flow
+      Reorganize Flow
     </div>
   );
 
@@ -703,7 +703,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         if (existingConnection && !selectedNodeData?.data.isCritical) {
           setNotification({
             show: true,
-            message: 'Cette question a déjà une connexion',
+            message: 'This question already has a connection',
             type: 'warning'
           });
           
@@ -719,7 +719,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       if (selectedNodeData?.data.isCritical) {
         setNotification({
           show: true,
-          message: 'Impossible d\'ajouter une connexion à une question critique',
+          message: 'Cannot add connection to a critical question',
           type: 'warning'
         });
         
