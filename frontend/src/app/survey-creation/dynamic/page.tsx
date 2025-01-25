@@ -75,13 +75,13 @@ interface PreviewAnswer {
 }
 
 const questionTypes = [
-  { value: 'text', label: 'Texte libre' },
-  { value: 'yes-no', label: 'Oui/Non' },
-  { value: 'dropdown', label: 'Liste déroulante' },
-  { value: 'multiple-choice', label: 'Choix multiple' },
-  { value: 'slider', label: 'Curseur' },
-  { value: 'rating', label: 'Évaluation (Étoiles)' },
-  { value: 'date', label: 'Sélecteur de date' },
+  { value: 'text', label: 'Free Text' },
+  { value: 'yes-no', label: 'Yes/No' },
+  { value: 'dropdown', label: 'Dropdown' },
+  { value: 'multiple-choice', label: 'Multiple Choice' },
+  { value: 'slider', label: 'Slider' },
+  { value: 'rating', label: 'Rating (Stars)' },
+  { value: 'date', label: 'Date Picker' },
 ];
 
 export default function DynamicSurveyCreation() {
@@ -136,47 +136,44 @@ export default function DynamicSurveyCreation() {
         if (!token) {
           setNotification({
             show: true,
-            message: 'Token d\'authentification non trouvé',
+            message: 'Authentication token not found',
             type: 'error'
           });
           return;
         }
 
         if (flowRef.current) {
-          // Récupérer tous les nœuds
           const nodes = flowRef.current.getNodes();
           
-          // Supprimer les médias de toutes les questions qui en ont
           for (const node of nodes) {
             if (node.data?.media) {
               try {
                 await dynamicSurveyService.deleteMedia(node.data.media, token);
               } catch (error) {
-                console.error('Erreur lors de la suppression du média:', error);
+                console.error('Error deleting media:', error);
                 setNotification({
                   show: true,
-                  message: `Erreur lors de la suppression du média de la question ${node.data.questionNumber}`,
+                  message: `Error deleting media for question ${node.data.questionNumber}`,
                   type: 'warning'
                 });
               }
             }
           }
 
-          // Réinitialiser le formulaire et le flow
           reset();
           flowRef.current.resetFlow();
           
           setNotification({
             show: true,
-            message: 'Sondage réinitialisé avec succès',
+            message: 'Survey reset successfully',
             type: 'success'
           });
         }
       } catch (error) {
-        console.error('Erreur lors de la réinitialisation:', error);
+        console.error('Error during reset:', error);
         setNotification({
           show: true,
-          message: 'Erreur lors de la réinitialisation du sondage',
+          message: 'Error resetting survey',
           type: 'error'
         });
       }
@@ -288,7 +285,7 @@ export default function DynamicSurveyCreation() {
 
       setNotification({
         show: true,
-        message: 'Sondage créé avec succès',
+        message: 'Survey created successfully',
         type: 'success'
       });
 
@@ -524,7 +521,7 @@ export default function DynamicSurveyCreation() {
             <TextField 
               fullWidth 
               variant="outlined" 
-              placeholder="Votre réponse"
+              placeholder="Your answer"
             />
           )}
 
@@ -540,7 +537,7 @@ export default function DynamicSurveyCreation() {
                 displayEmpty
               >
                 <MenuItem value="" disabled>
-                  <em>Sélectionnez une option</em>
+                  <em>Select an option</em>
                 </MenuItem>
                 {currentQuestion.data.options?.map((option: string, index: number) => (
                   <MenuItem key={index} value={option.trim()}>
@@ -549,7 +546,7 @@ export default function DynamicSurveyCreation() {
                 ))}
               </Select>
               <Typography variant="caption" color="textSecondary">
-                Valeur sélectionnée: {previewAnswers[currentQuestion.id] || 'Aucune'}
+                Selected value: {previewAnswers[currentQuestion.id] || 'None'}
               </Typography>
             </>
           )}
@@ -571,15 +568,15 @@ export default function DynamicSurveyCreation() {
               value={currentAnswer || ''}
               onChange={(e) => handleAnswerChange(e.target.value)}
             >
-              <FormControlLabel value="yes" control={<Radio />} label="Oui" />
-              <FormControlLabel value="no" control={<Radio />} label="Non" />
+              <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+              <FormControlLabel value="no" control={<Radio />} label="No" />
             </RadioGroup>
           )}
 
           {currentQuestion.data?.type === 'date' && (
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label="Sélectionnez une date"
+                label="Select a date"
                 value={null}
                 onChange={() => {}}
                 renderInput={(params) => <TextField {...params} />}
@@ -867,12 +864,12 @@ export default function DynamicSurveyCreation() {
           name="title"
           control={control}
           defaultValue=""
-          rules={{ required: 'Le titre est requis' }}
+          rules={{ required: 'Title is required' }}
           render={({ field, fieldState: { error } }) => (
             <TextField
               {...field}
               fullWidth
-              label="Titre du sondage"
+              label="Survey Title"
               error={!!error}
               helperText={error?.message}
               sx={{ mb: 2 }}

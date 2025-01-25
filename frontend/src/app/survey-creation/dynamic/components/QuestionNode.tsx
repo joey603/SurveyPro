@@ -181,11 +181,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) throw new Error('Token non trouvé');
+      if (!token) throw new Error('Token not found');
 
       const result = await dynamicSurveyService.uploadMedia(file, token);
 
-      // Marquer l'ancien média pour suppression si existe
+      // Mark old media for deletion if it exists
       if (data.media) {
         setMediaTracker((prev) => ({
           ...prev,
@@ -193,7 +193,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         }));
       }
 
-      // Vérifier si onChange existe avant de l'appeler
       if (data.onChange) {
         data.onChange({
           ...data,
@@ -203,8 +202,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       }
 
     } catch (error) {
-      console.error('Erreur upload:', error);
-      setUploadError('Erreur lors de l\'upload du média');
+      console.error('Upload error:', error);
+      setUploadError('Error uploading media');
     } finally {
       setIsUploading(false);
     }
@@ -213,13 +212,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const handleMediaDelete = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) throw new Error('Token non trouvé');
+      if (!token) throw new Error('Token not found');
 
       if (data.media) {
         await dynamicSurveyService.deleteMedia(data.media, token);
       }
 
-      // Vérifier si onChange existe avant de l'appeler
       if (data.onChange) {
         data.onChange({
           ...data,
@@ -229,8 +227,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       }
 
     } catch (error) {
-      console.error('Erreur suppression:', error);
-      setUploadError('Erreur lors de la suppression du média');
+      console.error('Deletion error:', error);
+      setUploadError('Error deleting media');
     }
   };
 
