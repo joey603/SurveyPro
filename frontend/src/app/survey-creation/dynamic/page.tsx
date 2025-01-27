@@ -171,7 +171,7 @@ export default function DynamicSurveyCreation() {
         }
       } catch (error) {
         console.error('Error during reset:', error);
-        setNotification({
+        setNotification({ 
           show: true,
           message: 'Error resetting survey',
           type: 'error'
@@ -844,9 +844,9 @@ export default function DynamicSurveyCreation() {
         <Alert 
           severity={notification.type}
           sx={{ 
-            position: 'fixed', 
+            position: 'fixed ', 
             top: 20, 
-            right: 20, 
+            right: '50%', 
             zIndex: 9999 
           }}
           onClose={() => setNotification(prev => ({ ...prev, show: false }))}
