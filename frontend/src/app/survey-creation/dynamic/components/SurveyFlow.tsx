@@ -103,16 +103,22 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const verticalSpacing = 150; // Vertical spacing
-    const horizontalSpacing = 200; // Horizontal spacing
+    const verticalSpacing = 300; // Augmenté à 300px
+    const horizontalSpacing = 800; // Augmenté à 800px pour un espacement beaucoup plus large
+
+    // Calculer la largeur totale et la position de départ
+    const totalWidth = (options.length - 1) * horizontalSpacing;
+    const startX = sourceNode.position.x - (totalWidth / 2);
 
     options.forEach((option, index) => {
-      const newNodeId = `${sourceId}_${option}`;
-      console.log("Creating new node:", newNodeId);
-
-      // Calculer la position en fonction de l'index
-      // Pour 2 options (Yes/No), index 0 sera à gauche, index 1 à droite
-      const xOffset = index === 0 ? -horizontalSpacing : horizontalSpacing;
+      // Normaliser l'option pour l'ID du nœud
+      const normalizedOption = option.trim().toLowerCase().replace(/\s+/g, '_');
+      const newNodeId = `${sourceId}_${normalizedOption}`;
+      
+      // Calculer la position X absolue pour chaque nœud
+      const xPosition = options.length === 1 
+        ? sourceNode.position.x // Si un seul nœud, le centrer
+        : startX + (index * horizontalSpacing);
 
       const newNode: Node = {
         id: newNodeId,
@@ -130,14 +136,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           onChange: (newData: any) => handleNodeChange(newNodeId, newData)
         },
         position: { 
-          x: sourceNode.position.x + xOffset, // Position gauche ou droite
-          y: sourceNode.position.y + verticalSpacing, // Toujours en dessous
+          x: xPosition,
+          y: sourceNode.position.y + verticalSpacing,
         },
+        style: {
+          width: 350, // Largeur fixe pour tous les nœuds
+        }
       };
       newNodes.push(newNode);
 
       const newEdge: Edge = {
-        id: `e${sourceId}-${option}`,
+        id: `e${sourceId}-${normalizedOption}`,
         source: sourceId,
         target: newNodeId,
         label: option,
@@ -162,12 +171,23 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newEdges.push(newEdge);
     });
 
-    console.log("New nodes:", newNodes);
-    console.log("New edges:", newEdges);
-
+    // Ajuster la vue après l'ajout des nouveaux nœuds
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
-  }, [nodes, handleNodeChange]);
+
+    // Ajuster la vue après un court délai
+    setTimeout(() => {
+      if (reactFlowInstance) {
+        reactFlowInstance.fitView({
+          padding: 0.4,
+          duration: 800,
+          minZoom: 0.1,
+          maxZoom: 1,
+        });
+      }
+    }, 100);
+
+  }, [nodes, handleNodeChange, reactFlowInstance]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
