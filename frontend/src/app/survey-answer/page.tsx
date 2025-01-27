@@ -1156,7 +1156,7 @@ const SurveyAnswerPage: React.FC = () => {
           {selectedSurvey.demographicEnabled && (
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                Informations Démographiques
+                Demographic informations
               </Typography>
               {renderDemographicFields()}
             </Box>
@@ -1164,7 +1164,7 @@ const SurveyAnswerPage: React.FC = () => {
 
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-              Questions du sondage
+              Survey questions
             </Typography>
             {selectedSurvey.questions.map((question: Question) => (
               <Paper
@@ -1622,7 +1622,7 @@ const SurveyAnswerPage: React.FC = () => {
                 }}
               >
                 <Typography variant="h6" gutterBottom>
-                  {node.data.text || node.data.label || 'Question sans texte'}
+                  {node.data.text || node.data.label || 'Question without text'}
                 </Typography>
 
                 <Box sx={{ mt: 2 }}>
@@ -1866,7 +1866,7 @@ const SurveyAnswerPage: React.FC = () => {
                         {survey.isDynamic && (
                           <Chip
                             icon={<AutoGraphIcon />}
-                            label="Dynamique"
+                            label="Dynamic"
                             size="small"
                             sx={{
                               ml: 1,
