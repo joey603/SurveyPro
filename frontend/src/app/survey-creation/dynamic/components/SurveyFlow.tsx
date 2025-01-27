@@ -626,51 +626,64 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       processNode('1', 0, 0);
     };
     
-    calculateLayout();
-    
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    
-    nodes.forEach(node => {
-      const level = nodeLevels.get(node.id) || 0;
-      const column = nodeColumns.get(node.id) || 0;
-      
-      let y = START_Y;
-      for (let i = 0; i < level; i++) {
-        y += calculateVerticalSpacing(i, node.id);
-      }
-      
-      const x = CENTER_X + column * HORIZONTAL_SPACING;
-      
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y + (nodeHeights.get(node.id) || BASE_NODE_HEIGHT));
-    });
-    
-    const flowWidth = maxX - minX;
-    const flowHeight = maxY - minY;
-    const xOffset = (containerWidth - flowWidth) / 2 - minX;
-    
-    setNodes(prevNodes => prevNodes.map(node => {
-      const level = nodeLevels.get(node.id) || 0;
-      const column = nodeColumns.get(node.id) || 0;
-      
-      let y = START_Y;
-      for (let i = 0; i < level; i++) {
-        y += calculateVerticalSpacing(i, node.id);
-      }
-      
-      return {
-        ...node,
-        position: {
-          x: CENTER_X + column * HORIZONTAL_SPACING + xOffset,
-          y: y
-        }
+    // Fonction pour obtenir tous les nœuds dans l'ordre de parcours
+    const getOrderedNodes = () => {
+      const orderedNodes: string[] = [];
+      const visited = new Set<string>();
+
+      const traverse = (nodeId: string) => {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+        orderedNodes.push(nodeId);
+
+        // Trier les edges pour garantir un ordre cohérent
+        const childEdges = edges
+          .filter(edge => edge.source === nodeId)
+          .sort((a, b) => {
+            const aColumn = nodeColumns.get(a.target) || 0;
+            const bColumn = nodeColumns.get(b.target) || 0;
+            return aColumn - bColumn;
+          });
+
+        childEdges.forEach(edge => {
+          traverse(edge.target);
+        });
       };
-    }));
+
+      traverse('1'); // Commencer par le nœud racine
+      return orderedNodes;
+    };
+
+    calculateLayout();
+    const orderedNodeIds = getOrderedNodes();
+
+    // Mettre à jour les numéros de questions
+    setNodes(prevNodes => {
+      const nodeMap = new Map(prevNodes.map(node => [node.id, node]));
+      return orderedNodeIds.map((nodeId, index) => {
+        const node = nodeMap.get(nodeId);
+        if (!node) return null;
+
+        return {
+          ...node,
+          position: {
+            x: CENTER_X + (nodeColumns.get(nodeId) || 0) * HORIZONTAL_SPACING,
+            y: (() => {
+              let y = START_Y;
+              const level = nodeLevels.get(nodeId) || 0;
+              for (let i = 0; i < level; i++) {
+                y += calculateVerticalSpacing(i, nodeId);
+              }
+              return y;
+            })()
+          },
+          data: {
+            ...node.data,
+            questionNumber: index + 1 // Mettre à jour le numéro de question
+          }
+        };
+      }).filter((node): node is Node => node !== null);
+    });
 
     // Ajuster le zoom et la position de la vue
     if (reactFlowInstance) {
