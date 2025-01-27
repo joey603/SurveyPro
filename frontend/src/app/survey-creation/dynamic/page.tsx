@@ -599,12 +599,7 @@ export default function DynamicSurveyCreation() {
           )}
         </Box>
 
-        <Typography
-          variant="body2"
-          sx={{ mt: 2, textAlign: 'center', color: 'gray' }}
-        >
-          Question {currentQuestion.data.questionNumber} sur {currentQuestion.data.totalQuestions}
-        </Typography>
+        
       </Box>
     );
   };
