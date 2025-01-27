@@ -1618,7 +1618,7 @@ const SurveyAnswerPage: React.FC = () => {
                   mb: 3,
                   borderRadius: 2,
                   border: '1px solid rgba(0, 0, 0, 0.1)',
-                  backgroundColor: isCritical ? '#fff8e1' : 'white'
+                  backgroundColor: 'white'
                 }}
               >
                 <Typography variant="h6" gutterBottom>
@@ -2058,7 +2058,7 @@ const SurveyAnswerPage: React.FC = () => {
                               ? 'rgba(0, 0, 0, 0.12)'
                               : 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                           },
-                          color: hasAnswered(survey._id) ? 'rgba(0, 0, 0, 0.26)' : 'white',
+                          color: hasAnswered(survey._id) ? 'rgba(100, 0, 0, 0.26)' : 'white',
                           pointerEvents: hasAnswered(survey._id) ? 'none' : 'auto',
                           opacity: hasAnswered(survey._id) ? 0.6 : 1,
                         }}
