@@ -120,6 +120,14 @@ export default function DynamicSurveyCreation() {
     type: 'info'
   });
 
+  // Ajouter ce state pour gérer la visibilité du dialog
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
       node.id.startsWith(`${currentQuestionId}-`) || 
@@ -129,55 +137,61 @@ export default function DynamicSurveyCreation() {
     return edges.map(edge => edge.id);
   };
 
-  const handleResetSurvey = async () => {
-    if (window.confirm('Are you sure you want to reset the survey? All progress will be lost.')) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          setNotification({
-            show: true,
-            message: 'Authentication token not found',
-            type: 'error'
-          });
-          return;
-        }
-
-        if (flowRef.current) {
-          const nodes = flowRef.current.getNodes();
-          
-          for (const node of nodes) {
-            if (node.data?.media) {
-              try {
-                await dynamicSurveyService.deleteMedia(node.data.media, token);
-              } catch (error) {
-                console.error('Error deleting media:', error);
-                setNotification({
-                  show: true,
-                  message: `Error deleting media for question ${node.data.questionNumber}`,
-                  type: 'warning'
-                });
-              }
-            }
+  const handleResetSurvey = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Reset Survey',
+      message: 'Are you sure you want to reset the survey? All progress will be lost.',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            setNotification({
+              show: true,
+              message: 'Authentication token not found',
+              type: 'error'
+            });
+            return;
           }
 
-          reset();
-          flowRef.current.resetFlow();
-          
-          setNotification({
+          if (flowRef.current) {
+            const nodes = flowRef.current.getNodes();
+            
+            for (const node of nodes) {
+              if (node.data?.media) {
+                try {
+                  await dynamicSurveyService.deleteMedia(node.data.media, token);
+                } catch (error) {
+                  console.error('Error deleting media:', error);
+                  setNotification({
+                    show: true,
+                    message: `Error deleting media for question ${node.data.questionNumber}`,
+                    type: 'warning'
+                  });
+                }
+              }
+            }
+
+            reset();
+            flowRef.current.resetFlow();
+            
+            setNotification({
+              show: true,
+              message: 'Survey reset successfully',
+              type: 'success'
+            });
+          }
+        } catch (error) {
+          console.error('Error during reset:', error);
+          setNotification({ 
             show: true,
-            message: 'Survey reset successfully',
-            type: 'success'
+            message: 'Error resetting survey',
+            type: 'error'
           });
         }
-      } catch (error) {
-        console.error('Error during reset:', error);
-        setNotification({ 
-          show: true,
-          message: 'Error resetting survey',
-          type: 'error'
-        });
+        setConfirmDialog(prev => ({ ...prev, open: false }));
       }
-    }
+    });
   };
 
   const handleDeleteQuestion = async (index: number) => {
@@ -1051,6 +1065,44 @@ export default function DynamicSurveyCreation() {
           </Button>
           <Button onClick={handleClosePreview} variant="contained">
             Close Preview
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de confirmation */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title" sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          py: 2
+        }}>
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            {confirmDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmDialog.onConfirm}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Reset
           </Button>
         </DialogActions>
       </Dialog>
