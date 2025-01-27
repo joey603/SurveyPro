@@ -231,6 +231,19 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
+    // Empêcher la suppression de la question 1
+    if (nodeId === '1') {
+      setNotification({
+        show: true,
+        message: 'La première question ne peut pas être supprimée',
+        type: 'warning'
+      });
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this question?')) {
       // Trouver le nœud à supprimer
       const nodeToDelete = nodes.find(node => node.id === nodeId);
@@ -430,6 +443,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const DeleteButton = () => {
     if (!selectedEdge && !selectedNode) return null;
+    
+    // Empêcher l'affichage du bouton de suppression pour la question 1
+    if (selectedNode === '1') return null;
 
     return (
       <div
