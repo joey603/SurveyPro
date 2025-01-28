@@ -39,6 +39,8 @@ import { Edge } from 'reactflow';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import { useRouter } from 'next/navigation';
 import { SurveyFlowRef } from './types/SurveyFlowTypes';
+import Lottie from "lottie-react";
+import validationAnimation from "@/assets/animation-check.json";
 
 const educationOptions = [
   'High School',
@@ -125,6 +127,7 @@ export default function DynamicSurveyCreation() {
 
   // Ajouter l'état de chargement
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
@@ -236,7 +239,7 @@ export default function DynamicSurveyCreation() {
   };
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true); // Activer l'état de chargement
+    setIsSubmitting(true);
     try {
       // Validation côté client
       if (!data.title?.trim()) {
@@ -268,19 +271,17 @@ export default function DynamicSurveyCreation() {
       }
 
       // Réorganiser le flow avant de soumettre
-      flowRef.current?.reorganizeFlow();
+      flowRef.current.reorganizeFlow();
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const allNodes = flowRef.current.getNodes();
       
-      // Nettoyer les données des nœuds avant l'envoi
       const cleanedNodes = allNodes.map(node => ({
         ...node,
         data: {
           ...node.data,
           mediaUrl: node.data.mediaUrl || '',
           media: node.data.media || '',
-          // Supprimer les fonctions qui ne doivent pas être envoyées
           onCreatePaths: undefined,
           onChange: undefined
         }
@@ -294,20 +295,16 @@ export default function DynamicSurveyCreation() {
         edges
       };
 
-      console.log('Données à envoyer:', surveyData);
-
       const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
       console.log('Sondage créé avec succès:', response);
 
-      setNotification({
-        show: true,
-        message: 'Survey created successfully',
-        type: 'success'
-      });
+      // Afficher l'animation de succès
+      setShowSuccess(true);
 
+      // Attendre que l'animation se termine (environ 2 secondes) puis rediriger
       setTimeout(() => {
-        router.push('/');
-      }, 1500);
+        router.push('/survey-answer');
+      }, 2000);
 
     } catch (error: any) {
       console.error('Erreur lors de la création du sondage:', error);
@@ -317,7 +314,7 @@ export default function DynamicSurveyCreation() {
         type: 'error'
       });
     } finally {
-      setIsSubmitting(false); // Désactiver l'état de chargement
+      setIsSubmitting(false);
     }
   };
 
@@ -1114,6 +1111,29 @@ export default function DynamicSurveyCreation() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {showSuccess && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            zIndex: 9999
+          }}
+        >
+          <Lottie
+            animationData={validationAnimation}
+            loop={false}
+            style={{ width: 400, height: 400 }}
+          />
+        </Box>
+      )}
     </Box>
   );
 } 
