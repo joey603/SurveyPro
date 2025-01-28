@@ -2,6 +2,7 @@
   "dependencies": {
     "@reactflow/node-resizer": "^2.2.14",
     "framer-motion": "^11.17.0",
+    "lottie-react": "^2.4.1",
     "reactflow": "^11.11.4"
   }
 }
