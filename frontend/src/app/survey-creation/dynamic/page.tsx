@@ -37,6 +37,7 @@ import ReactPlayer from 'react-player';
 import { Edge } from 'reactflow';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import { useRouter } from 'next/navigation';
+import { SurveyFlowRef } from './types/SurveyFlowTypes';
 
 const educationOptions = [
   'High School',
@@ -61,13 +62,6 @@ interface FormData {
   title: string;
   description: string;
   demographicEnabled: boolean;
-}
-
-interface SurveyFlowRef {
-  resetFlow: () => void;
-  getNodes: () => any[];
-  addNewQuestion: () => void;
-  setNodes: (nodes: any[]) => void;
 }
 
 interface PreviewAnswer {
@@ -241,7 +235,6 @@ export default function DynamicSurveyCreation() {
     try {
       // Validation côté client
       if (!data.title?.trim()) {
-        // Si vous utilisez Material-UI, vous pouvez utiliser Snackbar ou Alert
         setNotification({
           show: true,
           message: 'Le titre du sondage est requis',
@@ -268,6 +261,13 @@ export default function DynamicSurveyCreation() {
         });
         return;
       }
+
+      // Réorganiser le flow avant de soumettre
+      await new Promise<void>((resolve) => {
+        flowRef.current?.reorganizeFlow();
+        // Attendre un peu que la réorganisation soit terminée
+        setTimeout(resolve, 500);
+      });
 
       const allNodes = flowRef.current.getNodes();
       
@@ -304,7 +304,7 @@ export default function DynamicSurveyCreation() {
       });
 
       setTimeout(() => {
-        router.push('/'); // Redirection vers la page d'accueil
+        router.push('/');
       }, 1500);
 
     } catch (error: any) {

@@ -23,17 +23,11 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
+import { SurveyFlowRef } from '../types/SurveyFlowTypes';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
   onEdgesChange: (edges: Edge[]) => void;
-}
-
-interface SurveyFlowRef {
-  resetFlow: () => void;
-  getNodes: () => Node[];
-  addNewQuestion: () => void;
-  setNodes: (nodes: Node[]) => void;
 }
 
 const nodeTypes = {
@@ -826,7 +820,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     },
     setNodes: (newNodes: Node[]) => {
       setNodes(newNodes);
-    }
+    },
+    reorganizeFlow: reorganizeFlow,
   }));
 
   return (
