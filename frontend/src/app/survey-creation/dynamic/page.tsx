@@ -22,7 +22,8 @@ import {
   RadioGroup,
   Slider,
   Rating,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -121,6 +122,9 @@ export default function DynamicSurveyCreation() {
     message: '',
     onConfirm: () => {},
   });
+
+  // Ajouter l'état de chargement
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const findNextQuestions = (currentQuestionId: string, answer: any) => {
     const edges = previewNodes.filter(node => 
@@ -232,6 +236,7 @@ export default function DynamicSurveyCreation() {
   };
 
   const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true); // Activer l'état de chargement
     try {
       // Validation côté client
       if (!data.title?.trim()) {
@@ -263,11 +268,8 @@ export default function DynamicSurveyCreation() {
       }
 
       // Réorganiser le flow avant de soumettre
-      await new Promise<void>((resolve) => {
-        flowRef.current?.reorganizeFlow();
-        // Attendre un peu que la réorganisation soit terminée
-        setTimeout(resolve, 500);
-      });
+      flowRef.current?.reorganizeFlow();
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const allNodes = flowRef.current.getNodes();
       
@@ -314,6 +316,8 @@ export default function DynamicSurveyCreation() {
         message: error.message || 'Erreur lors de la création du sondage',
         type: 'error'
       });
+    } finally {
+      setIsSubmitting(false); // Désactiver l'état de chargement
     }
   };
 
@@ -954,6 +958,7 @@ export default function DynamicSurveyCreation() {
           onClick={handleResetSurvey}
           variant="contained"
           startIcon={<DeleteIcon />}
+          disabled={isSubmitting}
           sx={{
             background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
             '&:hover': {
@@ -968,6 +973,7 @@ export default function DynamicSurveyCreation() {
           onClick={handleOpenPreview}
           variant="contained"
           startIcon={<PreviewIcon />}
+          disabled={isSubmitting}
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             '&:hover': {
@@ -981,7 +987,14 @@ export default function DynamicSurveyCreation() {
         <Button
           onClick={handleSubmit(onSubmit)}
           variant="contained"
-          startIcon={<SendIcon />}
+          disabled={isSubmitting}
+          startIcon={
+            isSubmitting ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <SendIcon />
+            )
+          }
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             '&:hover': {
@@ -989,7 +1002,7 @@ export default function DynamicSurveyCreation() {
             },
           }}
         >
-          Submit
+          {isSubmitting ? 'Submitting...' : 'Submit'}
         </Button>
       </Box>
 
