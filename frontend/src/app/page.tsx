@@ -17,6 +17,10 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import { useAuth } from '../utils/AuthContext';
 import Avatar from '@mui/material/Avatar';
+import Lottie from 'lottie-react';
+import pollAnimation from '../assets/animation-pollIcon.json';
+import analyticsAnimation from '../assets/animation-analyticsIcon.json';
+import timelineAnimation from '../assets/animation-timeline.json';
 
 const Home = () => {
   const router = useRouter();
@@ -63,7 +67,13 @@ const Home = () => {
 
   const features = [
     {
-      icon: <PollIcon sx={{ fontSize: 40, color: '#667eea' }} />,
+      icon: (
+        <Lottie
+          animationData={pollAnimation}
+          style={{ width: 200, height: 200 }}
+          loop={true}
+        />
+      ),
       title: 'Create Surveys',
       description:
         'Design professional surveys with our intuitive survey builder',
@@ -71,14 +81,26 @@ const Home = () => {
       link: '/survey-creation',
     },
     {
-      icon: <AnalyticsIcon sx={{ fontSize: 40, color: '#667eea' }} />,
+      icon: (
+        <Lottie
+          animationData={analyticsAnimation}
+          style={{ width: 200, height: 200 }}
+          loop={true}
+        />
+      ),
       title: 'Gather Insights',
       description: 'Collect and analyze responses in real-time',
       delay: 1000,
       link: '/survey-answer',
     },
     {
-      icon: <TimelineIcon sx={{ fontSize: 40, color: '#667eea' }} />,
+      icon: (
+        <Lottie
+          animationData={timelineAnimation}
+          style={{ width: 200, height: 200 }}
+          loop={true}
+        />
+      ),
       title: 'Track Progress',
       description: 'Monitor survey performance with detailed analytics',
       delay: 1500,
