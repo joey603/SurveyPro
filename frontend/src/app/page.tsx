@@ -101,7 +101,7 @@ const Home = () => {
           loop={true}
         />
       ),
-      title: 'Track Progress',
+      title: 'Track Progress',  
       description: 'Monitor survey performance with detailed analytics',
       delay: 1500,
       link: '/results',
