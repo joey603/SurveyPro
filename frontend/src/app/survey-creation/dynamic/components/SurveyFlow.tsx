@@ -328,7 +328,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           target: newConnection.target || oldEdge.target,
         };
         updatedEdges.push(newEdge);
-      }
+      } 
       return updatedEdges;
     });
   }, []);
