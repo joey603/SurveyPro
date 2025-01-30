@@ -81,7 +81,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import CloseIcon from '@mui/icons-material/Close';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DatePicker } from '@mui/x-date-pickers';
+import type { DatePickerProps } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -96,6 +97,7 @@ import { respondToSurveyShare } from '@/utils/surveyShareService';
 import EmailIcon from '@mui/icons-material/Email';
 import { colors } from '../../theme/colors';
 import { useAuth } from '@/utils/AuthContext';
+import { forwardRef } from 'react';
 
 ChartJS.register(
   CategoryScale,
@@ -257,10 +259,78 @@ interface SurveyAnswer {
   };
 }
 
-// Modifiez le composant AnswerTooltip
-const AnswerTooltip = ({ answer, questionAnswer }: { 
-  answer: SurveyAnswer, 
-  questionAnswer: Answer | undefined 
+// Définir toutes les interfaces au début du fichier
+interface DemographicFilterPanelProps {
+  open: boolean;
+  onClose: () => void;
+  id?: string;
+  'data-testid'?: string;
+}
+
+interface AnswerTooltipProps {
+  answer: SurveyAnswer;
+  questionAnswer: Answer | undefined;
+  id?: string;
+  'data-testid'?: string;
+}
+
+interface ChartViewProps {
+  data: any;
+  question: Partial<Question> & { text: string; type: string; };
+  id?: string;
+  'data-testid'?: string;
+}
+
+interface CustomDatePickerProps {
+  id?: string;
+  'data-testid'?: string;
+  label: string;
+  value: Date | null;
+  onChange: (date: Date | null) => void;
+  minDate?: Date;
+}
+
+// Modifier l'interface CustomDatePickerProps
+interface CustomDatePickerProps {
+  id?: string;
+  'data-testid'?: string;
+  label: string;
+  value: Date | null;
+  onChange: (date: Date | null) => void;
+  minDate?: Date;
+}
+
+// Modifier le composant CustomDatePicker
+const CustomDatePicker = forwardRef<HTMLDivElement, CustomDatePickerProps>(
+  ({ id, 'data-testid': dataTestId, label, value, onChange, minDate, ...props }, ref) => {
+    return (
+      <DatePicker<Date>
+        {...props}
+        ref={ref}
+        label={label}
+        value={value}
+        onChange={onChange}
+        minDate={minDate}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            id={id}
+            data-testid={dataTestId}
+            size="small"
+          />
+        )}
+      />
+    );
+  }
+);
+
+CustomDatePicker.displayName = 'CustomDatePicker';
+
+const AnswerTooltip = memo<AnswerTooltipProps>(({ 
+  answer, 
+  questionAnswer, 
+  id, 
+  'data-testid': dataTestId 
 }) => {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
@@ -285,8 +355,8 @@ const AnswerTooltip = ({ answer, questionAnswer }: {
 
   return (
     <ListItem
-      id={`answer-tooltip-${answer._id}`}
-      data-testid={`answer-tooltip-${answer._id}`}
+      id={id}
+      data-testid={dataTestId}
       onMouseEnter={() => setIsTooltipOpen(true)}
       onMouseLeave={() => setIsTooltipOpen(false)}
       onMouseMove={handleMouseMove}
@@ -367,12 +437,14 @@ const AnswerTooltip = ({ answer, questionAnswer }: {
       )}
     </ListItem>
   );
-};
+});
 
 // Créer un nouveau composant pour le graphique
-const ChartView = memo(({ data, question }: { 
-  data: any; 
-  question: Partial<Question> & { text: string; type: string; }
+const ChartView = memo<ChartViewProps>(({ 
+  data, 
+  question, 
+  id, 
+  'data-testid': dataTestId 
 }) => {
   // Obtenir les types de graphiques disponibles avant de définir l'état
   const getAvailableChartTypes = (questionType: string): ChartType[] => {
@@ -591,8 +663,8 @@ const ChartView = memo(({ data, question }: {
 
   return (
     <Box
-      id={`chart-container-${question.id}`}
-      data-testid={`chart-container-${question.id}`}
+      id={id}
+      data-testid={dataTestId}
       sx={{ 
         height: '500px',
         width: '100%',
@@ -867,6 +939,8 @@ const ResultsPage: React.FC = () => {
     selectedSurvey: Survey;
     answerFilters: AnswerFilters;
     setAnswerFilters: React.Dispatch<React.SetStateAction<AnswerFilters>>;
+    id?: string;
+    'data-testid'?: string;
   }
 
   // Modifier la déclaration du composant pour inclure les props
@@ -875,7 +949,9 @@ const ResultsPage: React.FC = () => {
     onClose,
     selectedSurvey,
     answerFilters,
-    setAnswerFilters
+    setAnswerFilters,
+    id,
+    'data-testid': dataTestId
   }) => {
     const [tempFilters, setTempFilters] = useState<AnswerFilters>(answerFilters);
 
@@ -955,8 +1031,8 @@ const ResultsPage: React.FC = () => {
 
     return (
       <Dialog
-        id="answer-filter-dialog"
-        data-testid="answer-filter-dialog"
+        id={`answer-filter-dialog-${id}`}
+        data-testid={`answer-filter-dialog-${id}`}
         open={open}
         onClose={onClose}
         maxWidth="md"
@@ -1989,7 +2065,7 @@ const ResultsPage: React.FC = () => {
   const [demographicFilterDialogOpen, setDemographicFilterDialogOpen] = useState(false);
 
   // Créer le composant DemographicFilterPanel
-  const DemographicFilterPanel = ({ open, onClose }: { open: boolean, onClose: () => void }) => {
+  const DemographicFilterPanel: React.FC<DemographicFilterPanelProps> = ({ open, onClose, id, 'data-testid': dataTestId }) => {
     const [cities, setCities] = useState<string[]>([]);
     const [isLoadingCities, setIsLoadingCities] = useState(false);
 
@@ -2067,8 +2143,8 @@ const ResultsPage: React.FC = () => {
 
     return (
       <Dialog
-        id="demographic-filter-dialog"
-        data-testid="demographic-filter-dialog"
+        id={id}
+        data-testid={dataTestId}
         open={open}
         onClose={onClose}
         maxWidth="md"
@@ -4150,10 +4226,12 @@ const ResultsPage: React.FC = () => {
     open: boolean;
     onClose: () => void;
     surveyId: string;
+    id?: string;
+    'data-testid'?: string;
   }
 
   // Ajouter ce composant
-  const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, surveyId }) => {
+  const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, surveyId, id, 'data-testid': dataTestId }) => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -4199,16 +4277,16 @@ const ResultsPage: React.FC = () => {
 
     return (
       <Dialog
-        id="share-dialog"
-        data-testid="share-dialog"
+        id={id}
+        data-testid={dataTestId}
         open={open}
         onClose={onClose}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle
-          id="share-dialog-title"
-          data-testid="share-dialog-title"
+          id={`share-dialog-title-${id}`}
+          data-testid={`share-dialog-title-${id}`}
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
@@ -4221,13 +4299,13 @@ const ResultsPage: React.FC = () => {
         </DialogTitle>
         
         <DialogContent
-          id="share-dialog-content"
-          data-testid="share-dialog-content"
+          id={`share-dialog-content-${id}`}
+          data-testid={`share-dialog-content-${id}`}
           sx={{ mt: 2 }}
         >
           <TextField
-            id="email-input"
-            data-testid="email-input"
+            id={`email-input-${id}`}
+            data-testid={`email-input-${id}`}
             fullWidth
             label="Destinatory Mail"
             value={email}
@@ -4247,8 +4325,8 @@ const ResultsPage: React.FC = () => {
           
           {success && (
             <Alert
-              id="success-alert"
-              data-testid="success-alert"
+              id={`success-alert-${id}`}
+              data-testid={`success-alert-${id}`}
               severity="success"
               sx={{ mt: 2 }}
             >
@@ -4258,13 +4336,13 @@ const ResultsPage: React.FC = () => {
         </DialogContent>
         
         <DialogActions
-          id="share-dialog-actions"
-          data-testid="share-dialog-actions"
+          id={`share-dialog-actions-${id}`}
+          data-testid={`share-dialog-actions-${id}`}
           sx={{ p: 2, pt: 0 }}
         >
           <Button
-            id="cancel-button"
-            data-testid="cancel-button"
+            id={`cancel-button-${id}`}
+            data-testid={`cancel-button-${id}`}
             onClick={onClose}
             disabled={loading}
             sx={{ color: '#64748b' }}
@@ -4272,8 +4350,8 @@ const ResultsPage: React.FC = () => {
             Cancel
           </Button>
           <Button
-            id="send-button"
-            data-testid="send-button"
+            id={`send-button-${id}`}
+            data-testid={`send-button-${id}`}
             onClick={handleShare}
             disabled={!email || loading || success}
             variant="contained"
@@ -5045,7 +5123,7 @@ const ResultsPage: React.FC = () => {
                   spacing={2}
                   sx={{ mt: 2 }}
                 >
-                  <DatePicker
+                  <CustomDatePicker
                     id="start-date-picker"
                     data-testid="start-date-picker"
                     label="Start Date"
@@ -5056,16 +5134,8 @@ const ResultsPage: React.FC = () => {
                         start: newValue
                       }));
                     }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField
-                        id="start-date-input"
-                        data-testid="start-date-input"
-                        {...params}
-                        size="small"
-                      />
-                    )}
                   />
-                  <DatePicker
+                  <CustomDatePicker
                     id="end-date-picker"
                     data-testid="end-date-picker"
                     label="End Date"
@@ -5076,14 +5146,6 @@ const ResultsPage: React.FC = () => {
                         end: newValue
                       }));
                     }}
-                    renderInput={(params: TextFieldProps) => (
-                      <TextField
-                        id="end-date-input"
-                        data-testid="end-date-input"
-                        {...params}
-                        size="small"
-                      />
-                    )}
                     minDate={dateRange.start || undefined}
                   />
                 </Stack>

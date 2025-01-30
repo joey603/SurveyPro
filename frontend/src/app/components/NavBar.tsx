@@ -16,10 +16,13 @@ import {
   useMediaQuery,
   useTheme,
   Container,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../../utils/AuthContext';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 // Ajout des constantes de style
 const NAVBAR_STYLES = {
@@ -39,6 +42,8 @@ const NavBar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
   // Liste des routes où la navbar ne doit pas apparaître
   const noNavbarRoutes = ['/login', '/register'];
@@ -51,13 +56,20 @@ const NavBar = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleSurveyClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleSurveyClose = () => {
+    setAnchorEl(null);
+  };
+
   const navItems = !isAuthenticated
     ? [
         { name: 'Login', path: '/login' },
         { name: 'Register', path: '/register' },
       ]
     : [
-        { name: 'New Survey', path: '/survey-creation' },
         { name: 'Explore', path: '/survey-answer' },
         { name: 'Analytics', path: '/results' },
         { name: 'Activity Log', path: '/history' },
@@ -104,6 +116,103 @@ const NavBar = () => {
       {name}
     </Button>
   );
+
+  // Composant pour le bouton New Survey avec dropdown
+  const NewSurveyButton = () => {
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const menuOpen = Boolean(menuAnchorEl);
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+      setMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+      setMenuAnchorEl(null);
+    };
+
+    return (
+      <div>
+        <Button
+          id="new-survey-button"
+          aria-controls={menuOpen ? 'new-survey-menu' : undefined}
+          aria-haspopup="true"
+          aria-expanded={menuOpen ? 'true' : undefined}
+          onClick={handleClick}
+          endIcon={<KeyboardArrowDownIcon />}
+          sx={{
+            color: '#64748b',
+            mx: 1,
+            py: 1.5,
+            px: 2.5,
+            borderRadius: '12px',
+            textTransform: 'none',
+            fontSize: '0.95rem',
+            fontWeight: 500,
+            '&:hover': {
+              color: '#667eea',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            },
+          }}
+        >
+          New Survey
+        </Button>
+        <Menu
+          id="new-survey-menu"
+          anchorEl={menuAnchorEl}
+          open={menuOpen}
+          onClose={handleClose}
+          MenuListProps={{
+            'aria-labelledby': 'new-survey-button',
+          }}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          sx={{
+            '& .MuiPaper-root': {
+              borderRadius: '12px',
+              marginTop: '8px',
+              minWidth: '200px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            },
+          }}
+        >
+          <MenuItem 
+            component={Link} 
+            href="/survey-creation"
+            onClick={handleClose}
+            sx={{
+              py: 1.5,
+              px: 2.5,
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              },
+            }}
+          >
+            Standard Survey
+          </MenuItem>
+          <MenuItem 
+            component={Link} 
+            href="/survey-creation/dynamic"
+            onClick={handleClose}
+            sx={{
+              py: 1.5,
+              px: 2.5,
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              },
+            }}
+          >
+            Dynamic Survey
+          </MenuItem>
+        </Menu>
+      </div>
+    );
+  };
 
   return (
     <AppBar
@@ -172,6 +281,7 @@ const NavBar = () => {
             </IconButton>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {isAuthenticated && <NewSurveyButton />}
               {navItems.map((item) => (
                 <NavButton key={item.name} {...item} />
               ))}
@@ -259,6 +369,80 @@ const NavBar = () => {
             <CloseIcon />
           </IconButton>
           <List>
+            {isAuthenticated && (
+              <>
+                <ListItem>
+                  <ListItemText 
+                    primary="New Survey"
+                    primaryTypographyProps={{
+                      sx: {
+                        color: '#64748b',
+                        fontWeight: 600,
+                        pl: 2,
+                      }
+                    }}
+                  />
+                </ListItem>
+                <ListItem disablePadding>
+                  <Button
+                    component={Link}
+                    href="/survey-creation"
+                    fullWidth
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      pl: 6,
+                      justifyContent: 'flex-start',
+                      color: pathname === '/survey-creation' ? '#667eea' : '#64748b',
+                      backgroundColor: pathname === '/survey-creation' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+                      transition: NAVBAR_STYLES.transitions.default,
+                      '&:hover': {
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        transform: 'translateX(8px)',
+                      },
+                    }}
+                  >
+                    <ListItemText 
+                      primary="Standard Survey"
+                      primaryTypographyProps={{
+                        sx: {
+                          fontWeight: pathname === '/survey-creation' ? 600 : 500,
+                        }
+                      }}
+                    />
+                  </Button>
+                </ListItem>
+                <ListItem disablePadding>
+                  <Button
+                    component={Link}
+                    href="/survey-creation/dynamic"
+                    fullWidth
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      pl: 6,
+                      justifyContent: 'flex-start',
+                      color: pathname === '/survey-creation/dynamic' ? '#667eea' : '#64748b',
+                      backgroundColor: pathname === '/survey-creation/dynamic' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+                      transition: NAVBAR_STYLES.transitions.default,
+                      '&:hover': {
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        transform: 'translateX(8px)',
+                      },
+                    }}
+                  >
+                    <ListItemText 
+                      primary="Dynamic Survey"
+                      primaryTypographyProps={{
+                        sx: {
+                          fontWeight: pathname === '/survey-creation/dynamic' ? 600 : 500,
+                        }
+                      }}
+                    />
+                  </Button>
+                </ListItem>
+              </>
+            )}
             {navItems.map((item) => (
               <ListItem key={item.name} disablePadding>
                 <Button

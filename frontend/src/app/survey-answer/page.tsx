@@ -28,7 +28,11 @@ import {
   FormHelperText,
   Menu,
   MenuItem,
-  TextFieldProps
+  TextFieldProps,
+  Grid,
+  Card,
+  CardContent,
+  CardActions
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -38,7 +42,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { fetchAvailableSurveys, submitSurveyAnswer } from "@/utils/surveyService";
+import { fetchAvailableSurveys, submitSurveyAnswer, fetchAnsweredSurveys } from "@/utils/surveyService";
 import { useAuth } from '@/utils/AuthContext';
 import Image from 'next/image';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -52,6 +56,12 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import EmailIcon from '@mui/icons-material/Email';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from 'next/navigation';
+import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
+import axios from 'axios';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -84,6 +94,10 @@ interface Survey {
   status?: 'pending' | 'accepted' | 'rejected';
   demographicEnabled?: boolean;
   sharedBy?: string;
+  isDynamic?: boolean;
+  nodes?: any[];
+  edges?: any[];
+  userId?: { username: string };
 }
 
 interface DemographicData {
@@ -124,7 +138,7 @@ const SurveyAnswerPage: React.FC = () => {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit, watch } = useForm<FormData>({
+  const { control, handleSubmit, watch, reset, setValue } = useForm<FormData>({
     defaultValues: {
       demographic: {
         gender: '',
@@ -163,6 +177,12 @@ const SurveyAnswerPage: React.FC = () => {
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
   const [currentSurveyToShare, setCurrentSurveyToShare] = useState<Survey | null>(null);
   const [lastDemographicData, setLastDemographicData] = useState<DemographicData | null>(null);
+  const [dynamicSurveys, setDynamicSurveys] = useState<any[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [questionHistory, setQuestionHistory] = useState<string[]>(['1']);
+  const [currentAnswers, setCurrentAnswers] = useState<{ [key: string]: any }>({});
+  const [orderedNodes, setOrderedNodes] = useState<any[]>([]);
+  const [surveyTypeFilter, setSurveyTypeFilter] = useState<'all' | 'dynamic' | 'static'>('all');
 
   useEffect(() => {
     // Sauvegarder l'URL actuelle si elle contient un surveyId
@@ -226,19 +246,31 @@ const SurveyAnswerPage: React.FC = () => {
           throw new Error('Aucun token d\'authentification trouvé');
         }
 
-        const data = await fetchAvailableSurveys(token);
-        setSurveys(data);
+        // Charger tous les sondages
+        const allSurveys = await fetchAvailableSurveys(token);
+        console.log('Sondages chargés:', allSurveys);
+        // Charger les IDs des sondages déjà répondus
+        const answeredIds = await fetchAnsweredSurveys();
+        if (Array.isArray(answeredIds)) {
+          setAnsweredSurveys(answeredIds);
+          console.log('Sondages répondus:', answeredIds);
+        }
+
+        setSurveys(allSurveys);
 
         // Vérifier s'il y a un ID de survey dans l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSurveyId = urlParams.get('surveyId');
         if (sharedSurveyId) {
-          const sharedSurvey = data.find((survey: { _id: string }) => survey._id === sharedSurveyId);
+          const sharedSurvey = allSurveys.find(
+            (survey: { _id: string }) => survey._id === sharedSurveyId
+          );
           if (sharedSurvey) {
             setSelectedSurvey(sharedSurvey);
           }
         }
       } catch (error: any) {
+        console.error('Erreur lors du chargement des sondages:', error);
         setError(error.message || 'Échec du chargement des sondages');
       } finally {
         setLoading(false);
@@ -273,14 +305,18 @@ const SurveyAnswerPage: React.FC = () => {
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
+      const matchesType = surveyTypeFilter === 'all' || 
+                         (surveyTypeFilter === 'dynamic' && survey.isDynamic) ||
+                         (surveyTypeFilter === 'static' && !survey.isDynamic);
+
       if (dateRange.start && dateRange.end) {
         const surveyDate = new Date(survey.createdAt);
         const isInDateRange = surveyDate >= dateRange.start && 
                            surveyDate <= new Date(dateRange.end.setHours(23, 59, 59));
-        return matchesSearch && isInDateRange;
+        return matchesSearch && isInDateRange && matchesType;
       }
 
-      return matchesSearch;
+      return matchesSearch && matchesType;
     })
     .sort((a, b) => {
       if (sortBy === 'popular') {
@@ -295,6 +331,7 @@ const SurveyAnswerPage: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setDateRange({ start: null, end: null });
+    setSurveyTypeFilter('all');
   };
 
   const validateForm = (data: FormData): boolean => {
@@ -315,75 +352,206 @@ const SurveyAnswerPage: React.FC = () => {
       }
     }
 
-    selectedSurvey?.questions.forEach(question => {
-      const answer = data.answers[question.id];
-      if (answer === undefined || answer === '' || answer === null) {
-        errors[`answers.${question.id}`] = 'This question requires an answer';
-      }
-    });
+    if (selectedSurvey?.isDynamic && selectedSurvey.nodes) {
+      // Pour les sondages dynamiques, vérifier uniquement les questions visibles
+      const shouldShowQuestion = (nodeId: string): boolean => {
+        if (nodeId === '1') return true;
+        const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
+        if (incomingEdges.length === 0) return false;
+        return incomingEdges.some(edge => {
+          if (edge.label) {
+            return currentAnswers[edge.source] === edge.label;
+          }
+          return shouldShowQuestion(edge.source);
+        });
+      };
+
+      // Vérifier uniquement les questions actuellement visibles
+      const visibleNodes = selectedSurvey.nodes.filter(node => shouldShowQuestion(node.id));
+      visibleNodes.forEach(node => {
+        const answer = data.answers[node.id];
+        if (answer === undefined || answer === '' || answer === null) {
+          errors[`answers.${node.id}`] = 'This question requires an answer';
+        }
+      });
+    } else {
+      // Pour les sondages non dynamiques, vérifier toutes les questions
+      selectedSurvey?.questions.forEach(question => {
+        const answer = data.answers[question.id];
+        if (answer === undefined || answer === '' || answer === null) {
+          errors[`answers.${question.id}`] = 'This question requires an answer';
+        }
+      });
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const onSubmit = async (data: FormData) => {
-    if (!selectedSurvey) return;
-    
-    if (!validateForm(data)) {
-      setNotification({
-        message: "Please fill in all required fields",
-        severity: 'error',
-        open: true
-      });
-      return;
+  // Ajouter une clé unique pour chaque sondage dans le localStorage
+  const getStorageKey = (surveyId: string) => `survey_answers_${surveyId}`;
+
+  // Modifier useEffect pour charger les réponses sauvegardées
+  useEffect(() => {
+    if (selectedSurvey?.isDynamic && selectedSurvey.nodes) {
+      const storageKey = getStorageKey(selectedSurvey._id);
+      const savedAnswers = localStorage.getItem(storageKey);
+      
+      if (savedAnswers) {
+        const parsedAnswers = JSON.parse(savedAnswers);
+        setCurrentAnswers(parsedAnswers);
+        
+        // Mettre à jour les valeurs du formulaire avec les réponses sauvegardées
+        Object.entries(parsedAnswers).forEach(([questionId, value]) => {
+          setValue(`answers.${questionId}`, value);
+        });
+      } else {
+        setCurrentAnswers({});
+      }
     }
+  }, [selectedSurvey, setValue]);
 
-    setIsSubmitting(true);
-    setSubmitError(null);
+  // Modifier handleDynamicAnswerChange pour sauvegarder les réponses
+  const handleDynamicAnswerChange = (questionId: string, value: any) => {
+    console.log(`Setting answer for ${questionId}:`, value);
+    setCurrentAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: value
+      };
+      
+      // Sauvegarder dans le localStorage
+      if (selectedSurvey) {
+        const storageKey = getStorageKey(selectedSurvey._id);
+        localStorage.setItem(storageKey, JSON.stringify(newAnswers));
+      }
+      
+      console.log('Updated answers:', newAnswers);
+      return newAnswers;
+    });
+  };
 
+  // Modifier la fonction shouldShowQuestion pour utiliser currentAnswers
+  const shouldShowQuestion = (nodeId: string): boolean => {
+    if (nodeId === '1') return true;
+    
+    const incomingEdges = selectedSurvey?.edges?.filter(e => e.target === nodeId) || [];
+    if (incomingEdges.length === 0) return false;
+
+    return incomingEdges.some(edge => {
+      if (edge.label) {
+        const sourceAnswer = currentAnswers[edge.source];
+        return sourceAnswer === edge.label;
+      }
+      return shouldShowQuestion(edge.source);
+    });
+  };
+
+  // Ajouter une fonction pour nettoyer les réponses sauvegardées après soumission
+  const clearSavedAnswers = () => {
+    if (selectedSurvey) {
+      const storageKey = getStorageKey(selectedSurvey._id);
+      localStorage.removeItem(storageKey);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
     try {
-      const formattedAnswers = Object.entries(data.answers).map(([questionId, value]) => ({
-        questionId,
-        value
-      }));
-
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('No authentication token found');
+      if (!selectedSurvey) {
+        setSubmitError('Aucun sondage sélectionné');
+        return;
       }
 
-      const submissionData = {
-        surveyId: selectedSurvey._id,
-        answers: formattedAnswers,
-        demographic: selectedSurvey.demographicEnabled ? {
-          gender: data.demographic.gender,
-          dateOfBirth: data.demographic.dateOfBirth,
-          educationLevel: data.demographic.educationLevel,
-          city: data.demographic.city
-        } : undefined
-      };
+      // Valider le formulaire avant la soumission
+      if (!validateForm(data)) {
+        setSubmitError('Veuillez répondre à toutes les questions requises');
+        return;
+      }
 
-      await submitSurveyAnswer(selectedSurvey._id, submissionData, token);
+      setIsSubmitting(true);
+      setSubmitError(null);
 
-      setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Token non trouvé');
+
+      // Pour les sondages dynamiques, filtrer uniquement les réponses visibles
+      if (selectedSurvey.isDynamic && selectedSurvey.nodes) {
+        const shouldShowQuestion = (nodeId: string): boolean => {
+          if (nodeId === '1') return true;
+          const incomingEdges = selectedSurvey.edges?.filter(e => e.target === nodeId) || [];
+          if (incomingEdges.length === 0) return false;
+          return incomingEdges.some(edge => {
+            if (edge.label) {
+              return currentAnswers[edge.source] === edge.label;
+            }
+            return shouldShowQuestion(edge.source);
+          });
+        };
+
+        // Filtrer uniquement les réponses aux questions visibles
+        const visibleNodes = selectedSurvey.nodes.filter(node => shouldShowQuestion(node.id));
+        const visibleAnswers = visibleNodes.map(node => ({
+          nodeId: node.id,
+          value: data.answers[node.id]
+        }));
+
+        const submissionData = {
+          isDynamic: true,
+          answers: visibleAnswers,
+          demographic: selectedSurvey.demographicEnabled ? {
+            gender: data.demographic?.gender,
+            dateOfBirth: data.demographic?.dateOfBirth,
+            educationLevel: data.demographic?.educationLevel,
+            city: data.demographic?.city
+          } : undefined,
+          path: visibleNodes.map(node => node.id)
+        };
+
+        await submitSurveyAnswer(
+          selectedSurvey._id,
+          submissionData,
+          token
+        );
+      } else {
+        // Pour les sondages non dynamiques, garder la logique existante
+        const submissionData = {
+          isDynamic: false,
+          answers: Object.entries(data.answers).map(([questionId, value]) => ({
+            questionId,
+            value
+          })),
+          demographic: selectedSurvey.demographicEnabled ? {
+            gender: data.demographic?.gender,
+            dateOfBirth: data.demographic?.dateOfBirth,
+            educationLevel: data.demographic?.educationLevel,
+            city: data.demographic?.city
+          } : undefined
+        };
+
+        await submitSurveyAnswer(
+          selectedSurvey._id,
+          submissionData,
+          token
+        );
+      }
 
       setNotification({
-        message: "Thank you for your responses!",
+        message: 'Réponse soumise avec succès',
         severity: 'success',
         open: true
       });
-      
-      setTimeout(() => {
-        setSelectedSurvey(null);
-      }, 2000);
 
+      setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+      clearSavedAnswers();
+      reset();
+      setSelectedSurvey(null);
     } catch (error: any) {
-      console.error('Error submitting survey:', error);
-      setNotification({
-        message: error.message || 'An error occurred while submitting your responses',
-        severity: 'error',
-        open: true
-      });
+      console.error('Erreur lors de la soumission:', error);
+      setSubmitError(
+        error.response?.data?.message || 
+        error.message || 
+        'Erreur lors de la soumission du sondage'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -527,31 +695,31 @@ const SurveyAnswerPage: React.FC = () => {
 
             case "dropdown":
               return (
-                <FormControl 
-                  fullWidth 
-                  error={!!formErrors[`answers.${question.id}`]}
-                >
-                  <InputLabel>{question.text}</InputLabel>
-                  <Select
-                    {...field}
-                    label={question.text}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
-                    }}
-                  >
-                    {question.options?.map((option, index) => (
-                      <MenuItem key={index} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors[`answers.${question.id}`] && (
-                    <FormHelperText error>
-                      {formErrors[`answers.${question.id}`]}
-                    </FormHelperText>
+                <Controller
+                  name={`answers.${question.id}`}
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <FormControl fullWidth>
+                      <InputLabel>{question.text || 'Sélectionnez une option'}</InputLabel>
+                      <Select
+                        {...field}
+                        label={question.text || 'Sélectionnez une option'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          validateField(`answers.${question.id}`, value);
+                        }}
+                      >
+                        {(question.options || []).map((option: string) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   )}
-                </FormControl>
+                />
               );
 
             case "yes-no":
@@ -811,20 +979,22 @@ const SurveyAnswerPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5041/api/survey-answers/responses/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      // Récupérer les réponses aux sondages classiques
+      const classicResponse = await axios.get(`${BASE_URL}/survey-answers/responses/user`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      const classicAnswers = classicResponse.data.map((response: any) => response.surveyId);
 
-      if (!response.ok) throw new Error('Erreur lors de la récupération des réponses');
+      // Récupérer les réponses aux sondages dynamiques
+      const dynamicResponse = await axios.get(`${BASE_URL}/dynamic-survey-answers/user`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dynamicAnswers = dynamicResponse.data.map((response: any) => response.surveyId);
 
-      const data = await response.json();
-      console.log("Réponses reçues:", data);
-      const answeredIds = data.map((response: any) => response.surveyId);
-      console.log("IDs des sondages répondus:", answeredIds);
-      setAnsweredSurveys(answeredIds);
+      // Combiner les deux types de réponses
+      const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
+      console.log('Tous les sondages répondus:', allAnsweredSurveys);
+      setAnsweredSurveys(allAnsweredSurveys);
     } catch (error) {
       console.error('Erreur lors de la récupération des sondages répondus:', error);
     }
@@ -964,17 +1134,544 @@ const SurveyAnswerPage: React.FC = () => {
         setLastDemographicData(data);
         // Mettre à jour les valeurs du formulaire avec les données récupérées
         if (data) {
-          control._formValues.demographic = {
-            gender: data.gender || '',
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-            educationLevel: data.educationLevel || '',
-            city: data.city || ''
-          };
+          setValue('demographic.gender', data.gender || '');
+          setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+          setValue('demographic.educationLevel', data.educationLevel || '');
+          setValue('demographic.city', data.city || '');
         }
       }
     } catch (error) {
       console.error('Error fetching last demographic data:', error);
     }
+  };
+
+  const renderSurveyForm = () => {
+    if (!selectedSurvey) {
+      return null;
+    }
+
+    return (
+      <Box sx={{ p: 4, backgroundColor: 'white' }}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {selectedSurvey.demographicEnabled && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Demographic informations
+              </Typography>
+              {renderDemographicFields()}
+            </Box>
+          )}
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Survey questions
+            </Typography>
+            {selectedSurvey.questions.map((question: Question) => (
+              <Paper
+                key={question.id}
+                elevation={1}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {question.text}
+                </Typography>
+                
+                {question.media && renderQuestionMedia(question.media)}
+
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(question)}
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+
+          {submitError && (
+            <Typography color="error" sx={{ mt: 2, mb: 2 }}>
+              {submitError}
+            </Typography>
+          )}
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            mt: 4,
+            pt: 4,
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+          }}>
+            <Button
+              id="submit-survey-button"
+              data-testid="submit-survey-button"
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+                minWidth: 200
+              }}
+            >
+              {isSubmitting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} sx={{ color: 'white' }} />
+                  <span>Submitting...</span>
+                </Box>
+              ) : (
+                'Submit Survey'
+              )}
+            </Button>
+          </Box>
+        </form>
+      </Box>
+    );
+  };
+
+  // Modifier la fonction hasAnswered pour gérer les deux types de sondages
+  const hasAnswered = (surveyId: string) => {
+    return answeredSurveys.includes(surveyId);
+  };
+
+  // Fonction pour ordonner les nœuds selon le flux
+  const getOrderedNodesFromFlow = (nodes: any[], startNodeId = '1') => {
+    const orderedNodes: any[] = [];
+    const visited = new Set<string>();
+
+    const traverse = (nodeId: string) => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) {
+        orderedNodes.push(node);
+        // Trouver les nœuds connectés
+        const connectedNodes = selectedSurvey?.edges?.filter(e => e.source === nodeId)
+          .map(e => e.target) || [];
+        connectedNodes.forEach(traverse);
+      }
+    };
+
+    traverse(startNodeId);
+    return orderedNodes;
+  };
+
+  // Ajouter cette variable dans le composant
+  const isLastQuestion = currentQuestionIndex === orderedNodes.length - 1;
+
+  // Modifier la fonction de rendu des questions pour les sondages dynamiques
+  const renderDynamicSurveyQuestions = () => {
+    if (!selectedSurvey?.isDynamic || !selectedSurvey.nodes) return null;
+
+    // Fonction pour obtenir l'ordre des nœuds selon le flux
+    const getOrderedNodes = () => {
+      const orderedNodes: any[] = [];
+      const visited = new Set<string>();
+      const nodesByLevel: { [key: string]: number } = {};
+
+      // Fonction pour calculer le niveau de profondeur de chaque nœud
+      const calculateDepth = (nodeId: string, depth: number = 0) => {
+        if (nodesByLevel[nodeId] === undefined || depth > nodesByLevel[nodeId]) {
+          nodesByLevel[nodeId] = depth;
+        }
+
+        const outgoingEdges = selectedSurvey?.edges?.filter(e => e.source === nodeId) || [];
+        outgoingEdges.forEach(edge => {
+          calculateDepth(edge.target, depth + 1);
+        });
+      };
+
+      // Calculer la profondeur en commençant par le nœud racine
+      calculateDepth('1');
+
+      // Fonction de parcours modifiée pour respecter la profondeur
+      const traverse = () => {
+        const nodes = selectedSurvey?.nodes || [];
+        
+        // Trier les nœuds par niveau de profondeur
+        const sortedNodeIds = Object.entries(nodesByLevel)
+          .sort(([, depthA], [, depthB]) => depthA - depthB)
+          .map(([nodeId]) => nodeId);
+
+        // Ajouter les nœuds dans l'ordre de profondeur
+        sortedNodeIds.forEach(nodeId => {
+          if (!visited.has(nodeId)) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+              visited.add(nodeId);
+              orderedNodes.push(node);
+            }
+          }
+        });
+      };
+
+      traverse();
+      return orderedNodes;
+    };
+
+    // Fonction pour vérifier si c'est une question critique
+    const isCriticalQuestion = (nodeId: string): boolean => {
+      return selectedSurvey.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
+    };
+
+    // Obtenir les nœuds ordonnés
+    const orderedNodes = getOrderedNodes();
+
+    // Modifier la fonction de rendu des questions pour les sondages dynamiques
+    const renderQuestionInput = (node: any) => {
+      // Ajouter le rendu du média avant le rendu de l'input
+      const renderNodeMedia = () => {
+        const mediaUrl = node.data?.mediaUrl || node.data?.media;
+        if (!mediaUrl) return null;
+
+        // Déterminer le type de média basé sur l'extension du fichier
+        const isVideo = mediaUrl.match(/\.(mp4|mov|webm)$/i);
+        const isImage = mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+
+        if (isVideo) {
+          return (
+            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+              <ReactPlayer
+                url={mediaUrl}
+                controls
+                width="100%"
+                height="auto"
+                style={{ borderRadius: '8px' }}
+                config={{
+                  file: {
+                    attributes: {
+                      controlsList: 'nodownload',
+                      onContextMenu: (e: React.MouseEvent) => e.preventDefault()
+                    }
+                  }
+                }}
+                onError={(e) => console.error('Erreur de chargement vidéo:', e)}
+                onReady={() => console.log('Vidéo prête à être lue')}
+              />
+            </Box>
+          );
+        }
+
+        if (isImage) {
+          return (
+            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+              <Box
+                component="img"
+                src={mediaUrl}
+                alt="Question media"
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: '8px',
+                  objectFit: 'contain',
+                  maxHeight: '400px',
+                  backgroundColor: 'background.paper',
+                  boxShadow: 1
+                }}
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  console.error('Erreur de chargement image:', e);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={() => console.log('Image chargée avec succès')}
+              />
+            </Box>
+          );
+        }
+
+        return null;
+      };
+
+      return (
+        <Box sx={{ width: '100%' }}>
+          {renderNodeMedia()}
+          {/* Reste du code existant pour le rendu des inputs */}
+          {(() => {
+            const effectiveType = node.data?.questionType || node.data?.type;
+            switch (effectiveType?.toLowerCase()) {
+              case 'yes-no':
+              case 'yesno':
+              case 'boolean':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <RadioGroup
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          handleDynamicAnswerChange(node.id, value);
+                        }}
+                      >
+                        <FormControlLabel value="Yes" control={<Radio />} label="Oui" />
+                        <FormControlLabel value="No" control={<Radio />} label="Non" />
+                      </RadioGroup>
+                    )}
+                  />
+                );
+
+              case 'multiple-choice':
+              case 'multiplechoice':
+              case 'choice':
+              case 'radio':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <RadioGroup
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value);
+                          handleDynamicAnswerChange(node.id, value);
+                        }}
+                      >
+                        {(node.data?.options || []).map((option: string) => (
+                          <FormControlLabel
+                            key={option}
+                            value={option}
+                            control={<Radio />}
+                            label={option}
+                          />
+                        ))}
+                      </RadioGroup>
+                    )}
+                  />
+                );
+
+              case 'text':
+              case 'textarea':
+              case 'string':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        multiline
+                        rows={3}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleDynamicAnswerChange(node.id, e.target.value);
+                        }}
+                      />
+                    )}
+                  />
+                );
+
+              case 'rating':
+              case 'stars':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={0}
+                    render={({ field }) => (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Rating
+                          {...field}
+                          onChange={(_, value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                        <Typography>
+                          {field.value ? `${field.value} étoiles` : 'Aucune note'}
+                        </Typography>
+                      </Box>
+                    )}
+                  />
+                );
+
+              case 'slider':
+              case 'range':
+              case 'number':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={0}
+                    render={({ field }) => (
+                      <Box sx={{ width: '100%', px: 2 }}>
+                        <Slider
+                          {...field}
+                          min={0}
+                          max={10}
+                          marks
+                          valueLabelDisplay="auto"
+                          onChange={(_, value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                      </Box>
+                    )}
+                  />
+                );
+
+              case 'date':
+              case 'datetime':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue={null}
+                    render={({ field }) => (
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                          {...field}
+                          renderInput={(params) => <TextField {...params} fullWidth />}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        />
+                      </LocalizationProvider>
+                    )}
+                  />
+                );
+
+              case 'dropdown':
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
+                        <Select
+                          {...field}
+                          label={node.data.text || 'Sélectionnez une option'}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value);
+                            handleDynamicAnswerChange(node.id, value);
+                          }}
+                        >
+                          {(node.data?.options || []).map((option: string) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                );
+
+              default:
+                console.warn(`Type de question non supporté: ${effectiveType}`, node);
+                // Si aucun type n'est spécifié, on utilise un champ texte par défaut
+                return (
+                  <Controller
+                    name={`answers.${node.id}`}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        multiline
+                        rows={3}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleDynamicAnswerChange(node.id, e.target.value);
+                        }}
+                        placeholder="Votre réponse..."
+                      />
+                    )}
+                  />
+                );
+            }
+          })()}
+        </Box>
+      );
+    };
+
+    return (
+      <Box sx={{ p: 3 }}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {orderedNodes.map((node) => {
+            const isVisible = shouldShowQuestion(node.id);
+            const isCritical = isCriticalQuestion(node.id);
+
+            if (!isVisible) return null;
+
+            return (
+              <Paper
+                key={node.id}
+                elevation={1}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  backgroundColor: 'white'
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  {node.data.text || node.data.label || 'Question without text'}
+                </Typography>
+
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(node)}
+                </Box>
+              </Paper>
+            );
+          })}
+
+          {submitError && (
+            <Typography color="error" sx={{ mt: 2, mb: 2 }}>
+              {submitError}
+            </Typography>
+          )}
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            mt: 4,
+            pt: 4,
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+          }}>
+            <Button
+              id="submit-dynamic-survey-button"
+              data-testid="submit-dynamic-survey-button"
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+                minWidth: 200
+              }}
+            >
+              {isSubmitting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} sx={{ color: 'white' }} />
+                  <span>Submitting...</span>
+                </Box>
+              ) : (
+                'Submit Survey'
+              )}
+            </Button>
+          </Box>
+        </form>
+      </Box>
+    );
   };
 
   if (!selectedSurvey) {
@@ -1053,10 +1750,33 @@ const SurveyAnswerPage: React.FC = () => {
                   id="sort-filter-chip"
                   data-testid="sort-filter-chip"
                   icon={<FilterListIcon />}
-                  label={` ${sortBy === 'date' ? 'Popularity' : 'Popular'}`}
-                  onClick={(e) => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                  label={`Sort by ${sortBy === 'date' ? 'Date' : 'Popular'}`}
+                  onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
                   color={sortBy === 'popular' ? "primary" : "default"}
                   variant={sortBy === 'popular' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  id="type-filter-chip"
+                  data-testid="type-filter-chip"
+                  icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
+                  label={`${surveyTypeFilter === 'all' ? 'All Types' : 
+                          surveyTypeFilter === 'dynamic' ? 'Dynamic' : 'Static'}`}
+                  onClick={() => {
+                    setSurveyTypeFilter(current => {
+                      switch (current) {
+                        case 'all': return 'dynamic';
+                        case 'dynamic': return 'static';
+                        case 'static': return 'all';
+                      }
+                    });
+                  }}
+                  color={surveyTypeFilter !== 'all' ? "primary" : "default"}
+                  variant={surveyTypeFilter !== 'all' ? "filled" : "outlined"}
                   sx={{
                     '&.MuiChip-filled': {
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1124,24 +1844,60 @@ const SurveyAnswerPage: React.FC = () => {
                       flexDirection: 'column',
                       position: 'relative'
                     }}>
-                      <Typography 
-                        id={`survey-title-${survey._id}`}
-                        data-testid={`survey-title-${survey._id}`}
-                        variant="h6" 
-                        sx={{ 
-                          mb: 2,
-                          color: 'primary.main',
-                          fontWeight: 500,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.3,
-                          height: '2.6em'
-                        }}
-                      >
-                        {survey.title}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Typography 
+                          id={`survey-title-${survey._id}`}
+                          data-testid={`survey-title-${survey._id}`}
+                          variant="h6" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            flexGrow: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.3,
+                            height: '2.6em'
+                          }}
+                        >
+                          {survey.title}
+                        </Typography>
+                        {survey.isDynamic && (
+                          <Chip
+                            icon={<AutoGraphIcon />}
+                            label="Dynamic"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              '& .MuiChip-icon': {
+                                color: '#667eea'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
+                        {!survey.isDynamic && (
+                          <Chip
+                            icon={<ListAltIcon />}
+                            label="Static"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              '& .MuiChip-icon': {
+                                color: '#667eea'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
+                      </Box>
                       <Typography 
                         variant="body2" 
                         color="text.secondary"
@@ -1248,7 +2004,7 @@ const SurveyAnswerPage: React.FC = () => {
                         />
                         <Chip
                           size="small"
-                          label={`${surveyResponses[survey._id] || 0} responses`}
+                          label={`${survey.isDynamic ? surveyResponses[survey._id] || 0 : 0} responses`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
@@ -1292,22 +2048,22 @@ const SurveyAnswerPage: React.FC = () => {
                         onClick={() => setSelectedSurvey(survey)}
                         variant="contained"
                         size="small"
-                        disabled={answeredSurveys.includes(survey._id)}
+                        disabled={hasAnswered(survey._id)}
                         sx={{
-                          background: answeredSurveys.includes(survey._id)
+                          background: hasAnswered(survey._id)
                             ? 'rgba(0, 0, 0, 0.12)'
                             : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
-                            background: answeredSurveys.includes(survey._id)
+                            background: hasAnswered(survey._id)
                               ? 'rgba(0, 0, 0, 0.12)'
                               : 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                           },
-                          color: answeredSurveys.includes(survey._id) ? 'rgba(0, 0, 0, 0.26)' : 'white',
-                          pointerEvents: answeredSurveys.includes(survey._id) ? 'none' : 'auto',
-                          opacity: answeredSurveys.includes(survey._id) ? 0.6 : 1,
+                          color: hasAnswered(survey._id) ? 'rgba(100, 0, 0, 0.26)' : 'white',
+                          pointerEvents: hasAnswered(survey._id) ? 'none' : 'auto',
+                          opacity: hasAnswered(survey._id) ? 0.6 : 1,
                         }}
                       >
-                        {answeredSurveys.includes(survey._id) ? 'Already Answered' : 'Answer Survey'}
+                        {hasAnswered(survey._id) ? 'Already Answered' : 'Answer Survey'}
                       </Button>
                     </Box>
                   </Paper>
@@ -1398,7 +2154,7 @@ const SurveyAnswerPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '1000px ',
+        maxWidth: '1000px',
         mb: 4,
       }}>
         <Box sx={{
@@ -1429,86 +2185,11 @@ const SurveyAnswerPage: React.FC = () => {
           </Typography>
         </Box>
 
-        <Box sx={{ p: 4, backgroundColor: 'white' }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {selectedSurvey.demographicEnabled && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                  Informations Démographiques
-                </Typography>
-                {renderDemographicFields()}
-              </Box>
-            )}
-
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                Survey Questions
-              </Typography>
-              {selectedSurvey.questions.map((question: Question) => (
-                <Paper
-                  id={`question-container-${question.id}`}
-                  data-testid={`question-container-${question.id}`}
-                  key={question.id}
-                  elevation={1}
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    {question.text}
-                  </Typography>
-                  
-                  {question.media && renderQuestionMedia(question.media)}
-
-                  <Box sx={{ mt: 2 }}>
-                    {renderQuestionInput(question)}
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-
-            {submitError && (
-              <Typography color="error" sx={{ mt: 2, mb: 2 }}>
-                {submitError}
-              </Typography>
-            )}
-
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end',
-              mt: 4,
-              pt: 4,
-              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
-            }}>
-              <Button
-                id="submit-survey-button"
-                data-testid="submit-survey-button"
-                type="submit"
-                variant="contained"
-                disabled={isSubmitting}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  },
-                  minWidth: 200
-                }}
-              >
-                {isSubmitting ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: 'white' }} />
-                    <span>Submitting...</span>
-                  </Box>
-                ) : (
-                  'Submit Survey'
-                )}
-              </Button>
-            </Box>
-          </form>
-        </Box>
+        {selectedSurvey?.isDynamic ? (
+          renderDynamicSurveyQuestions()
+        ) : (
+          renderSurveyForm()
+        )}
       </Paper>
     </Box>
   );

@@ -1,12 +1,8 @@
 import axios from "axios";
+import { dynamicSurveyService } from "./dynamicSurveyService";
 
-const API_BASE_URL = 'http://localhost:5041/api/surveys';
-
-export const BASE_URL = "http://localhost:5041";
-
-if (!BASE_URL) {
-  throw new Error("Environment variable NEXT_PUBLIC_BASE_URL is not defined");
-}
+export const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+export const API_URL = `${BASE_URL}/api`;
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -31,9 +27,9 @@ export const uploadMedia = async (file: File): Promise<string> => {
       throw new Error('No authentication token found');
     }
 
-    console.log('Uploading media to:', `${API_BASE_URL}/upload-media`);
+    console.log('Uploading media to:', `${API_URL}/surveys/upload-media`);
 
-    const response = await fetch(`${API_BASE_URL}/upload-media`, {
+    const response = await fetch(`${API_URL}/surveys/upload-media`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -73,9 +69,9 @@ export const deleteMedia = async (publicId: string): Promise<void> => {
     }
 
     console.log('Attempting to delete media with publicId:', publicId);
-    console.log('Using API URL:', `${API_BASE_URL}/delete-media`);
+    console.log('Using API URL:', `${API_URL}/surveys/delete-media`);
 
-    const response = await fetch(`${API_BASE_URL}/delete-media`, {
+    const response = await fetch(`${API_URL}/surveys/delete-media`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,7 +107,7 @@ export const createSurvey = async (data: any, token: string): Promise<any> => {
   try {
     console.log('Sending survey data:', data);
 
-    const response = await axios.post(`${BASE_URL}/api/surveys`, data, {
+    const response = await axios.post(`${API_URL}/surveys`, data, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -125,29 +121,71 @@ export const createSurvey = async (data: any, token: string): Promise<any> => {
   }
 };
 
-export const submitSurveyAnswer = async (surveyId: string, data: any, token: string): Promise<any> => {
+export const submitSurveyAnswer = async (surveyId: string, data: any, token: string) => {
   try {
-    const response = await axios.post(
-      `${BASE_URL}/api/survey-answers/submit`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    console.log('Données à soumettre:', {
+      surveyId,
+      isDynamic: data.isDynamic,
+      data
+    });
+
+    if (data.isDynamic) {
+      // Format pour les sondages dynamiques
+      const formattedData = {
+        surveyId,
+        answers: data.answers.map((answer: any) => ({
+          nodeId: answer.questionId || answer.nodeId,
+          value: answer.value || answer.answer
+        })),
+        demographic: data.demographic,
+        path: data.path || []
+      };
+
+      console.log('Données formatées (dynamique):', formattedData);
+
+      return await axios.post(
+        `${API_URL}/dynamic-survey-answers/submit`,
+        formattedData,
+        {
+          headers: { Authorization: `Bearer ${token}` }
         }
-      }
-    );
-    return response.data;
+      );
+    } else {
+      // Format pour les sondages classiques
+      const formattedData = {
+        surveyId,
+        answers: Array.isArray(data.answers) 
+          ? data.answers.map((answer: any) => ({
+              questionId: answer.questionId,
+              value: answer.value
+            }))
+          : Object.entries(data.answers).map(([questionId, value]) => ({
+              questionId,
+              value
+            })),
+        demographic: data.demographic
+      };
+
+      console.log('Données formatées (classique):', formattedData);
+
+      return await axios.post(
+        `${API_URL}/survey-answers/submit`,
+        formattedData,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+    }
   } catch (error: any) {
-    console.error('Error submitting survey answers:', error);
-    throw error.response?.data || error;
+    console.error('Erreur détaillée lors de la soumission:', error.response?.data || error);
+    throw error;
   }
 };
 
 export const getSurveyAnswers = async (surveyId: string, token: string): Promise<any> => {
   try {
     const response = await axios.get(
-      `${BASE_URL}/api/survey-answers/${surveyId}`,
+      `${API_URL}/survey-answers/${surveyId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`
@@ -163,7 +201,7 @@ export const getSurveyAnswers = async (surveyId: string, token: string): Promise
 
 export const fetchSurveys = async (token: string): Promise<any> => {
   try {
-    const response = await axios.get(`${BASE_URL}/api/surveys`, {
+    const response = await axios.get(`${API_URL}/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -181,7 +219,7 @@ export const fetchCities = async (token: string): Promise<string[]> => {
       return DEFAULT_CITIES;
     }
 
-    const response = await axios.get(`${BASE_URL}/api/surveys/cities`, {
+    const response = await axios.get(`${API_URL}/surveys/cities`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -198,47 +236,42 @@ export const fetchCities = async (token: string): Promise<string[]> => {
   }
 };
 
-export const fetchAvailableSurveys = async (token: string): Promise<any> => {
-  console.log('Début fetchAvailableSurveys avec token:', token ? 'Token présent' : 'Pas de token');
-  
+export const fetchAvailableSurveys = async (token: string) => {
   try {
-    if (!token) {
-      throw new Error('Token d\'authentification requis');
-    }
+    console.log('Fetching surveys from:', API_URL); // Mise à jour du log
 
-    console.log('Envoi de la requête à:', `${BASE_URL}/api/surveys/available`);
-    
-    const response = await axios.get(`${BASE_URL}/api/surveys/available`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+    // Mise à jour des URLs pour utiliser API_URL
+    const classicResponse = await axios.get(`${API_URL}/surveys/available`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    console.log('Classic surveys:', classicResponse.data);
 
-    console.log('Réponse reçue:', response);
-    console.log('Données reçues:', response.data);
+    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    console.log('Dynamic surveys:', dynamicResponse.data);
 
-    if (!response.data) {
-      throw new Error('Aucune donnée reçue du serveur');
-    }
+    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: true,
+      questions: survey.nodes.map((node: any) => ({
+        id: node.id,
+        text: node.data.text || node.data.label || 'Question sans texte',
+        type: node.type,
+        options: node.data.options || []
+      }))
+    }));
 
-    return response.data;
-  } catch (error: any) {
-    console.error("Erreur complète:", error);
-    console.error("Message d'erreur:", error.message);
-    console.error("Réponse d'erreur:", error.response);
-    console.error("Données d'erreur:", error.response?.data);
-    
-    if (error.response?.data) {
-      throw error.response.data;
-    }
-    throw new Error(error.message || 'Erreur lors de la récupération des sondages');
+    return [...classicResponse.data, ...dynamicSurveys];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages:', error);
+    throw error;
   }
 };
 
 export const getSurveyById = async (id: string, token: string): Promise<any> => {
   try {
-    const response = await axios.get(`${BASE_URL}/api/surveys/${id}`, {
+    const response = await axios.get(`${API_URL}/surveys/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -261,7 +294,7 @@ export const getSurveyById = async (id: string, token: string): Promise<any> => 
 
 export const fetchPendingShares = async (token: string): Promise<any> => {
   try {
-    const response = await axios.get(`${BASE_URL}/api/survey-shares/pending`, {
+    const response = await axios.get(`${API_URL}/survey-shares/pending`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -279,7 +312,7 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
     console.log('Envoi de la réponse au partage:', { shareId, accept });
     
     const response = await axios.post(
-      `${BASE_URL}/api/survey-shares/respond`,
+      `${API_URL}/survey-shares/respond`,
       { 
         shareId: shareId,
         accept 
@@ -298,5 +331,27 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
     console.error('Erreur lors de la réponse au partage:', error);
     console.error('Détails de l\'erreur:', error.response?.data);
     throw error.response?.data || error;
+  }
+};
+
+export const fetchAnsweredSurveys = async (token: string) => {
+  try {
+    // Récupérer les réponses aux sondages classiques
+    const classicResponse = await axios.get(`${BASE_URL}/survey-answers/responses/user`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const classicAnswers = classicResponse.data.map((response: any) => response.surveyId);
+
+    // Récupérer les réponses aux sondages dynamiques
+    const dynamicAnswers = await dynamicSurveyService.getUserAnsweredSurveys(token);
+
+    // Combiner les deux types de réponses
+    const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
+    console.log('Tous les sondages répondus:', allAnsweredSurveys);
+
+    return allAnsweredSurveys;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages répondus:', error);
+    return [];
   }
 };

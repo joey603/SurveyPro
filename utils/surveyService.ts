@@ -1,9 +1,9 @@
 export const fetchCities = async (token: string): Promise<string[]> => {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/surveys/cities`, {
-    method: 'GET',
+    method: 'GET', 
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
   });
 

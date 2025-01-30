@@ -6,6 +6,8 @@ const authRoutes = require("./routes/auth");
 const surveyRoutes = require("./routes/surveys");
 const surveyAnswerRoutes = require("./routes/surveyAnswers");
 const surveyShareRoutes = require("./routes/surveyShares");
+const dynamicSurveyRoutes = require("./routes/dynamicSurveys");
+const dynamicSurveyAnswerRoutes = require("./routes/dynamicSurveyAnswers");
 require("dotenv").config();
 
 const app = express();
@@ -55,7 +57,9 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/surveys", surveyRoutes);
 app.use("/api/survey-answers", surveyAnswerRoutes);
-app.use("/api/survey-shares", surveyShareRoutes); // Sans middleware d'authentification
+app.use("/api/survey-shares", surveyShareRoutes);
+app.use("/api/dynamic-surveys", dynamicSurveyRoutes);
+app.use("/api/dynamic-survey-answers", dynamicSurveyAnswerRoutes);
 
 // Catch 404 avec plus de détails
 app.use((req, res) => {
@@ -90,4 +94,6 @@ app.listen(PORT, () => {
   console.log('- /api/surveys');
   console.log('- /api/survey-answers');
   console.log('- /api/survey-shares');
+  console.log('- /api/dynamic-surveys');
+  console.log('- /api/dynamic-survey-answers');
 });
