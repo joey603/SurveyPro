@@ -1,4 +1,4 @@
-  'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -42,6 +42,9 @@ import Tooltip from '@mui/material/Tooltip';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Zoom from '@mui/material/Zoom';
 import { colors } from '../../theme/colors';
+import Lottie from "lottie-react";
+import validationAnimation from "@/assets/animation-check.json";
+import { useRouter } from 'next/navigation';
 
 type Question = {
   id: string;
@@ -568,6 +571,8 @@ const SurveyCreationPage = () => {
     }
   };
 
+  const router = useRouter();
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitted(true);
     setIsSubmitting(true);
@@ -658,15 +663,11 @@ const SurveyCreationPage = () => {
       const result = await createSurvey(surveyData, token);
       console.log('Survey created successfully:', result);
       
-      setNotification({
-        message: 'Survey created successfully!',
-        severity: 'success',
-        open: true
-      });
-
+      // Afficher l'animation et rediriger
+      setShowSuccess(true);
       setTimeout(() => {
-        handleResetSurvey(null);
-      }, 2000);
+        router.push('/survey-answer');
+      }, 1650);
       
       await cleanupUnusedMedia();
       
@@ -988,6 +989,8 @@ const SurveyCreationPage = () => {
 
   // Ajoutez cet état pour gérer le chargement des médias
   const [loadingMedia, setLoadingMedia] = useState<{ [key: string]: boolean }>({});
+
+  const [showSuccess, setShowSuccess] = useState(false);
 
   return (
     <Box
@@ -1689,6 +1692,29 @@ const SurveyCreationPage = () => {
           >
             {notification.message}
           </Alert>
+        </Box>
+      )}
+
+      {showSuccess && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            zIndex: 9999
+          }}
+        >
+          <Lottie
+            animationData={validationAnimation}
+            loop={false}
+            style={{ width: 400, height: 400 }}
+          />
         </Box>
       )}
 
