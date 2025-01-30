@@ -344,7 +344,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Question {data.questionNumber}
+            Question {data.questionNumber} 
           </Typography>
           <IconButton size="small" onClick={() => setIsEditing(!isEditing)}>
             <EditIcon />
