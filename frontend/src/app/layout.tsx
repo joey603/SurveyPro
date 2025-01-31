@@ -7,6 +7,7 @@ import { CircularProgress, Backdrop } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { colors } from '../theme/colors';
+import { Toaster } from 'react-hot-toast';
 
 export default function RootLayout({
   children,
@@ -48,6 +49,7 @@ export default function RootLayout({
           <NavBar />
           {children}
         </AuthProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   );
