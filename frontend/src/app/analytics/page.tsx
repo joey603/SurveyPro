@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, Paper, Snackbar, Alert, IconButton } from '@mui/material';
 import { getSurveyAnswers } from '@/utils/surveyService';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 interface Survey {
   _id: string;
@@ -101,50 +102,75 @@ const AnalyticsPage: React.FC = () => {
   };
 
   return (
-    <Box
+    <Box 
       component="section"
       sx={{
         minHeight: '100vh',
         backgroundColor: '#f8fafc',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
         padding: { xs: 2, sm: 4 },
-        maxWidth: '1200px',
+        maxWidth: '1000px',
         margin: '0 auto',
       }}
     >
       <Paper
-        elevation={0}
+        component="article"
+        elevation={3}
         sx={{
-          p: 4,
-          borderRadius: 2,
+          borderRadius: '16px',
           backgroundColor: 'white',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '1000px',
+          mb: 4,
         }}
       >
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{
-            color: '#1a237e',
-            fontWeight: 600,
-            mb: 4
-          }}
-        >
-          Analyses Avancées
-        </Typography>
-        
-        {loading && (
-          <Typography color="text.secondary">
-            Chargement des données...
-          </Typography>
-        )}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          py: 4,
+          px: 4,
+          color: 'white',
+          textAlign: 'center',
+          position: 'relative',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <IconButton
+            onClick={() => window.history.back()}
+            sx={{ color: 'white' }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
 
-        {error && (
-          <Typography color="error">
-            {error}
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+          >
+            Analyses Avancées
           </Typography>
-        )}
 
-        {/* Interface d'analyse à implémenter */}
+          <Box sx={{ width: 48 }} /> {/* Spacer pour équilibrer le layout */}
+        </Box>
+
+        <Box sx={{ p: 3 }}>
+          {loading && (
+            <Typography color="text.secondary">
+              Chargement des données...
+            </Typography>
+          )}
+
+          {error && (
+            <Typography color="error">
+              {error}
+            </Typography>
+          )}
+
+          {/* Interface d'analyse à implémenter */}
+        </Box>
       </Paper>
 
       <Snackbar 
