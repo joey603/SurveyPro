@@ -79,20 +79,14 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
         >
           Supprimer
         </Button>
-        <Button
-          size="small"
-          startIcon={<ShareIcon />}
-          onClick={() => onShare(survey._id, true)}
-        >
-          Partager
-        </Button>
+        
         <Button
           variant="contained"
           size="small"
           startIcon={<VisibilityIcon />}
           onClick={onSelect}
         >
-          Voir
+          view
         </Button>
       </CardActions>
     </Card>
