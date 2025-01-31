@@ -106,4 +106,4 @@ The application will be available at: `http://localhost:3000`
 ```
 ## Support
 
-For support, email yoelibarthel603@gmail.com.
+For support, email yoelibarthel603@gmail.com/rudyhaddad.job@gmail.com
