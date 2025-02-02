@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Snackbar, Alert, IconButton } from '@mui/material';
+import { Box, Typography, Paper, Snackbar, Alert, IconButton, TextField, InputAdornment, Stack, Chip } from '@mui/material';
 import { getSurveyAnswers } from '@/utils/surveyService';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ClearIcon from '@mui/icons-material/Clear';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import SearchAndFilter from '../components/analytics/SearchAndFilter';
 
 interface Survey {
   _id: string;
@@ -68,6 +74,8 @@ const AnalyticsPage: React.FC = () => {
     trendAnalysis: null
   });
 
+  const [filteredData, setFilteredData] = useState(analyticsData);
+
   const handleViewAnalytics = (survey: Survey) => {
     setSelectedSurvey(survey);
     const token = localStorage.getItem('accessToken') || '';
@@ -99,6 +107,21 @@ const AnalyticsPage: React.FC = () => {
   const analyzeConditionalResponses = (answers: SurveyAnswer[], survey: Survey) => {
     // Logique d'analyse pour les sondages conditionnels
     // À implémenter selon vos besoins spécifiques
+  };
+
+  const handleSearchChange = (value: string) => {
+    // Implémentez la logique de filtrage par recherche
+    console.log('Search value:', value);
+  };
+
+  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+    // Implémentez la logique de filtrage par date
+    console.log('Date range:', start, end);
+  };
+
+  const handleSortChange = (sort: 'date' | 'popular') => {
+    // Implémentez la logique de tri
+    console.log('Sort by:', sort);
   };
 
   return (
@@ -157,6 +180,12 @@ const AnalyticsPage: React.FC = () => {
         </Box>
 
         <Box sx={{ p: 3 }}>
+          <SearchAndFilter
+            onSearchChange={handleSearchChange}
+            onDateRangeChange={handleDateRangeChange}
+            onSortChange={handleSortChange}
+          />
+
           {loading && (
             <Typography color="text.secondary">
               Chargement des données...
