@@ -1,17 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Snackbar, Alert, IconButton, TextField, InputAdornment, Stack, Chip, Grid } from '@mui/material';
-import { getSurveyAnswers, fetchSurveys } from '@/utils/surveyService';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Box, Typography, Paper, Snackbar, Alert, IconButton, Grid } from '@mui/material';
+import { getSurveyAnswers, fetchSurveys, fetchPendingShares } from '@/utils/surveyService';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ClearIcon from '@mui/icons-material/Clear';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import SearchAndFilter from '../components/analytics/SearchAndFilter';
 import { AnalyticsCard } from '../components/analytics/AnalyticsCard';
 import { useAuth } from '@/utils/AuthContext';
+
+interface Question {
+  id: string;
+  text: string;
+  type: string;
+  options?: string[];
+}
+
+interface Answer {
+  questionId: string;
+  answer: string;
+}
+
+interface SurveyResponse {
+  _id: string;
+  surveyId: string;
+  answers: Answer[];
+  submittedAt: string;
+}
 
 interface Survey {
   _id: string;
@@ -21,75 +35,60 @@ interface Survey {
   createdAt: string;
   demographicEnabled: boolean;
   userId: string;
-}
-
-interface Question {
-  id: string;
-  text: string;
-  type: string;
-  options?: string[];
-}
-
-interface SurveyAnswer {
-  _id: string;
-  surveyId: string;
-  answers: Answer[];
-  submittedAt: string;
-  respondent: {
-    userId: {
-      _id: string;
-      username: string;
-      email: string;
-    };
-    demographic?: Demographic;
-  };
-}
-
-interface Answer {
-  questionId: string;
-  answer: string;
-}
-
-interface Demographic {
-  gender?: string;
-  dateOfBirth?: string;
-  educationLevel?: string;
-  city?: string;
+  sharedBy?: string;
+  status?: 'pending' | 'accepted' | 'rejected';
 }
 
 const AnalyticsPage: React.FC = () => {
-  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
-  const [surveyAnswers, setSurveyAnswers] = useState<{ [key: string]: SurveyAnswer[] }>({});
+  const { user } = useAuth();
+  const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'error' | 'success'>('success');
+  const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: SurveyResponse[] }>({});
+  const [pendingShares, setPendingShares] = useState<Survey[]>([]);
 
-  const [analyticsData, setAnalyticsData] = useState<{
-    conditionalStats: any;
-    demographicCorrelations: any;
-    trendAnalysis: any;
+  // États pour les filtres
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
   }>({
-    conditionalStats: null,
-    demographicCorrelations: null,
-    trendAnalysis: null
+    start: null,
+    end: null
   });
-
-  const [filteredData, setFilteredData] = useState(analyticsData);
-
-  const { user } = useAuth();
-  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
 
   useEffect(() => {
-    const loadSurveys = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('accessToken') || '';
-        const surveysData = await fetchSurveys(token);
+        const [surveysData, pendingSharesData] = await Promise.all([
+          fetchSurveys(token),
+          fetchPendingShares(token)
+        ]);
+
+        const responsesPromises = surveysData.map(survey => 
+          getSurveyAnswers(survey._id, token)
+            .then(responses => ({ surveyId: survey._id, responses }))
+            .catch(() => ({ surveyId: survey._id, responses: [] }))
+        );
+
+        const responsesData = await Promise.all(responsesPromises);
+        const responsesMap = responsesData.reduce((acc, { surveyId, responses }) => {
+          acc[surveyId] = responses;
+          return acc;
+        }, {} as { [key: string]: SurveyResponse[] });
+
         setSurveys(surveysData);
+        setPendingShares(pendingSharesData);
+        setSurveyResponses(responsesMap);
       } catch (error) {
-        console.error('Error loading surveys:', error);
+        console.error('Error loading data:', error);
         setError('Failed to load surveys');
         setSnackbarMessage('Failed to load surveys');
         setSnackbarSeverity('error');
@@ -99,60 +98,32 @@ const AnalyticsPage: React.FC = () => {
       }
     };
 
-    loadSurveys();
+    loadData();
   }, []);
 
   const handleViewAnalytics = (survey: Survey) => {
-    setSelectedSurvey(survey);
-    const token = localStorage.getItem('accessToken') || '';
-    setLoading(true);
-
-    getSurveyAnswers(survey._id, token)
-      .then(answers => {
-        setSurveyAnswers(prev => ({
-          ...prev,
-          [survey._id]: answers
-        }));
-        analyzeConditionalResponses(answers, survey);
-      })
-      .catch(error => {
-        console.error('Erreur de chargement des réponses:', error);
-        setSnackbarMessage('Échec du chargement des analyses');
-        setSnackbarSeverity('error');
-        setOpenSnackbar(true);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    // Implémentation à venir
+    console.log('View analytics for survey:', survey);
   };
 
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
   };
 
-  const analyzeConditionalResponses = (answers: SurveyAnswer[], survey: Survey) => {
-    // Logique d'analyse pour les sondages conditionnels
-    // À implémenter selon vos besoins spécifiques
-  };
-
   const handleSearchChange = (value: string) => {
-    // Implémentez la logique de filtrage par recherche
-    console.log('Search value:', value);
+    setSearchQuery(value);
   };
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
-    // Implémentez la logique de filtrage par date
-    console.log('Date range:', start, end);
+    setDateRange({ start, end });
   };
 
   const handleSortChange = (sort: 'date' | 'popular') => {
-    // Implémentez la logique de tri
-    console.log('Sort by:', sort);
+    setSortBy(sort);
   };
 
   const handlePendingChange = (pending: boolean) => {
-    // Gérer le changement d'état en attente
-    console.log('Pending state:', pending);
+    setShowPendingOnly(pending);
   };
 
   const handleDeleteSurvey = async (surveyId: string) => {
@@ -175,6 +146,37 @@ const AnalyticsPage: React.FC = () => {
       setOpenSnackbar(true);
     }
   };
+
+  const filteredSurveys = useMemo(() => {
+    return surveys.filter(survey => {
+      if (searchQuery && !survey.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      if (dateRange.start || dateRange.end) {
+        const surveyDate = new Date(survey.createdAt);
+        if (dateRange.start && surveyDate < dateRange.start) return false;
+        if (dateRange.end && surveyDate > dateRange.end) return false;
+      }
+
+      if (showPendingOnly && !pendingShares.some(s => s._id === survey._id)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares]);
+
+  const sortedSurveys = useMemo(() => {
+    return [...filteredSurveys].sort((a, b) => {
+      if (sortBy === 'popular') {
+        const aResponses = surveyResponses[a._id]?.length || 0;
+        const bResponses = surveyResponses[b._id]?.length || 0;
+        return bResponses - aResponses;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [filteredSurveys, sortBy, surveyResponses]);
 
   return (
     <Box 
@@ -225,10 +227,10 @@ const AnalyticsPage: React.FC = () => {
             variant="h4"
             fontWeight="bold"
           >
-            Analyses Avancées
+            Advanced Analytics
           </Typography>
 
-          <Box sx={{ width: 48 }} /> {/* Spacer pour équilibrer le layout */}
+          <Box sx={{ width: 48 }} />
         </Box>
 
         <Box sx={{ p: 3 }}>
@@ -253,13 +255,14 @@ const AnalyticsPage: React.FC = () => {
 
           {!loading && !error && (
             <Grid container spacing={3}>
-              {surveys.map((survey) => (
+              {sortedSurveys.map((survey) => (
                 <Grid item xs={12} sm={6} md={6} key={survey._id}>
                   <AnalyticsCard
                     survey={survey}
                     onDelete={handleDeleteSurvey}
                     onViewAnalytics={handleViewAnalytics}
                     userId={user?.id}
+                    responses={surveyResponses[survey._id] || []}
                   />
                 </Grid>
               ))}

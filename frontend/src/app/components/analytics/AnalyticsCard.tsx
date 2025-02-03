@@ -11,6 +11,7 @@ import {
   BarChart as BarChartIcon,
   AutoGraph as AutoGraphIcon,
   Delete as DeleteIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 
@@ -22,7 +23,9 @@ interface Survey {
   createdAt: string;
   demographicEnabled: boolean;
   userId: string;
-  responses?: number;
+  sharedBy?: string;
+  status?: 'pending' | 'accepted' | 'rejected';
+  responses?: SurveyResponse[];
 }
 
 interface Question {
@@ -31,11 +34,24 @@ interface Question {
   type: string;
 }
 
+interface SurveyResponse {
+  _id: string;
+  surveyId: string;
+  answers: Answer[];
+  submittedAt: string;
+}
+
+interface Answer {
+  questionId: string;
+  answer: string;
+}
+
 interface AnalyticsCardProps {
   survey: Survey;
   onDelete?: (id: string) => void;
   onViewAnalytics: (survey: Survey) => void;
   userId?: string;
+  responses?: SurveyResponse[];
 }
 
 export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
@@ -43,7 +59,10 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   onDelete,
   onViewAnalytics,
   userId,
+  responses = [],
 }) => {
+  const responseCount = responses?.length || 0;
+
   return (
     <Paper
       elevation={1}
@@ -103,9 +122,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           <Chip
             size="small"
             icon={<BarChartIcon sx={{ fontSize: 16 }} />}
-            label={`${survey.responses || 0} Responses`}
+            label={`${responseCount} Responses`}
             sx={{
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              backgroundColor: colors.primary.transparent,
               color: colors.primary.main,
               height: '24px',
             }}
@@ -115,7 +134,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
             label={`${survey.questions.length} Questions`}
             sx={{
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              backgroundColor: colors.primary.transparent,
               color: colors.primary.main,
               height: '24px',
             }}
@@ -125,7 +144,19 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               size="small"
               label="Demographic"
               sx={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                backgroundColor: colors.primary.transparent,
+                color: colors.primary.main,
+                height: '24px',
+              }}
+            />
+          )}
+          {survey.sharedBy && (
+            <Chip
+              size="small"
+              icon={<EmailIcon sx={{ fontSize: 16 }} />}
+              label={`Shared by ${survey.sharedBy}`}
+              sx={{
+                backgroundColor: colors.primary.transparent,
                 color: colors.primary.main,
                 height: '24px',
               }}
@@ -147,7 +178,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           p: 2,
           borderTop: 1,
           borderColor: 'divider',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          backgroundColor: colors.primary.transparent,
           display: 'flex',
           justifyContent: 'space-between',
         }}
