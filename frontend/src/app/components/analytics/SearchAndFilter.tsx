@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import {
   Box,
   TextField,
@@ -10,19 +10,57 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { colors } from '@/theme/colors';
+
+interface CustomDatePickerProps {
+  id?: string;
+  'data-testid'?: string;
+  label: string;
+  value: Date | null;
+  onChange: (date: Date | null) => void;
+  minDate?: Date;
+}
+
+const CustomDatePicker = forwardRef<HTMLDivElement, CustomDatePickerProps>(
+  ({ id, 'data-testid': dataTestId, label, value, onChange, minDate, ...props }, ref) => {
+    return (
+      <DatePicker
+        {...props}
+        ref={ref}
+        label={label}
+        value={value}
+        onChange={onChange}
+        minDate={minDate}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            id={id}
+            data-testid={dataTestId}
+            size="small"
+          />
+        )}
+      />
+    );
+  }
+);
+
+CustomDatePicker.displayName = 'CustomDatePicker';
 
 interface SearchAndFilterProps {
   onSearchChange: (value: string) => void;
   onDateRangeChange: (start: Date | null, end: Date | null) => void;
   onSortChange: (sort: 'date' | 'popular') => void;
+  onPendingChange: (showPending: boolean) => void;
 }
 
 const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   onSearchChange,
   onDateRangeChange,
   onSortChange,
+  onPendingChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<{
@@ -30,35 +68,38 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     end: Date | null;
   }>({
     start: null,
-    end: null
+    end: null,
   });
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
 
   const clearFilters = () => {
     setSearchQuery('');
     setDateRange({ start: null, end: null });
     setShowDateFilter(false);
     setSortBy('date');
+    setShowPendingOnly(false);
     onSearchChange('');
     onDateRangeChange(null, null);
     onSortChange('date');
+    onPendingChange(false);
   };
 
   return (
     <Box
-      sx={{ 
-        mb: 4, 
-        backgroundColor: 'background.paper', 
-        p: 3, 
-        borderRadius: 2, 
-        boxShadow: 1 
+      sx={{
+        mb: 4,
+        backgroundColor: colors.background.paper,
+        p: 3,
+        borderRadius: 2,
+        boxShadow: 1,
       }}
     >
       <TextField
         fullWidth
         variant="outlined"
-        placeholder="Rechercher des analyses par titre ou description..."
+        placeholder="Search surveys..."
         value={searchQuery}
         onChange={(e) => {
           setSearchQuery(e.target.value);
@@ -71,12 +112,12 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               <SearchIcon />
             </InputAdornment>
           ),
-          endAdornment: (searchQuery || dateRange.start || dateRange.end) && (
+          endAdornment: (searchQuery ||
+            dateRange.start ||
+            dateRange.end ||
+            showPendingOnly) && (
             <InputAdornment position="end">
-              <IconButton
-                size="small"
-                onClick={clearFilters}
-              >
+              <IconButton size="small" onClick={clearFilters}>
                 <ClearIcon />
               </IconButton>
             </InputAdornment>
@@ -84,71 +125,72 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         }}
       />
 
-      <Stack
-        direction="row"
-        spacing={2}
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={2} alignItems="center">
         <Chip
           icon={<FilterListIcon />}
-          label="Filtre par date"
+          label="Date Filter"
           onClick={() => setShowDateFilter(!showDateFilter)}
-          color={showDateFilter ? "primary" : "default"}
-          variant={showDateFilter ? "filled" : "outlined"}
+          color={showDateFilter ? 'primary' : 'default'}
+          variant={showDateFilter ? 'filled' : 'outlined'}
           sx={{
             '&.MuiChip-filled': {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }
+              background: colors.primary.gradient,
+            },
           }}
         />
         <Chip
           icon={<FilterListIcon />}
-          label={`Tri par ${sortBy === 'date' ? 'date' : 'popularité'}`}
+          label={`Sort by ${sortBy === 'date' ? 'date' : 'popularity'}`}
           onClick={() => {
             const newSortBy = sortBy === 'date' ? 'popular' : 'date';
             setSortBy(newSortBy);
             onSortChange(newSortBy);
           }}
-          color={sortBy === 'popular' ? "primary" : "default"}
-          variant={sortBy === 'popular' ? "filled" : "outlined"}
+          color={sortBy === 'popular' ? 'primary' : 'default'}
+          variant={sortBy === 'popular' ? 'filled' : 'outlined'}
           sx={{
             '&.MuiChip-filled': {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }
+              background: colors.primary.gradient,
+            },
+          }}
+        />
+        <Chip
+          icon={<FilterListIcon />}
+          label="Pending"
+          onClick={() => {
+            setShowPendingOnly(!showPendingOnly);
+            onPendingChange(!showPendingOnly);
+          }}
+          color={showPendingOnly ? 'primary' : 'default'}
+          variant={showPendingOnly ? 'filled' : 'outlined'}
+          sx={{
+            '&.MuiChip-filled': {
+              background: colors.primary.gradient,
+            },
           }}
         />
       </Stack>
 
       {showDateFilter && (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ mt: 2 }}
-          >
-            <DatePicker
-              label="Date de début"
+          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+            <CustomDatePicker
+              label="Start Date"
               value={dateRange.start}
               onChange={(newValue: Date | null) => {
-                setDateRange(prev => {
-                  const newRange = {
-                    ...prev,
-                    start: newValue
-                  };
+                setDateRange((prev) => {
+                  const newRange = { ...prev, start: newValue };
                   onDateRangeChange(newRange.start, newRange.end);
                   return newRange;
                 });
               }}
             />
-            <DatePicker
-              label="Date de fin"
+            <CustomDatePicker
+              label="End Date"
               value={dateRange.end}
               onChange={(newValue: Date | null) => {
-                setDateRange(prev => {
-                  const newRange = {
-                    ...prev,
-                    end: newValue
-                  };
+                setDateRange((prev) => {
+                  const newRange = { ...prev, end: newValue };
                   onDateRangeChange(newRange.start, newRange.end);
                   return newRange;
                 });
@@ -162,4 +204,4 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   );
 };
 
-export default SearchAndFilter; 
+export default SearchAndFilter;
