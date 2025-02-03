@@ -124,6 +124,11 @@ const AnalyticsPage: React.FC = () => {
     console.log('Sort by:', sort);
   };
 
+  const handlePendingChange = (pending: boolean) => {
+    // Gérer le changement d'état en attente
+    console.log('Pending state:', pending);
+  };
+
   return (
     <Box 
       component="section"
@@ -184,6 +189,7 @@ const AnalyticsPage: React.FC = () => {
             onSearchChange={handleSearchChange}
             onDateRangeChange={handleDateRangeChange}
             onSortChange={handleSortChange}
+            onPendingChange={handlePendingChange}
           />
 
           {loading && (
