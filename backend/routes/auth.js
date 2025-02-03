@@ -31,14 +31,16 @@ passport.use(new GoogleStrategy({
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
+      console.log('Google Strategy - Starting user processing');
       let user = await User.findOne({ email: profile.emails[0].value });
       
       if (user) {
-        // Vérifier si l'utilisateur existe déjà avec une méthode d'authentification traditionnelle
-        if (user.password) {
-          return done(null, false, { 
-            message: 'Un compte existe déjà avec cet email. Veuillez vous connecter avec votre mot de passe.' 
-          });
+        console.log('User found:', user);
+        if (user.authMethod && user.authMethod !== 'google') {
+          console.log('User exists with different auth method:', user.authMethod);
+          const errorMessage = `Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`;
+          console.log('Sending error message:', errorMessage);
+          return done(null, false, { message: errorMessage });
         }
         return done(null, user);
       }
@@ -55,6 +57,7 @@ passport.use(new GoogleStrategy({
       
       return done(null, user);
     } catch (error) {
+      console.error('Detailed Google Strategy Error:', error);
       return done(error, null);
     }
   }
@@ -114,19 +117,72 @@ passport.use(new GitHubStrategy({
 
 router.use(passport.initialize());
 
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+router.get('/google', (req, res, next) => {
+  console.log('Google Auth Route - Starting authentication');
+  // Forcer une nouvelle session
+  req.logout((err) => {
+    if (err) {
+      console.error('Erreur lors de la déconnexion:', err);
+    }
+    passport.authenticate('google', { 
+      scope: ['profile', 'email'],
+      prompt: 'select_account' // Force Google à afficher la page de sélection de compte
+    })(req, res, next);
+  });
+});
 
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/login?error=email_exists` 
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
   }),
-  (req, res) => {
-    const accessToken = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '4h' });
-    const refreshToken = jwt.sign({ id: req.user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-    res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify({ accessToken, refreshToken }))}`);
+  async (req, res) => {
+    console.log('Google Callback - Starting response handling');
+    try {
+      console.log('Google Callback - User:', req.user);
+      
+      if (!req.user) {
+        console.error('No user data in request');
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user_data`);
+      }
+
+      const accessToken = jwt.sign(
+        { 
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '4h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: req.user._id }, 
+        process.env.JWT_REFRESH_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        user: {
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }
+      };
+
+      console.log('Redirecting with tokens:', tokenData);
+
+      const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      console.log('Redirect URL:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Detailed Google Callback Error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=token_generation_failed`);
+    }
   }
 );
 
@@ -139,8 +195,9 @@ router.get('/github', (req, res, next) => {
 
 router.get('/github/callback',
   passport.authenticate('github', { 
-    failureRedirect: `${process.env.FRONTEND_URL}/login?error=auth_failed`,
-    session: false
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
   }),
   async (req, res) => {
     try {
@@ -166,11 +223,6 @@ router.get('/github/callback',
         process.env.JWT_REFRESH_SECRET, 
         { expiresIn: '7d' }
       );
-
-      await User.findByIdAndUpdate(req.user._id, {
-        accessToken,
-        refreshToken
-      });
 
       const tokenData = {
         accessToken,

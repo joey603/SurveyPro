@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../utils/AuthContext';
 import { useRouter } from 'next/navigation';
 import { colors } from '../../theme/colors';
@@ -129,12 +129,58 @@ const LoginPage: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5041/api/auth/google';
+    try {
+      console.log('Début de la déconnexion Google');
+      
+      // Nettoyer le localStorage
+      localStorage.clear();
+      console.log('localStorage nettoyé');
+      
+      // Vérification que le localStorage est vide
+      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      
+      // Attendre un court instant avant la redirection
+      setTimeout(() => {
+        console.log('Redirection vers Google...');
+        window.location.href = 'http://localhost:5041/api/auth/google';
+      }, 100);
+      
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion Google:', error);
+    }
   };
 
   const handleGithubLogin = () => {
-    window.location.href = 'http://localhost:5041/api/auth/github';
+    try {
+      console.log('Début de la déconnexion GitHub');
+      
+      // Nettoyer le localStorage
+      localStorage.clear(); // Supprime tout le localStorage
+      console.log('localStorage nettoyé');
+      
+      // Vérification que le localStorage est vide
+      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      
+      // Attendre un court instant avant la redirection
+      setTimeout(() => {
+        console.log('Redirection vers GitHub...');
+        window.location.href = 'http://localhost:5041/api/auth/github';
+      }, 100);
+      
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion GitHub:', error);
+    }
   };
+
+  useEffect(() => {
+    // Récupérer le paramètre d'erreur de l'URL
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    
+    if (errorParam === 'existing_user') {
+      setError('Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
+    }
+  }, []);
 
   return (
     <Box
@@ -201,7 +247,20 @@ const LoginPage: React.FC = () => {
             Log in
           </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                width: '100%',
+                '& .MuiAlert-message': {
+                  width: '100%'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField

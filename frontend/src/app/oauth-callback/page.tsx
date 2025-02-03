@@ -15,13 +15,21 @@ const OAuthCallback = () => {
     const handleCallback = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
+        console.log('URL Search Params:', Object.fromEntries(params.entries()));
+        
         const tokensParam = params.get('tokens');
         const errorParam = params.get('error');
         const errorMessage = params.get('message');
         
+        console.log('Error Param:', errorParam);
+        console.log('Error Message:', errorMessage);
+        
         if (errorParam === 'existing_user') {
+          console.log('Existing user error detected');
           setError(errorMessage || 'Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
+          console.log('Error state set:', error);
           setTimeout(() => {
+            console.log('Redirecting to login page...');
             window.location.href = '/login';
           }, 3000);
           return;
@@ -32,14 +40,27 @@ const OAuthCallback = () => {
         }
 
         const { accessToken, refreshToken, user } = await handleOAuthCallback(tokensParam);
+        
+        if (!user) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          setError('Utilisateur non trouvé. Veuillez vous reconnecter.');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 15000);
+          return;
+        }
+
         await login(accessToken, refreshToken);
         window.location.href = '/';
       } catch (error) {
-        console.error('Error in OAuth callback:', error);
+        console.error('Detailed error:', error);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         setError('Une erreur est survenue lors de l\'authentification');
         setTimeout(() => {
           window.location.href = '/login';
-        }, 3000);
+        }, 10000);
       }
     };
 
