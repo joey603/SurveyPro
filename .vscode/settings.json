@@ -1,0 +1,6 @@
+{
+  "js/ts.implicitProjectConfig.checkJs": false,
+  "javascript.validate.enable": false,
+  "typescript.validate.enable": true,
+  "typescript.tsdk": "node_modules/typescript/lib"
+} 

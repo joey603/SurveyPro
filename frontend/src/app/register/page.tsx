@@ -12,8 +12,11 @@ import {
   Alert,
   CircularProgress,
   Container,
+  Divider,
 } from '@mui/material';
 import { useAuth } from '@/utils/AuthContext';
+import GoogleIcon from '@mui/icons-material/Google';
+import GitHubIcon from '@mui/icons-material/GitHub';
 
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -94,6 +97,14 @@ const RegisterPage: React.FC = () => {
       // En cas d'erreur, rediriger vers la racine
       router.push('/');
     }
+  };
+
+  const handleGoogleRegister = () => {
+    window.location.href = 'http://localhost:5041/api/auth/google';
+  };
+
+  const handleGithubRegister = () => {
+    window.location.href = 'http://localhost:5041/api/auth/github';
   };
 
   return (
@@ -224,6 +235,28 @@ const RegisterPage: React.FC = () => {
                 },
               }}
             />
+
+            <Divider sx={{ my: 3 }}>OR</Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleRegister}
+              sx={{ mb: 2 }}
+            >
+              Continue with Google
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              onClick={handleGithubRegister}
+              sx={{ mb: 2 }}
+            >
+              Continue with GitHub
+            </Button>
 
             <Button
               type="submit"

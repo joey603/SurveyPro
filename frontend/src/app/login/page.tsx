@@ -13,8 +13,11 @@ import {
   Container,
   Alert,
   CircularProgress,
+  Divider,
 } from '@mui/material';
 import axios from 'axios';
+import GoogleIcon from '@mui/icons-material/Google';
+import GitHubIcon from '@mui/icons-material/GitHub';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -91,12 +94,15 @@ const LoginPage: React.FC = () => {
       login(accessToken, refreshToken);
       onLoginSuccess();
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError('Invalid email or password');
-      } else if (err.response?.status === 404) {
-        setError('Account not found');
+      if (err.response?.data?.authMethod) {
+        // Si c'est un compte OAuth, rediriger vers la bonne méthode
+        if (err.response.data.authMethod === 'github') {
+          window.location.href = 'http://localhost:5041/api/auth/github';
+        } else if (err.response.data.authMethod === 'google') {
+          window.location.href = 'http://localhost:5041/api/auth/google';
+        }
       } else {
-        setError(err.response?.data?.message || 'An error occurred during login');
+        setError(err.response?.data?.message || 'Une erreur est survenue');
       }
     } finally {
       setIsLoading(false);
@@ -120,6 +126,14 @@ const LoginPage: React.FC = () => {
       // En cas d'erreur, rediriger vers la racine
       router.push('/');
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:5041/api/auth/google';
+  };
+
+  const handleGithubLogin = () => {
+    window.location.href = 'http://localhost:5041/api/auth/github';
   };
 
   return (
@@ -227,6 +241,28 @@ const LoginPage: React.FC = () => {
                 },
               }}
             />
+
+            <Divider sx={{ my: 3 }}>OR</Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with Google
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              onClick={handleGithubLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with GitHub
+            </Button>
 
             <Button
               type="submit"
