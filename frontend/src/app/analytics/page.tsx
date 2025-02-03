@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Box, Typography, Paper, Snackbar, Alert, IconButton, TextField, InputAdornment, Stack, Chip } from '@mui/material';
-import { getSurveyAnswers } from '@/utils/surveyService';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Paper, Snackbar, Alert, IconButton, TextField, InputAdornment, Stack, Chip, Grid } from '@mui/material';
+import { getSurveyAnswers, fetchSurveys } from '@/utils/surveyService';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -10,6 +10,8 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import SearchAndFilter from '../components/analytics/SearchAndFilter';
+import { AnalyticsCard } from '../components/analytics/AnalyticsCard';
+import { useAuth } from '@/utils/AuthContext';
 
 interface Survey {
   _id: string;
@@ -76,6 +78,30 @@ const AnalyticsPage: React.FC = () => {
 
   const [filteredData, setFilteredData] = useState(analyticsData);
 
+  const { user } = useAuth();
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+
+  useEffect(() => {
+    const loadSurveys = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('accessToken') || '';
+        const surveysData = await fetchSurveys(token);
+        setSurveys(surveysData);
+      } catch (error) {
+        console.error('Error loading surveys:', error);
+        setError('Failed to load surveys');
+        setSnackbarMessage('Failed to load surveys');
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSurveys();
+  }, []);
+
   const handleViewAnalytics = (survey: Survey) => {
     setSelectedSurvey(survey);
     const token = localStorage.getItem('accessToken') || '';
@@ -127,6 +153,27 @@ const AnalyticsPage: React.FC = () => {
   const handlePendingChange = (pending: boolean) => {
     // Gérer le changement d'état en attente
     console.log('Pending state:', pending);
+  };
+
+  const handleDeleteSurvey = async (surveyId: string) => {
+    try {
+      const token = localStorage.getItem('accessToken') || '';
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${surveyId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setSurveys(surveys.filter(s => s._id !== surveyId));
+      setSnackbarMessage('Survey deleted successfully');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+    } catch (error) {
+      console.error('Error deleting survey:', error);
+      setSnackbarMessage('Failed to delete survey');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
   };
 
   return (
@@ -193,18 +240,31 @@ const AnalyticsPage: React.FC = () => {
           />
 
           {loading && (
-            <Typography color="text.secondary">
-              Chargement des données...
+            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              Loading surveys...
             </Typography>
           )}
 
           {error && (
-            <Typography color="error">
+            <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
               {error}
             </Typography>
           )}
 
-          {/* Interface d'analyse à implémenter */}
+          {!loading && !error && (
+            <Grid container spacing={3}>
+              {surveys.map((survey) => (
+                <Grid item xs={12} sm={6} md={6} key={survey._id}>
+                  <AnalyticsCard
+                    survey={survey}
+                    onDelete={handleDeleteSurvey}
+                    onViewAnalytics={handleViewAnalytics}
+                    userId={user?.id}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Box>
       </Paper>
 
