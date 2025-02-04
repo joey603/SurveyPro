@@ -31,7 +31,7 @@ const OAuthCallback = () => {
           setTimeout(() => {
             console.log('Redirecting to login page...');
             window.location.href = '/login';
-          }, 3000);
+          }, 30000);
           return;
         }
 
@@ -47,7 +47,7 @@ const OAuthCallback = () => {
           setError('Utilisateur non trouvé. Veuillez vous reconnecter.');
           setTimeout(() => {
             window.location.href = '/login';
-          }, 15000);
+          }, 30000);
           return;
         }
 

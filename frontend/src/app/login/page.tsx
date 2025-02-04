@@ -62,48 +62,55 @@ const LoginPage: React.FC = () => {
     setPasswordError(validatePassword(newPassword));
   };
 
+  useEffect(() => {
+    console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation avant soumission
-    const emailValidation = validateEmail(email);
-    const passwordValidation = validatePassword(password);
-
-    if (emailValidation) {
-      setEmailError(emailValidation);
-      return;
-    }
-
-    if (passwordValidation) {
-      setPasswordError(passwordValidation);
-      return;
-    }
-
-    setError('');
     setIsLoading(true);
+    setError('');
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+    const apiUrl = `${baseUrl}/api/auth/login`;
+    
+    console.log('Full API URL:', apiUrl);
 
     try {
-      const response = await axios.post(
-        'http://localhost:5041/api/auth/login',
-        {
-          email,
-          password,
-        }
-      );
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
+      };
+
+      console.log('Request config:', config);
+      console.log('Request data:', { email, password });
+
+      const response = await axios.post(apiUrl, {
+        email,
+        password
+      }, config);
+
+      console.log('Response:', response);
+      
       const { accessToken, refreshToken } = response.data;
       login(accessToken, refreshToken);
       onLoginSuccess();
     } catch (err: any) {
-      if (err.response?.data?.authMethod) {
-        // Si c'est un compte OAuth, rediriger vers la bonne méthode
-        if (err.response.data.authMethod === 'github') {
-          window.location.href = 'http://localhost:5041/api/auth/github';
-        } else if (err.response.data.authMethod === 'google') {
-          window.location.href = 'http://localhost:5041/api/auth/google';
-        }
-      } else {
-        setError(err.response?.data?.message || 'Une erreur est survenue');
+      console.error('Detailed error:', {
+        message: err.message,
+        response: err.response,
+        config: err.config
+      });
+      
+      if (err.response?.data?.error === 'existing_user') {
+        window.location.href = err.response.data.redirectUrl;
+        return;
       }
+      
+      setError(err.response?.data?.message || 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }

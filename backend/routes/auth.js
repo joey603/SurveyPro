@@ -35,29 +35,58 @@ passport.use(new GoogleStrategy({
       let user = await User.findOne({ email: profile.emails[0].value });
       
       if (user) {
-        console.log('User found:', user);
-        if (user.authMethod && user.authMethod !== 'google') {
-          console.log('User exists with different auth method:', user.authMethod);
-          const errorMessage = `Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`;
-          console.log('Sending error message:', errorMessage);
-          return done(null, false, { message: errorMessage });
-        }
+        // Mettre à jour les tokens si l'utilisateur existe
+        const newAccessToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_SECRET,
+          { expiresIn: '4h' }
+        );
+        const newRefreshToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        user.accessToken = newAccessToken;
+        user.refreshToken = newRefreshToken;
+        await user.save();
+        
         return done(null, user);
       }
 
-      // Créer un nouveau compte si l'utilisateur n'existe pas
+      // Pour un nouvel utilisateur
+      // Créer d'abord l'utilisateur
       user = new User({
         username: profile.displayName,
         email: profile.emails[0].value,
         password: '',
         isVerified: true,
-        authMethod: 'google'  // Ajouter une indication de la méthode d'auth
+        authMethod: 'google'
       });
+      
+      // Sauvegarder pour obtenir l'ID
+      await user.save();
+      
+      // Maintenant on peut générer les tokens avec l'ID
+      const newAccessToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '4h' }
+      );
+      const newRefreshToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Mettre à jour l'utilisateur avec les tokens
+      user.accessToken = newAccessToken;
+      user.refreshToken = newRefreshToken;
       await user.save();
       
       return done(null, user);
     } catch (error) {
-      console.error('Detailed Google Strategy Error:', error);
+      console.error('Google Strategy Error:', error);
       return done(error, null);
     }
   }
@@ -87,26 +116,56 @@ passport.use(new GitHubStrategy({
       let user = await User.findOne({ email: primaryEmail });
       console.log('Existing user:', user);
       
-      if (!user) {
-        // Créer un nouvel utilisateur
-        console.log('Creating new user');
-        user = new User({
-          username: profile.username || profile.displayName,
-          email: primaryEmail,
-          password: '', // Pas de mot de passe pour l'auth GitHub
-          isVerified: true,
-          authMethod: 'github'
-        });
+      if (user) {
+        // Mettre à jour les tokens si l'utilisateur existe
+        const newAccessToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_SECRET,
+          { expiresIn: '4h' }
+        );
+        const newRefreshToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        user.accessToken = newAccessToken;
+        user.refreshToken = newRefreshToken;
         await user.save();
-        console.log('New user created:', user);
-      } else if (user.authMethod !== 'github') {
-        console.log('User exists with different auth method');
-        return done(null, false, { 
-          message: 'Un compte existe déjà avec cet email. Veuillez vous connecter avec votre méthode habituelle.' 
-        });
+        
+        return done(null, user);
       }
+
+      // Pour un nouvel utilisateur
+      // Créer d'abord l'utilisateur
+      user = new User({
+        username: profile.username || profile.displayName,
+        email: primaryEmail,
+        password: '',
+        isVerified: true,
+        authMethod: 'github'
+      });
       
-      console.log('Authentication successful, returning user');
+      // Sauvegarder pour obtenir l'ID
+      await user.save();
+      
+      // Maintenant on peut générer les tokens avec l'ID
+      const newAccessToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '4h' }
+      );
+      const newRefreshToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Mettre à jour l'utilisateur avec les tokens
+      user.accessToken = newAccessToken;
+      user.refreshToken = newRefreshToken;
+      await user.save();
+      
       return done(null, user);
     } catch (error) {
       console.error('GitHub Strategy Error:', error);
@@ -138,13 +197,13 @@ router.get('/google/callback',
     failureMessage: true
   }),
   async (req, res) => {
-    console.log('Google Callback - Starting response handling');
     try {
+      console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user_data`);
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -180,8 +239,8 @@ router.get('/google/callback',
       
       res.redirect(redirectUrl);
     } catch (error) {
-      console.error('Detailed Google Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/login?error=token_generation_failed`);
+      console.error('Google Callback Error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );
@@ -201,11 +260,12 @@ router.get('/github/callback',
   }),
   async (req, res) => {
     try {
+      console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user_data`);
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -242,7 +302,7 @@ router.get('/github/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/login?error=token_generation_failed`);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );
@@ -301,6 +361,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  console.log('Login route hit:', req.body);
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
@@ -310,8 +371,10 @@ router.post('/login', async (req, res) => {
     // Vérifier si c'est un compte GitHub ou Google
     if (user.authMethod === 'github' || user.authMethod === 'google') {
       return res.status(400).json({ 
-        message: `Ce compte utilise l'authentification ${user.authMethod}. Veuillez vous connecter avec ${user.authMethod}.`,
-        authMethod: user.authMethod 
+        error: 'existing_user',
+        message: `Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`,
+        authMethod: user.authMethod,
+        redirectUrl: `/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`
       });
     }
 
