@@ -76,7 +76,7 @@ const AnalyticsPage: React.FC = () => {
           fetchPendingShares(token)
         ]);
 
-        const responsesPromises = surveysData.map(survey => 
+        const responsesPromises = surveysData.map((survey: Survey) => 
           getSurveyAnswers(survey._id, token)
             .then(responses => ({ surveyId: survey._id, responses }))
             .catch(() => ({ surveyId: survey._id, responses: [] }))
