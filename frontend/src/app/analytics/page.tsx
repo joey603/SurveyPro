@@ -7,6 +7,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchAndFilter from '../components/analytics/SearchAndFilter';
 import { AnalyticsCard } from '../components/analytics/AnalyticsCard';
 import { useAuth } from '@/utils/AuthContext';
+import { SurveyAnalytics } from '../components/analytics/SurveyAnalytics';
 
 interface Question {
   id: string;
@@ -62,6 +63,9 @@ const AnalyticsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
 
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -102,8 +106,8 @@ const AnalyticsPage: React.FC = () => {
   }, []);
 
   const handleViewAnalytics = (survey: Survey) => {
-    // Implémentation à venir
-    console.log('View analytics for survey:', survey);
+    setSelectedSurvey(survey);
+    setAnalyticsOpen(true);
   };
 
   const handleCloseSnackbar = () => {
@@ -285,6 +289,15 @@ const AnalyticsPage: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {selectedSurvey && (
+        <SurveyAnalytics
+          open={analyticsOpen}
+          onClose={() => setAnalyticsOpen(false)}
+          survey={selectedSurvey}
+          responses={surveyResponses[selectedSurvey._id] || []}
+        />
+      )}
     </Box>
   );
 };
