@@ -38,7 +38,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getSurveyAnswers } from '@/utils/surveyService';
 import { toast } from 'react-toastify';
-import { calculateAge } from '@/utils/dateUtils';
+import { calculateAge } from '../../../utils/dateUtils';
 
 ChartJS.register(
   CategoryScale,
