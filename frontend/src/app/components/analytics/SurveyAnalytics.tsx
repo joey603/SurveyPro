@@ -118,18 +118,21 @@ interface PathNode {
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
-// Ajout des constantes pour les options de graphiques
+// Modifier les options communes pour centrer les graphiques
 const commonChartOptions = {
   responsive: true,
   maintainAspectRatio: true,
   plugins: {
     legend: {
       position: 'top' as const,
+      align: 'center' as const,
       labels: {
         padding: 20,
         font: {
           size: 12
-        }
+        },
+        boxWidth: 12,
+        usePointStyle: true
       }
     },
     title: {
@@ -143,6 +146,7 @@ const commonChartOptions = {
   }
 };
 
+// Modifier les options pour les graphiques circulaires
 const pieOptions = {
   ...commonChartOptions,
   plugins: {
@@ -150,6 +154,12 @@ const pieOptions = {
     legend: {
       ...commonChartOptions.plugins.legend,
       position: 'right' as const
+    }
+  },
+  layout: {
+    padding: {
+      left: 20,
+      right: 20
     }
   }
 };
@@ -207,6 +217,109 @@ interface Filters {
   demographic: DemographicFilters;
   answers: AnswerFilters;
 }
+
+// Modifier les options spécifiques pour le graphique des tendances
+const trendChartOptions = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: {
+      display: false
+    },
+    title: {
+      display: true,
+      text: 'Daily Response Distribution',
+      font: { 
+        size: 18,
+        weight: 'bold' as const
+      },
+      padding: {
+        bottom: 30
+      }
+    },
+    tooltip: {
+      mode: 'index',
+      intersect: false,
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      titleColor: '#1a237e',
+      bodyColor: '#1a237e',
+      borderColor: 'rgba(102, 126, 234, 0.2)',
+      borderWidth: 1,
+      padding: 12,
+      boxPadding: 6,
+      usePointStyle: true,
+      callbacks: {
+        label: (context: any) => `${context.parsed.y} responses`
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false
+      },
+      ticks: {
+        maxRotation: 45,
+        minRotation: 45,
+        color: '#64748b',
+        font: {
+          size: 11
+        }
+      },
+      border: {
+        display: false
+      }
+    },
+    y: {
+      beginAtZero: true,
+      grid: {
+        color: 'rgba(102, 126, 234, 0.1)',
+        drawBorder: false,
+        lineWidth: 1
+      },
+      ticks: {
+        stepSize: 1,
+        color: '#64748b',
+        font: {
+          size: 11
+        },
+        padding: 10,
+        callback: (value: number) => Math.floor(value)
+      },
+      border: {
+        display: false
+      }
+    }
+  },
+  elements: {
+    line: {
+      tension: 0.4,
+      borderWidth: 3,
+      borderColor: 'rgba(102, 126, 234, 0.8)',
+      fill: true,
+      backgroundColor: (context: any) => {
+        const ctx = context.chart.ctx;
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(102, 126, 234, 0.3)');
+        gradient.addColorStop(1, 'rgba(102, 126, 234, 0)');
+        return gradient;
+      }
+    },
+    point: {
+      radius: 0,
+      hoverRadius: 6,
+      backgroundColor: '#ffffff',
+      borderColor: 'rgba(102, 126, 234, 0.8)',
+      borderWidth: 3,
+      hoverBorderWidth: 3,
+      hitRadius: 8
+    }
+  },
+  interaction: {
+    intersect: false,
+    mode: 'index'
+  }
+} as const;
 
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
@@ -719,25 +832,227 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
             {/* Tendances des réponses */}
             <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Response Trends
-                </Typography>
-                <Box sx={{ height: 300 }}>
+              <Paper 
+                elevation={1} 
+                sx={{ 
+                  p: 3, 
+                  borderRadius: 2,
+                  background: 'linear-gradient(to bottom, #ffffff, #f8faff)',
+                  border: '1px solid rgba(102, 126, 234, 0.1)',
+                  minHeight: '500px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 3 
+                }}>
+                  <Box>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#1a237e',
+                        fontWeight: 'bold',
+                        mb: 1
+                      }}
+                    >
+                      Response Activity
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                    >
+                      Overview of survey responses over time
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end'
+                  }}>
+                    <Typography variant="h4" sx={{ color: '#1a237e', fontWeight: 'bold' }}>
+                      {filteredAnswers.length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Total Responses
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ 
+                  flex: 1,
+                  minHeight: '300px',
+                  p: 2,
+                  backgroundColor: '#ffffff',
+                  borderRadius: 1,
+                  boxShadow: 'inset 0 0 10px rgba(102, 126, 234, 0.05)',
+                  position: 'relative'
+                }}>
                   <Line
                     data={{
                       labels: getResponseTrends(filteredAnswers).labels,
                       datasets: [{
-                        label: 'Responses per Day',
+                        label: 'Responses',
                         data: getResponseTrends(filteredAnswers).data,
-                        borderColor: colors.primary.main,
-                        backgroundColor: colors.primary.transparent,
-                        tension: 0.4
+                        borderColor: 'rgba(102, 126, 234, 0.8)',
+                        backgroundColor: (context: any) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                          gradient.addColorStop(0, 'rgba(102, 126, 234, 0.2)');
+                          gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
+                          return gradient;
+                        },
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: 'rgba(102, 126, 234, 0.8)',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointHoverBorderWidth: 2,
+                        pointHitRadius: 8
                       }]
                     }}
-                    options={commonChartOptions}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        title: {
+                          display: false
+                        },
+                        tooltip: {
+                          mode: 'index',
+                          intersect: false,
+                          backgroundColor: '#ffffff',
+                          titleColor: '#1a237e',
+                          bodyColor: '#475569',
+                          borderColor: 'rgba(102, 126, 234, 0.2)',
+                          borderWidth: 1,
+                          padding: 12,
+                          bodyFont: {
+                            size: 13
+                          },
+                          titleFont: {
+                            size: 13,
+                            weight: 'bold'
+                          },
+                          callbacks: {
+                            label: (context) => `${context.parsed.y} responses`
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            color: '#64748b',
+                            font: {
+                              size: 11
+                            },
+                            padding: 8
+                          },
+                          border: {
+                            display: false
+                          }
+                        },
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(102, 126, 234, 0.1)',
+                            drawBorder: false,
+                            lineWidth: 1,
+                            drawTicks: false
+                          },
+                          ticks: {
+                            stepSize: 1,
+                            color: '#64748b',
+                            font: {
+                              size: 11
+                            },
+                            padding: 12,
+                            callback: (value) => Math.round(Number(value))
+                          },
+                          border: {
+                            display: false
+                          }
+                        }
+                      },
+                      interaction: {
+                        intersect: false,
+                        mode: 'index'
+                      },
+                      layout: {
+                        padding: {
+                          top: 20,
+                          right: 20,
+                          bottom: 20,
+                          left: 10
+                        }
+                      }
+                    }}
                   />
                 </Box>
+
+                <Grid container spacing={2} sx={{ mt: 3 }}>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        First Response
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Average Daily Responses
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {(filteredAnswers.length / Math.max(1, getDaysBetweenDates(
+                          new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
+                          new Date()
+                        ))).toFixed(1)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Latest Response
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {new Date(Math.max(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Paper>
             </Grid>
 
@@ -767,19 +1082,30 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     <Typography variant="h6" gutterBottom align="center">
                       Distribution by Gender
                     </Typography>
-                    <Box sx={{ height: 'calc(100% - 60px)' }}>
-                      <Pie
-                        data={{
-                          labels: Object.keys(demographicStats.gender),
-                          datasets: [{
-                            data: Object.values(demographicStats.gender),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={pieOptions}
-                      />
+                    <Box sx={{ 
+                      height: 'calc(100% - 60px)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <Box sx={{ 
+                        width: '100%',
+                        maxWidth: '400px',
+                        margin: '0 auto'
+                      }}>
+                        <Pie
+                          data={{
+                            labels: Object.keys(demographicStats.gender),
+                            datasets: [{
+                              data: Object.values(demographicStats.gender),
+                              backgroundColor: chartColors.backgrounds,
+                              borderColor: chartColors.borders,
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={pieOptions}
+                        />
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
@@ -790,19 +1116,30 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     <Typography variant="h6" gutterBottom align="center">
                       Distribution by Education Level
                     </Typography>
-                    <Box sx={{ height: 'calc(100% - 60px)' }}>
-                      <Bar
-                        data={{
-                          labels: Object.keys(demographicStats.education),
-                          datasets: [{
-                            data: Object.values(demographicStats.education),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={commonChartOptions}
-                      />
+                    <Box sx={{ 
+                      height: 'calc(100% - 60px)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <Box sx={{ 
+                        width: '100%',
+                        maxWidth: '400px',
+                        margin: '0 auto'
+                      }}>
+                        <Bar
+                          data={{
+                            labels: Object.keys(demographicStats.education),
+                            datasets: [{
+                              data: Object.values(demographicStats.education),
+                              backgroundColor: chartColors.backgrounds,
+                              borderColor: chartColors.borders,
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={commonChartOptions}
+                        />
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
@@ -813,8 +1150,19 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     <Typography variant="h6" gutterBottom align="center">
                       Age Distribution
                     </Typography>
-                    <Box sx={{ height: 'calc(100% - 60px)' }}>
-                      {renderAgeChart(demographicStats.ageDistribution)}
+                    <Box sx={{ 
+                      height: 'calc(100% - 60px)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <Box sx={{ 
+                        width: '100%',
+                        maxWidth: '400px',
+                        margin: '0 auto'
+                      }}>
+                        {renderAgeChart(demographicStats.ageDistribution)}
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
@@ -825,19 +1173,30 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     <Typography variant="h6" gutterBottom align="center">
                       Distribution by City
                     </Typography>
-                    <Box sx={{ height: 'calc(100% - 60px)' }}>
-                      <Doughnut
-                        data={{
-                          labels: Object.keys(demographicStats.city),
-                          datasets: [{
-                            data: Object.values(demographicStats.city),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={pieOptions}
-                      />
+                    <Box sx={{ 
+                      height: 'calc(100% - 60px)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <Box sx={{ 
+                        width: '100%',
+                        maxWidth: '400px',
+                        margin: '0 auto'
+                      }}>
+                        <Doughnut
+                          data={{
+                            labels: Object.keys(demographicStats.city),
+                            datasets: [{
+                              data: Object.values(demographicStats.city),
+                              backgroundColor: chartColors.backgrounds,
+                              borderColor: chartColors.borders,
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={pieOptions}
+                        />
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
@@ -883,11 +1242,36 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         ))}
                       </List>
 
-                      <Box sx={{ height: 300, mt: 3 }}>
-                        {renderChart(question.id, currentChartType)}
+                      <Box sx={{ 
+                        height: 300, 
+                        mt: 3,
+                        mb: 4,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        width: '100%',
+                        position: 'relative'
+                      }}>
+                        <Box sx={{ 
+                          width: '100%',
+                          maxWidth: '800px',
+                          margin: '0 auto'
+                        }}>
+                          {renderChart(question.id, currentChartType)}
+                        </Box>
                       </Box>
 
-                      <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center' }}>
+                      <Divider sx={{ my: 3 }} />
+
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        sx={{ 
+                          mt: 3,
+                          justifyContent: 'center',
+                          pt: 1
+                        }}
+                      >
                         {availableChartTypes.map((type) => (
                           <Button
                             key={type}
