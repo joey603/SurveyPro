@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,12 +12,20 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Stack,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {
   BarChart as BarChartIcon,
   AutoGraph as AutoGraphIcon,
   Email as EmailIcon,
+  PieChart as PieChartIcon,
+  ShowChart as ShowChartIcon,
+  DonutLarge as DonutLargeIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 import {
@@ -39,6 +47,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getSurveyAnswers } from '@/utils/surveyService';
 import { toast } from 'react-toastify';
 import { calculateAge } from '../../../utils/dateUtils';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ClearIcon from '@mui/icons-material/Clear';
+import { FilterPanel } from './FilterPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -105,6 +116,8 @@ interface PathNode {
   count: number;
 }
 
+type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
+
 // Ajout des constantes pour les options de graphiques
 const commonChartOptions = {
   responsive: true,
@@ -158,6 +171,43 @@ const chartColors = {
   ]
 };
 
+// Ajouter cette fonction utilitaire
+const getResponseTrends = (responses: SurveyResponse[]) => {
+  const trends = responses.reduce((acc: { [key: string]: number }, response) => {
+    const date = new Date(response.submittedAt).toLocaleDateString();
+    acc[date] = (acc[date] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    labels: Object.keys(trends),
+    data: Object.values(trends)
+  };
+};
+
+// Modifier les interfaces de filtrage
+interface FilterRule {
+  operator: string;
+  value: string | number | null;
+  secondValue?: string | number | null;
+}
+
+interface AnswerFilters {
+  [questionId: string]: FilterRule[];
+}
+
+interface DemographicFilters {
+  gender?: string;
+  educationLevel?: string;
+  city?: string;
+  age?: [number, number];
+}
+
+interface Filters {
+  demographic: DemographicFilters;
+  answers: AnswerFilters;
+}
+
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
   onClose,
@@ -167,6 +217,15 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [loading, setLoading] = useState(false);
   const [surveyAnswers, setSurveyAnswers] = useState<SurveyResponse[]>(responses);
   const [error, setError] = useState<string | null>(null);
+  const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
+  const [showResponseDetails, setShowResponseDetails] = useState(false);
+  const [selectedResponse, setSelectedResponse] = useState<SurveyResponse | null>(null);
+  const [filters, setFilters] = useState<Filters>({
+    demographic: {},
+    answers: {}
+  });
+  const [filteredAnswers, setFilteredAnswers] = useState<SurveyResponse[]>(responses);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -188,18 +247,101 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     loadAnswers();
   }, [survey._id]);
 
-  // Fonction pour analyser les réponses d'une question
-  const analyzeQuestionResponses = (question: Question) => {
+  // Mettre à jour les réponses filtrées quand les réponses changent
+  useEffect(() => {
+    setSurveyAnswers(responses);
+    setFilteredAnswers(responses);
+  }, [responses]);
+
+  const analyzeResponses = useCallback((questionId: string) => {
     const answerCounts: { [key: string]: number } = {};
+    let total = 0;
     
-    surveyAnswers.forEach(response => {
-      const answer = response.answers.find(a => a.questionId === question.id);
+    filteredAnswers.forEach(response => {
+      const answer = response.answers.find(a => a.questionId === questionId);
       if (answer) {
         answerCounts[answer.answer] = (answerCounts[answer.answer] || 0) + 1;
+        total++;
       }
     });
+    
+    return { answerCounts, total };
+  }, [filteredAnswers]);
 
-    return answerCounts;
+  const getChartData = useCallback((questionId: string) => {
+    const { answerCounts } = analyzeResponses(questionId);
+    return {
+      labels: Object.keys(answerCounts),
+      datasets: [{
+        label: 'Réponses',
+        data: Object.values(answerCounts),
+        backgroundColor: [
+          'rgba(102, 126, 234, 0.6)',
+          'rgba(118, 75, 162, 0.6)',
+          'rgba(79, 99, 196, 0.6)',
+          'rgba(142, 94, 189, 0.6)',
+        ],
+        borderColor: [
+          'rgba(102, 126, 234, 1)',
+          'rgba(118, 75, 162, 1)',
+          'rgba(79, 99, 196, 1)',
+          'rgba(142, 94, 189, 1)',
+        ],
+        borderWidth: 1,
+      }],
+    };
+  }, [analyzeResponses]);
+
+  const getAvailableChartTypes = (questionType: string): ChartType[] => {
+    switch (questionType) {
+      case "multiple-choice":
+        return ['bar', 'pie', 'doughnut'];
+      case "text":
+        return ['bar'];
+      case "dropdown":
+        return ['bar', 'pie', 'doughnut'];
+      case "yes-no":
+        return ['pie', 'doughnut', 'bar'];
+      case "slider":
+        return ['bar', 'line'];
+      case "rating":
+        return ['bar', 'line'];
+      default:
+        return ['bar'];
+    }
+  };
+
+  const getChartIcon = (type: ChartType) => {
+    switch (type) {
+      case 'bar':
+        return <BarChartIcon />;
+      case 'line':
+        return <ShowChartIcon />;
+      case 'pie':
+        return <PieChartIcon />;
+      case 'doughnut':
+        return <DonutLargeIcon />;
+      default:
+        return <BarChartIcon />;
+    }
+  };
+
+  const renderChart = (questionId: string, chartType: ChartType) => {
+    const data = getChartData(questionId);
+    const options = ['pie', 'doughnut'].includes(chartType) ? pieOptions : commonChartOptions;
+
+    switch (chartType) {
+      case 'bar':
+        return <Bar data={data} options={options} />;
+      case 'line':
+        return <Line data={data} options={options} />;
+      case 'pie':
+        return <Pie data={data} options={options} />;
+      case 'doughnut':
+        return <Doughnut data={data} options={options} />;
+      default:
+        return <Bar data={data} options={options} />;
+    }
   };
 
   // Fonction pour créer l'arbre des chemins pour les sondages dynamiques
@@ -226,30 +368,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return root;
   };
 
-  // Fonction pour générer les données du graphique
-  const getChartData = (question: Question, answerCounts: { [key: string]: number }) => {
-    return {
-      labels: Object.keys(answerCounts),
-      datasets: [{
-        label: 'Réponses',
-        data: Object.values(answerCounts),
-        backgroundColor: [
-          'rgba(102, 126, 234, 0.6)',
-          'rgba(118, 75, 162, 0.6)',
-          'rgba(79, 99, 196, 0.6)',
-          'rgba(142, 94, 189, 0.6)',
-        ],
-        borderColor: [
-          'rgba(102, 126, 234, 1)',
-          'rgba(118, 75, 162, 1)',
-          'rgba(79, 99, 196, 1)',
-          'rgba(142, 94, 189, 1)',
-        ],
-        borderWidth: 1,
-      }],
-    };
-  };
-
   // Fonction pour rendre l'arbre des chemins
   const renderPathTree = (node: PathNode, level: number = 0): JSX.Element => {
     const question = survey.questions.find(q => q.id === node.questionId);
@@ -270,36 +388,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     );
   };
 
-  // Fonction pour choisir le type de graphique approprié
-  const renderChart = (question: Question, answerCounts: { [key: string]: number }) => {
-    const chartData = getChartData(question, answerCounts);
-    const chartOptions = {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'top' as const,
-        },
-        title: {
-          display: true,
-          text: question.text,
-        },
-      },
-    };
-
-    switch (question.type) {
-      case 'multiple-choice':
-      case 'dropdown':
-        return <Pie data={chartData} options={chartOptions} />;
-      case 'slider':
-      case 'rating':
-        return <Line data={chartData} options={chartOptions} />;
-      default:
-        return <Bar data={chartData} options={chartOptions} />;
-    }
-  };
-
   // Fonction pour analyser les données démographiques
-  const analyzeDemographicData = () => {
+  const analyzeDemographicData = useCallback(() => {
     const stats = {
       gender: {} as { [key: string]: number },
       education: {} as { [key: string]: number },
@@ -307,7 +397,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       ageDistribution: [] as number[],
     };
 
-    surveyAnswers.forEach(response => {
+    filteredAnswers.forEach(response => {
       const demographic = response.respondent?.demographic;
       if (demographic) {
         // Genre
@@ -336,7 +426,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
 
     return stats;
-  };
+  }, [filteredAnswers]);
 
   // Fonction pour rendre le graphique d'âge
   const renderAgeChart = (data: number[]) => {
@@ -377,6 +467,136 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   };
 
   const demographicStats = survey.demographicEnabled ? analyzeDemographicData() : null;
+
+  // Ajouter cette fonction pour calculer les statistiques générales
+  const getGeneralStats = useCallback(() => {
+    const totalResponses = filteredAnswers.length;
+    const responsesPerDay = totalResponses / (Math.max(1, getDaysBetweenDates(
+      new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
+      new Date()
+    )));
+    
+    const completionRates = survey.questions.map(question => {
+      const answeredCount = filteredAnswers.filter(response => 
+        response.answers.some(a => a.questionId === question.id && a.answer)
+      ).length;
+      return {
+        questionId: question.id,
+        rate: (answeredCount / totalResponses) * 100
+      };
+    });
+
+    return {
+      totalResponses,
+      responsesPerDay: responsesPerDay.toFixed(1),
+      averageCompletionRate: (completionRates.reduce((acc, curr) => acc + curr.rate, 0) / survey.questions.length).toFixed(1),
+      completionRates
+    };
+  }, [filteredAnswers, survey.questions]);
+
+  // Ajouter cette fonction pour évaluer les règles de filtrage
+  const evaluateRule = (value: any, rule: { operator: string; value: any; secondValue?: any }) => {
+    const safeValue = value ?? null;
+    const safeRuleValue = rule.value ?? null;
+
+    switch (rule.operator) {
+      case 'equals':
+        return safeValue === safeRuleValue;
+      case 'not':
+        return safeValue !== safeRuleValue;
+      case 'greater':
+        return Number(safeValue) > Number(safeRuleValue);
+      case 'less':
+        return Number(safeValue) < Number(safeRuleValue);
+      case 'between':
+        if (rule.secondValue === undefined) return false;
+        const numValue = Number(safeValue);
+        const min = Number(safeRuleValue);
+        const max = Number(rule.secondValue);
+        return numValue >= min && numValue <= max;
+      case 'contains':
+        return String(safeValue).toLowerCase().includes(String(safeRuleValue).toLowerCase());
+      case 'not_contains':
+        return !String(safeValue).toLowerCase().includes(String(safeRuleValue).toLowerCase());
+      default:
+        return true;
+    }
+  };
+
+  // Modifier la fonction applyFilters
+  const applyFilters = useCallback(() => {
+    console.log('Applying filters:', filters);
+    
+    const filtered = surveyAnswers.filter(response => {
+      // Vérifier les filtres démographiques
+      if (filters.demographic.gender && 
+          response.respondent?.demographic?.gender !== filters.demographic.gender) {
+        return false;
+      }
+      if (filters.demographic.educationLevel && 
+          response.respondent?.demographic?.educationLevel !== filters.demographic.educationLevel) {
+        return false;
+      }
+
+      // Vérifier les filtres de réponses
+      for (const [questionId, rules] of Object.entries(filters.answers)) {
+        if (!rules?.length) continue;
+        
+        const answer = response.answers.find(a => a.questionId === questionId);
+        if (!answer) return false;
+
+        const rule = rules[0];
+        if (!rule?.value) continue;
+
+        if (!evaluateRule(answer.answer, rule)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    console.log('Filtered responses:', filtered.length);
+    setFilteredAnswers(filtered);
+  }, [filters, surveyAnswers]);
+
+  // Modifier la fonction handleApplyFilters
+  const handleApplyFilters = (newFilters: Filters) => {
+    console.log('New filters:', newFilters);
+    setFilters(newFilters);
+    setTimeout(() => {
+      const filtered = surveyAnswers.filter(response => {
+        // Vérifier les filtres démographiques
+        if (newFilters.demographic.gender && 
+            response.respondent?.demographic?.gender !== newFilters.demographic.gender) {
+          return false;
+        }
+        if (newFilters.demographic.educationLevel && 
+            response.respondent?.demographic?.educationLevel !== newFilters.demographic.educationLevel) {
+          return false;
+        }
+
+        // Vérifier les filtres de réponses
+        for (const [questionId, rules] of Object.entries(newFilters.answers)) {
+          if (!rules?.length) continue;
+          
+          const answer = response.answers.find(a => a.questionId === questionId);
+          if (!answer) return false;
+
+          const rule = rules[0];
+          if (!rule?.value) continue;
+
+          if (!evaluateRule(answer.answer, rule)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      setFilteredAnswers(filtered);
+    }, 0);
+  };
 
   return (
     <Dialog
@@ -421,36 +641,102 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           <Grid container spacing={3}>
             {/* Statistiques générales */}
             <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <Chip
-                    size="small"
-                    icon={<BarChartIcon sx={{ fontSize: 16 }} />}
-                    label={`${surveyAnswers.length} Responses`}
-                    sx={{
-                      backgroundColor: colors.primary.transparent,
-                      color: colors.primary.main,
-                    }}
-                  />
-                  <Chip
-                    size="small"
-                    icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-                    label={`${survey.questions.length} Questions`}
-                    sx={{
-                      backgroundColor: colors.primary.transparent,
-                      color: colors.primary.main,
-                    }}
-                  />
-                  {survey.demographicEnabled && (
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Survey Overview
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Typography variant="h4" color="primary">
+                        {filteredAnswers.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Responses
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Typography variant="h4" color="primary">
+                        {getGeneralStats().responsesPerDay}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Responses/Day
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Typography variant="h4" color="primary">
+                        {getGeneralStats().averageCompletionRate}%
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Completion Rate
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Typography variant="h4" color="primary">
+                        {survey.questions.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Questions
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+
+            {/* Section des filtres */}
+            <Grid item xs={12}>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <FilterPanel
+                  survey={survey}
+                  onApplyFilters={handleApplyFilters}
+                  onClearFilters={() => {
+                    setFilters({ demographic: {}, answers: {} });
+                    setFilteredAnswers(surveyAnswers);
+                  }}
+                />
+
+                {filteredAnswers.length !== surveyAnswers.length && (
+                  <Box sx={{ mt: 2 }}>
                     <Chip
-                      size="small"
-                      label="Demographic"
-                      sx={{
-                        backgroundColor: colors.primary.transparent,
-                        color: colors.primary.main,
+                      label={`Showing ${filteredAnswers.length} of ${surveyAnswers.length} responses`}
+                      onDelete={() => {
+                        setFilters({ demographic: {}, answers: {} });
+                        setFilteredAnswers(surveyAnswers);
                       }}
+                      color="primary"
                     />
-                  )}
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Tendances des réponses */}
+            <Grid item xs={12}>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Response Trends
+                </Typography>
+                <Box sx={{ height: 300 }}>
+                  <Line
+                    data={{
+                      labels: getResponseTrends(filteredAnswers).labels,
+                      datasets: [{
+                        label: 'Responses per Day',
+                        data: getResponseTrends(filteredAnswers).data,
+                        borderColor: colors.primary.main,
+                        backgroundColor: colors.primary.transparent,
+                        tension: 0.4
+                      }]
+                    }}
+                    options={commonChartOptions}
+                  />
                 </Box>
               </Paper>
             </Grid>
@@ -466,7 +752,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     defaultCollapseIcon={<ExpandMoreIcon />}
                     defaultExpandIcon={<ChevronRightIcon />}
                   >
-                    {renderPathTree(createPathTree(surveyAnswers))}
+                    {renderPathTree(createPathTree(filteredAnswers))}
                   </TreeView>
                 </Paper>
               </Grid>
@@ -559,40 +845,69 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             )}
 
             {/* Questions et réponses avec graphiques */}
-            {survey.questions.map((question) => {
-              const answerCounts = analyzeQuestionResponses(question);
-              const totalResponses = Object.values(answerCounts).reduce((a, b) => a + b, 0);
-              const mostFrequentAnswer = Object.entries(answerCounts).length > 0 
-                ? Object.entries(answerCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0]
-                : 'No answer';
+            {survey.questions.map((question: any, index: number) => {
+              const { answerCounts, total } = analyzeResponses(question.id);
+              const availableChartTypes = getAvailableChartTypes(question.type);
+              const currentChartType = chartTypes[question.id] || availableChartTypes[0];
 
               return (
                 <Grid item xs={12} key={question.id}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                      {question.text}
-                    </Typography>
-                    <Box sx={{ height: 300, mt: 2 }}>
-                      {renderChart(question, answerCounts)}
+                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      mb: 2 
+                    }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                          Question {index + 1}: {question.text}
+                        </Typography>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                          Type: {question.type}
+                        </Typography>
+                      </Box>
                     </Box>
-                    
-                    {/* Statistiques détaillées */}
+
+                    <Divider sx={{ my: 2 }} />
+
                     <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Statistics:
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2">
-                            Total responses: {totalResponses}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2">
-                            Most frequent answer: {mostFrequentAnswer}
-                          </Typography>
-                        </Grid>
-                      </Grid>
+                      <List>
+                        {Object.entries(answerCounts).map(([answer, count]) => (
+                          <ListItem key={answer}>
+                            <ListItemText
+                              primary={answer}
+                              secondary={`${count} responses (${Math.round((count / total) * 100)}%)`}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+
+                      <Box sx={{ height: 300, mt: 3 }}>
+                        {renderChart(question.id, currentChartType)}
+                      </Box>
+
+                      <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center' }}>
+                        {availableChartTypes.map((type) => (
+                          <Button
+                            key={type}
+                            onClick={() => setChartTypes(prev => ({ ...prev, [question.id]: type }))}
+                            variant={currentChartType === type ? 'contained' : 'outlined'}
+                            startIcon={getChartIcon(type)}
+                            sx={{
+                              ...(currentChartType === type ? {
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                              } : {
+                                color: '#667eea',
+                                borderColor: 'rgba(102, 126, 234, 0.5)',
+                              })
+                            }}
+                          >
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </Button>
+                        ))}
+                      </Stack>
                     </Box>
                   </Paper>
                 </Grid>
@@ -603,4 +918,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       </DialogContent>
     </Dialog>
   );
+};
+
+// Fonction utilitaire pour calculer le nombre de jours entre deux dates
+const getDaysBetweenDates = (start: Date, end: Date) => {
+  return Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }; 
