@@ -1,12 +1,37 @@
 "use client";
 
 import "./globals.css";
-import { AuthProvider } from "../utils/AuthContext";
+import { AuthProvider } from "@/utils/AuthContext";
 import NavBar from "./components/NavBar";
-import { CircularProgress, Backdrop, Snackbar, Alert } from '@mui/material';
+import { CircularProgress, Backdrop } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { colors } from '../theme/colors';
+import { useAuth } from '@/utils/AuthContext';
+
+const AuthHandler = ({ children }: { children: React.ReactNode }) => {
+  const searchParams = useSearchParams();
+  const { login } = useAuth();
+
+  useEffect(() => {
+    const accessToken = searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
+    const auth = searchParams.get('auth');
+
+    if (accessToken && refreshToken && auth === 'success') {
+      try {
+        login(accessToken, refreshToken);
+        // Nettoyer l'URL
+        window.history.replaceState({}, document.title, '/');
+      } catch (error) {
+        console.error('Error processing auth tokens:', error);
+        window.location.href = '/login?error=auth_failed';
+      }
+    }
+  }, [searchParams, login]);
+
+  return <>{children}</>;
+};
 
 export default function RootLayout({
   children,
@@ -14,12 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
-  });
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsLoading(true);
@@ -29,10 +51,6 @@ export default function RootLayout({
 
     return () => clearTimeout(timer);
   }, [pathname]);
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
 
   return (
     <html lang="en">
@@ -54,23 +72,11 @@ export default function RootLayout({
           </Backdrop>
         )}
         <AuthProvider>
-          <NavBar />
-          {children}
+          <AuthHandler>
+            <NavBar />
+            {children}
+          </AuthHandler>
         </AuthProvider>
-        <Snackbar 
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={handleCloseSnackbar} 
-            severity={snackbar.severity}
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
       </body>
     </html>
   );

@@ -1,106 +1,344 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-require('dotenv').config();
-const sgMail = require('@sendgrid/mail');
-console.log('SendGrid API Key being used:', process.env.SENDGRID_API_KEY);
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-const authMiddleware = require('../middleware/authMiddleware'); // Import du middleware
-const fs = require('fs');
-const path = require('path');
-
 const router = express.Router();
+const sgMail = require('@sendgrid/mail');
+const authMiddleware = require('../middleware/auth');
 
-// Fonction pour convertir l'image en base64
-const getLogoAsBase64 = () => {
+// Configuration de Passport pour la sérialisation
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
   try {
-    const logoPath = path.join(__dirname, '..', 'images', 'logo-wide.png');
-    console.log('Logo path:', logoPath); // Pour déboguer le chemin
-    const logoBuffer = fs.readFileSync(logoPath);
-    return `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    const user = await User.findById(id);
+    done(null, user);
   } catch (error) {
-    console.error('Error reading logo file:', error);
-    return ''; // Retourne une chaîne vide si l'image n'est pas trouvée
+    done(error, null);
   }
-};
+});
 
-// Fonction pour envoyer un e-mail de vérification
-const sendVerificationEmail = async (email, verificationCode) => {
-  const msg = {
-    to: email,
-    from: process.env.EMAIL_FROM,
-    subject: 'Your Verification Code',
-    text: `Your verification code is: ${verificationCode}`,
-    html: `
-      <div style="text-align: center; font-family: Arial, sans-serif;">
-        <div style="margin-bottom: 30px;">
-          <h1 style="color: #4a90e2; font-size: 32px; font-weight: bold;">SurveyPro</h1>
-        </div>
-        <div style="padding: 20px; background-color: #f9f9f9; border-radius: 5px; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #333;">Your Verification Code</h2>
-          <p style="font-size: 32px; font-weight: bold; color: #4a90e2; margin: 20px 0; letter-spacing: 3px;">
-            ${verificationCode}
-          </p>
-          <p style="color: #666; margin-top: 20px;">
-            This code will expire in 1 hour. If you didn't request this code, please ignore this email.
-          </p>
-        </div>
-      </div>
-    `,
-  };
+// Configuration de Passport pour Google
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `http://localhost:5041/api/auth/google/callback`
+  },
+  async function(accessToken, refreshToken, profile, done) {
+    try {
+      console.log('Google Strategy - Starting user processing');
+      let user = await User.findOne({ email: profile.emails[0].value });
+      
+      if (user) {
+        // Mettre à jour les tokens si l'utilisateur existe
+        const newAccessToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_SECRET,
+          { expiresIn: '4h' }
+        );
+        const newRefreshToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        user.accessToken = newAccessToken;
+        user.refreshToken = newRefreshToken;
+        await user.save();
+        
+        return done(null, user);
+      }
 
-  try {
-    await sgMail.send(msg);
-    console.log(`Verification email sent to ${email}`);
-  } catch (error) {
-    console.error('Email sending error:', error.response?.body || error.message);
-    throw new Error('Failed to send verification email');
+      // Pour un nouvel utilisateur
+      // Créer d'abord l'utilisateur
+      user = new User({
+        username: profile.displayName,
+        email: profile.emails[0].value,
+        password: '',
+        isVerified: true,
+        authMethod: 'google'
+      });
+      
+      // Sauvegarder pour obtenir l'ID
+      await user.save();
+      
+      // Maintenant on peut générer les tokens avec l'ID
+      const newAccessToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '4h' }
+      );
+      const newRefreshToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Mettre à jour l'utilisateur avec les tokens
+      user.accessToken = newAccessToken;
+      user.refreshToken = newRefreshToken;
+      await user.save();
+      
+      return done(null, user);
+    } catch (error) {
+      console.error('Google Strategy Error:', error);
+      return done(error, null);
+    }
   }
-};
+));
 
-// Route d'inscription
+// Configuration de Passport pour GitHub
+passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: "http://localhost:5041/api/auth/github/callback",
+    scope: ['user:email']
+  },
+  async function(accessToken, refreshToken, profile, done) {
+    try {
+      console.log('GitHub Strategy - Starting user processing');
+      const emails = profile.emails;
+      let primaryEmail;
+      
+      if (!emails || emails.length === 0) {
+        console.error('No emails available from GitHub');
+        return done(new Error('Aucun email disponible depuis GitHub'));
+      }
+
+      primaryEmail = emails[0].value;
+      console.log('Primary email found:', primaryEmail);
+
+      let user = await User.findOne({ email: primaryEmail });
+      console.log('Existing user:', user);
+      
+      if (user) {
+        // Mettre à jour les tokens si l'utilisateur existe
+        const newAccessToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_SECRET,
+          { expiresIn: '4h' }
+        );
+        const newRefreshToken = jwt.sign(
+          { id: user._id },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        user.accessToken = newAccessToken;
+        user.refreshToken = newRefreshToken;
+        await user.save();
+        
+        return done(null, user);
+      }
+
+      // Pour un nouvel utilisateur
+      // Créer d'abord l'utilisateur
+      user = new User({
+        username: profile.username || profile.displayName,
+        email: primaryEmail,
+        password: '',
+        isVerified: true,
+        authMethod: 'github'
+      });
+      
+      // Sauvegarder pour obtenir l'ID
+      await user.save();
+      
+      // Maintenant on peut générer les tokens avec l'ID
+      const newAccessToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '4h' }
+      );
+      const newRefreshToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Mettre à jour l'utilisateur avec les tokens
+      user.accessToken = newAccessToken;
+      user.refreshToken = newRefreshToken;
+      await user.save();
+      
+      return done(null, user);
+    } catch (error) {
+      console.error('GitHub Strategy Error:', error);
+      return done(error, null);
+    }
+  }
+));
+
+router.use(passport.initialize());
+
+router.get('/google', (req, res, next) => {
+  console.log('Google Auth Route - Starting authentication');
+  // Forcer une nouvelle session
+  req.logout((err) => {
+    if (err) {
+      console.error('Erreur lors de la déconnexion:', err);
+    }
+    passport.authenticate('google', { 
+      scope: ['profile', 'email'],
+      prompt: 'select_account' // Force Google à afficher la page de sélection de compte
+    })(req, res, next);
+  });
+});
+
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
+  }),
+  async (req, res) => {
+    try {
+      console.log('Google Callback - Starting response handling');
+      console.log('Google Callback - User:', req.user);
+      
+      if (!req.user) {
+        console.error('No user data in request');
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+      }
+
+      const accessToken = jwt.sign(
+        { 
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '4h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: req.user._id }, 
+        process.env.JWT_REFRESH_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        user: {
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }
+      };
+
+      console.log('Redirecting with tokens:', tokenData);
+
+      const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      console.log('Redirect URL:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google Callback Error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+    }
+  }
+);
+
+router.get('/github', (req, res, next) => {
+  console.log('GitHub Auth Route - Starting authentication');
+  passport.authenticate('github', { 
+    scope: ['user:email']
+  })(req, res, next);
+});
+
+router.get('/github/callback',
+  passport.authenticate('github', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
+  }),
+  async (req, res) => {
+    try {
+      console.log('GitHub Callback - Starting response handling');
+      console.log('GitHub Callback - User:', req.user);
+      
+      if (!req.user) {
+        console.error('No user data in request');
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+      }
+
+      const accessToken = jwt.sign(
+        { 
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '4h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: req.user._id }, 
+        process.env.JWT_REFRESH_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        user: {
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }
+      };
+
+      console.log('Redirecting with tokens:', tokenData);
+
+      const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      console.log('Redirect URL:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('GitHub Callback Error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+    }
+  }
+);
+
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
-
-    // Vérifier si l'utilisateur ou l'email existe déjà
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    
     if (existingUser) {
       return res.status(400).json({
-        message: existingUser.email === email
-          ? 'Email déjà utilisé.'
-          : 'Nom d’utilisateur déjà utilisé.',
+        message: existingUser.email === email ? 'Email déjà utilisé' : 'Nom d\'utilisateur déjà utilisé'
       });
     }
 
-    // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Générer un code de vérification
     const verificationCode = Math.floor(100000 + Math.random() * 900000);
 
-    // Créer et enregistrer l'utilisateur
     const newUser = new User({
       username,
       email,
       password: hashedPassword,
       verificationCode,
-      isVerified: false,
+      isVerified: false
     });
     await newUser.save();
 
-    // Envoyer le code de vérification par e-mail
     await sendVerificationEmail(email, verificationCode);
 
     res.status(201).json({ message: 'Inscription réussie ! Vérifiez votre e-mail pour activer votre compte.' });
   } catch (error) {
-    console.error('Erreur lors de l’inscription :', error);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    console.error('Erreur lors de l\'inscription:', error);
+    res.status(500).json({ message: 'Erreur du serveur' });
   }
 });
 
-// Route de vérification d'e-mail
 router.post('/verify-email', async (req, res) => {
   const { email, verificationCode } = req.body;
 
@@ -110,208 +348,195 @@ router.post('/verify-email', async (req, res) => {
 
     if (user.verificationCode === parseInt(verificationCode)) {
       user.isVerified = true;
-      user.verificationCode = null; // Clear the code
+      user.verificationCode = null;
       await user.save();
       res.status(200).json({ message: 'Email vérifié avec succès.' });
     } else {
       res.status(400).json({ message: 'Code de vérification incorrect.' });
     }
   } catch (error) {
-    console.error('Erreur lors de la vérification de l’e-mail :', error.message);
+    console.error('Erreur lors de la vérification:', error);
     res.status(500).json({ message: 'Erreur du serveur.' });
   }
 });
 
-// Route de connexion
 router.post('/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-  
-      const user = await User.findOne({ email });
-      if (!user) return res.status(400).json({ message: 'Account not found' });
-  
-      // Ajouter le statut de vérification dans la réponse
-      const isVerified = user.isVerified;
-      if (!isVerified) {
-        return res.status(403).json({
-          message: 'Account not verified. Please verify your email.',
-          isVerified,
-        });
-      }
-  
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Wrong password' });
-  
-      const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '4h' });
-      const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-  
-      // Mettre à jour les tokens dans la base de données
-      user.accessToken = accessToken;
-      user.refreshToken = refreshToken;
-      await user.save();
-  
-      // Inclure le statut `isVerified` dans la réponse
-      res.status(200).json({ accessToken, refreshToken, isVerified });
-    } catch (error) {
-      console.error('Erreur lors de la connexion :', error);
-      res.status(500).json({ message: 'Erreur du serveur.' });
-    }
-  });
-  
+  console.log('Login route hit:', req.body);
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    
+    if (!user) return res.status(400).json({ message: "Compte non trouvé" });
 
-// Route de rafraîchissement du token
+    // Vérifier si c'est un compte GitHub ou Google
+    if (user.authMethod === 'github' || user.authMethod === 'google') {
+      return res.status(400).json({ 
+        error: 'existing_user',
+        message: `Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`,
+        authMethod: user.authMethod,
+        redirectUrl: `/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message: "Compte non vérifié. Veuillez vérifier votre email.",
+        isVerified: false
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Mot de passe incorrect" });
+
+    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "4h" });
+    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+
+    user.accessToken = accessToken;
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(200).json({ accessToken, refreshToken, isVerified: true });
+  } catch (error) {
+    console.error("Erreur lors de la connexion:", error);
+    res.status(500).json({ message: "Erreur du serveur" });
+  }
+});
+
 router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken) return res.status(401).json({ message: 'Token de rafraîchissement manquant.' });
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Token de rafraîchissement manquant" });
+  }
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
 
     if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({ message: 'Token de rafraîchissement invalide.' });
+      return res.status(403).json({ message: "Token de rafraîchissement invalide" });
     }
 
-    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
     user.accessToken = newAccessToken;
     await user.save();
 
     res.status(200).json({ accessToken: newAccessToken });
   } catch (error) {
-    console.error('Erreur lors du rafraîchissement du token :', error.message);
-    res.status(403).json({ message: 'Token de rafraîchissement invalide.' });
+    console.error("Erreur lors du rafraîchissement du token:", error);
+    res.status(403).json({ message: "Token de rafraîchissement invalide" });
   }
 });
 
-// Route de déconnexion
 router.post('/logout', async (req, res) => {
   const { refreshToken } = req.body;
 
   try {
     const user = await User.findOne({ refreshToken });
-    if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé.' });
+    if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé' });
 
     user.accessToken = null;
     user.refreshToken = null;
     await user.save();
 
-    res.status(200).json({ message: 'Déconnexion réussie.' });
+    res.status(200).json({ message: 'Déconnexion réussie' });
   } catch (error) {
-    console.error('Erreur lors de la déconnexion :', error.message);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    console.error('Erreur lors de la déconnexion:', error);
+    res.status(500).json({ message: 'Erreur du serveur' });
   }
 });
 
-// Route pour le profil utilisateur
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
     res.status(200).json({ user });
   } catch (error) {
-    console.error('Erreur dans /profile :', error);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    console.error('Erreur dans /profile:', error);
+    res.status(500).json({ message: 'Erreur du serveur' });
   }
 });
 
-// Route pour changer le mot de passe
 router.put('/password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
-    // Vérifier l'ancien mot de passe
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Mot de passe actuel incorrect.' });
+      return res.status(400).json({ message: 'Mot de passe actuel incorrect' });
     }
 
-    // Hacher le nouveau mot de passe
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: 'Mot de passe mis à jour avec succès.' });
+    res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
   } catch (error) {
     console.error('Erreur lors du changement de mot de passe:', error);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    res.status(500).json({ message: 'Erreur du serveur' });
   }
 });
 
-// Nouvelle route pour renvoyer le code de vérification
 router.post('/resend-verification', async (req, res) => {
   try {
     const { email } = req.body;
-
-    // Vérifier si l'utilisateur existe
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    }
-
-    // Vérifier si l'utilisateur n'est pas déjà vérifié
-    if (user.isVerified) {
-      return res.status(400).json({ message: 'Cet email est déjà vérifié.' });
-    }
-
-    // Générer un nouveau code de vérification
-    const verificationCode = Math.floor(100000 + Math.random() * 900000);
     
-    // Mettre à jour le code de vérification dans la base de données
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Cet email est déjà vérifié' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000);
     user.verificationCode = verificationCode;
     await user.save();
 
-    // Envoyer le nouveau code par email
     await sendVerificationEmail(email, verificationCode);
 
-    res.status(200).json({ message: 'Un nouveau code de vérification a été envoyé.' });
+    res.status(200).json({ message: 'Un nouveau code de vérification a été envoyé' });
   } catch (error) {
-    console.error('Erreur lors du renvoi du code :', error);
-    res.status(500).json({ message: 'Erreur lors de l\'envoi du nouveau code.' });
+    console.error('Erreur lors du renvoi du code:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'envoi du nouveau code' });
   }
 });
 
-// Route pour mot de passe oublié
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(200).json({ 
-        message: 'If an account exists with this email, you will receive reset instructions.' 
+        message: "Si un compte existe avec cet email, vous recevrez les instructions de réinitialisation."
       });
     }
 
-    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
+    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // Expires in 1 hour
+    user.resetPasswordExpires = Date.now() + 3600000;
     await user.save();
-
-    if (!process.env.FRONTEND_URL) {
-      console.error('FRONTEND_URL is not defined in environment variables');
-      throw new Error('Configuration error');
-    }
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     
     const msg = {
       to: email,
       from: process.env.EMAIL_FROM,
-      subject: 'Reset Your Password',
+      subject: "Réinitialisation de mot de passe",
       html: `
         <div style="text-align: center; font-family: Arial, sans-serif;">
-          <h2>Password Reset Request</h2>
-          <p>You have requested to reset your password.</p>
-          <p>Click the button below to set a new password:</p>
+          <h2>Demande de réinitialisation de mot de passe</h2>
+          <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+          <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
           <a href="${resetUrl}" style="
             background-color: #4a90e2;
             color: white;
@@ -320,9 +545,9 @@ router.post('/forgot-password', async (req, res) => {
             border-radius: 5px;
             display: inline-block;
             margin: 20px 0;
-          ">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you did not request this reset, please ignore this email.</p>
+          ">Réinitialiser le mot de passe</a>
+          <p>Ce lien expirera dans 1 heure.</p>
+          <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
         </div>
       `
     };
@@ -330,16 +555,15 @@ router.post('/forgot-password', async (req, res) => {
     await sgMail.send(msg);
 
     res.status(200).json({ 
-      message: 'Reset instructions have been sent to your email.' 
+      message: "Les instructions de réinitialisation ont été envoyées à votre email."
     });
 
   } catch (error) {
-    console.error('Error during password reset request:', error);
-    res.status(500).json({ message: 'An error occurred while sending reset instructions.' });
+    console.error("Erreur lors de la demande de réinitialisation:", error);
+    res.status(500).json({ message: "Une erreur est survenue lors de l'envoi des instructions." });
   }
 });
 
-// Route pour réinitialiser le mot de passe
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -351,7 +575,7 @@ router.post('/reset-password', async (req, res) => {
 
     if (!user) {
       return res.status(400).json({
-        message: 'Reset link is invalid or has expired.'
+        message: "Le lien de réinitialisation est invalide ou a expiré."
       });
     }
 
@@ -363,13 +587,13 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message: 'Your password has been successfully reset.'
+      message: "Le mot de passe a été réinitialisé avec succès."
     });
 
   } catch (error) {
-    console.error('Error during password reset:', error);
+    console.error("Erreur lors de la réinitialisation du mot de passe:", error);
     res.status(500).json({
-      message: 'An error occurred while resetting your password.'
+      message: "Une erreur est survenue lors de la réinitialisation du mot de passe."
     });
   }
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../utils/AuthContext';
 import { useRouter } from 'next/navigation';
 import { colors } from '../../theme/colors';
@@ -13,8 +13,11 @@ import {
   Container,
   Alert,
   CircularProgress,
+  Divider,
 } from '@mui/material';
 import axios from 'axios';
+import GoogleIcon from '@mui/icons-material/Google';
+import GitHubIcon from '@mui/icons-material/GitHub';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -59,45 +62,55 @@ const LoginPage: React.FC = () => {
     setPasswordError(validatePassword(newPassword));
   };
 
+  useEffect(() => {
+    console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation avant soumission
-    const emailValidation = validateEmail(email);
-    const passwordValidation = validatePassword(password);
-
-    if (emailValidation) {
-      setEmailError(emailValidation);
-      return;
-    }
-
-    if (passwordValidation) {
-      setPasswordError(passwordValidation);
-      return;
-    }
-
-    setError('');
     setIsLoading(true);
+    setError('');
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+    const apiUrl = `${baseUrl}/api/auth/login`;
+    
+    console.log('Full API URL:', apiUrl);
 
     try {
-      const response = await axios.post(
-        'http://localhost:5041/api/auth/login',
-        {
-          email,
-          password,
-        }
-      );
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
+      };
+
+      console.log('Request config:', config);
+      console.log('Request data:', { email, password });
+
+      const response = await axios.post(apiUrl, {
+        email,
+        password
+      }, config);
+
+      console.log('Response:', response);
+      
       const { accessToken, refreshToken } = response.data;
       login(accessToken, refreshToken);
       onLoginSuccess();
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError('Invalid email or password');
-      } else if (err.response?.status === 404) {
-        setError('Account not found');
-      } else {
-        setError(err.response?.data?.message || 'An error occurred during login');
+      console.error('Detailed error:', {
+        message: err.message,
+        response: err.response,
+        config: err.config
+      });
+      
+      if (err.response?.data?.error === 'existing_user') {
+        window.location.href = err.response.data.redirectUrl;
+        return;
       }
+      
+      setError(err.response?.data?.message || 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }
@@ -121,6 +134,60 @@ const LoginPage: React.FC = () => {
       router.push('/');
     }
   };
+
+  const handleGoogleLogin = () => {
+    try {
+      console.log('Début de la déconnexion Google');
+      
+      // Nettoyer le localStorage
+      localStorage.clear();
+      console.log('localStorage nettoyé');
+      
+      // Vérification que le localStorage est vide
+      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      
+      // Attendre un court instant avant la redirection
+      setTimeout(() => {
+        console.log('Redirection vers Google...');
+        window.location.href = 'http://localhost:5041/api/auth/google';
+      }, 100);
+      
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion Google:', error);
+    }
+  };
+
+  const handleGithubLogin = () => {
+    try {
+      console.log('Début de la déconnexion GitHub');
+      
+      // Nettoyer le localStorage
+      localStorage.clear(); // Supprime tout le localStorage
+      console.log('localStorage nettoyé');
+      
+      // Vérification que le localStorage est vide
+      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      
+      // Attendre un court instant avant la redirection
+      setTimeout(() => {
+        console.log('Redirection vers GitHub...');
+        window.location.href = 'http://localhost:5041/api/auth/github';
+      }, 100);
+      
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion GitHub:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Récupérer le paramètre d'erreur de l'URL
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    
+    if (errorParam === 'existing_user') {
+      setError('Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
+    }
+  }, []);
 
   return (
     <Box
@@ -187,7 +254,20 @@ const LoginPage: React.FC = () => {
             Log in
           </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                width: '100%',
+                '& .MuiAlert-message': {
+                  width: '100%'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
@@ -227,6 +307,28 @@ const LoginPage: React.FC = () => {
                 },
               }}
             />
+
+            <Divider sx={{ my: 3 }}>OR</Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with Google
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              onClick={handleGithubLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with GitHub
+            </Button>
 
             <Button
               type="submit"
