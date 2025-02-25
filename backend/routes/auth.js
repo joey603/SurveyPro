@@ -598,4 +598,34 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Ajouter cette fonction avant les routes
+const sendVerificationEmail = async (email, verificationCode) => {
+  const msg = {
+    to: email,
+    from: process.env.EMAIL_FROM,
+    subject: 'Vérification de votre compte SurveyPro',
+    html: `
+      <div style="text-align: center; font-family: Arial, sans-serif;">
+        <h2>Bienvenue sur SurveyPro !</h2>
+        <p>Votre code de vérification est :</p>
+        <h1 style="
+          color: #4a90e2;
+          font-size: 36px;
+          margin: 20px 0;
+          letter-spacing: 5px;
+        ">${verificationCode}</h1>
+        <p>Ce code expirera dans 24 heures.</p>
+        <p>Si vous n'avez pas créé de compte sur SurveyPro, vous pouvez ignorer cet email.</p>
+      </div>
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email:', error);
+    throw new Error('Erreur lors de l\'envoi de l\'email de vérification');
+  }
+};
+
 module.exports = router;
