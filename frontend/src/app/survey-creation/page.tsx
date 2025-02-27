@@ -49,6 +49,7 @@ import { useRouter } from 'next/navigation';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SendIcon from '@mui/icons-material/Send';
 
 type Question = {
   id: string;
@@ -640,7 +641,6 @@ const SurveyCreationPage = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitted(true);
-    setIsSubmitting(true);
     try {
       // Validation des données
       const errors = validateFormData(data);
@@ -667,41 +667,45 @@ const SurveyCreationPage = () => {
         questions: data.questions
       };
 
-      // Si le sondage est privé, montrer d'abord la boîte de dialogue
-      if (data.isPrivate) {
-        setNotification({
-          message: 'Voulez-vous créer ce sondage privé ?',
-          severity: 'info',
-          open: true,
-          action: async () => {
-            try {
-              setShowSuccess(true); // Montrer l'animation
-              const result = await createSurvey(surveyData, token);
-              await cleanupUnusedMedia();
-              
-              // Une fois le sondage créé, rediriger
-              setTimeout(() => {
-                router.push('/survey-answer');
-              }, 1650);
-              
-            } catch (error: any) {
-              setShowSuccess(false);
-              setNotification({
-                message: error.message || 'Error creating survey',
-                severity: 'error',
-                open: true
-              });
-            }
-          }
-        });
-      } else {
-        // Pour les sondages publics, créer directement
+      setIsSubmitting(true);
+      try {
         const result = await createSurvey(surveyData, token);
         await cleanupUnusedMedia();
-        setShowSuccess(true);
-        setTimeout(() => {
-          router.push('/survey-answer');
-        }, 1650);
+        
+        if (data.isPrivate) {
+          const surveyLink = `${window.location.origin}/survey-answer?surveyId=${result._id}`;
+          
+          // Afficher la notification avec le lien
+          setNotification({
+            message: 'Votre sondage privé a été créé avec succès !',
+            severity: 'success',
+            open: true,
+            link: surveyLink,
+            action: () => {
+              navigator.clipboard.writeText(surveyLink);
+              setNotification(prev => ({
+                ...prev,
+                message: 'Lien copié dans le presse-papiers !',
+              }));
+            }
+          });
+        } else {
+          setNotification({
+            message: 'Votre sondage a été créé avec succès !',
+            severity: 'success',
+            open: true
+          });
+        }
+
+      } catch (error: any) {
+        setShowSuccess(false);
+        setNotification({
+          message: error.message || 'Error creating survey',
+          severity: 'error',
+          open: true
+        });
+      } finally {
+        setIsSubmitting(false);
       }
 
     } catch (error: any) {
@@ -711,8 +715,6 @@ const SurveyCreationPage = () => {
         severity: 'error',
         open: true
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -1622,30 +1624,24 @@ const SurveyCreationPage = () => {
                 </Button>
 
                 <Button
-                  type="submit"
+                  onClick={handleSubmit(onSubmit)}
                   variant="contained"
                   disabled={isSubmitting}
-                  startIcon={isSubmitting ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <CheckCircleIcon />
-                  )}
+                  startIcon={
+                    isSubmitting ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      <SendIcon />
+                    )
+                  }
                   sx={{
-                    background: colors.primary.gradient,
-                    color: 'white',
-                    boxShadow: 'none',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     '&:hover': {
-                      background: colors.primary.hover,
-                      boxShadow: 'none',
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                     },
-                    '&.Mui-disabled': {
-                      background: colors.primary.gradient,
-                      opacity: 0.7,
-                      color: 'white',
-                    }
                   }}
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Survey'}
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
                 </Button>
               </Box>
             </Box>
@@ -1740,12 +1736,22 @@ const SurveyCreationPage = () => {
           open={notification.open}
           onClose={() => {
             setNotification(prev => ({ ...prev, open: false }));
-            if (notification.action) {
-              notification.action();
+            // Démarrer l'animation et la redirection après la fermeture de la boîte de dialogue
+            setShowSuccess(true);
+            setTimeout(() => {
+              router.push('/survey-answer');
+            }, 2000);
+          }}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
             }
           }}
         >
-          <DialogContent>
+          <DialogContent sx={{ mt: 2 }}>
             <Alert 
               severity={notification.severity}
               sx={{ mb: notification.link ? 2 : 0 }}
@@ -1753,45 +1759,64 @@ const SurveyCreationPage = () => {
               {notification.message}
             </Alert>
             {notification.link && (
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  Voici le lien pour accéder à votre sondage :
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Lien de partage du sondage :
                 </Typography>
-                <TextField
-                  fullWidth
-                  value={notification.link}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => {
-                            navigator.clipboard.writeText(notification.link!);
-                            setNotification(prev => ({
-                              ...prev,
-                              message: 'Lien copié dans le presse-papiers !',
-                              severity: 'success'
-                            }));
-                          }}
-                        >
-                          <ContentCopyIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    )
+                <Paper
+                  sx={{
+                    p: 2,
+                    backgroundColor: '#f5f5f5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
                   }}
-                />
+                >
+                  <TextField
+                    fullWidth
+                    value={notification.link}
+                    variant="outlined"
+                    size="small"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { backgroundColor: 'white' }
+                    }}
+                  />
+                  <Tooltip title="Copier le lien">
+                    <IconButton
+                      onClick={notification.action}
+                      sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
               </Box>
             )}
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button 
               onClick={() => {
                 setNotification(prev => ({ ...prev, open: false }));
-                if (notification.action) {
-                  notification.action();
-                }
+                // Démarrer l'animation et la redirection après la fermeture de la boîte de dialogue
+                setShowSuccess(true);
+                setTimeout(() => {
+                  router.push('/survey-answer');
+                }, 2000);
               }}
               variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
             >
               OK
             </Button>
