@@ -1887,15 +1887,15 @@ const SurveyAnswerPage: React.FC = () => {
                         </Typography>
                         {survey.isPrivate && (
                           <Chip
-                            icon={<LockIcon />}
+                            icon={<LockIcon sx={{ fontSize: '0.5rem' }} />}
                             label="Private"
                             size="small"
                             sx={{
                               ml: 1,
-                              backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                              color: '#ff0000',
+                              backgroundColor: 'rgba(0, 198, 212, 0.1)',
+                              color: '#00C6D4',
                               '& .MuiChip-icon': {
-                                color: '#ff0000'
+                                color: '#00C6D4'
                               },
                               height: '24px',
                               fontWeight: 500
