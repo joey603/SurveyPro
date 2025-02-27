@@ -641,19 +641,20 @@ const SurveyCreationPage = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitted(true);
-    try {
-      // Validation des données
-      const errors = validateFormData(data);
-      if (errors) {
-        setValidationErrors(errors);
-        setNotification({
-          message: 'Please fill in all required fields',
-          severity: 'error',
-          open: true
-        });
-        return;
-      }
+    
+    // Validation des données
+    const errors = validateFormData(data);
+    if (errors) {
+      setValidationErrors(errors);
+      setNotification({
+        message: 'Please fill in all required fields',
+        severity: 'error',
+        open: true
+      });
+      return; // Arrête l'exécution ici si il y a des erreurs
+    }
 
+    try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('No authentication token found');
@@ -690,7 +691,7 @@ const SurveyCreationPage = () => {
           });
         } else {
           setNotification({
-            message: 'Votre sondage a été créé avec succès !',
+            message: 'Your survey has been created successfully!',
             severity: 'success',
             open: true
           });
@@ -1806,6 +1807,13 @@ const SurveyCreationPage = () => {
             </Button>
             <Button 
               onClick={() => {
+                // Si c'est un message d'erreur, fermer simplement la notification
+                if (notification.severity === 'error') {
+                  setNotification(prev => ({ ...prev, open: false }));
+                  return;
+                }
+                
+                // Si c'est un succès, procéder à la redirection
                 setNotification(prev => ({ ...prev, open: false }));
                 setShowSuccess(true);
                 setTimeout(() => {
