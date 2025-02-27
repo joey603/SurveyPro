@@ -32,7 +32,7 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions
+  CardActions,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -60,6 +60,7 @@ import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import axios from 'axios';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import LockIcon from '@mui/icons-material/Lock';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -98,6 +99,7 @@ interface Survey {
   nodes?: any[];
   edges?: any[];
   userId?: { username: string };
+  isPrivate?: boolean;
 }
 
 interface DemographicData {
@@ -302,6 +304,11 @@ const SurveyAnswerPage: React.FC = () => {
 
   const filteredSurveys = surveys
     .filter(survey => {
+      // Vérifier d'abord si le sondage est privé
+      if (survey.isPrivate) {
+        return false; // Ne pas afficher les sondages privés
+      }
+
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
@@ -1863,6 +1870,23 @@ const SurveyAnswerPage: React.FC = () => {
                         >
                           {survey.title}
                         </Typography>
+                        {survey.isPrivate && (
+                          <Chip
+                            icon={<LockIcon />}
+                            label="Private"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                              color: '#ff0000',
+                              '& .MuiChip-icon': {
+                                color: '#ff0000'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
                         {survey.isDynamic && (
                           <Chip
                             icon={<AutoGraphIcon />}

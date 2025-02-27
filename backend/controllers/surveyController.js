@@ -34,6 +34,7 @@ exports.createSurvey = async (req, res) => {
       title: req.body.title,
       description: req.body.description,
       demographicEnabled: req.body.demographicEnabled,
+      isPrivate: req.body.isPrivate || false,
       questions: processedQuestions,
       userId: req.user.id,
       createdAt: new Date()
@@ -211,23 +212,28 @@ exports.getAllSurveysForAnswering = async (req, res) => {
   try {
     console.log('Début de la recherche des sondages');
     
-    // Ajout de plus de logs pour le debugging
-    const query = Survey.find({})
-      .select('_id title description questions demographicEnabled createdAt')
+    // Création du filtre pour la requête
+    const filter = {
+      $or: [
+        { isPrivate: false },
+        { userId: req.user.id }
+      ]
+    };
+    
+    console.log('Filtre de recherche:', filter);
+    
+    const surveys = await Survey.find(filter)
+      .select('_id title description questions demographicEnabled createdAt isPrivate')
       .sort({ createdAt: -1 });
     
-    console.log('Query MongoDB:', query.getFilter());
+    console.log('Nombre de sondages trouvés:', surveys.length);
     
-    const surveys = await query;
-    console.log('Résultat brut de MongoDB:', surveys);
-    console.log('Nombre de sondages trouvés:', surveys ? surveys.length : 0);
-    
-    if (!surveys || !surveys.length) {
+    if (!surveys || surveys.length === 0) {
       console.log('Aucun sondage trouvé');
       return res.status(404).json({ 
         message: "Aucun sondage disponible.",
         debug: {
-          query: query.getFilter(),
+          filter,
           modelName: Survey.modelName,
           collectionName: Survey.collection.name
         }

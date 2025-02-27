@@ -37,6 +37,10 @@ const surveySchema = new mongoose.Schema({
     required: true
   },
   description: String,
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
   demographicEnabled: {
     type: Boolean,
     default: false

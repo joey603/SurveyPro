@@ -45,6 +45,8 @@ import { colors } from '../../theme/colors';
 import Lottie from "lottie-react";
 import validationAnimation from "@/assets/animation-check.json";
 import { useRouter } from 'next/navigation';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
 
 type Question = {
   id: string;
@@ -60,6 +62,7 @@ type FormData = {
   title: string;
   description: string;
   demographicEnabled: boolean;
+  isPrivate: boolean;
   questions: Question[];
 };
 
@@ -97,6 +100,7 @@ const SurveyCreationPage = () => {
         title: '',
         description: '',
         demographicEnabled: false,
+        isPrivate: false,
         questions: [],
       },
     });
@@ -412,6 +416,7 @@ const SurveyCreationPage = () => {
       title: '',
       description: '',
       demographicEnabled: false,
+      isPrivate: false,
       questions: []
     });
     
@@ -657,6 +662,7 @@ const SurveyCreationPage = () => {
         title: data.title,
         description: data.description,
         demographicEnabled: data.demographicEnabled,
+        isPrivate: data.isPrivate,
         questions: data.questions
       };
 
@@ -1148,6 +1154,40 @@ const SurveyCreationPage = () => {
                   arrow
                 >
                   <HelpOutlineIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={watch('isPrivate')}
+                      onChange={(e) => {
+                        setValue('isPrivate', e.target.checked);
+                      }}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {watch('isPrivate') ? (
+                        <LockIcon sx={{ color: '#667eea' }} />
+                      ) : (
+                        <PublicIcon sx={{ color: '#667eea' }} />
+                      )}
+                      <Typography>
+                        {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Tooltip 
+                  title="Private surveys are only visible to you, while public surveys can be accessed by all users"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
                 </Tooltip>
               </Box>
 
