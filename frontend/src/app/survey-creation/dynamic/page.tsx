@@ -23,7 +23,9 @@ import {
   Slider,
   Rating,
   Alert,
-  CircularProgress
+  CircularProgress,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -45,6 +47,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Zoom } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const educationOptions = [
   'High School',
@@ -86,6 +89,14 @@ const questionTypes = [
   { value: 'date', label: 'Date Picker' },
 ];
 
+interface NotificationState {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  link?: string;
+  action?: () => void;
+}
+
 export default function DynamicSurveyCreation() {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -113,11 +124,7 @@ export default function DynamicSurveyCreation() {
   const router = useRouter();
 
   // Ajouter l'état pour les notifications
-  const [notification, setNotification] = useState<{
-    show: boolean;
-    message: string;
-    type: 'error' | 'success' | 'info' | 'warning';
-  }>({
+  const [notification, setNotification] = useState<NotificationState>({
     show: false,
     message: '',
     type: 'info'
@@ -276,12 +283,11 @@ export default function DynamicSurveyCreation() {
         return;
       }
 
-      // Réorganiser le flow avant de soumettre
+      // Préparer les données du sondage
       flowRef.current.reorganizeFlow();
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const allNodes = flowRef.current.getNodes();
-      
       const cleanedNodes = allNodes.map(node => ({
         ...node,
         data: {
@@ -302,16 +308,39 @@ export default function DynamicSurveyCreation() {
         edges
       };
 
-      const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
-      console.log('Sondage créé avec succès:', response);
-
-      // Afficher l'animation de succès
-      setShowSuccess(true);
-
-      // Attendre que l'animation se termine (environ 2 secondes) puis rediriger
-      setTimeout(() => {
-        router.push('/survey-answer');
-      }, 2000);
+      // Si le sondage est privé, montrer d'abord la boîte de dialogue
+      if (data.isPrivate) {
+        try {
+          const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
+          const surveyLink = `${window.location.origin}/survey-answer?surveyId=${response._id}`;
+          
+          setNotification({
+            show: true,
+            message: 'Votre sondage privé a été créé avec succès !',
+            type: 'success',
+            link: surveyLink,
+            action: () => {
+              setShowSuccess(true);
+              setTimeout(() => {
+                router.push('/survey-answer');
+              }, 2000);
+            }
+          });
+        } catch (error: any) {
+          setNotification({
+            show: true,
+            message: error.message || 'Erreur lors de la création du sondage',
+            type: 'error'
+          });
+        }
+      } else {
+        // Pour les sondages publics, comportement inchangé
+        const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
+        setShowSuccess(true);
+        setTimeout(() => {
+          router.push('/survey-answer');
+        }, 2000);
+      }
 
     } catch (error: any) {
       console.error('Erreur lors de la création du sondage:', error);
@@ -858,18 +887,93 @@ export default function DynamicSurveyCreation() {
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       {/* Notification */}
       {notification.show && (
-        <Alert 
-          severity={notification.type}
-          sx={{ 
-            position: 'fixed ', 
-            top: 20, 
-            right: '50%', 
-            zIndex: 9999 
+        <Dialog
+          open={notification.show}
+          onClose={() => {
+            setNotification(prev => ({ ...prev, show: false }));
           }}
-          onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+          maxWidth="sm"
+          fullWidth
         >
-          {notification.message}
-        </Alert>
+          <DialogContent>
+            <Alert 
+              severity={notification.type}
+              sx={{ mb: notification.link ? 2 : 0 }}
+            >
+              {notification.message}
+            </Alert>
+            {notification.link && (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Voici le lien pour répondre à votre sondage privé :
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    backgroundColor: '#f5f5f5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    value={notification.link}
+                    variant="outlined"
+                    size="small"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { backgroundColor: 'white' }
+                    }}
+                  />
+                  <Tooltip title="Copier le lien">
+                    <IconButton
+                      onClick={() => {
+                        navigator.clipboard.writeText(notification.link!);
+                        setNotification(prev => ({
+                          ...prev,
+                          message: 'Lien copié dans le presse-papiers !',
+                          type: 'success'
+                        }));
+                      }}
+                      sx={{
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Partagez ce lien uniquement avec les personnes que vous souhaitez inviter à répondre à votre sondage.
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, show: false }));
+                if (notification.action) {
+                  notification.action();
+                }
+              }}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                }
+              }}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       <Paper sx={{ p: 3, mb: 3 }}>

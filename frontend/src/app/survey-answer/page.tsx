@@ -248,13 +248,33 @@ const SurveyAnswerPage: React.FC = () => {
           throw new Error('Aucun token d\'authentification trouvé');
         }
 
+        // Vérifier d'abord s'il y a un ID de survey dans l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSurveyId = urlParams.get('surveyId');
+
         // Charger tous les sondages
         const allSurveys = await fetchAvailableSurveys(token);
         console.log('Sondages chargés:', allSurveys);
         
-        // Filtrer les sondages privés avant de les définir
-        const publicSurveys = allSurveys.filter(survey => !survey.isPrivate);
-        
+        if (sharedSurveyId) {
+          // Si on a un ID dans l'URL, chercher ce sondage spécifique
+          const sharedSurvey = allSurveys.find(
+            (survey: { _id: string }) => survey._id === sharedSurveyId
+          );
+          
+          if (sharedSurvey) {
+            // Si c'est un sondage privé ou public, l'afficher directement
+            setSelectedSurvey(sharedSurvey);
+            setSurveys([sharedSurvey]); // Afficher uniquement ce sondage dans la liste
+          } else {
+            setError('Sondage non trouvé');
+          }
+        } else {
+          // Si pas d'ID dans l'URL, afficher uniquement les sondages publics
+          const publicSurveys = allSurveys.filter(survey => !survey.isPrivate);
+          setSurveys(publicSurveys);
+        }
+
         // Charger les IDs des sondages déjà répondus
         const answeredIds = await fetchAnsweredSurveys();
         if (Array.isArray(answeredIds)) {
@@ -262,19 +282,6 @@ const SurveyAnswerPage: React.FC = () => {
           console.log('Sondages répondus:', answeredIds);
         }
 
-        setSurveys(publicSurveys);
-
-        // Vérifier s'il y a un ID de survey dans l'URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sharedSurveyId = urlParams.get('surveyId');
-        if (sharedSurveyId) {
-          const sharedSurvey = allSurveys.find(
-            (survey: { _id: string }) => survey._id === sharedSurveyId
-          );
-          if (sharedSurvey && !sharedSurvey.isPrivate) {
-            setSelectedSurvey(sharedSurvey);
-          }
-        }
       } catch (error: any) {
         console.error('Erreur lors du chargement des sondages:', error);
         setError(error.message || 'Échec du chargement des sondages');
@@ -308,11 +315,15 @@ const SurveyAnswerPage: React.FC = () => {
 
   const filteredSurveys = surveys
     .filter(survey => {
-      // Vérifier d'abord si le sondage est privé (pour les deux types de sondages)
-      if (survey.isPrivate) {
-        return false;
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedSurveyId = urlParams.get('surveyId');
+
+      // Si on accède via un lien, ne montrer que ce sondage spécifique
+      if (sharedSurveyId) {
+        return survey._id === sharedSurveyId;
       }
 
+      // Sinon, appliquer les filtres normaux pour les sondages publics
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 

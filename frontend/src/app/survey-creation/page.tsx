@@ -24,6 +24,7 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  InputAdornment,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -47,6 +48,7 @@ import validationAnimation from "@/assets/animation-check.json";
 import { useRouter } from 'next/navigation';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 type Question = {
   id: string;
@@ -93,6 +95,62 @@ const educationOptions = [
   'Other',
 ];
 
+const validateFormData = (data: FormData) => {
+  const errors: {
+    title?: boolean;
+    description?: boolean;
+    questions: {
+      [key: string]: boolean | {
+        text?: boolean;
+        options?: { [key: number]: boolean }
+      }
+    };
+  } = {
+    questions: {}
+  };
+
+  let hasErrors = false;
+
+  // Valider le titre
+  if (!data.title?.trim()) {
+    errors.title = true;
+    hasErrors = true;
+  }
+
+  // Valider les questions
+  data.questions.forEach((question, index) => {
+    // Valider le texte de la question
+    if (!question.text?.trim()) {
+      if (!errors.questions[index]) {
+        errors.questions[index] = {};
+      }
+      if (typeof errors.questions[index] === 'object') {
+        (errors.questions[index] as any).text = true;
+      }
+      hasErrors = true;
+    }
+
+    // Valider les options pour les questions à choix multiples ou dropdown
+    if ((question.type === 'multiple-choice' || question.type === 'dropdown') && question.options) {
+      const optionErrors: { [key: number]: boolean } = {};
+      question.options.forEach((option, optionIndex) => {
+        if (!option.trim()) {
+          optionErrors[optionIndex] = true;
+          hasErrors = true;
+        }
+      });
+
+      if (Object.keys(optionErrors).length > 0) {
+        if (typeof errors.questions[index] === 'object') {
+          (errors.questions[index] as any).options = optionErrors;
+        }
+      }
+    }
+  });
+
+  return hasErrors ? errors : null;
+};
+
 const SurveyCreationPage = () => {
   const { control, handleSubmit, setValue, getValues, reset, watch } =
     useForm<FormData>({
@@ -130,6 +188,8 @@ const SurveyCreationPage = () => {
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
     open: boolean;
+    link?: string;
+    action?: () => void;
   }>({
     message: '',
     severity: 'info',
@@ -582,71 +642,12 @@ const SurveyCreationPage = () => {
     setIsSubmitted(true);
     setIsSubmitting(true);
     try {
-      const errors: { 
-        title?: boolean;
-        description?: boolean;
-        questions: { 
-          [key: string]: boolean | { 
-            text?: boolean;
-            options?: { [key: number]: boolean } 
-          }
-        };
-      } = { 
-        questions: {} 
-      };
-      let hasErrors = false;
-
-      // Vérifier le titre
-      if (!data.title?.trim()) {
-        errors.title = true;
-        hasErrors = true;
-      }
-
-      // Vérification qu'il y a au moins une question
-      if (data.questions.length === 0) {
-        setNotification({
-          message: 'Please add at least one question to your survey',
-          severity: 'error',
-          open: true
-        });
-        return;
-      }
-
-      // Vérification des questions et de leurs options
-      data.questions.forEach((question, index) => {
-        const questionErrors: { text?: boolean; options?: { [key: number]: boolean } } = {};
-        
-        // Vérifier le texte de la question
-        if (!question.text?.trim()) {
-          questionErrors.text = true;
-          hasErrors = true;
-        }
-
-        // Vérifier les options pour les questions à choix multiples et dropdown
-        if ((question.type === 'multiple-choice' || question.type === 'dropdown') && question.options) {
-          const optionErrors: { [key: number]: boolean } = {};
-          
-          question.options.forEach((option, optionIndex) => {
-            if (!option.trim()) {
-              optionErrors[optionIndex] = true;
-              hasErrors = true;
-            }
-          });
-
-          if (Object.keys(optionErrors).length > 0) {
-            questionErrors.options = optionErrors;
-          }
-        }
-
-        if (Object.keys(questionErrors).length > 0) {
-          errors.questions[index] = questionErrors;
-        }
-      });
-
-      if (hasErrors) {
+      // Validation des données
+      const errors = validateFormData(data);
+      if (errors) {
         setValidationErrors(errors);
         setNotification({
-          message: 'Please fill in all required fields and options',
+          message: 'Please fill in all required fields',
           severity: 'error',
           open: true
         });
@@ -666,17 +667,43 @@ const SurveyCreationPage = () => {
         questions: data.questions
       };
 
-      const result = await createSurvey(surveyData, token);
-      console.log('Survey created successfully:', result);
-      
-      // Afficher l'animation et rediriger
-      setShowSuccess(true);
-      setTimeout(() => {
-        router.push('/survey-answer');
-      }, 1650);
-      
-      await cleanupUnusedMedia();
-      
+      // Si le sondage est privé, montrer d'abord la boîte de dialogue
+      if (data.isPrivate) {
+        setNotification({
+          message: 'Voulez-vous créer ce sondage privé ?',
+          severity: 'info',
+          open: true,
+          action: async () => {
+            try {
+              setShowSuccess(true); // Montrer l'animation
+              const result = await createSurvey(surveyData, token);
+              await cleanupUnusedMedia();
+              
+              // Une fois le sondage créé, rediriger
+              setTimeout(() => {
+                router.push('/survey-answer');
+              }, 1650);
+              
+            } catch (error: any) {
+              setShowSuccess(false);
+              setNotification({
+                message: error.message || 'Error creating survey',
+                severity: 'error',
+                open: true
+              });
+            }
+          }
+        });
+      } else {
+        // Pour les sondages publics, créer directement
+        const result = await createSurvey(surveyData, token);
+        await cleanupUnusedMedia();
+        setShowSuccess(true);
+        setTimeout(() => {
+          router.push('/survey-answer');
+        }, 1650);
+      }
+
     } catch (error: any) {
       console.error('Error submitting survey:', error);
       setNotification({
@@ -1709,30 +1736,67 @@ const SurveyCreationPage = () => {
 
       {/* Notification */}
       {notification.open && (
-        <Box 
-          component="div"
-          data-testid="notification-container"
-          sx={{
-            position: 'fixed',
-            top: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            minWidth: 300
+        <Dialog
+          open={notification.open}
+          onClose={() => {
+            setNotification(prev => ({ ...prev, open: false }));
+            if (notification.action) {
+              notification.action();
+            }
           }}
         >
-          <Alert 
-            severity={notification.severity}
-            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-            sx={{ 
-              backgroundColor: colors.background.paper,
-              boxShadow: 3,
-              borderRadius: 2
-            }}
-          >
-            {notification.message}
-          </Alert>
-        </Box>
+          <DialogContent>
+            <Alert 
+              severity={notification.severity}
+              sx={{ mb: notification.link ? 2 : 0 }}
+            >
+              {notification.message}
+            </Alert>
+            {notification.link && (
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Voici le lien pour accéder à votre sondage :
+                </Typography>
+                <TextField
+                  fullWidth
+                  value={notification.link}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => {
+                            navigator.clipboard.writeText(notification.link!);
+                            setNotification(prev => ({
+                              ...prev,
+                              message: 'Lien copié dans le presse-papiers !',
+                              severity: 'success'
+                            }));
+                          }}
+                        >
+                          <ContentCopyIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, open: false }));
+                if (notification.action) {
+                  notification.action();
+                }
+              }}
+              variant="contained"
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       {showSuccess && (
