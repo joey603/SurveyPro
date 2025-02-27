@@ -316,7 +316,7 @@ export default function DynamicSurveyCreation() {
           
           setNotification({
             show: true,
-            message: 'Votre sondage privé a été créé avec succès !',
+            message: 'Your private survey has been created successfully!',
             type: 'success',
             link: surveyLink,
             action: () => {
@@ -329,7 +329,7 @@ export default function DynamicSurveyCreation() {
         } catch (error: any) {
           setNotification({
             show: true,
-            message: error.message || 'Erreur lors de la création du sondage',
+            message: error.message || 'Error creating survey',
             type: 'error'
           });
         }
@@ -905,7 +905,7 @@ export default function DynamicSurveyCreation() {
             {notification.link && (
               <Box sx={{ mt: 3, mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  Voici le lien pour répondre à votre sondage privé :
+                  Here is the link to answer your private survey:
                 </Typography>
                 <Paper
                   sx={{
@@ -926,13 +926,13 @@ export default function DynamicSurveyCreation() {
                       sx: { backgroundColor: 'white' }
                     }}
                   />
-                  <Tooltip title="Copier le lien">
+                  <Tooltip title="Copy link">
                     <IconButton
                       onClick={() => {
                         navigator.clipboard.writeText(notification.link!);
                         setNotification(prev => ({
                           ...prev,
-                          message: 'Lien copié dans le presse-papiers !',
+                          message: 'Link copied to clipboard!',
                           type: 'success'
                         }));
                       }}
@@ -949,12 +949,24 @@ export default function DynamicSurveyCreation() {
                   </Tooltip>
                 </Paper>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  Partagez ce lien uniquement avec les personnes que vous souhaitez inviter à répondre à votre sondage.
+                  Share this link only with people you want to invite to answer your survey.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  This link will also be displayed in your analytics dashboard.
                 </Typography>
               </Box>
             )}
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, show: false }));
+              }}
+              variant="outlined"
+              color="inherit"
+            >
+              Cancel
+            </Button>
             <Button 
               onClick={() => {
                 setNotification(prev => ({ ...prev, show: false }));

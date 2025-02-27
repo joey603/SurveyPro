@@ -675,9 +675,8 @@ const SurveyCreationPage = () => {
         if (data.isPrivate) {
           const surveyLink = `${window.location.origin}/survey-answer?surveyId=${result._id}`;
           
-          // Afficher la notification avec le lien
           setNotification({
-            message: 'Votre sondage privé a été créé avec succès !',
+            message: 'Your private survey has been created successfully!',
             severity: 'success',
             open: true,
             link: surveyLink,
@@ -685,7 +684,7 @@ const SurveyCreationPage = () => {
               navigator.clipboard.writeText(surveyLink);
               setNotification(prev => ({
                 ...prev,
-                message: 'Lien copié dans le presse-papiers !',
+                message: 'Link copied to clipboard!',
               }));
             }
           });
@@ -698,7 +697,6 @@ const SurveyCreationPage = () => {
         }
 
       } catch (error: any) {
-        setShowSuccess(false);
         setNotification({
           message: error.message || 'Error creating survey',
           severity: 'error',
@@ -717,16 +715,6 @@ const SurveyCreationPage = () => {
       });
     }
   };
-
-  useEffect(() => {
-    if (notification.open) {
-      const timer = setTimeout(() => {
-        setNotification(prev => ({ ...prev, open: false }));
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [notification.open]);
 
   const renderDemographicPreview = () => {
     return (
@@ -1761,7 +1749,7 @@ const SurveyCreationPage = () => {
             {notification.link && (
               <Box sx={{ mt: 3, mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  Lien de partage du sondage :
+                  Here is the link to answer your private survey:
                 </Typography>
                 <Paper
                   sx={{
@@ -1782,14 +1770,14 @@ const SurveyCreationPage = () => {
                       sx: { backgroundColor: 'white' }
                     }}
                   />
-                  <Tooltip title="Copier le lien">
+                  <Tooltip title="Copy link">
                     <IconButton
                       onClick={notification.action}
                       sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        backgroundColor: 'primary.main',
                         color: 'white',
                         '&:hover': {
-                          background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          backgroundColor: 'primary.dark',
                         }
                       }}
                     >
@@ -1797,14 +1785,28 @@ const SurveyCreationPage = () => {
                     </IconButton>
                   </Tooltip>
                 </Paper>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Share this link only with people you want to invite to answer your survey.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  This link will also be displayed in your analytics dashboard.
+                </Typography>
               </Box>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
             <Button 
               onClick={() => {
                 setNotification(prev => ({ ...prev, open: false }));
-                // Démarrer l'animation et la redirection après la fermeture de la boîte de dialogue
+              }}
+              variant="outlined"
+              color="inherit"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, open: false }));
                 setShowSuccess(true);
                 setTimeout(() => {
                   router.push('/survey-answer');
@@ -1815,7 +1817,7 @@ const SurveyCreationPage = () => {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                },
+                }
               }}
             >
               OK
