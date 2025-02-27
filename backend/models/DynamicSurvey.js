@@ -48,6 +48,10 @@ const dynamicSurveySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
   nodes: [nodeSchema],
   edges: [edgeSchema],
   userId: {

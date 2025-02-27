@@ -41,6 +41,10 @@ import { useRouter } from 'next/navigation';
 import { SurveyFlowRef } from './types/SurveyFlowTypes';
 import Lottie from "lottie-react";
 import validationAnimation from "@/assets/animation-check.json";
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { Zoom } from '@mui/material';
 
 const educationOptions = [
   'High School',
@@ -65,6 +69,7 @@ interface FormData {
   title: string;
   description: string;
   demographicEnabled: boolean;
+  isPrivate: boolean;
 }
 
 interface PreviewAnswer {
@@ -94,6 +99,7 @@ export default function DynamicSurveyCreation() {
       title: '',
       description: '',
       demographicEnabled: false,
+      isPrivate: false,
     },
   });
 
@@ -291,6 +297,7 @@ export default function DynamicSurveyCreation() {
         title: data.title.trim(),
         description: data.description?.trim() || '',
         demographicEnabled: data.demographicEnabled || false,
+        isPrivate: data.isPrivate || false,
         nodes: cleanedNodes,
         edges
       };
@@ -912,6 +919,40 @@ export default function DynamicSurveyCreation() {
           }
           label="Enable Demographic Questions"
         />
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={watch('isPrivate')}
+                onChange={(e) => {
+                  setValue('isPrivate', e.target.checked);
+                }}
+                color="primary"
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {watch('isPrivate') ? (
+                  <LockIcon sx={{ color: '#667eea' }} />
+                ) : (
+                  <PublicIcon sx={{ color: '#667eea' }} />
+                )}
+                <Typography>
+                  {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tooltip 
+            title="Private surveys are only visible to you, while public surveys can be accessed by all users"
+            placement="right"
+            TransitionComponent={Zoom}
+            arrow
+          >
+            <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
+          </Tooltip>
+        </Box>
       </Paper>
 
       <Paper sx={{ p: 3, mb: 3, height: '600px', position: 'relative' }}>

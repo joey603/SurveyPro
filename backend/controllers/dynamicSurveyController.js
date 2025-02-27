@@ -6,7 +6,7 @@ exports.createDynamicSurvey = async (req, res) => {
   try {
     console.log('Données reçues:', JSON.stringify(req.body, null, 2));
     
-    const { title, description, demographicEnabled, nodes, edges } = req.body;
+    const { title, description, demographicEnabled, nodes, edges, isPrivate } = req.body;
 
     // Validation des données
     if (!title) {
@@ -55,6 +55,7 @@ exports.createDynamicSurvey = async (req, res) => {
       title,
       description,
       demographicEnabled: demographicEnabled || false,
+      isPrivate: isPrivate || false,
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.type,
@@ -92,7 +93,7 @@ exports.createDynamicSurvey = async (req, res) => {
 exports.getDynamicSurveys = async (req, res) => {
   try {
     const surveys = await DynamicSurvey.find()
-      .select('title description demographicEnabled nodes edges createdAt userId')
+      .select('title description demographicEnabled nodes edges createdAt userId isPrivate')
       .populate('userId', 'username')
       .sort({ createdAt: -1 });
 
@@ -109,7 +110,7 @@ exports.getDynamicSurveys = async (req, res) => {
 exports.getDynamicSurveyById = async (req, res) => {
   try {
     const survey = await DynamicSurvey.findById(req.params.id)
-      .select('title description demographicEnabled nodes edges createdAt');
+      .select('title description demographicEnabled nodes edges createdAt isPrivate');
 
     if (!survey) {
       return res.status(404).json({ message: "Sondage non trouvé" });

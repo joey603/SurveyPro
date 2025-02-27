@@ -251,6 +251,10 @@ const SurveyAnswerPage: React.FC = () => {
         // Charger tous les sondages
         const allSurveys = await fetchAvailableSurveys(token);
         console.log('Sondages chargés:', allSurveys);
+        
+        // Filtrer les sondages privés avant de les définir
+        const publicSurveys = allSurveys.filter(survey => !survey.isPrivate);
+        
         // Charger les IDs des sondages déjà répondus
         const answeredIds = await fetchAnsweredSurveys();
         if (Array.isArray(answeredIds)) {
@@ -258,7 +262,7 @@ const SurveyAnswerPage: React.FC = () => {
           console.log('Sondages répondus:', answeredIds);
         }
 
-        setSurveys(allSurveys);
+        setSurveys(publicSurveys);
 
         // Vérifier s'il y a un ID de survey dans l'URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -267,7 +271,7 @@ const SurveyAnswerPage: React.FC = () => {
           const sharedSurvey = allSurveys.find(
             (survey: { _id: string }) => survey._id === sharedSurveyId
           );
-          if (sharedSurvey) {
+          if (sharedSurvey && !sharedSurvey.isPrivate) {
             setSelectedSurvey(sharedSurvey);
           }
         }
@@ -304,9 +308,9 @@ const SurveyAnswerPage: React.FC = () => {
 
   const filteredSurveys = surveys
     .filter(survey => {
-      // Vérifier d'abord si le sondage est privé
+      // Vérifier d'abord si le sondage est privé (pour les deux types de sondages)
       if (survey.isPrivate) {
-        return false; // Ne pas afficher les sondages privés
+        return false;
       }
 
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
