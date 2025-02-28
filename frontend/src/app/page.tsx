@@ -215,7 +215,16 @@ const Home = () => {
   };
 
   return (
-    <Box ref={containerRef} sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box 
+      ref={containerRef} 
+      sx={{ 
+        backgroundColor: '#f5f5f5', 
+        minHeight: '100vh',
+        WebkitFontSmoothing: 'antialiased', // Pour Safari
+        MozOsxFontSmoothing: 'grayscale',   // Pour Firefox
+        fontFamily: '"Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      }}
+    >
       {/* Hero Section */}
       <Box
         ref={heroRef}
