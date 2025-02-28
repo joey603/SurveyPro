@@ -817,7 +817,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                 {filteredAnswers.length !== surveyAnswers.length && (
                   <Box sx={{ mt: 2 }}>
-                    <Chip
+                  <Chip
                       label={`Showing ${filteredAnswers.length} of ${surveyAnswers.length} responses`}
                       onDelete={() => {
                         setFilters({ demographic: {}, answers: {} });
@@ -834,7 +834,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             <Grid item xs={12}>
               <Paper 
                 elevation={1} 
-                sx={{ 
+                      sx={{
                   p: 3, 
                   borderRadius: 2,
                   background: 'linear-gradient(to bottom, #ffffff, #f8faff)',
@@ -1093,18 +1093,18 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         maxWidth: '400px',
                         margin: '0 auto'
                       }}>
-                        <Pie
-                          data={{
-                            labels: Object.keys(demographicStats.gender),
-                            datasets: [{
-                              data: Object.values(demographicStats.gender),
-                              backgroundColor: chartColors.backgrounds,
-                              borderColor: chartColors.borders,
-                              borderWidth: 1
-                            }]
-                          }}
-                          options={pieOptions}
-                        />
+                      <Pie
+                        data={{
+                          labels: Object.keys(demographicStats.gender),
+                          datasets: [{
+                            data: Object.values(demographicStats.gender),
+                            backgroundColor: chartColors.backgrounds,
+                            borderColor: chartColors.borders,
+                            borderWidth: 1
+                          }]
+                        }}
+                        options={pieOptions}
+                      />
                       </Box>
                     </Box>
                   </Paper>
@@ -1127,18 +1127,18 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         maxWidth: '400px',
                         margin: '0 auto'
                       }}>
-                        <Bar
-                          data={{
-                            labels: Object.keys(demographicStats.education),
-                            datasets: [{
-                              data: Object.values(demographicStats.education),
-                              backgroundColor: chartColors.backgrounds,
-                              borderColor: chartColors.borders,
-                              borderWidth: 1
-                            }]
-                          }}
-                          options={commonChartOptions}
-                        />
+                      <Bar
+                        data={{
+                          labels: Object.keys(demographicStats.education),
+                          datasets: [{
+                            data: Object.values(demographicStats.education),
+                            backgroundColor: chartColors.backgrounds,
+                            borderColor: chartColors.borders,
+                            borderWidth: 1
+                          }]
+                        }}
+                        options={commonChartOptions}
+                      />
                       </Box>
                     </Box>
                   </Paper>
@@ -1161,7 +1161,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         maxWidth: '400px',
                         margin: '0 auto'
                       }}>
-                        {renderAgeChart(demographicStats.ageDistribution)}
+                      {renderAgeChart(demographicStats.ageDistribution)}
                       </Box>
                     </Box>
                   </Paper>
@@ -1184,18 +1184,18 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         maxWidth: '400px',
                         margin: '0 auto'
                       }}>
-                        <Doughnut
-                          data={{
-                            labels: Object.keys(demographicStats.city),
-                            datasets: [{
-                              data: Object.values(demographicStats.city),
-                              backgroundColor: chartColors.backgrounds,
-                              borderColor: chartColors.borders,
-                              borderWidth: 1
-                            }]
-                          }}
-                          options={pieOptions}
-                        />
+                      <Doughnut
+                        data={{
+                          labels: Object.keys(demographicStats.city),
+                          datasets: [{
+                            data: Object.values(demographicStats.city),
+                            backgroundColor: chartColors.backgrounds,
+                            borderColor: chartColors.borders,
+                            borderWidth: 1
+                          }]
+                        }}
+                        options={pieOptions}
+                      />
                       </Box>
                     </Box>
                   </Paper>
@@ -1221,13 +1221,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       <Box>
                         <Typography variant="h6" sx={{ color: '#1a237e' }}>
                           Question {index + 1}: {question.text}
-                        </Typography>
+                    </Typography>
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
                           Type: {question.type}
                         </Typography>
                       </Box>
                     </Box>
-
+                    
                     <Divider sx={{ my: 2 }} />
 
                     <Box sx={{ mt: 2 }}>
