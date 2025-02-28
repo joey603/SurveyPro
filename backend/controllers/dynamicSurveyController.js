@@ -76,10 +76,23 @@ exports.createDynamicSurvey = async (req, res) => {
       userId: req.user.id
     });
 
+    // Si le sondage est privé, générer et sauvegarder le lien
+    if (isPrivate) {
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      survey.privateLink = `${baseUrl}/survey-answer?surveyId=${survey._id}`;
+    }
+
     console.log('Survey à sauvegarder:', JSON.stringify(survey, null, 2));
 
     const savedSurvey = await survey.save();
-    res.status(201).json(savedSurvey);
+
+    // Retourner le lien privé dans la réponse si le sondage est privé
+    const response = {
+      ...savedSurvey.toObject(),
+      privateLink: savedSurvey.isPrivate ? savedSurvey.privateLink : undefined
+    };
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Erreur détaillée:', error);
     res.status(500).json({

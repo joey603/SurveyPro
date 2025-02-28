@@ -40,10 +40,22 @@ exports.createSurvey = async (req, res) => {
       createdAt: new Date()
     });
 
+    // Si le sondage est privé, générer et sauvegarder le lien
+    if (req.body.isPrivate) {
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      survey.privateLink = `${baseUrl}/survey-answer?surveyId=${survey._id}`;
+    }
+
     const savedSurvey = await survey.save();
     console.log('Saved survey:', JSON.stringify(savedSurvey, null, 2));
 
-    res.status(201).json(savedSurvey);
+    // Retourner le lien privé dans la réponse si le sondage est privé
+    const response = {
+      ...savedSurvey.toObject(),
+      privateLink: savedSurvey.isPrivate ? savedSurvey.privateLink : undefined
+    };
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Error in createSurvey:', error);
     res.status(500).json({
