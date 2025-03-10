@@ -712,498 +712,229 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          maxHeight: '90vh',
-        },
-      }}
-    >
-      <Box sx={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        py: 2,
-        px: 3,
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+    <Box>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3
       }}>
-        <Typography variant="h5" fontWeight="bold">
-          {survey.title}
+        <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e' }}>
+          Analyse détaillée
         </Typography>
-        <IconButton onClick={onClose} sx={{ color: 'white' }}>
-          <CloseIcon />
-        </IconButton>
+        
+        <Box>
+          <Button
+            variant={showFilters ? "contained" : "outlined"}
+            startIcon={showFilters ? <ClearIcon /> : <FilterListIcon />}
+            onClick={() => setShowFilters(!showFilters)}
+            sx={{
+              mr: 1,
+              ...(showFilters ? {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              } : {})
+            }}
+          >
+            {showFilters ? "Masquer les filtres" : "Filtres"}
+          </Button>
+        </Box>
       </Box>
 
-      <DialogContent sx={{ p: 3 }}>
+      <Box>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         ) : (
           <Grid container spacing={3}>
-            {/* Statistiques générales */}
-            <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Survey Overview
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={3}>
-                    <Box sx={{ textAlign: 'center', p: 2 }}>
-                      <Typography variant="h4" color="primary">
-                        {filteredAnswers.length}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Responses
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Box sx={{ textAlign: 'center', p: 2 }}>
-                      <Typography variant="h4" color="primary">
-                        {getGeneralStats().responsesPerDay}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Responses/Day
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Box sx={{ textAlign: 'center', p: 2 }}>
-                      <Typography variant="h4" color="primary">
-                        {getGeneralStats().averageCompletionRate}%
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Completion Rate
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Box sx={{ textAlign: 'center', p: 2 }}>
-                      <Typography variant="h4" color="primary">
-                        {survey.questions.length}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Questions
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
-
-            {/* Section des filtres */}
-            <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                <FilterPanel
-                  survey={survey}
-                  onApplyFilters={handleApplyFilters}
-                  onClearFilters={() => {
-                    setFilters({ demographic: {}, answers: {} });
-                    setFilteredAnswers(surveyAnswers);
-                  }}
-                />
-
-                {filteredAnswers.length !== surveyAnswers.length && (
-                  <Box sx={{ mt: 2 }}>
-                  <Chip
-                      label={`Showing ${filteredAnswers.length} of ${surveyAnswers.length} responses`}
-                      onDelete={() => {
-                        setFilters({ demographic: {}, answers: {} });
-                        setFilteredAnswers(surveyAnswers);
-                      }}
-                      color="primary"
-                    />
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-
-            {/* Tendances des réponses */}
-            <Grid item xs={12}>
-              <Paper 
-                elevation={1} 
-                      sx={{
-                  p: 3, 
-                  borderRadius: 2,
-                  background: 'linear-gradient(to bottom, #ffffff, #f8faff)',
-                  border: '1px solid rgba(102, 126, 234, 0.1)',
-                  minHeight: '500px',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  mb: 3 
-                }}>
-                  <Box>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        color: '#1a237e',
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Response Activity
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                    >
-                      Overview of survey responses over time
-                    </Typography>
-                  </Box>
-                  <Box sx={{ 
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end'
-                  }}>
-                    <Typography variant="h4" sx={{ color: '#1a237e', fontWeight: 'bold' }}>
-                      {filteredAnswers.length}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Total Responses
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ 
-                  flex: 1,
-                  minHeight: '300px',
-                  p: 2,
-                  backgroundColor: '#ffffff',
-                  borderRadius: 1,
-                  boxShadow: 'inset 0 0 10px rgba(102, 126, 234, 0.05)',
-                  position: 'relative'
-                }}>
-                  <Line
-                    data={{
-                      labels: getResponseTrends(filteredAnswers).labels,
-                      datasets: [{
-                        label: 'Responses',
-                        data: getResponseTrends(filteredAnswers).data,
-                        borderColor: 'rgba(102, 126, 234, 0.8)',
-                        backgroundColor: (context: any) => {
-                          const ctx = context.chart.ctx;
-                          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-                          gradient.addColorStop(0, 'rgba(102, 126, 234, 0.2)');
-                          gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
-                          return gradient;
-                        },
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: '#ffffff',
-                        pointBorderColor: 'rgba(102, 126, 234, 0.8)',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointHoverBorderWidth: 2,
-                        pointHitRadius: 8
-                      }]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false
-                        },
-                        title: {
-                          display: false
-                        },
-                        tooltip: {
-                          mode: 'index',
-                          intersect: false,
-                          backgroundColor: '#ffffff',
-                          titleColor: '#1a237e',
-                          bodyColor: '#475569',
-                          borderColor: 'rgba(102, 126, 234, 0.2)',
-                          borderWidth: 1,
-                          padding: 12,
-                          bodyFont: {
-                            size: 13
-                          },
-                          titleFont: {
-                            size: 13,
-                            weight: 'bold'
-                          },
-                          callbacks: {
-                            label: (context) => `${context.parsed.y} responses`
-                          }
-                        }
-                      },
-                      scales: {
-                        x: {
-                          grid: {
-                            display: false
-                          },
-                          ticks: {
-                            maxRotation: 45,
-                            minRotation: 45,
-                            color: '#64748b',
-                            font: {
-                              size: 11
-                            },
-                            padding: 8
-                          },
-                          border: {
-                            display: false
-                          }
-                        },
-                        y: {
-                          beginAtZero: true,
-                          grid: {
-                            color: 'rgba(102, 126, 234, 0.1)',
-                            drawBorder: false,
-                            lineWidth: 1,
-                            drawTicks: false
-                          },
-                          ticks: {
-                            stepSize: 1,
-                            color: '#64748b',
-                            font: {
-                              size: 11
-                            },
-                            padding: 12,
-                            callback: (value) => Math.round(Number(value))
-                          },
-                          border: {
-                            display: false
-                          }
-                        }
-                      },
-                      interaction: {
-                        intersect: false,
-                        mode: 'index'
-                      },
-                      layout: {
-                        padding: {
-                          top: 20,
-                          right: 20,
-                          bottom: 20,
-                          left: 10
-                        }
-                      }
-                    }}
-                  />
-                </Box>
-
-                <Grid container spacing={2} sx={{ mt: 3 }}>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: 1,
-                      textAlign: 'center'
-                    }}>
-                      <Typography variant="caption" color="text.secondary">
-                        First Response
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: 1,
-                      textAlign: 'center'
-                    }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Average Daily Responses
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {(filteredAnswers.length / Math.max(1, getDaysBetweenDates(
-                          new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
-                          new Date()
-                        ))).toFixed(1)}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: 1,
-                      textAlign: 'center'
-                    }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Latest Response
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {new Date(Math.max(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
-
-            {/* Arbre des chemins pour les sondages dynamiques */}
-            {survey.questions.some(q => q.type === 'dynamic') && (
-              <Grid item xs={12}>
-                <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Path Analysis
-                  </Typography>
-                  <TreeView
-                    defaultCollapseIcon={<ExpandMoreIcon />}
-                    defaultExpandIcon={<ChevronRightIcon />}
-                  >
-                    {renderPathTree(createPathTree(filteredAnswers))}
-                  </TreeView>
-                </Paper>
-              </Grid>
-            )}
-
-            {/* Données démographiques */}
-            {survey.demographicEnabled && demographicStats && (
+            {showFilters && (
               <>
-                {/* Genre */}
-                <Grid item xs={12} md={6}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '400px' }}>
-                    <Typography variant="h6" gutterBottom align="center">
-                      Distribution by Gender
-                    </Typography>
-                    <Box sx={{ 
-                      height: 'calc(100% - 60px)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}>
-                      <Box sx={{ 
-                        width: '100%',
-                        maxWidth: '400px',
-                        margin: '0 auto'
-                      }}>
-                      <Pie
-                        data={{
-                          labels: Object.keys(demographicStats.gender),
-                          datasets: [{
-                            data: Object.values(demographicStats.gender),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={pieOptions}
-                      />
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                {/* Éducation */}
-                <Grid item xs={12} md={6}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '400px' }}>
-                    <Typography variant="h6" gutterBottom align="center">
-                      Distribution by Education Level
-                    </Typography>
-                    <Box sx={{ 
-                      height: 'calc(100% - 60px)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}>
-                      <Box sx={{ 
-                        width: '100%',
-                        maxWidth: '400px',
-                        margin: '0 auto'
-                      }}>
-                      <Bar
-                        data={{
-                          labels: Object.keys(demographicStats.education),
-                          datasets: [{
-                            data: Object.values(demographicStats.education),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={commonChartOptions}
-                      />
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                {/* Âge */}
-                <Grid item xs={12} md={6}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '400px' }}>
-                    <Typography variant="h6" gutterBottom align="center">
-                      Age Distribution
-                    </Typography>
-                    <Box sx={{ 
-                      height: 'calc(100% - 60px)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}>
-                      <Box sx={{ 
-                        width: '100%',
-                        maxWidth: '400px',
-                        margin: '0 auto'
-                      }}>
-                      {renderAgeChart(demographicStats.ageDistribution)}
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                {/* Ville */}
-                <Grid item xs={12} md={6}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '400px' }}>
-                    <Typography variant="h6" gutterBottom align="center">
-                      Distribution by City
-                    </Typography>
-                    <Box sx={{ 
-                      height: 'calc(100% - 60px)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}>
-                      <Box sx={{ 
-                        width: '100%',
-                        maxWidth: '400px',
-                        margin: '0 auto'
-                      }}>
-                      <Doughnut
-                        data={{
-                          labels: Object.keys(demographicStats.city),
-                          datasets: [{
-                            data: Object.values(demographicStats.city),
-                            backgroundColor: chartColors.backgrounds,
-                            borderColor: chartColors.borders,
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={pieOptions}
-                      />
-                      </Box>
-                    </Box>
+                <Grid item xs={12}>
+                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                    <FilterPanel
+                      survey={survey}
+                      filters={filters}
+                      onApplyFilters={handleApplyFilters}
+                    />
                   </Paper>
                 </Grid>
               </>
             )}
 
-            {/* Questions et réponses avec graphiques */}
+            <Grid item xs={12}>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
+                  Statistiques générales
+                </Typography>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Total des réponses: <strong>{filteredAnswers.length}</strong>
+                  </Typography>
+                  {filteredAnswers.length !== responses.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      (Filtré de {responses.length} réponses totales)
+                    </Typography>
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Première réponse
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {filteredAnswers.length > 0 ? 
+                          new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                          'Aucune réponse'
+                        }
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Réponses quotidiennes moyennes
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {filteredAnswers.length > 0 ? 
+                          (filteredAnswers.length / Math.max(1, getDaysBetweenDates(
+                            new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
+                            new Date()
+                          ))).toFixed(1) :
+                          '0'
+                        }
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Dernière réponse
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                        {filteredAnswers.length > 0 ? 
+                          new Date(Math.max(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                          'Aucune réponse'
+                        }
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {filteredAnswers.length > 0 && (
+                  <Box sx={{ 
+                    height: 300, 
+                    mt: 4,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    position: 'relative'
+                  }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2, color: '#1a237e' }}>
+                      Tendance des réponses
+                    </Typography>
+                    <Box sx={{ 
+                      width: '100%',
+                      maxWidth: '800px',
+                      margin: '0 auto'
+                    }}>
+                      <Line
+                        data={getResponseTrends(filteredAnswers)}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: false
+                            },
+                            title: {
+                              display: false
+                            },
+                            tooltip: {
+                              mode: 'index',
+                              intersect: false,
+                              backgroundColor: '#ffffff',
+                              titleColor: '#1a237e',
+                              bodyColor: '#475569',
+                              borderColor: 'rgba(102, 126, 234, 0.2)',
+                              borderWidth: 1,
+                              padding: 12,
+                              bodyFont: {
+                                size: 13
+                              },
+                              titleFont: {
+                                size: 13,
+                                weight: 'bold'
+                              },
+                              callbacks: {
+                                label: (context) => `${context.parsed.y} réponses`
+                              }
+                            }
+                          },
+                          scales: {
+                            x: {
+                              grid: {
+                                color: 'rgba(102, 126, 234, 0.1)',
+                                drawBorder: false,
+                                lineWidth: 1,
+                                drawTicks: false
+                              },
+                              ticks: {
+                                font: {
+                                  size: 11
+                                },
+                                color: '#64748b'
+                              }
+                            },
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: 'rgba(102, 126, 234, 0.1)',
+                                drawBorder: false,
+                                lineWidth: 1,
+                                drawTicks: false
+                              },
+                              ticks: {
+                                font: {
+                                  size: 11
+                                },
+                                color: '#64748b',
+                                precision: 0
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+
             {survey.questions.map((question: any, index: number) => {
               const { answerCounts, total } = analyzeResponses(question.id);
               const availableChartTypes = getAvailableChartTypes(question.type);
@@ -1221,7 +952,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       <Box>
                         <Typography variant="h6" sx={{ color: '#1a237e' }}>
                           Question {index + 1}: {question.text}
-                    </Typography>
+                        </Typography>
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
                           Type: {question.type}
                         </Typography>
@@ -1236,7 +967,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           <ListItem key={answer}>
                             <ListItemText
                               primary={answer}
-                              secondary={`${count} responses (${Math.round((count / total) * 100)}%)`}
+                              secondary={`${count} réponses (${Math.round((count / total) * 100)}%)`}
                             />
                           </ListItem>
                         ))}
@@ -1299,8 +1030,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             })}
           </Grid>
         )}
-      </DialogContent>
-    </Dialog>
+      </Box>
+    </Box>
   );
 };
 

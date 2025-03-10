@@ -64,7 +64,6 @@ const AnalyticsPage: React.FC = () => {
   const [showPendingOnly, setShowPendingOnly] = useState(false);
 
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
-  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -107,7 +106,10 @@ const AnalyticsPage: React.FC = () => {
 
   const handleViewAnalytics = (survey: Survey) => {
     setSelectedSurvey(survey);
-    setAnalyticsOpen(true);
+  };
+
+  const handleBack = () => {
+    setSelectedSurvey(null);
   };
 
   const handleCloseSnackbar = () => {
@@ -196,84 +198,137 @@ const AnalyticsPage: React.FC = () => {
         margin: '0 auto',
       }}
     >
-      <Paper
-        component="article"
-        elevation={3}
-        sx={{
-          borderRadius: '16px',
-          backgroundColor: 'white',
-          overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          width: '100%',
-          maxWidth: '1000px',
-          mb: 4,
-        }}
-      >
-        <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          py: 4,
-          px: 4,
-          color: 'white',
-          textAlign: 'center',
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <IconButton
-            onClick={() => window.history.back()}
-            sx={{ color: 'white' }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
+      {!selectedSurvey ? (
+        <Paper
+          component="article"
+          elevation={3}
+          sx={{
+            borderRadius: '16px',
+            backgroundColor: 'white',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            width: '100%',
+            maxWidth: '1000px',
+            mb: 4,
+          }}
+        >
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <IconButton
+              onClick={() => window.history.back()}
+              sx={{ color: 'white' }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
 
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-          >
-            Advanced Analytics
-          </Typography>
-
-          <Box sx={{ width: 48 }} />
-        </Box>
-
-        <Box sx={{ p: 3 }}>
-          <SearchAndFilter
-            onSearchChange={handleSearchChange}
-            onDateRangeChange={handleDateRangeChange}
-            onSortChange={handleSortChange}
-            onPendingChange={handlePendingChange}
-          />
-
-          {loading && (
-            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              Loading surveys...
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+            >
+              Advanced Analytics
             </Typography>
-          )}
 
-          {error && (
-            <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
-              {error}
+            <Box sx={{ width: 48 }} />
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            <SearchAndFilter
+              onSearchChange={handleSearchChange}
+              onDateRangeChange={handleDateRangeChange}
+              onSortChange={handleSortChange}
+              onPendingChange={handlePendingChange}
+            />
+
+            {loading && (
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                Loading surveys...
+              </Typography>
+            )}
+
+            {error && (
+              <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
+                {error}
+              </Typography>
+            )}
+
+            {!loading && !error && (
+              <Grid container spacing={3}>
+                {sortedSurveys.map((survey) => (
+                  <Grid item xs={12} sm={6} md={6} key={survey._id}>
+                    <AnalyticsCard
+                      survey={survey}
+                      onDelete={handleDeleteSurvey}
+                      onViewAnalytics={handleViewAnalytics}
+                      userId={user?.id}
+                      responses={surveyResponses[survey._id] || []}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Box>
+        </Paper>
+      ) : (
+        <Paper
+          component="article"
+          elevation={3}
+          sx={{
+            borderRadius: '16px',
+            backgroundColor: 'white',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            width: '100%',
+            maxWidth: '1000px',
+            mb: 4,
+          }}
+        >
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            py: 4,
+            px: 4,
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <IconButton
+              onClick={handleBack}
+              sx={{ color: 'white' }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+            >
+              {selectedSurvey.title}
             </Typography>
-          )}
 
-          {!loading && !error && (
-            <Grid container spacing={3}>
-              {sortedSurveys.map((survey) => (
-                <Grid item xs={12} sm={6} md={6} key={survey._id}>
-                  <AnalyticsCard
-                    survey={survey}
-                    onDelete={handleDeleteSurvey}
-                    onViewAnalytics={handleViewAnalytics}
-                    userId={user?.id}
-                    responses={surveyResponses[survey._id] || []}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Box>
-      </Paper>
+            <Box sx={{ width: 48 }} />
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            <SurveyAnalytics
+              open={true}
+              onClose={handleBack}
+              survey={selectedSurvey}
+              responses={surveyResponses[selectedSurvey._id] || []}
+            />
+          </Box>
+        </Paper>
+      )}
 
       <Snackbar 
         open={openSnackbar} 
@@ -289,15 +344,6 @@ const AnalyticsPage: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-
-      {selectedSurvey && (
-        <SurveyAnalytics
-          open={analyticsOpen}
-          onClose={() => setAnalyticsOpen(false)}
-          survey={selectedSurvey}
-          responses={surveyResponses[selectedSurvey._id] || []}
-        />
-      )}
     </Box>
   );
 };
