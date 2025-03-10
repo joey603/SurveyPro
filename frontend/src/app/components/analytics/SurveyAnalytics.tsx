@@ -50,6 +50,7 @@ import { calculateAge } from '../../../utils/dateUtils';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { FilterPanel } from './FilterPanel';
+import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -681,42 +682,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     setFilteredAnswers(filtered);
   }, [filters, surveyAnswers]);
 
-  // Modifier la fonction handleApplyFilters
-  const handleApplyFilters = (newFilters: Filters) => {
-    console.log('New filters:', newFilters);
-    setFilters(newFilters);
-    setTimeout(() => {
-      const filtered = surveyAnswers.filter(response => {
-        // Vérifier les filtres démographiques
-        if (newFilters.demographic.gender && 
-            response.respondent?.demographic?.gender !== newFilters.demographic.gender) {
-          return false;
-        }
-        if (newFilters.demographic.educationLevel && 
-            response.respondent?.demographic?.educationLevel !== newFilters.demographic.educationLevel) {
-          return false;
-        }
-
-        // Vérifier les filtres de réponses
-        for (const [questionId, rules] of Object.entries(newFilters.answers)) {
-          if (!rules?.length) continue;
-          
-          const answer = response.answers.find(a => a.questionId === questionId);
-          if (!answer) return false;
-
-          const rule = rules[0];
-          if (!rule?.value) continue;
-
-          if (!evaluateRule(answer.answer, rule)) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      setFilteredAnswers(filtered);
-    }, 0);
+  // Remplacer la fonction handleApplyFilters par une nouvelle qui prend directement les réponses filtrées
+  const handleApplyFilters = (filteredResponses: SurveyResponse[]) => {
+    setFilteredAnswers(filteredResponses);
   };
 
   return (
@@ -760,20 +728,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         ) : (
           <Grid container spacing={3}>
             {showFilters && (
-              <>
-                <Grid item xs={12}>
-                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                    <FilterPanel
-                      survey={survey}
-                      onApplyFilters={handleApplyFilters}
-                      onClearFilters={() => {
-                        setFilters({ demographic: {}, answers: {} });
-                        setFilteredAnswers(surveyAnswers);
-                      }}
-                    />
-                  </Paper>
-                </Grid>
-              </>
+              <Grid item xs={12}>
+                <AdvancedFilterPanel
+                  survey={survey}
+                  responses={surveyAnswers}
+                  onApplyFilters={handleApplyFilters}
+                />
+              </Grid>
             )}
 
             <Grid item xs={12}>
