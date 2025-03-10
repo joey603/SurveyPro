@@ -189,9 +189,17 @@ const getResponseTrends = (responses: SurveyResponse[]) => {
     return acc;
   }, {});
 
+  // Modifier le retour pour inclure datasets comme requis par Chart.js
   return {
     labels: Object.keys(trends),
-    data: Object.values(trends)
+    datasets: [{
+      label: 'Réponses',
+      data: Object.values(trends),
+      borderColor: 'rgba(102, 126, 234, 0.8)',
+      backgroundColor: 'rgba(102, 126, 234, 0.2)',
+      fill: true,
+      tension: 0.3
+    }]
   };
 };
 
@@ -757,8 +765,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
                     <FilterPanel
                       survey={survey}
-                      filters={filters}
                       onApplyFilters={handleApplyFilters}
+                      onClearFilters={() => {
+                        setFilters({ demographic: {}, answers: {} });
+                        setFilteredAnswers(surveyAnswers);
+                      }}
                     />
                   </Paper>
                 </Grid>
@@ -899,7 +910,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             x: {
                               grid: {
                                 color: 'rgba(102, 126, 234, 0.1)',
-                                drawBorder: false,
                                 lineWidth: 1,
                                 drawTicks: false
                               },
@@ -914,7 +924,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                               beginAtZero: true,
                               grid: {
                                 color: 'rgba(102, 126, 234, 0.1)',
-                                drawBorder: false,
                                 lineWidth: 1,
                                 drawTicks: false
                               },
