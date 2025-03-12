@@ -53,6 +53,7 @@ import { FilterPanel } from './FilterPanel';
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { QuestionDetailsDialog } from './QuestionDetailsDialog';
 
 ChartJS.register(
   CategoryScale,
@@ -424,6 +425,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     };
   }, [analyzeResponses]);
 
+  // Fonction pour obtenir les types de graphiques disponibles pour un type de question
   const getAvailableChartTypes = (questionType: string): ChartType[] => {
     switch (questionType) {
       case "multiple-choice":
@@ -443,6 +445,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     }
   };
 
+  // Fonction pour obtenir l'icône d'un type de graphique
   const getChartIcon = (type: ChartType) => {
     switch (type) {
       case 'bar':
@@ -458,6 +461,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     }
   };
 
+  // Fonction pour rendre un graphique
   const renderChart = (questionId: string, chartType: ChartType) => {
     const data = getChartData(questionId);
     const options = ['pie', 'doughnut'].includes(chartType) ? pieOptions : commonChartOptions;
@@ -1186,101 +1190,17 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         )}
       </Box>
 
-      {/* Boîte de dialogue pour les détails de la question */}
-      <Dialog
+      {/* Remplacer la boîte de dialogue existante par le nouveau composant */}
+      <QuestionDetailsDialog
         open={showResponseDetails}
         onClose={() => setShowResponseDetails(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 2 }
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white'
-        }}>
-          {selectedQuestion?.question?.text}
-          <IconButton onClick={() => setShowResponseDetails(false)} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        
-        <DialogContent sx={{ p: 3 }}>
-          {selectedQuestion && (
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Question Type: {selectedQuestion.question.type}
-              </Typography>
-              
-              <Box sx={{ mt: 3, mb: 4 }}>
-                {renderChart(selectedQuestion.questionId, chartTypes[selectedQuestion.questionId] || getAvailableChartTypes(selectedQuestion.question.type)[0])}
-              </Box>
-              
-              <Stack 
-                direction="row" 
-                spacing={1} 
-                sx={{ 
-                  mt: 3,
-                  mb: 4,
-                  justifyContent: 'center',
-                  pt: 1
-                }}
-              >
-                {getAvailableChartTypes(selectedQuestion.question.type).map((type) => (
-                  <Button
-                    key={type}
-                    onClick={() => setChartTypes(prev => ({ ...prev, [selectedQuestion.questionId]: type }))}
-                    variant={chartTypes[selectedQuestion.questionId] === type ? 'contained' : 'outlined'}
-                    startIcon={getChartIcon(type)}
-                    sx={{
-                      ...(chartTypes[selectedQuestion.questionId] === type ? {
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                      } : {
-                        color: '#667eea',
-                        borderColor: 'rgba(102, 126, 234, 0.5)',
-                      })
-                    }}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Button>
-                ))}
-              </Stack>
-              
-              <Divider sx={{ my: 3 }} />
-              
-              <Typography variant="h6" gutterBottom>
-                Individual Responses ({selectedQuestion.answers.length})
-              </Typography>
-              
-              <Box sx={{ maxHeight: 300, overflowY: 'auto', mt: 2 }}>
-                {selectedQuestion.answers.map((response, index) => {
-                  const answer = response.answers.find(a => a.questionId === selectedQuestion.questionId);
-                  return (
-                    <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          Response #{index + 1}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(response.submittedAt).toLocaleString()}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body1" sx={{ mt: 1 }}>
-                        {answer?.answer || 'No answer'}
-                      </Typography>
-                    </Paper>
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+        question={selectedQuestion}
+        chartTypes={chartTypes}
+        setChartTypes={setChartTypes}
+        renderChart={renderChart}
+        getAvailableChartTypes={getAvailableChartTypes}
+        getChartIcon={getChartIcon}
+      />
     </Box>
   );
 };
