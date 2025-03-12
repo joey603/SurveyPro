@@ -26,6 +26,8 @@ import {
   PieChart as PieChartIcon,
   ShowChart as ShowChartIcon,
   DonutLarge as DonutLargeIcon,
+  TableView as TableViewIcon,
+  Code as CodeIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 import {
@@ -895,6 +897,84 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     setShowResponseDetails(true);
   };
 
+  // Fonction pour préparer les données pour l'exportation
+  const prepareExportData = useCallback(() => {
+    if (!survey || filteredAnswers.length === 0) return [];
+
+    return filteredAnswers.map(response => {
+      const questionAnswers = survey.questions.reduce((acc: any, question) => {
+        const questionAnswer = response.answers.find(a => a.questionId === question.id);
+        acc[question.text] = questionAnswer?.answer || 'Pas de réponse';
+        return acc;
+      }, {});
+
+      return {
+        respondentId: response._id,
+        submittedAt: response.submittedAt,
+        demographic: response.respondent?.demographic ? {
+          gender: response.respondent.demographic.gender,
+          dateOfBirth: response.respondent.demographic.dateOfBirth,
+          educationLevel: response.respondent.demographic.educationLevel,
+          city: response.respondent.demographic.city
+        } : null,
+        ...questionAnswers
+      };
+    });
+  }, [survey, filteredAnswers]);
+
+  // Fonction pour exporter en CSV
+  const exportToCSV = useCallback(() => {
+    if (!survey) return;
+
+    const data = prepareExportData();
+    if (data.length === 0) return;
+
+    // Créer les en-têtes
+    const headers = [
+      'ID Répondant',
+      'Date de soumission',
+      'Genre',
+      'Date de naissance',
+      'Niveau d\'éducation',
+      'Ville',
+      ...survey.questions.map(q => q.text)
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...data.map(item => [
+        item.respondentId,
+        item.submittedAt,
+        item.demographic?.gender || '',
+        item.demographic?.dateOfBirth || '',
+        item.demographic?.educationLevel || '',
+        item.demographic?.city || '',
+        ...survey.questions.map(q => `"${item[q.text]}"`)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `resultats_sondage_${survey._id}.csv`;
+    link.click();
+  }, [survey, prepareExportData]);
+
+  // Fonction pour exporter en JSON
+  const exportToJSON = useCallback(() => {
+    if (!survey) return;
+
+    const data = prepareExportData();
+    if (data.length === 0) return;
+
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `resultats_sondage_${survey._id}.json`;
+    link.click();
+  }, [survey, prepareExportData]);
+
   return (
     <Box>
       <Box sx={{ 
@@ -1183,6 +1263,46 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         }}
                       />
                     </Box>
+                  </Box>
+                )}
+
+                {/* Boutons d'exportation */}
+                {filteredAnswers.length > 0 && (
+                  <Box sx={{ 
+                    mt: 4, 
+                    pt: 3, 
+                    borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }}>
+                    <Stack direction="row" spacing={2}>
+                      <Button
+                        variant="contained"
+                        startIcon={<TableViewIcon />}
+                        onClick={exportToCSV}
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        Exporter en CSV
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<CodeIcon />}
+                        onClick={exportToJSON}
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          }
+                        }}
+                      >
+                        Exporter en JSON
+                      </Button>
+                    </Stack>
                   </Box>
                 )}
               </Paper>
