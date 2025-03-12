@@ -51,6 +51,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { FilterPanel } from './FilterPanel';
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 ChartJS.register(
   CategoryScale,
@@ -330,6 +332,12 @@ const trendChartOptions = {
   }
 } as const;
 
+interface QuestionDetails {
+  questionId: string;
+  question: Question;
+  answers: SurveyResponse[];
+}
+
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
   onClose,
@@ -348,6 +356,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   });
   const [filteredAnswers, setFilteredAnswers] = useState<SurveyResponse[]>(responses);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
+  const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -687,6 +697,199 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     setFilteredAnswers(filteredResponses);
   };
 
+  // Fonction pour calculer les statistiques d'une question
+  const calculateQuestionStats = useCallback((questionId: string) => {
+    const { answerCounts, total } = analyzeResponses(questionId);
+    
+    // Trouver la réponse la plus fréquente
+    let mostCommonAnswer = '';
+    let maxCount = 0;
+    
+    Object.entries(answerCounts).forEach(([answer, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonAnswer = answer;
+      }
+    });
+    
+    const percentages = Object.entries(answerCounts).reduce((acc, [answer, count]) => {
+      acc[answer] = Math.round((count / total) * 100);
+      return acc;
+    }, {} as { [key: string]: number });
+    
+    return {
+      total,
+      answerCounts,
+      percentages,
+      mostCommonAnswer,
+      maxCount
+    };
+  }, [analyzeResponses]);
+
+  // Fonction pour afficher un résumé de la question
+  const renderQuestionSummary = (question: Question) => {
+    const stats = calculateQuestionStats(question.id);
+    
+    if (stats.total === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          Aucune réponse pour cette question.
+        </Typography>
+      );
+    }
+    
+    switch (question.type) {
+      case 'multiple-choice':
+      case 'dropdown':
+      case 'yes-no':
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Réponse la plus fréquente: <strong>{stats.mostCommonAnswer}</strong> ({stats.percentages[stats.mostCommonAnswer]}% des réponses)
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              {Object.entries(stats.answerCounts).map(([answer, count]) => (
+                <Box key={answer} sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">{answer}</Typography>
+                    <Typography variant="body2">{count} ({stats.percentages[answer]}%)</Typography>
+                  </Box>
+                  <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
+                    <Box
+                      sx={{
+                        width: `${stats.percentages[answer]}%`,
+                        bgcolor: 'rgba(102, 126, 234, 0.8)',
+                        borderRadius: 1,
+                        height: 8
+                      }}
+                    />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        );
+      case 'text':
+        const entries = Object.entries(stats.answerCounts);
+        const initialDisplayCount = 3;
+        const hasMoreResponses = entries.length > initialDisplayCount;
+        const displayedEntries = showAllResponses[question.id] 
+          ? entries 
+          : entries.slice(0, initialDisplayCount);
+        
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Réponses: <strong>{stats.total}</strong>
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              {displayedEntries.map(([answer, count]) => (
+                <Box key={answer} sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">{answer}</Typography>
+                    <Typography variant="body2">{count} ({stats.percentages[answer]}%)</Typography>
+                  </Box>
+                  <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
+                    <Box
+                      sx={{
+                        width: `${stats.percentages[answer]}%`,
+                        bgcolor: 'rgba(102, 126, 234, 0.8)',
+                        borderRadius: 1,
+                        height: 8
+                      }}
+                    />
+                  </Box>
+                </Box>
+              ))}
+              
+              {hasMoreResponses && (
+                <Button 
+                  onClick={() => setShowAllResponses(prev => ({
+                    ...prev,
+                    [question.id]: !prev[question.id]
+                  }))}
+                  startIcon={showAllResponses[question.id] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                  sx={{ 
+                    mt: 1, 
+                    color: '#667eea',
+                    '&:hover': {
+                      backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                    }
+                  }}
+                >
+                  {showAllResponses[question.id] 
+                    ? "Voir moins" 
+                    : `Voir ${entries.length - initialDisplayCount} réponses supplémentaires`}
+                </Button>
+              )}
+            </Box>
+          </Box>
+        );
+      case 'rating':
+      case 'slider':
+        const values = Object.keys(stats.answerCounts).map(Number).sort((a, b) => a - b);
+        const min = values[0];
+        const max = values[values.length - 1];
+        const sum = values.reduce((acc, val) => acc + (val * stats.answerCounts[val]), 0);
+        const avg = (sum / stats.total).toFixed(1);
+        
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Note moyenne: <strong>{avg}</strong> (plage: {min} - {max})
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              {values.map(value => (
+                <Box key={value} sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">Note {value}</Typography>
+                    <Typography variant="body2">{stats.answerCounts[value]} ({stats.percentages[value]}%)</Typography>
+                  </Box>
+                  <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
+                    <Box
+                      sx={{
+                        width: `${stats.percentages[value]}%`,
+                        bgcolor: 'rgba(102, 126, 234, 0.8)',
+                        borderRadius: 1,
+                        height: 8
+                      }}
+                    />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        );
+      default:
+        return (
+          <Typography variant="body2" color="text.secondary">
+            {stats.total} réponses reçues pour cette question.
+          </Typography>
+        );
+    }
+  };
+
+  // Fonction pour gérer le clic sur une question
+  const handleQuestionClick = (questionId: string) => {
+    const question = survey.questions.find(q => q.id === questionId);
+    if (!question) return;
+    
+    // Filtrer les réponses pour cette question
+    const questionAnswers = filteredAnswers.filter(response => 
+      response.answers.some(a => a.questionId === questionId)
+    );
+    
+    // Définir la question sélectionnée avec ses réponses
+    setSelectedQuestion({
+      questionId,
+      question,
+      answers: questionAnswers
+    });
+    
+    // Ouvrir la boîte de dialogue ou changer la vue
+    setShowResponseDetails(true);
+  };
+
   return (
     <Box>
       <Box sx={{ 
@@ -736,6 +939,81 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 />
               </Grid>
             )}
+
+            {/* Section Survey Questions - déplacée au-dessus des statistiques générales */}
+            <Grid item xs={12}>
+              <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
+                Questions du sondage
+              </Typography>
+              
+              {survey.questions.map((question, index) => {
+                const stats = calculateQuestionStats(question.id);
+                
+                return (
+                  <Paper
+                    key={question.id}
+                    elevation={1}
+                    sx={{
+                      p: 3,
+                      mb: 3,
+                      borderRadius: 2,
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.1)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                        Question {index + 1}: {question.text}
+                      </Typography>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Type: {question.type}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="body2">
+                          Total des réponses: <strong>{stats.total}</strong>
+                        </Typography>
+                        {stats.total > 0 && stats.mostCommonAnswer && (
+                          <Typography variant="body2">
+                            Réponse la plus fréquente: <strong>{stats.mostCommonAnswer}</strong>
+                          </Typography>
+                        )}
+                      </Box>
+                      
+                      <Button
+                        variant="contained"
+                        startIcon={<BarChartIcon />}
+                        onClick={() => handleQuestionClick(question.id)}
+                        disabled={stats.total === 0}
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          },
+                          '&.Mui-disabled': {
+                            background: 'rgba(0, 0, 0, 0.12)',
+                            color: 'rgba(0, 0, 0, 0.26)'
+                          }
+                        }}
+                      >
+                        Voir détails ({stats.total} réponses)
+                      </Button>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Box sx={{ mt: 2 }}>
+                      {renderQuestionSummary(question)}
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Grid>
 
             <Grid item xs={12}>
               <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
@@ -904,103 +1182,105 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 )}
               </Paper>
             </Grid>
-
-            {survey.questions.map((question: any, index: number) => {
-              const { answerCounts, total } = analyzeResponses(question.id);
-              const availableChartTypes = getAvailableChartTypes(question.type);
-              const currentChartType = chartTypes[question.id] || availableChartTypes[0];
-
-              return (
-                <Grid item xs={12} key={question.id}>
-                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start', 
-                      mb: 2 
-                    }}>
-                      <Box>
-                        <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                          Question {index + 1}: {question.text}
-                        </Typography>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                          Type: {question.type}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Divider sx={{ my: 2 }} />
-
-                    <Box sx={{ mt: 2 }}>
-                      <List>
-                        {Object.entries(answerCounts).map(([answer, count]) => (
-                          <ListItem key={answer}>
-                            <ListItemText
-                              primary={answer}
-                              secondary={`${count} réponses (${Math.round((count / total) * 100)}%)`}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-
-                      <Box sx={{ 
-                        height: 300, 
-                        mt: 3,
-                        mb: 4,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        width: '100%',
-                        position: 'relative'
-                      }}>
-                        <Box sx={{ 
-                          width: '100%',
-                          maxWidth: '800px',
-                          margin: '0 auto'
-                        }}>
-                          {renderChart(question.id, currentChartType)}
-                        </Box>
-                      </Box>
-
-                      <Divider sx={{ my: 3 }} />
-
-                      <Stack 
-                        direction="row" 
-                        spacing={1} 
-                        sx={{ 
-                          mt: 3,
-                          justifyContent: 'center',
-                          pt: 1
-                        }}
-                      >
-                        {availableChartTypes.map((type) => (
-                          <Button
-                            key={type}
-                            onClick={() => setChartTypes(prev => ({ ...prev, [question.id]: type }))}
-                            variant={currentChartType === type ? 'contained' : 'outlined'}
-                            startIcon={getChartIcon(type)}
-                            sx={{
-                              ...(currentChartType === type ? {
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                color: 'white',
-                              } : {
-                                color: '#667eea',
-                                borderColor: 'rgba(102, 126, 234, 0.5)',
-                              })
-                            }}
-                          >
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </Button>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </Paper>
-                </Grid>
-              );
-            })}
           </Grid>
         )}
       </Box>
+
+      {/* Boîte de dialogue pour les détails de la question */}
+      <Dialog
+        open={showResponseDetails}
+        onClose={() => setShowResponseDetails(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white'
+        }}>
+          {selectedQuestion?.question?.text}
+          <IconButton onClick={() => setShowResponseDetails(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 3 }}>
+          {selectedQuestion && (
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Question Type: {selectedQuestion.question.type}
+              </Typography>
+              
+              <Box sx={{ mt: 3, mb: 4 }}>
+                {renderChart(selectedQuestion.questionId, chartTypes[selectedQuestion.questionId] || getAvailableChartTypes(selectedQuestion.question.type)[0])}
+              </Box>
+              
+              <Stack 
+                direction="row" 
+                spacing={1} 
+                sx={{ 
+                  mt: 3,
+                  mb: 4,
+                  justifyContent: 'center',
+                  pt: 1
+                }}
+              >
+                {getAvailableChartTypes(selectedQuestion.question.type).map((type) => (
+                  <Button
+                    key={type}
+                    onClick={() => setChartTypes(prev => ({ ...prev, [selectedQuestion.questionId]: type }))}
+                    variant={chartTypes[selectedQuestion.questionId] === type ? 'contained' : 'outlined'}
+                    startIcon={getChartIcon(type)}
+                    sx={{
+                      ...(chartTypes[selectedQuestion.questionId] === type ? {
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                      } : {
+                        color: '#667eea',
+                        borderColor: 'rgba(102, 126, 234, 0.5)',
+                      })
+                    }}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Button>
+                ))}
+              </Stack>
+              
+              <Divider sx={{ my: 3 }} />
+              
+              <Typography variant="h6" gutterBottom>
+                Individual Responses ({selectedQuestion.answers.length})
+              </Typography>
+              
+              <Box sx={{ maxHeight: 300, overflowY: 'auto', mt: 2 }}>
+                {selectedQuestion.answers.map((response, index) => {
+                  const answer = response.answers.find(a => a.questionId === selectedQuestion.questionId);
+                  return (
+                    <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          Response #{index + 1}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(response.submittedAt).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" sx={{ mt: 1 }}>
+                        {answer?.answer || 'No answer'}
+                      </Typography>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
