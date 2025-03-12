@@ -21,7 +21,7 @@ import {
 import { Bar, Pie, Line, Doughnut, Scatter } from 'react-chartjs-2';
 import { calculateAge } from '../../../utils/dateUtils';
 
-// Enregistrer les composants Chart.js nécessaires
+// Register necessary Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -66,7 +66,7 @@ interface DemographicStatisticsProps {
   filteredResponses?: SurveyResponse[];
 }
 
-// Options communes pour les graphiques
+// Common options for charts
 const commonChartOptions = {
   responsive: true,
   maintainAspectRatio: true,
@@ -94,7 +94,7 @@ const commonChartOptions = {
   }
 };
 
-// Options pour les graphiques circulaires
+// Options for pie charts
 const pieOptions = {
   ...commonChartOptions,
   plugins: {
@@ -112,7 +112,7 @@ const pieOptions = {
   }
 };
 
-// Couleurs pour les graphiques
+// Colors for charts
 const chartColors = {
   backgrounds: [
     'rgba(102, 126, 234, 0.6)',
@@ -134,16 +134,16 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   responses,
   filteredResponses
 }) => {
-  // Utiliser les réponses filtrées si disponibles, sinon utiliser toutes les réponses
+  // Use filtered responses if available, otherwise use all responses
   const displayedResponses = filteredResponses || responses;
 
-  // Fonction pour calculer les statistiques démographiques
+  // Function to calculate demographic statistics
   const calculateDemographicStats = useCallback((): DemographicStats => {
     const stats: DemographicStats = {
       gender: {},
       education: {},
       city: {},
-      ageDistribution: Array(121).fill(0) // Pour stocker les âges de 0 à 120 ans
+      ageDistribution: Array(121).fill(0) // To store ages from 0 to 120 years
     };
 
     displayedResponses.forEach(response => {
@@ -174,26 +174,26 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     return stats;
   }, [displayedResponses]);
 
-  // Calculer les statistiques
+  // Calculate statistics
   const stats = calculateDemographicStats();
 
-  // Fonction pour rendre le graphique d'âge
+  // Function to render the age chart
   const renderAgeChart = () => {
-    // Créer des données pour le graphique de dispersion
+    // Create data for scatter chart
     const ageDistribution: { [key: string]: number } = {};
     
-    // Filtrer les âges qui ont au moins une réponse
+    // Filter ages that have at least one response
     stats.ageDistribution.forEach((count, age) => {
       if (count > 0) {
         ageDistribution[age] = count;
       }
     });
 
-    // Trier les âges pour une attribution cohérente des couleurs
+    // Sort ages for consistent color assignment
     const sortedAges = Object.keys(ageDistribution).sort((a, b) => parseInt(a) - parseInt(b));
     
     const datasets = sortedAges.map((age, index) => ({
-      label: `${age} ans`,
+      label: `${age} years old`,
       data: [{
         x: parseInt(age),
         y: ageDistribution[age]
@@ -231,21 +231,21 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             label: (context: any) => {
               const age = context.parsed.x;
               const count = context.parsed.y;
-              return `${count} participant${count > 1 ? 's' : ''} de ${age} ans`;
+              return `${count} participant${count > 1 ? 's' : ''} of ${age} years old`;
             }
           }
         }
       },
       scales: {
         x: {
-          type: 'linear',
-          position: 'bottom',
+          type: 'linear' as const,
+          position: 'bottom' as const,
           title: {
             display: true,
-            text: 'Âge',
+            text: 'Age',
             font: {
               size: 14,
-              weight: 'bold'
+              weight: 'bold' as const
             }
           },
           min: 1,
@@ -261,14 +261,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           }
         },
         y: {
-          type: 'linear',
-          position: 'left',
+          type: 'linear' as const,
+          position: 'left' as const,
           title: {
             display: true,
-            text: 'Nombre de participants',
+            text: 'Number of participants',
             font: {
               size: 14,
-              weight: 'bold'
+              weight: 'bold' as const
             }
           },
           beginAtZero: true,
@@ -283,7 +283,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       },
       interaction: {
         intersect: false,
-        mode: 'nearest'
+        mode: 'nearest' as const
       }
     };
 
@@ -306,7 +306,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          Statistiques Démographiques
+          Demographic Statistics
         </Typography>
       </Box>
 
@@ -314,7 +314,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         justifyContent: 'center',
         alignItems: 'stretch'
       }}>
-        {/* Genre */}
+        {/* Gender */}
         <Grid item xs={12} md={6}>
           <Paper elevation={0} sx={{ 
             p: 3, 
@@ -341,7 +341,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 mb: 3
               }}
             >
-              Distribution par Genre
+              Gender Distribution
             </Typography>
             <Box sx={{ 
               height: 'calc(100% - 60px)',
@@ -370,7 +370,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           </Paper>
         </Grid>
 
-        {/* Niveau d'éducation */}
+        {/* Education Level */}
         <Grid item xs={12} md={6}>
           <Paper elevation={0} sx={{ 
             p: 3, 
@@ -397,7 +397,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 mb: 3
               }}
             >
-              Distribution par Niveau d'Éducation
+              Education Level Distribution
             </Typography>
             <Box sx={{ 
               height: 'calc(100% - 60px)',
@@ -454,7 +454,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           </Paper>
         </Grid>
 
-        {/* Distribution des âges */}
+        {/* Age Distribution */}
         <Grid item xs={12} md={6}>
           <Paper elevation={0} sx={{ 
             p: 3, 
@@ -481,7 +481,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 mb: 3
               }}
             >
-              Distribution par Âge
+              Age Distribution
             </Typography>
             <Box sx={{ 
               height: 'calc(100% - 60px)',
@@ -495,7 +495,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           </Paper>
         </Grid>
 
-        {/* Villes */}
+        {/* Cities */}
         <Grid item xs={12} md={6}>
           <Paper elevation={0} sx={{ 
             p: 3, 
@@ -522,7 +522,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 mb: 3
               }}
             >
-              Distribution par Ville
+              City Distribution
             </Typography>
             <Box sx={{ 
               height: 'calc(100% - 60px)',

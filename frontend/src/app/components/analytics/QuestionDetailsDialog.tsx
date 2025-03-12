@@ -55,7 +55,7 @@ interface QuestionDetails {
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
-// Props du composant
+// Component props
 interface QuestionDetailsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -104,7 +104,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
         {question && (
           <Box>
             <Typography variant="subtitle1" gutterBottom>
-              Type de question: {question.question.type}
+              Question type: {question.question.type}
             </Typography>
             
             <Box sx={{ mt: 3, mb: 4 }}>
@@ -145,7 +145,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
             <Divider sx={{ my: 3 }} />
             
             <Typography variant="h6" gutterBottom>
-              Réponses individuelles ({question.answers.length})
+              Individual Responses ({question.answers.length})
             </Typography>
             
             <Box sx={{ maxHeight: 300, overflowY: 'auto', mt: 2 }}>
@@ -155,14 +155,14 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                   <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="body2" fontWeight="medium">
-                        Réponse #{index + 1}
+                        Response #{index + 1}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {new Date(response.submittedAt).toLocaleString()}
                       </Typography>
                     </Box>
                     <Typography variant="body1" sx={{ mt: 1 }}>
-                      {answer?.answer || 'Pas de réponse'}
+                      {answer?.answer || 'No response'}
                     </Typography>
                   </Paper>
                 );

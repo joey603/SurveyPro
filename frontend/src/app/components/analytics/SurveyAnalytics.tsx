@@ -977,9 +977,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   return (
     <Box>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         mb: 3
       }}>
@@ -1016,20 +1016,20 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         ) : (
           <Grid container spacing={3}>
             {showFilters && (
-              <Grid item xs={12}>
+            <Grid item xs={12}>
                 <AdvancedFilterPanel
                   survey={survey}
                   responses={surveyAnswers}
                   onApplyFilters={handleApplyFilters}
                 />
-              </Grid>
+                  </Grid>
             )}
 
             {/* Section Survey Questions - déplacée au-dessus des statistiques générales */}
             <Grid item xs={12}>
               <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
                 Questions du sondage
-              </Typography>
+                      </Typography>
               
               {survey.questions.map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
@@ -1062,13 +1062,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       <Box>
                         <Typography variant="body2">
                           Total des réponses: <strong>{stats.total}</strong>
-                        </Typography>
+                      </Typography>
                         {stats.total > 0 && stats.mostCommonAnswer && (
                           <Typography variant="body2">
                             Réponse la plus fréquente: <strong>{stats.mostCommonAnswer}</strong>
-                          </Typography>
+                      </Typography>
                         )}
-                      </Box>
+                    </Box>
                       
                       <Button
                         variant="contained"
@@ -1092,10 +1092,10 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Box sx={{ mt: 2 }}>
+                  <Box sx={{ mt: 2 }}>
                       {renderQuestionSummary(question)}
-                    </Box>
-                  </Paper>
+                  </Box>
+              </Paper>
                 );
               })}
             </Grid>
@@ -1121,7 +1121,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
+                <Box sx={{ 
                       p: 2, 
                       bgcolor: 'rgba(102, 126, 234, 0.1)',
                       borderRadius: 1,
@@ -1129,23 +1129,23 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     }}>
                       <Typography variant="caption" color="text.secondary">
                         Première réponse
-                      </Typography>
+                    </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
                         {filteredAnswers.length > 0 ? 
                           new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
                           'Aucune réponse'
                         }
-                      </Typography>
-                    </Box>
+                    </Typography>
+                  </Box>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
+                  <Box sx={{ 
                       p: 2, 
                       bgcolor: 'rgba(102, 126, 234, 0.1)',
                       borderRadius: 1,
                       textAlign: 'center'
                     }}>
-                      <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary">
                         Réponses quotidiennes moyennes
                       </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
@@ -1156,14 +1156,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           ))).toFixed(1) :
                           '0'
                         }
-                      </Typography>
-                    </Box>
+                    </Typography>
+                  </Box>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                      p: 2, 
+                <Box sx={{ 
+                  p: 2,
                       bgcolor: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: 1,
+                  borderRadius: 1,
                       textAlign: 'center'
                     }}>
                       <Typography variant="caption" color="text.secondary">
@@ -1187,7 +1187,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     justifyContent: 'center',
                     alignItems: 'center',
                     width: '100%',
-                    position: 'relative'
+                  position: 'relative'
                   }}>
                     <Typography variant="subtitle1" sx={{ mb: 2, color: '#1a237e' }}>
                       Tendance des réponses
@@ -1196,83 +1196,83 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       width: '100%',
                       maxWidth: '800px',
                       margin: '0 auto'
-                    }}>
-                      <Line
+                }}>
+                  <Line
                         data={getResponseTrends(filteredAnswers)}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              display: false
-                            },
-                            title: {
-                              display: false
-                            },
-                            tooltip: {
-                              mode: 'index',
-                              intersect: false,
-                              backgroundColor: '#ffffff',
-                              titleColor: '#1a237e',
-                              bodyColor: '#475569',
-                              borderColor: 'rgba(102, 126, 234, 0.2)',
-                              borderWidth: 1,
-                              padding: 12,
-                              bodyFont: {
-                                size: 13
-                              },
-                              titleFont: {
-                                size: 13,
-                                weight: 'bold'
-                              },
-                              callbacks: {
-                                label: (context) => `${context.parsed.y} réponses`
-                              }
-                            }
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        title: {
+                          display: false
+                        },
+                        tooltip: {
+                          mode: 'index',
+                          intersect: false,
+                          backgroundColor: '#ffffff',
+                          titleColor: '#1a237e',
+                          bodyColor: '#475569',
+                          borderColor: 'rgba(102, 126, 234, 0.2)',
+                          borderWidth: 1,
+                          padding: 12,
+                          bodyFont: {
+                            size: 13
                           },
-                          scales: {
-                            x: {
-                              grid: {
+                          titleFont: {
+                            size: 13,
+                            weight: 'bold'
+                          },
+                          callbacks: {
+                                label: (context) => `${context.parsed.y} réponses`
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          grid: {
                                 color: 'rgba(102, 126, 234, 0.1)',
                                 lineWidth: 1,
                                 drawTicks: false
-                              },
-                              ticks: {
-                                font: {
-                                  size: 11
-                                },
-                                color: '#64748b'
-                              }
+                          },
+                          ticks: {
+                            font: {
+                              size: 11
                             },
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                color: 'rgba(102, 126, 234, 0.1)',
-                                lineWidth: 1,
-                                drawTicks: false
-                              },
-                              ticks: {
-                                font: {
-                                  size: 11
-                                },
+                                color: '#64748b'
+                          }
+                        },
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(102, 126, 234, 0.1)',
+                            lineWidth: 1,
+                            drawTicks: false
+                          },
+                          ticks: {
+                            font: {
+                              size: 11
+                            },
                                 color: '#64748b',
                                 precision: 0
                               }
                             }
-                          }
-                        }}
-                      />
+                      }
+                    }}
+                  />
+                </Box>
                     </Box>
-                  </Box>
                 )}
 
                 {/* Boutons d'exportation */}
                 {filteredAnswers.length > 0 && (
-                  <Box sx={{ 
+                    <Box sx={{ 
                     mt: 4, 
                     pt: 3, 
                     borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-                    display: 'flex',
+                      display: 'flex',
                     justifyContent: 'center'
                   }}>
                     <Stack direction="row" spacing={2}>
@@ -1280,7 +1280,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         variant="contained"
                         startIcon={<TableViewIcon />}
                         onClick={exportToCSV}
-                        sx={{
+                        sx={{ 
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
                             background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
@@ -1289,24 +1289,24 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       >
                         Exporter en CSV
                       </Button>
-                      <Button
+                          <Button
                         variant="contained"
                         startIcon={<CodeIcon />}
                         onClick={exportToJSON}
-                        sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
                             background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                           }
                         }}
                       >
                         Exporter en JSON
-                      </Button>
-                    </Stack>
-                  </Box>
+                          </Button>
+                      </Stack>
+                    </Box>
                 )}
-              </Paper>
-            </Grid>
+                  </Paper>
+                </Grid>
 
             {/* Ajouter la section des statistiques démographiques si des données démographiques sont disponibles */}
             {survey.demographicEnabled && filteredAnswers.some(response => response.respondent?.demographic) && (
@@ -1315,8 +1315,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   responses={responses}
                   filteredResponses={filteredAnswers}
                 />
-              </Grid>
-            )}
+          </Grid>
+        )}
           </Grid>
         )}
       </Box>
