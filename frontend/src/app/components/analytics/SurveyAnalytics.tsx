@@ -54,6 +54,7 @@ import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { QuestionDetailsDialog } from './QuestionDetailsDialog';
+import { DemographicStatistics } from './DemographicStatistics';
 
 ChartJS.register(
   CategoryScale,
@@ -1186,6 +1187,16 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 )}
               </Paper>
             </Grid>
+
+            {/* Ajouter la section des statistiques démographiques si des données démographiques sont disponibles */}
+            {survey.demographicEnabled && filteredAnswers.some(response => response.respondent?.demographic) && (
+              <Grid item xs={12}>
+                <DemographicStatistics 
+                  responses={responses}
+                  filteredResponses={filteredAnswers}
+                />
+              </Grid>
+            )}
           </Grid>
         )}
       </Box>
