@@ -224,13 +224,13 @@ const getResponseTrends = (responses: SurveyResponse[]) => {
       trendPercentage = Math.round(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100);
     }
     
-    if (secondHalfAvg > firstHalfAvg * 1.1) trend = 'en hausse';
-    else if (secondHalfAvg < firstHalfAvg * 0.9) trend = 'en baisse';
+    if (secondHalfAvg > firstHalfAvg * 1.1) trend = 'increasing';
+    else if (secondHalfAvg < firstHalfAvg * 0.9) trend = 'decreasing';
   }
   
   // Calculer la répartition par jour de la semaine
   const dayOfWeekDistribution = [0, 0, 0, 0, 0, 0, 0]; // dim, lun, mar, mer, jeu, ven, sam
-  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   dates.forEach(dateStr => {
     const date = new Date(dateStr);
@@ -262,7 +262,7 @@ const getResponseTrends = (responses: SurveyResponse[]) => {
     chartData: {
       labels: dates,
       datasets: [{
-        label: 'Réponses',
+        label: 'Responses',
         data: counts,
         borderColor: 'rgba(102, 126, 234, 0.8)',
         backgroundColor: 'rgba(102, 126, 234, 0.2)',
@@ -1269,7 +1269,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     width: '100%',
                   }}>
                     <Typography variant="h6" sx={{ mb: 3, color: '#1a237e', fontWeight: 'medium', textAlign: 'center' }}>
-                      Analyse des tendances de participation
+                      Participation Trend Analysis
                     </Typography>
                     
                     {(() => {
@@ -1314,7 +1314,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                   {trends.total}
                                 </Typography>
                                 <Typography variant="body2">
-                                  réponses totales
+                                  total responses
                                 </Typography>
                               </Box>
                               
@@ -1328,7 +1328,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                 justifyContent: 'center'
                               }}>
                                 <Typography variant="h6" sx={{ color: '#1a237e', mb: 1 }}>
-                                  Tendance de participation
+                                  Participation Trend
                                 </Typography>
                                 
                                 <Box sx={{ 
@@ -1340,17 +1340,17 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                     variant="h4" 
                                     sx={{ 
                                       fontWeight: 'bold',
-                                      color: trends.trend === 'en hausse' 
+                                      color: trends.trend === 'increasing' 
                                         ? '#4caf50' 
-                                        : trends.trend === 'en baisse' 
+                                        : trends.trend === 'decreasing' 
                                           ? '#f44336' 
                                           : '#ff9800',
                                       mr: 2
                                     }}
                                   >
-                                    {trends.trend === 'en hausse' 
+                                    {trends.trend === 'increasing' 
                                       ? '↗️' 
-                                      : trends.trend === 'en baisse' 
+                                      : trends.trend === 'decreasing' 
                                         ? '↘️' 
                                         : '→'}
                                   </Typography>
@@ -1359,9 +1359,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                     variant="h5" 
                                     sx={{ 
                                       fontWeight: 'medium',
-                                      color: trends.trend === 'en hausse' 
+                                      color: trends.trend === 'increasing' 
                                         ? '#4caf50' 
-                                        : trends.trend === 'en baisse' 
+                                        : trends.trend === 'decreasing' 
                                           ? '#f44336' 
                                           : '#ff9800'
                                     }}
@@ -1373,11 +1373,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                 </Box>
                                 
                                 <Typography variant="body2" sx={{ color: '#475569' }}>
-                                  {trends.trend === 'en hausse' 
-                                    ? 'La participation augmente! Votre sondage gagne en popularité.' 
-                                    : trends.trend === 'en baisse' 
-                                      ? 'La participation diminue. Envisagez de promouvoir davantage votre sondage.' 
-                                      : 'La participation est stable.'}
+                                  {trends.trend === 'increasing' 
+                                    ? 'Participation is increasing! Your survey is gaining popularity.' 
+                                    : trends.trend === 'decreasing' 
+                                      ? 'Participation is decreasing. Consider promoting your survey more.' 
+                                      : 'Participation is stable.'}
                                 </Typography>
                               </Box>
                             </Box>
@@ -1394,7 +1394,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             }}
                           >
                             <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
-                              Répartition par jour de la semaine
+                              Distribution by Day of Week
                             </Typography>
                             
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
@@ -1483,7 +1483,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             
                             <Box sx={{ mt: 3, textAlign: 'center' }}>
                               <Typography variant="body2" sx={{ color: '#475569' }}>
-                                <strong>{trends.dayNames[trends.mostActiveDay]}</strong> est le jour le plus actif avec <strong>{trends.dayOfWeekDistribution[trends.mostActiveDay]}</strong> réponses ({dayPercentages[trends.mostActiveDay]}% du total)
+                                <strong>{trends.dayNames[trends.mostActiveDay]}</strong> is the most active day with <strong>{trends.dayOfWeekDistribution[trends.mostActiveDay]}</strong> responses ({dayPercentages[trends.mostActiveDay]}% of total)
                               </Typography>
                             </Box>
                           </Paper>
@@ -1501,7 +1501,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                               }}
                             >
                               <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
-                                Chronologie des réponses
+                                Response Timeline
                               </Typography>
                               
                               <Box sx={{ position: 'relative', mt: 4, mb: 2 }}>
@@ -1571,7 +1571,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                             zIndex: 10
                                           }}
                                         >
-                                          {date}: {count} réponses
+                                          {date}: {count} responses
                                         </Box>
                                       </Box>
                                     );
@@ -1595,7 +1595,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                               
                               <Box sx={{ mt: 3, textAlign: 'center' }}>
                                 <Typography variant="body2" sx={{ color: '#475569' }}>
-                                  Pic de participation le <strong>{trends.maxResponsesDay}</strong> avec <strong>{trends.maxResponsesCount}</strong> réponses
+                                  Peak participation on <strong>{trends.maxResponsesDay}</strong> with <strong>{trends.maxResponsesCount}</strong> responses
                                 </Typography>
                               </Box>
                             </Paper>
