@@ -194,23 +194,82 @@ const chartColors = {
 
 // Ajouter cette fonction utilitaire
 const getResponseTrends = (responses: SurveyResponse[]) => {
-  const trends = responses.reduce((acc: { [key: string]: number }, response) => {
+  // Regrouper les réponses par date
+  const trendsByDate = responses.reduce((acc: { [key: string]: number }, response) => {
     const date = new Date(response.submittedAt).toLocaleDateString();
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
 
-  // Modifier le retour pour inclure datasets comme requis par Chart.js
+  // Trier les dates chronologiquement
+  const dates = Object.keys(trendsByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  const counts = dates.map(date => trendsByDate[date]);
+  
+  // Calculer des statistiques
+  const maxResponsesDay = dates.reduce((max, date) => 
+    trendsByDate[date] > trendsByDate[max] ? date : max, dates[0] || '');
+  
+  const totalResponses = counts.reduce((sum, count) => sum + count, 0);
+  
+  // Calculer la tendance
+  let trend = 'stable';
+  let trendPercentage = 0;
+  if (dates.length > 1) {
+    const firstHalf = counts.slice(0, Math.floor(counts.length / 2));
+    const secondHalf = counts.slice(Math.floor(counts.length / 2));
+    const firstHalfAvg = firstHalf.reduce((sum, count) => sum + count, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, count) => sum + count, 0) / secondHalf.length;
+    
+    if (firstHalfAvg > 0) {
+      trendPercentage = Math.round(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100);
+    }
+    
+    if (secondHalfAvg > firstHalfAvg * 1.1) trend = 'en hausse';
+    else if (secondHalfAvg < firstHalfAvg * 0.9) trend = 'en baisse';
+  }
+  
+  // Calculer la répartition par jour de la semaine
+  const dayOfWeekDistribution = [0, 0, 0, 0, 0, 0, 0]; // dim, lun, mar, mer, jeu, ven, sam
+  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  
+  dates.forEach(dateStr => {
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay(); // 0 = dimanche, 6 = samedi
+    dayOfWeekDistribution[dayOfWeek] += trendsByDate[dateStr];
+  });
+  
+  // Trouver le jour de la semaine le plus actif
+  let mostActiveDay = 0;
+  dayOfWeekDistribution.forEach((count, index) => {
+    if (count > dayOfWeekDistribution[mostActiveDay]) {
+      mostActiveDay = index;
+    }
+  });
+  
   return {
-    labels: Object.keys(trends),
-    datasets: [{
-      label: 'Réponses',
-      data: Object.values(trends),
-      borderColor: 'rgba(102, 126, 234, 0.8)',
-      backgroundColor: 'rgba(102, 126, 234, 0.2)',
-      fill: true,
-      tension: 0.3
-    }]
+    byDate: trendsByDate,
+    dates,
+    counts,
+    maxResponsesDay,
+    maxResponsesCount: maxResponsesDay ? trendsByDate[maxResponsesDay] : 0,
+    trend,
+    trendPercentage,
+    total: totalResponses,
+    dayOfWeekDistribution,
+    dayNames,
+    mostActiveDay,
+    // Pour Chart.js
+    chartData: {
+      labels: dates,
+      datasets: [{
+        label: 'Réponses',
+        data: counts,
+        borderColor: 'rgba(102, 126, 234, 0.8)',
+        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+        fill: true,
+        tension: 0.3
+      }]
+    }
   };
 };
 
@@ -1206,89 +1265,345 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                 {filteredAnswers.length > 0 && (
                   <Box sx={{ 
-                    height: 300, 
                     mt: 4,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
                     width: '100%',
-                  position: 'relative'
                   }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, color: '#1a237e' }}>
-                      Response Trend
+                    <Typography variant="h6" sx={{ mb: 3, color: '#1a237e', fontWeight: 'medium', textAlign: 'center' }}>
+                      Analyse des tendances de participation
                     </Typography>
-                    <Box sx={{ 
-                      width: '100%',
-                      maxWidth: '800px',
-                      margin: '0 auto'
-                }}>
-                  <Line
-                        data={getResponseTrends(filteredAnswers)}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false
-                        },
-                        title: {
-                          display: false
-                        },
-                        tooltip: {
-                          mode: 'index',
-                          intersect: false,
-                          backgroundColor: '#ffffff',
-                          titleColor: '#1a237e',
-                          bodyColor: '#475569',
-                          borderColor: 'rgba(102, 126, 234, 0.2)',
-                          borderWidth: 1,
-                          padding: 12,
-                          bodyFont: {
-                            size: 13
-                          },
-                          titleFont: {
-                            size: 13,
-                            weight: 'bold'
-                          },
-                          callbacks: {
-                                label: (context) => `${context.parsed.y} responses`
-                          }
-                        }
-                      },
-                      scales: {
-                        x: {
-                          grid: {
-                                color: 'rgba(102, 126, 234, 0.1)',
-                                lineWidth: 1,
-                                drawTicks: false
-                          },
-                          ticks: {
-                            font: {
-                              size: 11
-                            },
-                                color: '#64748b'
-                          }
-                        },
-                        y: {
-                          beginAtZero: true,
-                          grid: {
-                            color: 'rgba(102, 126, 234, 0.1)',
-                            lineWidth: 1,
-                            drawTicks: false
-                          },
-                          ticks: {
-                            font: {
-                              size: 11
-                            },
-                                color: '#64748b',
-                                precision: 0
-                              }
-                            }
-                      }
-                    }}
-                  />
-                </Box>
-                    </Box>
+                    
+                    {(() => {
+                      const trends = getResponseTrends(filteredAnswers);
+                      
+                      // Calculer le pourcentage pour chaque jour de la semaine
+                      const totalWeekResponses = trends.dayOfWeekDistribution.reduce((sum, count) => sum + count, 0);
+                      const dayPercentages = trends.dayOfWeekDistribution.map(count => 
+                        totalWeekResponses > 0 ? Math.round((count / totalWeekResponses) * 100) : 0
+                      );
+                      
+                      return (
+                        <Box>
+                          {/* Visualisation principale - Tendance et total */}
+                          <Paper 
+                            elevation={2} 
+                            sx={{ 
+                              p: 3, 
+                              mb: 3, 
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                              border: '1px solid rgba(102, 126, 234, 0.2)',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box sx={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center' }}>
+                              {/* Cercle central avec le nombre total de réponses */}
+                              <Box sx={{ 
+                                width: '180px',
+                                height: '180px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+                                zIndex: 2
+                              }}>
+                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                                  {trends.total}
+                                </Typography>
+                                <Typography variant="body2">
+                                  réponses totales
+                                </Typography>
+                              </Box>
+                              
+                              {/* Indicateur de tendance */}
+                              <Box sx={{ 
+                                flex: 1,
+                                ml: 3,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                justifyContent: 'center'
+                              }}>
+                                <Typography variant="h6" sx={{ color: '#1a237e', mb: 1 }}>
+                                  Tendance de participation
+                                </Typography>
+                                
+                                <Box sx={{ 
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  mb: 2
+                                }}>
+                                  <Typography 
+                                    variant="h4" 
+                                    sx={{ 
+                                      fontWeight: 'bold',
+                                      color: trends.trend === 'en hausse' 
+                                        ? '#4caf50' 
+                                        : trends.trend === 'en baisse' 
+                                          ? '#f44336' 
+                                          : '#ff9800',
+                                      mr: 2
+                                    }}
+                                  >
+                                    {trends.trend === 'en hausse' 
+                                      ? '↗️' 
+                                      : trends.trend === 'en baisse' 
+                                        ? '↘️' 
+                                        : '→'}
+                                  </Typography>
+                                  
+                                  <Typography 
+                                    variant="h5" 
+                                    sx={{ 
+                                      fontWeight: 'medium',
+                                      color: trends.trend === 'en hausse' 
+                                        ? '#4caf50' 
+                                        : trends.trend === 'en baisse' 
+                                          ? '#f44336' 
+                                          : '#ff9800'
+                                    }}
+                                  >
+                                    {trends.trend === 'stable' 
+                                      ? 'Stable' 
+                                      : `${trends.trendPercentage > 0 ? '+' : ''}${trends.trendPercentage}%`}
+                                  </Typography>
+                                </Box>
+                                
+                                <Typography variant="body2" sx={{ color: '#475569' }}>
+                                  {trends.trend === 'en hausse' 
+                                    ? 'La participation augmente! Votre sondage gagne en popularité.' 
+                                    : trends.trend === 'en baisse' 
+                                      ? 'La participation diminue. Envisagez de promouvoir davantage votre sondage.' 
+                                      : 'La participation est stable.'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Paper>
+                          
+                          {/* Visualisation des jours de la semaine */}
+                          <Paper 
+                            elevation={2} 
+                            sx={{ 
+                              p: 3, 
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                              border: '1px solid rgba(102, 126, 234, 0.2)'
+                            }}
+                          >
+                            <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
+                              Répartition par jour de la semaine
+                            </Typography>
+                            
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                              {trends.dayNames.map((day, index) => {
+                                const isActive = index === trends.mostActiveDay;
+                                const percentage = dayPercentages[index];
+                                
+                                return (
+                                  <Box 
+                                    key={day} 
+                                    sx={{ 
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      width: `${100 / 7}%`
+                                    }}
+                                  >
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        fontWeight: isActive ? 'bold' : 'regular',
+                                        color: isActive ? '#1a237e' : '#64748b',
+                                        mb: 3
+                                      }}
+                                    >
+                                      {day}
+                                    </Typography>
+                                    
+                                    <Box sx={{ 
+                                      width: '100%',
+                                      display: 'flex',
+                                      justifyContent: 'center',
+                                      alignItems: 'flex-end',
+                                      height: '120px',
+                                      position: 'relative',
+                                      mt: 3
+                                    }}>
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          position: 'absolute',
+                                          top: '-24px',
+                                          left: '50%',
+                                          transform: 'translateX(-50%)',
+                                          color: isActive ? '#1a237e' : '#64748b',
+                                          fontWeight: isActive ? 'bold' : 'regular',
+                                          fontSize: '0.7rem'
+                                        }}
+                                      >
+                                        {percentage}%
+                                      </Typography>
+                                      <Box 
+                                        sx={{ 
+                                          width: '70%',
+                                          height: `${Math.max(5, percentage)}%`,
+                                          bgcolor: isActive 
+                                            ? 'linear-gradient(to top, #667eea, #764ba2)' 
+                                            : 'rgba(102, 126, 234, 0.3)',
+                                          borderRadius: '4px 4px 0 0',
+                                          position: 'relative',
+                                          transition: 'height 0.3s ease',
+                                          background: isActive 
+                                            ? 'linear-gradient(to top, #667eea, #764ba2)' 
+                                            : undefined,
+                                          '&:hover': {
+                                            filter: 'brightness(1.1)',
+                                          }
+                                        }}
+                                      />
+                                    </Box>
+                                    
+                                    <Typography 
+                                      variant="caption" 
+                                      sx={{ 
+                                        mt: 1,
+                                        color: isActive ? '#1a237e' : '#64748b',
+                                        fontWeight: isActive ? 'bold' : 'regular'
+                                      }}
+                                    >
+                                      {trends.dayOfWeekDistribution[index]}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                            
+                            <Box sx={{ mt: 3, textAlign: 'center' }}>
+                              <Typography variant="body2" sx={{ color: '#475569' }}>
+                                <strong>{trends.dayNames[trends.mostActiveDay]}</strong> est le jour le plus actif avec <strong>{trends.dayOfWeekDistribution[trends.mostActiveDay]}</strong> réponses ({dayPercentages[trends.mostActiveDay]}% du total)
+                              </Typography>
+                            </Box>
+                          </Paper>
+                          
+                          {/* Mini-timeline des réponses */}
+                          {trends.dates.length > 1 && (
+                            <Paper 
+                              elevation={2} 
+                              sx={{ 
+                                p: 3, 
+                                mt: 3,
+                                borderRadius: 3,
+                                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                                border: '1px solid rgba(102, 126, 234, 0.2)'
+                              }}
+                            >
+                              <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
+                                Chronologie des réponses
+                              </Typography>
+                              
+                              <Box sx={{ position: 'relative', mt: 4, mb: 2 }}>
+                                {/* Ligne de temps */}
+                                <Box sx={{ 
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: 0,
+                                  right: 0,
+                                  height: '4px',
+                                  bgcolor: 'rgba(102, 126, 234, 0.2)',
+                                  zIndex: 1
+                                }} />
+                                
+                                {/* Points sur la timeline */}
+                                <Box sx={{ 
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  position: 'relative',
+                                  zIndex: 2
+                                }}>
+                                  {trends.dates.map((date, index) => {
+                                    const count = trends.counts[index];
+                                    const isMax = date === trends.maxResponsesDay;
+                                    const size = isMax ? 16 : 12;
+                                    
+                                    return (
+                                      <Box 
+                                        key={date}
+                                        sx={{ 
+                                          width: size,
+                                          height: size,
+                                          borderRadius: '50%',
+                                          bgcolor: isMax ? '#764ba2' : '#667eea',
+                                          display: 'flex',
+                                          justifyContent: 'center',
+                                          alignItems: 'center',
+                                          boxShadow: isMax ? '0 0 0 4px rgba(118, 75, 162, 0.2)' : 'none',
+                                          position: 'relative',
+                                          '&:hover': {
+                                            zIndex: 3,
+                                            '& .tooltip': {
+                                              opacity: 1,
+                                              visibility: 'visible'
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        {/* Tooltip */}
+                                        <Box 
+                                          className="tooltip"
+                                          sx={{ 
+                                            position: 'absolute',
+                                            bottom: '100%',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            mb: 1,
+                                            bgcolor: 'rgba(0, 0, 0, 0.8)',
+                                            color: 'white',
+                                            padding: '4px 8px',
+                                            borderRadius: 1,
+                                            fontSize: '0.75rem',
+                                            whiteSpace: 'nowrap',
+                                            opacity: 0,
+                                            visibility: 'hidden',
+                                            transition: 'opacity 0.2s',
+                                            zIndex: 10
+                                          }}
+                                        >
+                                          {date}: {count} réponses
+                                        </Box>
+                                      </Box>
+                                    );
+                                  })}
+                                </Box>
+                              </Box>
+                              
+                              {/* Dates de début et de fin */}
+                              <Box sx={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                mt: 1
+                              }}>
+                                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                  {trends.dates[0]}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                  {trends.dates[trends.dates.length - 1]}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                                <Typography variant="body2" sx={{ color: '#475569' }}>
+                                  Pic de participation le <strong>{trends.maxResponsesDay}</strong> avec <strong>{trends.maxResponsesCount}</strong> réponses
+                                </Typography>
+                              </Box>
+                            </Paper>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Box>
                 )}
 
                 {/* Boutons d'exportation */}
