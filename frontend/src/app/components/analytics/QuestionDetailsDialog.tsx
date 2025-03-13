@@ -107,8 +107,26 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
               Question type: {question.question.type}
             </Typography>
             
-            <Box sx={{ mt: 3, mb: 4 }}>
-              {renderChart(question.questionId, chartTypes[question.questionId] || getAvailableChartTypes(question.question.type)[0])}
+            <Box sx={{ 
+              mt: 3, 
+              mb: 4,
+              height: '350px',
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <Box sx={{ 
+                width: '90%', 
+                height: '100%', 
+                maxWidth: '550px',
+                margin: '0 auto',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                {renderChart(question.questionId, chartTypes[question.questionId] || getAvailableChartTypes(question.question.type)[0])}
+              </Box>
             </Box>
             
             <Stack 

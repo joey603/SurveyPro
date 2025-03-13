@@ -189,7 +189,7 @@ const AnalyticsPage: React.FC = () => {
       component="section"
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#f5f5f5',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',

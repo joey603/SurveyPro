@@ -134,21 +134,21 @@ const commonChartOptions = {
       position: 'top' as const,
       align: 'center' as const,
       labels: {
-        padding: 20,
+        padding: 10,
         font: {
-          size: 12
+          size: 11
         },
-        boxWidth: 12,
+        boxWidth: 10,
         usePointStyle: true
       }
     },
     title: {
       display: true,
       font: { 
-        size: 16,
+        size: 14,
         weight: 'bold' as const
       },
-      padding: 20
+      padding: 10
     }
   }
 };
@@ -160,15 +160,19 @@ const pieOptions = {
     ...commonChartOptions.plugins,
     legend: {
       ...commonChartOptions.plugins.legend,
-      position: 'right' as const
+      position: 'bottom' as const,
+      align: 'center' as const
     }
   },
   layout: {
     padding: {
+      top: 20,
+      bottom: 20,
       left: 20,
       right: 20
     }
-  }
+  },
+  aspectRatio: 1.2
 };
 
 const chartColors = {
@@ -469,17 +473,38 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     const data = getChartData(questionId);
     const options = ['pie', 'doughnut'].includes(chartType) ? pieOptions : commonChartOptions;
 
+    // Ajuster les options pour maintenir une taille cohérente
+    const chartOptions = {
+      ...options,
+      maintainAspectRatio: true,
+      responsive: true,
+    };
+
+    // Pour les graphiques circulaires, centrer les données
+    if (chartType === 'pie' || chartType === 'doughnut') {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          width: '100%',
+          height: '100%'
+        }}>
+          {chartType === 'pie' 
+            ? <Pie data={data} options={chartOptions} /> 
+            : <Doughnut data={data} options={chartOptions} />
+          }
+        </Box>
+      );
+    }
+
     switch (chartType) {
       case 'bar':
-        return <Bar data={data} options={options} />;
+        return <Bar data={data} options={chartOptions} />;
       case 'line':
-        return <Line data={data} options={options} />;
-      case 'pie':
-        return <Pie data={data} options={options} />;
-      case 'doughnut':
-        return <Doughnut data={data} options={options} />;
+        return <Line data={data} options={chartOptions} />;
       default:
-        return <Bar data={data} options={options} />;
+        return <Bar data={data} options={chartOptions} />;
     }
   };
 
@@ -1226,7 +1251,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             weight: 'bold'
                           },
                           callbacks: {
-                                label: (context) => `${context.parsed.y} réponses`
+                                label: (context) => `${context.parsed.y} responses`
                           }
                         }
                       },
