@@ -511,8 +511,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const renderPathTree = (node: PathNode, level: number = 0): JSX.Element => {
     const question = survey.questions.find(q => q.id === node.questionId);
     const label = question 
-      ? `${question.text}: ${node.answer} (${node.count} réponses)`
-      : `Root (${node.count} réponses)`;
+      ? `${question.text}: ${node.answer} (${node.count} responses)`
+      : `Root (${node.count} responses)`;
 
     return (
       <TreeItem
@@ -740,7 +740,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     if (stats.total === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          Aucune réponse pour cette question.
+          No responses for this question.
         </Typography>
       );
     }
@@ -752,7 +752,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         return (
           <Box>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Réponse la plus fréquente: <strong>{stats.mostCommonAnswer}</strong> ({stats.percentages[stats.mostCommonAnswer]}% des réponses)
+              Most frequent answer: <strong>{stats.mostCommonAnswer}</strong> ({stats.percentages[stats.mostCommonAnswer]}% of responses)
             </Typography>
             <Box sx={{ mt: 2 }}>
               {Object.entries(stats.answerCounts).map(([answer, count]) => (
@@ -787,7 +787,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         return (
           <Box>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              Réponses: <strong>{stats.total}</strong>
+              Total responses: <strong>{stats.total}</strong>
             </Typography>
             <Box sx={{ mt: 2 }}>
               {displayedEntries.map(([answer, count]) => (
@@ -825,8 +825,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   }}
                 >
                   {showAllResponses[question.id] 
-                    ? "Voir moins" 
-                    : `Voir ${entries.length - initialDisplayCount} réponses supplémentaires`}
+                    ? "Show less" 
+                    : `Show ${entries.length - initialDisplayCount} additional responses`}
                 </Button>
               )}
             </Box>
@@ -843,7 +843,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         return (
           <Box>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Note moyenne: <strong>{avg}</strong> (plage: {min} - {max})
+              Average note: <strong>{avg}</strong> (range: {min} - {max})
             </Typography>
             <Box sx={{ mt: 2 }}>
               {values.map(value => (
@@ -870,7 +870,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       default:
         return (
           <Typography variant="body2" color="text.secondary">
-            {stats.total} réponses reçues pour cette question.
+            {stats.total} responses received for this question.
           </Typography>
         );
     }
@@ -984,7 +984,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         mb: 3
       }}>
         <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e' }}>
-          Analyse détaillée
+          Detailed Analysis
         </Typography>
         
         <Box>
@@ -999,7 +999,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               } : {})
             }}
           >
-            {showFilters ? "Masquer les filtres" : "Filtres"}
+            {showFilters ? "Hide Filters" : "Filters"}
           </Button>
         </Box>
       </Box>
@@ -1028,8 +1028,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {/* Section Survey Questions - déplacée au-dessus des statistiques générales */}
             <Grid item xs={12}>
               <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
-                Questions du sondage
-                      </Typography>
+                Survey Questions
+              </Typography>
               
               {survey.questions.map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
@@ -1061,11 +1061,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Box>
                         <Typography variant="body2">
-                          Total des réponses: <strong>{stats.total}</strong>
+                          Total responses: <strong>{stats.total}</strong>
                       </Typography>
                         {stats.total > 0 && stats.mostCommonAnswer && (
                           <Typography variant="body2">
-                            Réponse la plus fréquente: <strong>{stats.mostCommonAnswer}</strong>
+                            Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
                       </Typography>
                         )}
                     </Box>
@@ -1086,7 +1086,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           }
                         }}
                       >
-                        Voir détails ({stats.total} réponses)
+                        Show details ({stats.total} responses)
                       </Button>
                     </Box>
 
@@ -1103,16 +1103,16 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             <Grid item xs={12}>
               <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
-                  Statistiques générales
+                  General Statistics
                 </Typography>
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" color="text.secondary">
-                    Total des réponses: <strong>{filteredAnswers.length}</strong>
+                    Total responses: <strong>{filteredAnswers.length}</strong>
                   </Typography>
                   {filteredAnswers.length !== responses.length && (
                     <Typography variant="body2" color="text.secondary">
-                      (Filtré de {responses.length} réponses totales)
+                      (Filtered from {responses.length} total responses)
                     </Typography>
                   )}
                 </Box>
@@ -1128,12 +1128,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       textAlign: 'center'
                     }}>
                       <Typography variant="caption" color="text.secondary">
-                        Première réponse
+                        First response
                     </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
                         {filteredAnswers.length > 0 ? 
                           new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
-                          'Aucune réponse'
+                          'No response'
                         }
                     </Typography>
                   </Box>
@@ -1146,7 +1146,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       textAlign: 'center'
                     }}>
                     <Typography variant="caption" color="text.secondary">
-                        Réponses quotidiennes moyennes
+                        Average Daily Responses
                       </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
                         {filteredAnswers.length > 0 ? 
@@ -1167,12 +1167,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       textAlign: 'center'
                     }}>
                       <Typography variant="caption" color="text.secondary">
-                        Dernière réponse
+                        Last response
                       </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
                         {filteredAnswers.length > 0 ? 
                           new Date(Math.max(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
-                          'Aucune réponse'
+                          'No response'
                         }
                       </Typography>
                     </Box>
@@ -1190,7 +1190,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   position: 'relative'
                   }}>
                     <Typography variant="subtitle1" sx={{ mb: 2, color: '#1a237e' }}>
-                      Tendance des réponses
+                      Response Trend
                     </Typography>
                     <Box sx={{ 
                       width: '100%',
@@ -1287,7 +1287,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           }
                         }}
                       >
-                        Exporter en CSV
+                        Export to CSV
                       </Button>
                           <Button
                         variant="contained"
@@ -1300,7 +1300,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           }
                         }}
                       >
-                        Exporter en JSON
+                        Export to JSON
                           </Button>
                       </Stack>
                     </Box>
