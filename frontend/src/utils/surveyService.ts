@@ -182,16 +182,34 @@ export const submitSurveyAnswer = async (surveyId: string, data: any, token: str
   }
 };
 
-export const getSurveyAnswers = async (surveyId: string, token: string): Promise<any> => {
+export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic?: boolean): Promise<any> => {
   try {
-    const response = await axios.get(
-      `${API_URL}/survey-answers/${surveyId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+    // Construire l'URL en fonction du type de sondage
+    const endpoint = isDynamic ? 
+      `${API_URL}/dynamic-survey-answers/survey/${surveyId}` : 
+      `${API_URL}/survey-answers/${surveyId}`;
+    
+    const response = await axios.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    );
+    });
+    
+    // Pour les sondages dynamiques, transformer les réponses pour correspondre au format standard
+    if (isDynamic) {
+      // Transformer le format des réponses dynamiques pour matcher le format standard
+      return response.data.map((answer: any) => ({
+        _id: answer._id,
+        surveyId: answer.surveyId,
+        submittedAt: answer.submittedAt,
+        answers: answer.answers.map((ans: any) => ({
+          questionId: ans.nodeId,
+          answer: ans.answer
+        })),
+        respondent: answer.respondent
+      }));
+    }
+    
     return response.data;
   } catch (error: any) {
     console.error('Error fetching survey answers:', error);
@@ -201,12 +219,34 @@ export const getSurveyAnswers = async (surveyId: string, token: string): Promise
 
 export const fetchSurveys = async (token: string): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/surveys`, {
+    // Récupérer les sondages classiques
+    const classicResponse = await axios.get(`${API_URL}/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data;
+    
+    // Récupérer les sondages dynamiques
+    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    // Formater les sondages dynamiques pour avoir la même structure
+    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: true,
+      questions: survey.nodes?.map((node: any) => ({
+        id: node.id,
+        text: node.data?.text || node.data?.label || 'Question sans texte',
+        type: node.data?.questionType || node.data?.type || 'text',
+        options: node.data?.options || []
+      })) || []
+    }));
+    
+    // Combiner les deux types de sondages
+    return [...classicResponse.data, ...dynamicSurveys];
   } catch (error: any) {
     console.error("Error fetching surveys:", error);
     throw error.response?.data || error;

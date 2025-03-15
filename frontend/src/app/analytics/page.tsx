@@ -38,6 +38,9 @@ interface Survey {
   userId: string;
   sharedBy?: string;
   status?: 'pending' | 'accepted' | 'rejected';
+  isDynamic?: boolean;
+  nodes?: any[];
+  edges?: any[];
 }
 
 const AnalyticsPage: React.FC = () => {
@@ -75,8 +78,10 @@ const AnalyticsPage: React.FC = () => {
           fetchPendingShares(token)
         ]);
 
+        console.log('Sondages chargés:', surveysData); // Debugging
+
         const responsesPromises = surveysData.map((survey: Survey) => 
-          getSurveyAnswers(survey._id, token)
+          getSurveyAnswers(survey._id, token, survey.isDynamic)
             .then(responses => ({ surveyId: survey._id, responses }))
             .catch(() => ({ surveyId: survey._id, responses: [] }))
         );

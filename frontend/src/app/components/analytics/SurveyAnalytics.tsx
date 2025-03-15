@@ -107,6 +107,9 @@ interface Survey {
   userId: string;
   sharedBy?: string;
   status?: 'pending' | 'accepted' | 'rejected';
+  isDynamic?: boolean;
+  nodes?: any[];
+  edges?: any[];
 }
 
 interface SurveyAnalyticsProps {
@@ -1059,6 +1062,21 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     link.click();
   }, [survey, prepareExportData]);
 
+  // Fonction pour obtenir les questions à afficher (questions standard ou nœuds pour les sondages dynamiques)
+  const getQuestionsToDisplay = () => {
+    if (survey.isDynamic && survey.nodes) {
+      // Pour les sondages dynamiques, extraire les questions des nœuds
+      return survey.nodes.map(node => ({
+        id: node.id,
+        text: node.data?.text || node.data?.label || 'Question sans texte',
+        type: node.data?.questionType || node.data?.type || 'text',
+        options: node.data?.options || []
+      }));
+    }
+    // Pour les sondages standard, utiliser les questions normales
+    return survey.questions;
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1069,6 +1087,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       }}>
         <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e' }}>
           Detailed Analysis
+          {survey.isDynamic && (
+            <Chip 
+              size="small" 
+              icon={<AutoGraphIcon />} 
+              label="Dynamic Survey" 
+              sx={{ ml: 1, backgroundColor: colors.primary.transparent, color: colors.primary.main }}
+            />
+          )}
         </Typography>
         
         <Box>
@@ -1115,7 +1141,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 Survey Questions
               </Typography>
               
-              {survey.questions.map((question, index) => {
+              {getQuestionsToDisplay().map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
                 
                 return (
@@ -1126,34 +1152,42 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       p: 3,
                       mb: 3,
                       borderRadius: 2,
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.1)',
-                      },
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                        Question {index + 1}: {question.text}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '8px',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      }}
+                    />
+
+                    <Box sx={{ pl: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {question.text}
                       </Typography>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Type: {question.type}
+                      <Typography variant="caption" color="text.secondary">
+                        Question type: {question.type}
                       </Typography>
                     </Box>
-                    
+
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Box>
                         <Typography variant="body2">
                           Total responses: <strong>{stats.total}</strong>
-                      </Typography>
+                        </Typography>
                         {stats.total > 0 && stats.mostCommonAnswer && (
                           <Typography variant="body2">
                             Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
-                      </Typography>
+                          </Typography>
                         )}
-                    </Box>
-                      
+                      </Box>
+                        
                       <Button
                         variant="contained"
                         startIcon={<BarChartIcon />}
@@ -1176,10 +1210,10 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                     <Divider sx={{ my: 2 }} />
 
-                  <Box sx={{ mt: 2 }}>
+                    <Box sx={{ mt: 2 }}>
                       {renderQuestionSummary(question)}
-                  </Box>
-              </Paper>
+                    </Box>
+                  </Paper>
                 );
               })}
             </Grid>

@@ -12,6 +12,7 @@ import {
   AutoGraph as AutoGraphIcon,
   Delete as DeleteIcon,
   Email as EmailIcon,
+  ListAlt as ListAltIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 
@@ -25,6 +26,9 @@ interface Survey {
   userId: string;
   sharedBy?: string;
   status?: 'pending' | 'accepted' | 'rejected';
+  isDynamic?: boolean;
+  nodes?: any[];
+  edges?: any[];
   responses?: SurveyResponse[];
 }
 
@@ -132,13 +136,36 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           <Chip
             size="small"
             icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-            label={`${survey.questions.length} Questions`}
+            label={`${survey.questions?.length || survey.nodes?.length || 0} Questions`}
             sx={{
               backgroundColor: colors.primary.transparent,
               color: colors.primary.main,
               height: '24px',
             }}
           />
+          {survey.isDynamic ? (
+            <Chip
+              size="small"
+              icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
+              label="Dynamic"
+              sx={{
+                backgroundColor: colors.primary.transparent,
+                color: colors.primary.main,
+                height: '24px',
+              }}
+            />
+          ) : (
+            <Chip
+              size="small"
+              icon={<ListAltIcon sx={{ fontSize: 16 }} />}
+              label="Static"
+              sx={{
+                backgroundColor: colors.primary.transparent,
+                color: colors.primary.main,
+                height: '24px',
+              }}
+            />
+          )}
           {survey.demographicEnabled && (
             <Chip
               size="small"
