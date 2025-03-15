@@ -1625,6 +1625,15 @@ const SurveyAnswerPage: React.FC = () => {
     return (
       <Box sx={{ p: 3 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
+          {selectedSurvey.demographicEnabled && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Demographic informations
+              </Typography>
+              {renderDemographicFields()}
+            </Box>
+          )}
+
           {orderedNodes.map((node) => {
             const isVisible = shouldShowQuestion(node.id);
             const isCritical = isCriticalQuestion(node.id);
