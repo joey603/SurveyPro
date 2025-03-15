@@ -2041,15 +2041,6 @@ const SurveyAnswerPage: React.FC = () => {
                             height: '24px'
                           }}
                         />
-                        <Chip
-                          size="small"
-                          label={`${survey.isDynamic ? surveyResponses[survey._id] || 0 : 0} responses`}
-                          sx={{
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            color: '#667eea',
-                            height: '24px'
-                          }}
-                        />
                       </Stack>
                     </Box>
                     
