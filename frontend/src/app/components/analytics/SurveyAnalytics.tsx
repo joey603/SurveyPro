@@ -791,13 +791,21 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Remplacer la fonction handleApplyFilters par une nouvelle qui prend directement les réponses filtrées
   const handleApplyFilters = (filteredResponses: SurveyResponse[]) => {
+    console.log("handleApplyFilters called in SurveyAnalytics with", filteredResponses.length, "responses");
+    
+    // Si aucune réponse ne correspond aux filtres, ne pas mettre à jour filteredAnswers
+    // pour éviter que les questions disparaissent
+    if (filteredResponses.length === 0 && surveyAnswers.length > 0) {
+      toast.info("No responses match the selected filters. Showing all responses.");
+      // Ne pas mettre à jour filteredAnswers pour conserver l'affichage des questions
+      return;
+    }
+    
+    console.log("Setting filteredAnswers to", filteredResponses);
     setFilteredAnswers(filteredResponses);
     
-    // Afficher un message si aucune réponse ne correspond aux filtres
-    if (filteredResponses.length === 0 && surveyAnswers.length > 0) {
-      toast.info("Aucune réponse ne correspond aux filtres sélectionnés. Les statistiques affichées utilisent toutes les réponses.");
-    } else if (filteredResponses.length < surveyAnswers.length) {
-      toast.info(`${filteredResponses.length} réponses correspondent aux filtres sur ${surveyAnswers.length} au total.`);
+    if (filteredResponses.length < surveyAnswers.length) {
+      toast.info(`${filteredResponses.length} responses match the filters out of ${surveyAnswers.length} total.`);
     }
   };
 
@@ -837,7 +845,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     if (stats.total === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          No responses for this question.
+          {filteredAnswers.length === 0 && surveyAnswers.length > 0 
+            ? "No responses match the current filters. Try adjusting your filters to see data."
+            : "No responses for this question."}
         </Typography>
       );
     }
@@ -1074,6 +1084,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               icon={<AutoGraphIcon />} 
               label="Dynamic Survey" 
               sx={{ ml: 1, backgroundColor: colors.primary.transparent, color: colors.primary.main }}
+            />
+          )}
+          {filteredAnswers.length < surveyAnswers.length && filteredAnswers.length > 0 && (
+            <Chip 
+              size="small" 
+              icon={<FilterListIcon />} 
+              label={`Filtered: ${filteredAnswers.length}/${surveyAnswers.length}`}
+              sx={{ ml: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' }}
             />
           )}
         </Typography>

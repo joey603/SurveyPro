@@ -153,11 +153,45 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     const safeValue = value ?? null;
     const safeRuleValue = rule.value ?? null;
 
+    console.log("Evaluating rule:", rule.operator, "Value:", safeValue, "Rule value:", safeRuleValue);
+    
+    // Normaliser les valeurs yes/no pour les comparaisons
+    const normalizeYesNo = (val: any): any => {
+      if (val === null || val === undefined) return val;
+      
+      // Convertir en chaîne et en minuscules
+      const strVal = String(val).toLowerCase();
+      
+      // Normaliser les variations de "yes" et "no"
+      if (strVal === 'yes' || strVal === 'y' || strVal === 'true' || strVal === '1') {
+        return 'yes';
+      } else if (strVal === 'no' || strVal === 'n' || strVal === 'false' || strVal === '0') {
+        return 'no';
+      }
+      
+      return val;
+    };
+    
+    // Pour les comparaisons d'égalité, normaliser les valeurs yes/no
+    if (rule.operator === 'equals' || rule.operator === 'not') {
+      const normalizedValue = normalizeYesNo(safeValue);
+      const normalizedRuleValue = normalizeYesNo(safeRuleValue);
+      
+      console.log("Normalized values for comparison:", normalizedValue, normalizedRuleValue);
+      
+      if (rule.operator === 'equals') {
+        console.log("Equals comparison result:", normalizedValue === normalizedRuleValue);
+        return normalizedValue === normalizedRuleValue;
+      } else { // not
+        console.log("Not equals comparison result:", normalizedValue !== normalizedRuleValue);
+        return normalizedValue !== normalizedRuleValue;
+      }
+    }
+    
     switch (rule.operator) {
-      case 'equals':
-        return safeValue === safeRuleValue;
-      case 'not':
-        return safeValue !== safeRuleValue;
+      case 'equals': // Déjà traité ci-dessus
+      case 'not': // Déjà traité ci-dessus
+        return false; // Ne devrait jamais arriver ici
       case 'greater':
         return Number(safeValue) > Number(safeRuleValue);
       case 'less':
@@ -241,6 +275,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   const handleAddRule = () => {
     if (!selectedQuestionId || tempRule.value === null) return;
     
+    console.log("Adding rule for question:", selectedQuestionId);
+    console.log("Rule to add:", tempRule);
+    
     setFilters(prev => {
       const newFilters = { ...prev };
       if (!newFilters.answers[selectedQuestionId]) {
@@ -258,6 +295,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
       // Ajouter la règle seulement si elle n'existe pas déjà
       if (!ruleExists) {
         newFilters.answers[selectedQuestionId].push({ ...tempRule });
+        console.log("Rule added, new filters:", newFilters);
+      } else {
+        console.log("Rule already exists, not adding");
       }
       
       return newFilters;
@@ -289,8 +329,26 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   const handleApplyFilters = useCallback(() => {
     // Ajouter des logs pour déboguer
-    console.log("Applying filters:", filters);
+    console.log("Applying filters:", JSON.stringify(filters, null, 2));
     console.log("Total responses before filtering:", responses.length);
+    console.log("Responses data:", responses);
+    
+    // Fonction pour normaliser les valeurs yes/no
+    const normalizeYesNo = (val: any): any => {
+      if (val === null || val === undefined) return val;
+      
+      // Convertir en chaîne et en minuscules
+      const strVal = String(val).toLowerCase();
+      
+      // Normaliser les variations de "yes" et "no"
+      if (strVal === 'yes' || strVal === 'y' || strVal === 'true' || strVal === '1') {
+        return 'yes';
+      } else if (strVal === 'no' || strVal === 'n' || strVal === 'false' || strVal === '0') {
+        return 'no';
+      }
+      
+      return val;
+    };
     
     // Appliquer les filtres démographiques et de réponses
     const filteredResponses = responses.filter(response => {
@@ -361,11 +419,48 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         const rules = filters.answers[questionId];
         const answer = response.answers.find(a => a.questionId === questionId);
         
-        if (!answer) return false;
+        console.log("Checking question:", questionId);
+        console.log("Rules:", rules);
+        console.log("Answer found:", answer);
+        
+        if (!answer) {
+          console.log("No answer found for question, filtering out");
+          return false;
+        }
+        
+        // Trouver la question correspondante pour connaître son type
+        const question = survey.questions.find(q => q.id === questionId);
+        console.log("Question type:", question?.type);
         
         // Vérifier chaque règle pour cette question
         for (const rule of rules) {
+          console.log("Checking rule:", rule);
+          
+          // Traitement spécial pour les questions yes-no
+          if (question?.type === 'yes-no') {
+            const normalizedAnswer = normalizeYesNo(answer.answer);
+            const normalizedRuleValue = normalizeYesNo(rule.value);
+            
+            console.log("Yes-No question detected. Normalized answer:", normalizedAnswer, "Normalized rule value:", normalizedRuleValue);
+            
+            if (rule.operator === 'equals') {
+              if (normalizedAnswer !== normalizedRuleValue) {
+                console.log("Yes-No equals comparison failed");
+                return false;
+              }
+              continue; // Passer à la règle suivante
+            } else if (rule.operator === 'not') {
+              if (normalizedAnswer === normalizedRuleValue) {
+                console.log("Yes-No not equals comparison failed");
+                return false;
+              }
+              continue; // Passer à la règle suivante
+            }
+          }
+          
+          // Pour les autres types de questions, utiliser evaluateRule normalement
           if (!evaluateRule(answer.answer, rule)) {
+            console.log("Rule evaluation failed, filtering out");
             return false;
           }
         }
@@ -376,8 +471,16 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     
     console.log("Filtered responses:", filteredResponses.length);
     
-    onApplyFilters(filteredResponses);
-  }, [filters, responses, onApplyFilters, calculateAge, evaluateRule]);
+    // Si aucune réponse ne correspond aux filtres, afficher un message et ne pas appliquer les filtres
+    if (filteredResponses.length === 0 && responses.length > 0) {
+      console.log("No responses match the filters, keeping all responses");
+      // Appeler onApplyFilters avec toutes les réponses pour éviter de vider l'affichage
+      onApplyFilters(responses);
+    } else {
+      // Sinon, appliquer les filtres normalement
+      onApplyFilters(filteredResponses);
+    }
+  }, [filters, responses, onApplyFilters, calculateAge, evaluateRule, survey.questions]);
 
   // Rendu du composant
   return (
