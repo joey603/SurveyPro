@@ -459,7 +459,10 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     const answerCounts: { [key: string]: number } = {};
     let total = 0;
     
-    filteredAnswers.forEach(response => {
+    // Utiliser les réponses filtrées si elles existent, sinon utiliser toutes les réponses
+    const responsesToAnalyze = filteredAnswers.length > 0 ? filteredAnswers : surveyAnswers;
+    
+    responsesToAnalyze.forEach(response => {
       const answer = response.answers.find(a => a.questionId === questionId);
       if (answer) {
         answerCounts[answer.answer] = (answerCounts[answer.answer] || 0) + 1;
@@ -468,7 +471,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
     
     return { answerCounts, total };
-  }, [filteredAnswers]);
+  }, [filteredAnswers, surveyAnswers]);
 
   const getChartData = useCallback((questionId: string) => {
     const { answerCounts } = analyzeResponses(questionId);
@@ -789,6 +792,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   // Remplacer la fonction handleApplyFilters par une nouvelle qui prend directement les réponses filtrées
   const handleApplyFilters = (filteredResponses: SurveyResponse[]) => {
     setFilteredAnswers(filteredResponses);
+    
+    // Afficher un message si aucune réponse ne correspond aux filtres
+    if (filteredResponses.length === 0 && surveyAnswers.length > 0) {
+      toast.info("Aucune réponse ne correspond aux filtres sélectionnés. Les statistiques affichées utilisent toutes les réponses.");
+    } else if (filteredResponses.length < surveyAnswers.length) {
+      toast.info(`${filteredResponses.length} réponses correspondent aux filtres sur ${surveyAnswers.length} au total.`);
+    }
   };
 
   // Fonction pour calculer les statistiques d'une question
@@ -877,44 +887,15 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               Total responses: <strong>{stats.total}</strong>
             </Typography>
             <Box sx={{ mt: 2 }}>
-              {displayedEntries.map(([answer, count]) => (
-                <Box key={answer} sx={{ mb: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">{answer}</Typography>
-                    <Typography variant="body2">{count} ({stats.percentages[answer]}%)</Typography>
-                  </Box>
-                  <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
-                    <Box
-                      sx={{
-                        width: `${stats.percentages[answer]}%`,
-                        bgcolor: 'rgba(102, 126, 234, 0.8)',
-                        borderRadius: 1,
-                        height: 8
-                      }}
-                    />
-                  </Box>
-                </Box>
-              ))}
-              
-              {hasMoreResponses && (
-                <Button 
-                  onClick={() => setShowAllResponses(prev => ({
-                    ...prev,
-                    [question.id]: !prev[question.id]
-                  }))}
-                  startIcon={showAllResponses[question.id] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                  sx={{ 
-                    mt: 1, 
-                    color: '#667eea',
-                    '&:hover': {
-                      backgroundColor: 'rgba(102, 126, 234, 0.04)'
-                    }
-                  }}
-                >
-                  {showAllResponses[question.id] 
-                    ? "Show less" 
-                    : `Show ${entries.length - initialDisplayCount} additional responses`}
-                </Button>
+              {filteredAnswers.length < surveyAnswers.length && (
+                <Typography variant="caption" color="text.secondary">
+                  (Filtered from {surveyAnswers.length} total responses)
+                </Typography>
+              )}
+              {stats.total > 0 && stats.mostCommonAnswer && (
+                <Typography variant="body2">
+                  Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
+                </Typography>
               )}
             </Box>
           </Box>
@@ -1181,6 +1162,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         <Typography variant="body2">
                           Total responses: <strong>{stats.total}</strong>
                         </Typography>
+                        {filteredAnswers.length < surveyAnswers.length && (
+                          <Typography variant="caption" color="text.secondary">
+                            (Filtered from {surveyAnswers.length} total responses)
+                          </Typography>
+                        )}
                         {stats.total > 0 && stats.mostCommonAnswer && (
                           <Typography variant="body2">
                             Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>

@@ -187,7 +187,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     }
 
     if (typeof value === 'boolean') {
-      return value ? 'Oui' : 'Non';
+      return value ? 'Yes' : 'No';
     }
 
     if (typeof value === 'object') {
@@ -439,7 +439,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           }}
         >
           <Tab label="Demographic Filters" disabled={!survey.demographicEnabled} />
-          <Tab label="Response Filters" />
+          <Tab label="Answer Filters" />
         </Tabs>
 
         {activeTab === 0 && survey.demographicEnabled && (
@@ -476,9 +476,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   >
                     <MenuItem value="">All</MenuItem>
                     <MenuItem value="high_school">High School</MenuItem>
-                    <MenuItem value="bachelor">Bachelor's Degree</MenuItem>
-                    <MenuItem value="master">Master's Degree</MenuItem>
-                    <MenuItem value="phd">Ph.D.</MenuItem>
+                    <MenuItem value="bachelor">Bachelor</MenuItem>
+                    <MenuItem value="master">Master</MenuItem>
+                    <MenuItem value="phd">PhD</MenuItem>
                     <MenuItem value="other">Other</MenuItem>
                   </Select>
                 </FormControl>
@@ -582,9 +582,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   <Chip
                     label={`Education Level: ${
                       filters.demographic.educationLevel === 'high_school' ? 'High School' :
-                      filters.demographic.educationLevel === 'bachelor' ? 'Bachelor\'s Degree' :
-                      filters.demographic.educationLevel === 'master' ? 'Master\'s Degree' :
-                      filters.demographic.educationLevel === 'phd' ? 'Ph.D.' : 
+                      filters.demographic.educationLevel === 'bachelor' ? 'Bachelor' :
+                      filters.demographic.educationLevel === 'master' ? 'Master' :
+                      filters.demographic.educationLevel === 'phd' ? 'PhD' : 
                       filters.demographic.educationLevel === 'other' ? 'Other' :
                       filters.demographic.educationLevel
                     }`}
@@ -650,7 +650,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                  !filters.demographic.city && 
                  !filters.demographic.age && (
                   <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No active demographic filters.
+                    No active demographic filter.
                   </Typography>
                 )}
               </Box>
@@ -674,7 +674,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   }
                 }}
               >
-                Add Response Filter
+                Add Answer Filter
               </Button>
             </Box>
 
@@ -730,7 +730,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No response filters defined. Click "Add Response Filter" to get started.
+                No answer filter defined. Click "Add Answer Filter" to start.
               </Typography>
             )}
           </>
@@ -738,7 +738,21 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
         <Divider sx={{ my: 3 }} />
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleClearFilters}
+            sx={{
+              borderColor: 'rgba(102, 126, 234, 0.3)',
+              color: '#667eea',
+              '&:hover': {
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.04)'
+              }
+            }}
+          >
+            Reset
+          </Button>
           <Button
             variant="contained"
             onClick={handleApplyFilters}
@@ -771,7 +785,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white'
         }}>
-          Add Response Filter
+          Add Answer Filter
           <IconButton onClick={handleCloseAnswerFilterDialog} sx={{ color: 'white' }}>
             <CloseIcon />
           </IconButton>
@@ -823,32 +837,133 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               {tempRule.operator === 'between' ? (
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Minimum Value"
-                      variant="outlined"
-                      value={tempRule.value || ''}
-                      onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
-                    />
+                    {(() => {
+                      const question = survey.questions.find(q => q.id === selectedQuestionId);
+                      if (!question) return null;
+
+                      switch (question.type) {
+                        case 'rating':
+                        case 'slider':
+                          return (
+                            <TextField
+                              fullWidth
+                              label="Minimum Value"
+                              variant="outlined"
+                              type="number"
+                              value={tempRule.value || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                            />
+                          );
+                        default:
+                          return (
+                            <TextField
+                              fullWidth
+                              label="Minimum Value"
+                              variant="outlined"
+                              value={tempRule.value || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                            />
+                          );
+                      }
+                    })()}
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Maximum Value"
-                      variant="outlined"
-                      value={tempRule.secondValue || ''}
-                      onChange={(e) => setTempRule(prev => ({ ...prev, secondValue: e.target.value }))}
-                    />
+                    {(() => {
+                      const question = survey.questions.find(q => q.id === selectedQuestionId);
+                      if (!question) return null;
+
+                      switch (question.type) {
+                        case 'rating':
+                        case 'slider':
+                          return (
+                            <TextField
+                              fullWidth
+                              label="Maximum Value"
+                              variant="outlined"
+                              type="number"
+                              value={tempRule.secondValue || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, secondValue: e.target.value }))}
+                            />
+                          );
+                        default:
+                          return (
+                            <TextField
+                              fullWidth
+                              label="Maximum Value"
+                              variant="outlined"
+                              value={tempRule.secondValue || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, secondValue: e.target.value }))}
+                            />
+                          );
+                      }
+                    })()}
                   </Grid>
                 </Grid>
               ) : (
-                <TextField
-                  fullWidth
-                  label="Value"
-                  variant="outlined"
-                  value={tempRule.value || ''}
-                  onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
-                />
+                <>
+                  {(() => {
+                    const question = survey.questions.find(q => q.id === selectedQuestionId);
+                    if (!question) return null;
+
+                    switch (question.type) {
+                      case 'yes-no':
+                        return (
+                          <FormControl fullWidth variant="outlined">
+                            <InputLabel>Value</InputLabel>
+                            <Select
+                              value={tempRule.value || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                              label="Value"
+                            >
+                              <MenuItem value="yes">Yes</MenuItem>
+                              <MenuItem value="no">No</MenuItem>
+                            </Select>
+                          </FormControl>
+                        );
+                      
+                      case 'multiple-choice':
+                      case 'dropdown':
+                        return (
+                          <FormControl fullWidth variant="outlined">
+                            <InputLabel>Value</InputLabel>
+                            <Select
+                              value={tempRule.value || ''}
+                              onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                              label="Value"
+                            >
+                              {question.options?.map(option => (
+                                <MenuItem key={option} value={option}>{option}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        );
+                      
+                      case 'rating':
+                      case 'slider':
+                        return (
+                          <TextField
+                            fullWidth
+                            label="Value"
+                            variant="outlined"
+                            type="number"
+                            value={tempRule.value || ''}
+                            onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                          />
+                        );
+                      
+                      default:
+                        return (
+                          <TextField
+                            fullWidth
+                            label="Value"
+                            variant="outlined"
+                            value={tempRule.value || ''}
+                            onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
+                          />
+                        );
+                    }
+                  })()}
+                </>
               )}
             </>
           )}
