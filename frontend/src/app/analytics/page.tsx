@@ -159,7 +159,12 @@ const AnalyticsPage: React.FC = () => {
   };
 
   const filteredSurveys = useMemo(() => {
-    return surveys.filter(survey => {
+    // Nous filtrons directement pour n'inclure que les sondages créés par l'utilisateur
+    return surveys.filter((survey) => {
+      // Vérifier si le sondage appartient à l'utilisateur actuel
+      if (survey.userId !== user?.userId) return false;
+
+      // Appliquer la recherche et les autres filtres
       if (searchQuery && !survey.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
@@ -176,7 +181,7 @@ const AnalyticsPage: React.FC = () => {
 
       return true;
     });
-  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares]);
+  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId]);
 
   const sortedSurveys = useMemo(() => {
     return [...filteredSurveys].sort((a, b) => {
