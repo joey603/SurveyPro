@@ -228,12 +228,7 @@ const AnalyticsPage: React.FC = () => {
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <IconButton
-              onClick={() => window.history.back()}
-              sx={{ color: 'white' }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
+            <Box sx={{ width: 48 }} />
 
             <Typography
               variant="h4"

@@ -25,13 +25,29 @@ interface FilterPanelProps {
   onClearFilters: () => void;
 }
 
+// D'abord, définissons une interface pour notre structure de filtres
+interface FilterState {
+  demographic: {
+    gender?: string;
+    educationLevel?: string;
+    [key: string]: any;
+  };
+  answers: {
+    [questionId: string]: Array<{
+      operator: string;
+      value: string;
+    }>;
+  };
+}
+
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   survey,
   onApplyFilters,
   onClearFilters,
 }) => {
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState<any>({
+  // Utilisons le type défini pour notre état
+  const [filters, setFilters] = useState<FilterState>({
     demographic: {},
     answers: {}
   });
@@ -110,7 +126,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <InputLabel>Gender</InputLabel>
                     <Select
                       value={filters.demographic.gender || ''}
-                      onChange={(e) => setFilters(prev => ({
+                      onChange={(e) => setFilters((prev: FilterState) => ({
                         ...prev,
                         demographic: { ...prev.demographic, gender: e.target.value }
                       }))}
@@ -127,7 +143,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <InputLabel>Education Level</InputLabel>
                     <Select
                       value={filters.demographic.educationLevel || ''}
-                      onChange={(e) => setFilters(prev => ({
+                      onChange={(e) => setFilters((prev: FilterState) => ({
                         ...prev,
                         demographic: { ...prev.demographic, educationLevel: e.target.value }
                       }))}
@@ -159,7 +175,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       <FormControl fullWidth>
                         <Select
                           value={filters.answers[question.id]?.[0]?.value || ''}
-                          onChange={(e) => setFilters(prev => ({
+                          onChange={(e) => setFilters((prev: FilterState) => ({
                             ...prev,
                             answers: {
                               ...prev.answers,
@@ -180,7 +196,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                         fullWidth
                         placeholder="Filter value..."
                         value={filters.answers[question.id]?.[0]?.value || ''}
-                        onChange={(e) => setFilters(prev => ({
+                        onChange={(e) => setFilters((prev: FilterState) => ({
                           ...prev,
                           answers: {
                             ...prev.answers,

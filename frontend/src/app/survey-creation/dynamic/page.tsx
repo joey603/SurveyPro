@@ -991,20 +991,21 @@ export default function DynamicSurveyCreation() {
       
       {/* Paper principal contenant tous les éléments */}
       <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
-        {/* Entête */}
+        {/* Entête en anglais avec titre et sous-titre centrés */}
         <Box 
           sx={{ 
             p: 3,
             bgcolor: 'primary.main', 
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
             color: 'white',
+            textAlign: 'center'
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            Création de sondage dynamique
+            Dynamic Survey Creation
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
-            Créez un sondage avec des chemins conditionnels et des questions personnalisées
+            Create surveys with conditional paths and customized questions
           </Typography>
         </Box>
         

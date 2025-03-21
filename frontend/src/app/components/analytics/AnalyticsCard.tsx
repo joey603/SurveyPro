@@ -73,24 +73,37 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
       sx={{
         borderRadius: 2,
         overflow: 'hidden',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.3s ease-in-out',
+        position: 'relative',
         '&:hover': {
-          transform: 'translateY(-4px)',
           boxShadow: 3,
-        },
+          zIndex: 1,
+          transform: 'translateY(-4px)',
+        }
       }}
     >
-      <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ 
+        p: 3, 
+        flex: 1, 
+        display: 'flex', 
+        flexDirection: 'column',
+        position: 'relative'
+      }}>
         <Typography
           variant="h6"
           sx={{
+            color: 'primary.main',
             fontWeight: 500,
             mb: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            lineHeight: 1.3,
+            height: '2.6em',
           }}
         >
           {survey.title}
@@ -117,10 +130,15 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           direction="row"
           spacing={1}
           sx={{
+            display: 'flex',
+            flexDirection: 'row',
             flexWrap: 'wrap',
             gap: '8px',
             mt: 2,
             mb: 2,
+            '& .MuiChip-root': {
+              margin: '0 !important'
+            }
           }}
         >
           <Chip
@@ -128,9 +146,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             icon={<BarChartIcon sx={{ fontSize: 16 }} />}
             label={`${responseCount} Responses`}
             sx={{
-              backgroundColor: colors.primary.transparent,
-              color: colors.primary.main,
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              color: '#667eea',
               height: '24px',
+              '& .MuiChip-icon': {
+                color: '#667eea'
+              },
             }}
           />
           <Chip
@@ -138,9 +159,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
             label={`${survey.questions?.length || survey.nodes?.length || 0} Questions`}
             sx={{
-              backgroundColor: colors.primary.transparent,
-              color: colors.primary.main,
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              color: '#667eea',
               height: '24px',
+              '& .MuiChip-icon': {
+                color: '#667eea'
+              },
             }}
           />
           {survey.isDynamic ? (
@@ -149,9 +173,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
               label="Dynamic"
               sx={{
-                backgroundColor: colors.primary.transparent,
-                color: colors.primary.main,
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
                 height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
               }}
             />
           ) : (
@@ -160,9 +187,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               icon={<ListAltIcon sx={{ fontSize: 16 }} />}
               label="Static"
               sx={{
-                backgroundColor: colors.primary.transparent,
-                color: colors.primary.main,
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
                 height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
               }}
             />
           )}
@@ -171,8 +201,8 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               size="small"
               label="Demographic"
               sx={{
-                backgroundColor: colors.primary.transparent,
-                color: colors.primary.main,
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
                 height: '24px',
               }}
             />
@@ -183,9 +213,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               icon={<EmailIcon sx={{ fontSize: 16 }} />}
               label={`Shared by ${survey.sharedBy}`}
               sx={{
-                backgroundColor: colors.primary.transparent,
-                color: colors.primary.main,
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
                 height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
               }}
             />
           )}
@@ -205,9 +238,11 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           p: 2,
           borderTop: 1,
           borderColor: 'divider',
-          backgroundColor: colors.primary.transparent,
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
           display: 'flex',
           justifyContent: 'space-between',
+          position: 'relative',
+          zIndex: 1
         }}
       >
         {userId === survey.userId && onDelete && (
@@ -217,6 +252,14 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             color="error"
             onClick={() => onDelete(survey._id)}
             startIcon={<DeleteIcon />}
+            sx={{
+              borderColor: '#f44336',
+              color: '#f44336',
+              '&:hover': {
+                borderColor: '#d32f2f',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              },
+            }}
           >
             Delete
           </Button>
@@ -227,9 +270,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           onClick={() => onViewAnalytics(survey)}
           sx={{
             ml: 'auto',
-            background: colors.primary.gradient,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             '&:hover': {
-              background: colors.primary.hover,
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
             },
           }}
         >
