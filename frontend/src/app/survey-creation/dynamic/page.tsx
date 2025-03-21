@@ -25,7 +25,8 @@ import {
   Alert,
   CircularProgress,
   InputAdornment,
-  IconButton
+  IconButton,
+  Container
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -987,126 +988,149 @@ export default function DynamicSurveyCreation() {
           </DialogActions>
         </Dialog>
       )}
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-          Basic Information
-        </Typography>
+      
+      {/* Paper principal contenant tous les éléments */}
+      <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
+        {/* Entête */}
+        <Box 
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Création de sondage dynamique
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            Créez un sondage avec des chemins conditionnels et des questions personnalisées
+          </Typography>
+        </Box>
         
-        <Controller
-          name="title"
-          control={control}
-          defaultValue=""
-          rules={{ required: 'Title is required' }}
-          render={({ field, fieldState: { error } }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Survey Title"
-              error={!!error}
-              helperText={error?.message}
-              sx={{ mb: 2 }}
-            />
-          )}
-        />
-        
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Description"
-              variant="outlined"
-              multiline
-              rows={3}
-              sx={{ mb: 2 }}
-            />
-          )}
-        />
-        
-        <FormControlLabel
-          control={
-            <Switch
-              checked={watch('demographicEnabled')}
-              onChange={(e) => setValue('demographicEnabled', e.target.checked)}
-            />
-          }
-          label="Enable Demographic Questions"
-        />
-
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+        {/* Section des informations de base */}
+        <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+            Basic Information
+          </Typography>
+          
+          <Controller
+            name="title"
+            control={control}
+            defaultValue=""
+            rules={{ required: 'Title is required' }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Survey Title"
+                error={!!error}
+                helperText={error?.message}
+                sx={{ mb: 2 }}
+              />
+            )}
+          />
+          
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Description"
+                variant="outlined"
+                multiline
+                rows={3}
+                sx={{ mb: 2 }}
+              />
+            )}
+          />
+          
           <FormControlLabel
             control={
               <Switch
-                checked={watch('isPrivate')}
-                onChange={(e) => {
-                  setValue('isPrivate', e.target.checked);
-                }}
-                color="primary"
+                checked={watch('demographicEnabled')}
+                onChange={(e) => setValue('demographicEnabled', e.target.checked)}
               />
             }
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {watch('isPrivate') ? (
-                  <LockIcon sx={{ color: '#667eea' }} />
-                ) : (
-                  <PublicIcon sx={{ color: '#667eea' }} />
-                )}
-                <Typography>
-                  {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
-                </Typography>
-              </Box>
-            }
+            label="Enable Demographic Questions"
           />
-          <Tooltip 
-            title="Private surveys are only visible to you, while public surveys can be accessed by all users"
-            placement="right"
-            TransitionComponent={Zoom}
-            arrow
-          >
-            <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={watch('isPrivate')}
+                  onChange={(e) => {
+                    setValue('isPrivate', e.target.checked);
+                  }}
+                  color="primary"
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {watch('isPrivate') ? (
+                    <LockIcon sx={{ color: '#667eea' }} />
+                  ) : (
+                    <PublicIcon sx={{ color: '#667eea' }} />
+                  )}
+                  <Typography>
+                    {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
+                  </Typography>
+                </Box>
+              }
+            />
+            <Tooltip 
+              title="Private surveys are only visible to you, while public surveys can be accessed by all users"
+              placement="right"
+              TransitionComponent={Zoom}
+              arrow
+            >
+              <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Flow section */}
+        <Box sx={{ p: 3, pt: 0, height: '600px', position: 'relative' }}>
+          <SurveyFlow 
+            ref={flowRef}
+            onAddNode={() => {
+              if (flowRef.current) {
+                const nodes = flowRef.current.getNodes();
+                setPreviewNodes(nodes);
+              }
+            }} 
+            onEdgesChange={handleEdgesChange}
+          />
+          
+          <Tooltip title="Add Question" placement="left">
+            <Fab 
+              color="primary" 
+              aria-label="add question"
+              sx={{
+                position: 'absolute',
+                bottom: 24,
+                right: 24,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
+              onClick={() => {
+                if (flowRef.current) {
+                  flowRef.current.addNewQuestion();
+                }
+              }}
+            >
+              <AddIcon />
+            </Fab>
           </Tooltip>
         </Box>
       </Paper>
 
-      <Paper sx={{ p: 3, mb: 3, height: '600px', position: 'relative' }}>
-        <SurveyFlow 
-          ref={flowRef}
-          onAddNode={() => {
-            if (flowRef.current) {
-              const nodes = flowRef.current.getNodes();
-              setPreviewNodes(nodes);
-            }
-          }} 
-          onEdgesChange={handleEdgesChange}
-        />
-        
-        <Tooltip title="Add Question" placement="left">
-          <Fab 
-            color="primary" 
-            aria-label="add question"
-            sx={{
-              position: 'absolute',
-              bottom: 24,
-              right: 24,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              },
-            }}
-            onClick={() => {
-              if (flowRef.current) {
-                flowRef.current.addNewQuestion();
-              }
-            }}
-          >
-            <AddIcon />
-          </Fab>
-        </Tooltip>
-      </Paper>
-
+      {/* Boutons d'action en dehors du Paper principal */}
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
           onClick={handleResetSurvey}
