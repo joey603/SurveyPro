@@ -73,14 +73,17 @@ const AnalyticsPage: React.FC = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('accessToken') || '';
-        const [surveysData, pendingSharesData] = await Promise.all([
-          fetchSurveys(token),
-          fetchPendingShares(token)
-        ]);
-
-        console.log('Sondages chargés:', surveysData); // Debugging
-
-        const responsesPromises = surveysData.map((survey: Survey) => 
+        
+        // Charger les sondages classiques et dynamiques
+        const allSurveys = await fetchSurveys(token);
+        console.log('Tous les sondages chargés:', allSurveys.length);
+        console.log('Sondages dynamiques chargés:', allSurveys.filter((s: any) => s.isDynamic).length);
+        
+        // Charger les partages en attente séparément
+        const pendingSharesData = await fetchPendingShares(token);
+        
+        // Charger les réponses pour tous les sondages
+        const responsesPromises = allSurveys.map((survey: any) => 
           getSurveyAnswers(survey._id, token, survey.isDynamic)
             .then(responses => ({ surveyId: survey._id, responses }))
             .catch(() => ({ surveyId: survey._id, responses: [] }))
@@ -90,9 +93,9 @@ const AnalyticsPage: React.FC = () => {
         const responsesMap = responsesData.reduce((acc, { surveyId, responses }) => {
           acc[surveyId] = responses;
           return acc;
-        }, {} as { [key: string]: SurveyResponse[] });
+        }, {} as { [key: string]: any[] });
 
-        setSurveys(surveysData);
+        setSurveys(allSurveys);
         setPendingShares(pendingSharesData);
         setSurveyResponses(responsesMap);
       } catch (error) {
@@ -159,29 +162,62 @@ const AnalyticsPage: React.FC = () => {
   };
 
   const filteredSurveys = useMemo(() => {
-    // Nous filtrons directement pour n'inclure que les sondages créés par l'utilisateur
-    return surveys.filter((survey) => {
-      // Vérifier si le sondage appartient à l'utilisateur actuel
-      if (survey.userId !== user?.userId) return false;
-
-      // Appliquer la recherche et les autres filtres
+    console.log('Tous les sondages avant filtrage:', surveys.length);
+    console.log('Sondages dynamiques avant filtrage:', surveys.filter(s => s.isDynamic).length);
+    console.log('ID utilisateur actuel:', user?.userId || user?.id);
+    
+    // Fonction pour vérifier si un sondage appartient à l'utilisateur actuel
+    const belongsToCurrentUser = (survey) => {
+      const currentUserId = String(user?.userId || user?.id || '');
+      
+      if (survey.isDynamic) {
+        // Pour les sondages dynamiques, userId est un objet avec _id
+        if (survey.userId && typeof survey.userId === 'object' && survey.userId._id) {
+          return survey.userId._id === currentUserId;
+        }
+        
+        // Pour les sondages dynamiques sans userId défini ou null
+        return survey.createdBy === currentUserId;
+      } else {
+        // Pour les sondages classiques - ils semblent ne pas avoir de userId défini
+        // Nous supposons donc qu'ils appartiennent tous à l'utilisateur actuel
+        // comme c'était le cas avant notre modification
+        return true;
+      }
+    };
+    
+    const filtered = surveys.filter((survey) => {
+      // Filtrer par propriété du sondage
+      if (!belongsToCurrentUser(survey)) {
+        return false;
+      }
+      
+      // Appliquer le filtre de recherche si présent
       if (searchQuery && !survey.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
 
+      // Appliquer les filtres de date si présents
       if (dateRange.start || dateRange.end) {
         const surveyDate = new Date(survey.createdAt);
         if (dateRange.start && surveyDate < dateRange.start) return false;
         if (dateRange.end && surveyDate > dateRange.end) return false;
       }
 
+      // Appliquer le filtre de partages en attente si actif
       if (showPendingOnly && !pendingShares.some(s => s._id === survey._id)) {
         return false;
       }
 
       return true;
     });
-  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId]);
+    
+    console.log('Sondages après filtrage:', filtered.length);
+    console.log('Sondages classiques après filtrage:', filtered.filter(s => !s.isDynamic).length);
+    console.log('Sondages dynamiques après filtrage:', filtered.filter(s => s.isDynamic).length);
+    
+    return filtered;
+  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId, user?.id]);
 
   const sortedSurveys = useMemo(() => {
     return [...filteredSurveys].sort((a, b) => {

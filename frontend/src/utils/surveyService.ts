@@ -182,40 +182,34 @@ export const submitSurveyAnswer = async (surveyId: string, data: any, token: str
   }
 };
 
-export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic?: boolean): Promise<any> => {
-  try {
-    // Construire l'URL en fonction du type de sondage
-    const endpoint = isDynamic ? 
-      `${API_URL}/dynamic-survey-answers/survey/${surveyId}` : 
-      `${API_URL}/survey-answers/${surveyId}`;
-    
-    const response = await axios.get(endpoint, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    
-    // Pour les sondages dynamiques, transformer les réponses pour correspondre au format standard
-    if (isDynamic) {
-      // Transformer le format des réponses dynamiques pour matcher le format standard
-      return response.data.map((answer: any) => ({
-        _id: answer._id,
-        surveyId: answer.surveyId,
-        submittedAt: answer.submittedAt,
-        answers: answer.answers.map((ans: any) => ({
-          questionId: ans.nodeId,
-          answer: ans.answer
-        })),
-        respondent: answer.respondent
-      }));
-    }
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('Error fetching survey answers:', error);
-    throw error.response?.data || error;
-  }
-};
+interface DynamicSurveyNode {
+  id: string;
+  type: string;
+  data: {
+    text?: string;
+    label?: string;
+    questionType?: string;
+    type?: string;
+    options?: string[];
+    [key: string]: any;
+  };
+  position?: {
+    x: number;
+    y: number;
+  };
+}
+
+interface DynamicSurvey {
+  _id: string;
+  title: string;
+  description?: string;
+  nodes?: DynamicSurveyNode[];
+  edges?: any[];
+  userId: string;
+  createdAt: string;
+  demographicEnabled?: boolean;
+  [key: string]: any;
+}
 
 export const fetchSurveys = async (token: string): Promise<any> => {
   try {
@@ -233,17 +227,25 @@ export const fetchSurveys = async (token: string): Promise<any> => {
       },
     });
     
+    console.log('Sondages classiques récupérés:', classicResponse.data.length);
+    console.log('Sondages dynamiques récupérés:', dynamicResponse.data.length);
+    
     // Formater les sondages dynamiques pour avoir la même structure
-    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+    const dynamicSurveys = dynamicResponse.data.map((survey: DynamicSurvey) => ({
       ...survey,
       isDynamic: true,
-      questions: survey.nodes?.map((node: any) => ({
+      questions: survey.nodes?.map((node: DynamicSurveyNode) => ({
         id: node.id,
         text: node.data?.text || node.data?.label || 'Question sans texte',
         type: node.data?.questionType || node.data?.type || 'text',
         options: node.data?.options || []
       })) || []
     }));
+    
+    console.log('Sondages dynamiques formatés:', dynamicSurveys.length);
+    if (dynamicSurveys.length > 0) {
+      console.log('Exemple de sondage dynamique:', dynamicSurveys[0].title);
+    }
     
     // Combiner les deux types de sondages
     return [...classicResponse.data, ...dynamicSurveys];
@@ -393,5 +395,46 @@ export const fetchAnsweredSurveys = async (token: string) => {
   } catch (error) {
     console.error('Erreur lors de la récupération des sondages répondus:', error);
     return [];
+  }
+};
+
+export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic?: boolean): Promise<any> => {
+  try {
+    console.log(`Récupération des réponses pour le sondage ${surveyId}, isDynamic: ${isDynamic}`);
+    
+    // Construire l'URL en fonction du type de sondage
+    const endpoint = isDynamic ? 
+      `${API_URL}/dynamic-survey-answers/survey/${surveyId}` : 
+      `${API_URL}/survey-answers/${surveyId}`;
+    
+    console.log(`Endpoint utilisé: ${endpoint}`);
+    
+    const response = await axios.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    console.log(`Réponses reçues: ${response.data?.length || 0}`);
+    
+    // Pour les sondages dynamiques, transformer les réponses pour correspondre au format standard
+    if (isDynamic) {
+      // Transformer le format des réponses dynamiques pour matcher le format standard
+      return response.data.map((answer: any) => ({
+        _id: answer._id,
+        surveyId: answer.surveyId,
+        submittedAt: answer.submittedAt,
+        answers: answer.answers.map((ans: any) => ({
+          questionId: ans.nodeId,
+          answer: ans.answer
+        })),
+        respondent: answer.respondent
+      }));
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching survey answers:', error);
+    throw error.response?.data || error;
   }
 };
