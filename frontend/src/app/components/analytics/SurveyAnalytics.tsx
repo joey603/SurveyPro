@@ -1724,7 +1724,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 <DemographicStatistics 
                   responses={responses}
                   filteredResponses={filteredResponses}
-                  onClearFilters={handleClearFilters}
                 />
           </Grid>
         )}
