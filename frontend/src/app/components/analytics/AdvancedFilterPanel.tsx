@@ -471,14 +471,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     
     console.log("Filtered responses:", filteredResponses.length);
     
-    // Si aucune réponse ne correspond aux filtres, afficher un message et ne pas appliquer les filtres
-    if (filteredResponses.length === 0 && responses.length > 0) {
-      console.log("No responses match the filters, keeping all responses");
-      // Appeler onApplyFilters avec toutes les réponses pour éviter de vider l'affichage
-      onApplyFilters(responses);
-    } else {
-      // Sinon, appliquer les filtres normalement
-      onApplyFilters(filteredResponses);
+    // Toujours appliquer les filtres, même si le tableau est vide
+    onApplyFilters(filteredResponses);
+
+    if (filteredResponses.length === 0) {
+      console.log("Aucune réponse ne correspond aux filtres, affichage d'un tableau vide");
     }
   }, [filters, responses, onApplyFilters, calculateAge, evaluateRule, survey.questions]);
 

@@ -4,6 +4,7 @@ import {
   Grid,
   Paper,
   Typography,
+  Button,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -64,6 +65,7 @@ interface DemographicStats {
 interface DemographicStatisticsProps {
   responses: SurveyResponse[];
   filteredResponses?: SurveyResponse[];
+  onClearFilters?: () => void;
 }
 
 // Common options for charts
@@ -132,7 +134,8 @@ const chartColors = {
 
 export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   responses,
-  filteredResponses
+  filteredResponses,
+  onClearFilters
 }) => {
   // Utiliser toujours les réponses filtrées si disponibles
   const displayedResponses = filteredResponses || responses;
@@ -316,243 +319,260 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         </Typography>
       </Box>
 
-      <Grid container spacing={4} sx={{ 
-        justifyContent: 'center',
-        alignItems: 'stretch'
-      }}>
-        {/* Gender */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            height: '400px',
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 2,
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              transform: 'translateY(-2px)'
-            }
-          }}>
-            <Typography 
-              variant="subtitle1" 
-              gutterBottom 
-              align="center" 
-              sx={{ 
-                fontWeight: 600,
-                color: '#2d3748',
-                mb: 3
-              }}
-            >
-              Gender Distribution
-            </Typography>
-            <Box sx={{ 
-              height: 'calc(100% - 60px)',
-              width: '100%',
+      {/* Vérifier s'il y a des réponses à afficher */}
+      {displayedResponses.length > 0 ? (
+        <Grid container spacing={4} sx={{ 
+          justifyContent: 'center',
+          alignItems: 'stretch'
+        }}>
+          {/* Gender */}
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
               display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
               justifyContent: 'center',
-              alignItems: 'center'
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
             }}>
-              <Pie
-                data={{
-                  labels: Object.keys(stats.gender),
-                  datasets: [{
-                    data: Object.values(stats.gender),
-                    backgroundColor: chartColors.backgrounds,
-                    borderColor: chartColors.borders,
-                    borderWidth: 1
-                  }]
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
                 }}
-                options={{
-                  ...pieOptions,
-                  responsive: true,
-                  maintainAspectRatio: true
-                }}
-              />
-            </Box>
-          </Paper>
-        </Grid>
+              >
+                Gender Distribution
+              </Typography>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Pie
+                  data={{
+                    labels: Object.keys(stats.gender),
+                    datasets: [{
+                      data: Object.values(stats.gender),
+                      backgroundColor: chartColors.backgrounds,
+                      borderColor: chartColors.borders,
+                      borderWidth: 1
+                    }]
+                  }}
+                  options={{
+                    ...pieOptions,
+                    responsive: true,
+                    maintainAspectRatio: true
+                  }}
+                />
+              </Box>
+            </Paper>
+          </Grid>
 
-        {/* Education Level */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            height: '400px',
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 2,
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              transform: 'translateY(-2px)'
-            }
-          }}>
-            <Typography 
-              variant="subtitle1" 
-              gutterBottom 
-              align="center" 
-              sx={{ 
-                fontWeight: 600,
-                color: '#2d3748',
-                mb: 3
-              }}
-            >
-              Education Level Distribution
-            </Typography>
-            <Box sx={{ 
-              height: 'calc(100% - 60px)',
-              width: '100%',
+          {/* Education Level */}
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
               display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
               justifyContent: 'center',
-              alignItems: 'center'
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
             }}>
-              <Bar
-                data={{
-                  labels: Object.keys(stats.education),
-                  datasets: [{
-                    data: Object.values(stats.education),
-                    backgroundColor: chartColors.backgrounds,
-                    borderColor: chartColors.borders,
-                    borderWidth: 1,
-                    hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
-                    hoverBorderColor: chartColors.borders,
-                    hoverBorderWidth: 2,
-                  }]
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
                 }}
-                options={{
-                  ...commonChartOptions,
-                  plugins: {
-                    ...commonChartOptions.plugins,
-                    title: {
-                      ...commonChartOptions.plugins.title,
-                      display: false,
-                    },
-                    legend: {
-                      display: false
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1
+              >
+                Education Level Distribution
+              </Typography>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Bar
+                  data={{
+                    labels: Object.keys(stats.education),
+                    datasets: [{
+                      data: Object.values(stats.education),
+                      backgroundColor: chartColors.backgrounds,
+                      borderColor: chartColors.borders,
+                      borderWidth: 1,
+                      hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
+                      hoverBorderColor: chartColors.borders,
+                      hoverBorderWidth: 2,
+                    }]
+                  }}
+                  options={{
+                    ...commonChartOptions,
+                    plugins: {
+                      ...commonChartOptions.plugins,
+                      title: {
+                        ...commonChartOptions.plugins.title,
+                        display: false,
                       },
-                      grid: {
-                        color: 'rgba(102, 126, 234, 0.1)',
-                        display: true
-                      }
-                    },
-                    x: {
-                      grid: {
+                      legend: {
                         display: false
                       }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          stepSize: 1
+                        },
+                        grid: {
+                          color: 'rgba(102, 126, 234, 0.1)',
+                          display: true
+                        }
+                      },
+                      x: {
+                        grid: {
+                          display: false
+                        }
+                      }
                     }
-                  }
-                }}
-              />
-            </Box>
-          </Paper>
-        </Grid>
+                  }}
+                />
+              </Box>
+            </Paper>
+          </Grid>
 
-        {/* Age Distribution */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            height: '400px',
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 2,
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              transform: 'translateY(-2px)'
-            }
-          }}>
-            <Typography 
-              variant="subtitle1" 
-              gutterBottom 
-              align="center" 
-              sx={{ 
-                fontWeight: 600,
-                color: '#2d3748',
-                mb: 3
-              }}
-            >
-              Age Distribution
-            </Typography>
-            <Box sx={{ 
-              height: 'calc(100% - 60px)',
-              width: '100%',
+          {/* Age Distribution */}
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
               display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
               justifyContent: 'center',
-              alignItems: 'center'
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
             }}>
-              {renderAgeChart()}
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Cities */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            height: '400px',
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 2,
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              transform: 'translateY(-2px)'
-            }
-          }}>
-            <Typography 
-              variant="subtitle1" 
-              gutterBottom 
-              align="center" 
-              sx={{ 
-                fontWeight: 600,
-                color: '#2d3748',
-                mb: 3
-              }}
-            >
-              City Distribution
-            </Typography>
-            <Box sx={{ 
-              height: 'calc(100% - 60px)',
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <Doughnut
-                data={{
-                  labels: Object.keys(stats.city),
-                  datasets: [{
-                    data: Object.values(stats.city),
-                    backgroundColor: chartColors.backgrounds,
-                    borderColor: chartColors.borders,
-                    borderWidth: 1
-                  }]
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
                 }}
-                options={pieOptions}
-              />
-            </Box>
-          </Paper>
+              >
+                Age Distribution
+              </Typography>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                {renderAgeChart()}
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Cities */}
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom 
+                align="center" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2d3748',
+                  mb: 3
+                }}
+              >
+                City Distribution
+              </Typography>
+              <Box sx={{ 
+                height: 'calc(100% - 60px)',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Doughnut
+                  data={{
+                    labels: Object.keys(stats.city),
+                    datasets: [{
+                      data: Object.values(stats.city),
+                      backgroundColor: chartColors.backgrounds,
+                      borderColor: chartColors.borders,
+                      borderWidth: 1
+                    }]
+                  }}
+                  options={pieOptions}
+                />
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      ) : (
+        // Afficher ce message quand aucune réponse ne correspond aux filtres
+        <Box sx={{ textAlign: 'center', p: 3 }}>
+          <Typography variant="h6" color="text.secondary">
+            Aucune réponse ne correspond aux critères de filtrage
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={onClearFilters || (() => {})}
+            sx={{ mt: 2 }}
+          >
+            Réinitialiser les filtres
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }; 

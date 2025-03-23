@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -14,15 +14,35 @@ import {
   MenuItem,
   TextField,
   IconButton,
+  Chip,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
 import ClearIcon from '@mui/icons-material/Clear';
 
+// Définir le type pour SurveyResponse
+interface SurveyResponse {
+  _id: string;
+  surveyId: string;
+  answers: any[];
+  submittedAt: string;
+  respondent?: {
+    demographic?: {
+      gender?: string;
+      educationLevel?: string;
+      city?: string;
+      dateOfBirth?: string;
+    };
+  };
+}
+
 interface FilterPanelProps {
   survey: any;
+  responses: SurveyResponse[];
+  filteredResponses: SurveyResponse[];
   onApplyFilters: (filters: any) => void;
   onClearFilters: () => void;
+  setFilteredResponses: (responses: SurveyResponse[]) => void;
 }
 
 // D'abord, définissons une interface pour notre structure de filtres
@@ -44,14 +64,18 @@ interface FilterState {
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   survey,
+  responses,
+  filteredResponses,
   onApplyFilters,
   onClearFilters,
+  setFilteredResponses,
 }) => {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     demographic: {},
     answers: {}
   });
+  const [activeFilters, setActiveFilters] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -61,10 +85,107 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     handleApplyFilters(newFilters);
   };
 
-  const handleApplyFilters = (newFilters: FilterState) => {
-    setFilters(newFilters);
-    onApplyFilters(newFilters);
+  const handleApplyFilters = (filters: FilterState) => {
+    // Vérifier si des filtres sont actifs
+    const hasActiveDemographicFilters = Object.values(filters.demographic).some(
+      value => value !== undefined && value !== '' && value !== null
+    );
+    
+    const hasActiveAnswerFilters = Object.keys(filters.answers).length > 0;
+    
+    // Mettre à jour l'état des filtres actifs
+    setActiveFilters(hasActiveDemographicFilters || hasActiveAnswerFilters);
+    
+    console.log("Applying filters:", JSON.stringify(filters, null, 2));
+    console.log("Total responses before filtering:", responses.length);
+    console.log("Responses data:", responses);
+    
+    const filtered = responses.filter((response: SurveyResponse) => {
+      // Filtrage démographique
+      if (filters.demographic.gender && 
+          response.respondent?.demographic?.gender !== filters.demographic.gender) {
+        return false;
+      }
+      
+      if (filters.demographic.educationLevel) {
+        console.log("Filtering by education level:", filters.demographic.educationLevel);
+        console.log("User education level:", response.respondent?.demographic?.educationLevel);
+        
+        if (response.respondent?.demographic?.educationLevel !== filters.demographic.educationLevel) {
+          console.log("Education level does not match, filtering out");
+          return false;
+        }
+      }
+      
+      // Autres filtres...
+      
+      return true;
+    });
+    
+    console.log("Filtered responses:", filtered.length);
+    
+    setFilteredResponses(filtered);
+    
+    if (filtered.length === 0) {
+      console.log("Aucune réponse ne correspond aux critères, affichage d'un tableau vide");
+    }
+    
+    // Appeler la fonction passée en prop
+    onApplyFilters(filters);
+    handleClose();
   };
+
+  const handleClearFilters = () => {
+    setFilters({
+      demographic: {},
+      answers: {}
+    });
+    setActiveFilters(false);
+    onClearFilters();
+  };
+
+  const renderData = (data: any): ReactNode => {
+    if (!data) {
+      return <Typography>Aucune donnée disponible</Typography>;
+    }
+    
+    return (Object.entries(data || {}).map(([key, value]) => (
+      <div key={key}>{key}: {String(value)}</div>
+    )) as ReactNode);
+  };
+
+  const renderStatistics = () => {
+    // Vérifier si le tableau filtré est vide
+    if (filteredResponses.length === 0) {
+      return (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" color="text.secondary">
+            Aucune réponse ne correspond aux critères de filtrage
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={onClearFilters}
+            sx={{ mt: 2 }}
+          >
+            Réinitialiser les filtres
+          </Button>
+        </Box>
+      );
+    }
+    
+    // Afficher les statistiques avec les données filtrées
+    return (
+      <Box>
+        {/* Vos graphiques basés sur filteredResponses */}
+      </Box>
+    );
+  };
+
+  useEffect(() => {
+    if (filteredResponses.length === 0 && activeFilters) {
+      setFilteredResponses(responses);
+    }
+  }, [filteredResponses, activeFilters]);
 
   return (
     <>
@@ -221,6 +342,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 </Grid>
               ))}
             </Grid>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle1">
+              {filteredResponses.length} réponses affichées
+              {filteredResponses.length !== responses.length && 
+                ` (filtrées à partir de ${responses.length} réponses)`}
+            </Typography>
+            
+            {filteredResponses.length !== responses.length && (
+              <Chip 
+                label="Filtres actifs" 
+                color="primary" 
+                size="small" 
+                onDelete={onClearFilters}
+                sx={{ ml: 2 }}
+              />
+            )}
           </Box>
         </DialogContent>
 
