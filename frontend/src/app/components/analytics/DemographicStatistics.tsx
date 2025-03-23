@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -134,8 +134,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   responses,
   filteredResponses
 }) => {
-  // Use filtered responses if available, otherwise use all responses
+  // Utiliser toujours les réponses filtrées si disponibles
   const displayedResponses = filteredResponses || responses;
+  
+  // Effet pour recalculer les statistiques lorsque les réponses filtrées changent
+  useEffect(() => {
+    // Recalculer les statistiques ici
+    // ...
+  }, [displayedResponses]);
 
   // Function to calculate demographic statistics
   const calculateDemographicStats = useCallback((): DemographicStats => {

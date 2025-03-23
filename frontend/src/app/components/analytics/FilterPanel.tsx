@@ -30,6 +30,8 @@ interface FilterState {
   demographic: {
     gender?: string;
     educationLevel?: string;
+    city?: string;
+    age?: [number, number];
     [key: string]: any;
   };
   answers: {
@@ -46,7 +48,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onClearFilters,
 }) => {
   const [open, setOpen] = useState(false);
-  // Utilisons le type défini pour notre état
   const [filters, setFilters] = useState<FilterState>({
     demographic: {},
     answers: {}
@@ -55,15 +56,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  const handleApply = () => {
-    onApplyFilters(filters);
-    handleClose();
+  const handleFilterChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    handleApplyFilters(newFilters);
   };
 
-  const handleClear = () => {
-    setFilters({ demographic: {}, answers: {} });
-    onClearFilters();
-    handleClose();
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    onApplyFilters(newFilters);
   };
 
   return (
@@ -126,10 +126,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <InputLabel>Gender</InputLabel>
                     <Select
                       value={filters.demographic.gender || ''}
-                      onChange={(e) => setFilters((prev: FilterState) => ({
-                        ...prev,
-                        demographic: { ...prev.demographic, gender: e.target.value }
-                      }))}
+                      onChange={(e) => {
+                        const newFilters = {
+                          ...filters,
+                          demographic: { ...filters.demographic, gender: e.target.value }
+                        };
+                        handleFilterChange(newFilters);
+                      }}
                     >
                       <MenuItem value="">All</MenuItem>
                       <MenuItem value="male">Male</MenuItem>
@@ -143,10 +146,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <InputLabel>Education Level</InputLabel>
                     <Select
                       value={filters.demographic.educationLevel || ''}
-                      onChange={(e) => setFilters((prev: FilterState) => ({
-                        ...prev,
-                        demographic: { ...prev.demographic, educationLevel: e.target.value }
-                      }))}
+                      onChange={(e) => {
+                        const newFilters = {
+                          ...filters,
+                          demographic: { ...filters.demographic, educationLevel: e.target.value }
+                        };
+                        handleFilterChange(newFilters);
+                      }}
                     >
                       <MenuItem value="">All</MenuItem>
                       <MenuItem value="high_school">High School</MenuItem>
@@ -175,13 +181,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       <FormControl fullWidth>
                         <Select
                           value={filters.answers[question.id]?.[0]?.value || ''}
-                          onChange={(e) => setFilters((prev: FilterState) => ({
-                            ...prev,
-                            answers: {
-                              ...prev.answers,
-                              [question.id]: [{ operator: 'equals', value: e.target.value }]
-                            }
-                          }))}
+                          onChange={(e) => {
+                            const newFilters = {
+                              ...filters,
+                              answers: {
+                                ...filters.answers,
+                                [question.id]: [{ operator: 'equals', value: e.target.value }]
+                              }
+                            };
+                            handleFilterChange(newFilters);
+                          }}
                         >
                           <MenuItem value="">All</MenuItem>
                           {question.options?.map((option: string) => (
@@ -196,13 +205,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                         fullWidth
                         placeholder="Filter value..."
                         value={filters.answers[question.id]?.[0]?.value || ''}
-                        onChange={(e) => setFilters((prev: FilterState) => ({
-                          ...prev,
-                          answers: {
-                            ...prev.answers,
-                            [question.id]: [{ operator: 'contains', value: e.target.value }]
-                          }
-                        }))}
+                        onChange={(e) => {
+                          const newFilters = {
+                            ...filters,
+                            answers: {
+                              ...filters.answers,
+                              [question.id]: [{ operator: 'contains', value: e.target.value }]
+                            }
+                          };
+                          handleFilterChange(newFilters);
+                        }}
                       />
                     )}
                   </Box>
@@ -214,13 +226,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
         <DialogActions sx={{ p: 3 }}>
           <Button
-            onClick={handleClear}
+            onClick={() => {
+              const emptyFilters = { demographic: {}, answers: {} };
+              setFilters(emptyFilters);
+              onClearFilters();
+            }}
             startIcon={<ClearIcon />}
           >
             Clear All
           </Button>
           <Button
-            onClick={handleApply}
+            onClick={handleClose}
             variant="contained"
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -229,7 +245,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
             }}
           >
-            Apply Filters
+            Fermer
           </Button>
         </DialogActions>
       </Dialog>

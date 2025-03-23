@@ -424,7 +424,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     demographic: {},
     answers: {}
   });
-  const [filteredAnswers, setFilteredAnswers] = useState<SurveyResponse[]>(responses);
+  const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>(responses);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
@@ -451,8 +451,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Mettre à jour les réponses filtrées quand les réponses changent
   useEffect(() => {
-    setSurveyAnswers(responses);
-    setFilteredAnswers(responses);
+    setFilteredResponses(responses);
   }, [responses]);
 
   const analyzeResponses = useCallback((questionId: string) => {
@@ -460,7 +459,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     let total = 0;
     
     // Utiliser les réponses filtrées si elles existent, sinon utiliser toutes les réponses
-    const responsesToAnalyze = filteredAnswers.length > 0 ? filteredAnswers : surveyAnswers;
+    const responsesToAnalyze = filteredResponses.length > 0 ? filteredResponses : surveyAnswers;
     
     responsesToAnalyze.forEach(response => {
       const answer = response.answers.find(a => a.questionId === questionId);
@@ -471,7 +470,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
     
     return { answerCounts, total };
-  }, [filteredAnswers, surveyAnswers]);
+  }, [filteredResponses, surveyAnswers]);
 
   const getChartData = useCallback((questionId: string) => {
     const { answerCounts } = analyzeResponses(questionId);
@@ -626,7 +625,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       ageDistribution: [] as number[],
     };
 
-    filteredAnswers.forEach(response => {
+    filteredResponses.forEach(response => {
       const demographic = response.respondent?.demographic;
       if (demographic) {
         // Genre
@@ -655,7 +654,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
 
     return stats;
-  }, [filteredAnswers]);
+  }, [filteredResponses]);
 
   // Fonction pour rendre le graphique d'âge
   const renderAgeChart = (data: number[]) => {
@@ -699,14 +698,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Ajouter cette fonction pour calculer les statistiques générales
   const getGeneralStats = useCallback(() => {
-    const totalResponses = filteredAnswers.length;
+    const totalResponses = filteredResponses.length;
     const responsesPerDay = totalResponses / (Math.max(1, getDaysBetweenDates(
-      new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
+      new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))),
       new Date()
     )));
     
     const completionRates = survey.questions.map(question => {
-      const answeredCount = filteredAnswers.filter(response => 
+      const answeredCount = filteredResponses.filter(response => 
         response.answers.some(a => a.questionId === question.id && a.answer)
       ).length;
       return {
@@ -721,7 +720,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       averageCompletionRate: (completionRates.reduce((acc, curr) => acc + curr.rate, 0) / survey.questions.length).toFixed(1),
       completionRates
     };
-  }, [filteredAnswers, survey.questions]);
+  }, [filteredResponses, survey.questions]);
 
   // Ajouter cette fonction pour évaluer les règles de filtrage
   const evaluateRule = (value: any, rule: { operator: string; value: any; secondValue?: any }) => {
@@ -753,21 +752,38 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   };
 
   // Modifier la fonction applyFilters
-  const applyFilters = useCallback(() => {
-    console.log('Applying filters:', filters);
-    
-    const filtered = surveyAnswers.filter(response => {
-      // Vérifier les filtres démographiques
-      if (filters.demographic.gender && 
-          response.respondent?.demographic?.gender !== filters.demographic.gender) {
-        return false;
+  const handleApplyFilters = useCallback((filters: Filters) => {
+    const filtered = responses.filter(response => {
+      // Filtrage démographique
+      if (filters.demographic) {
+        const demographic = response.respondent?.demographic;
+        
+        // Vérification du genre
+        if (filters.demographic.gender && demographic?.gender !== filters.demographic.gender) {
+          return false;
+        }
+        
+        // Vérification du niveau d'éducation
+        if (filters.demographic.educationLevel && 
+            demographic?.educationLevel !== filters.demographic.educationLevel) {
+          return false;
+        }
+        
+        // Vérification de la ville
+        if (filters.demographic.city && demographic?.city !== filters.demographic.city) {
+          return false;
+        }
+        
+        // Vérification de l'âge
+        if (filters.demographic.age && demographic?.dateOfBirth) {
+          const age = calculateAge(new Date(demographic.dateOfBirth));
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        }
       }
-      if (filters.demographic.educationLevel && 
-          response.respondent?.demographic?.educationLevel !== filters.demographic.educationLevel) {
-        return false;
-      }
-
-      // Vérifier les filtres de réponses
+      
+      // Filtrage des réponses
       for (const [questionId, rules] of Object.entries(filters.answers)) {
         if (!rules?.length) continue;
         
@@ -784,30 +800,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
       return true;
     });
-
-    console.log('Filtered responses:', filtered.length);
-    setFilteredAnswers(filtered);
-  }, [filters, surveyAnswers]);
-
-  // Remplacer la fonction handleApplyFilters par une nouvelle qui prend directement les réponses filtrées
-  const handleApplyFilters = (filteredResponses: SurveyResponse[]) => {
-    console.log("handleApplyFilters called in SurveyAnalytics with", filteredResponses.length, "responses");
     
-    // Si aucune réponse ne correspond aux filtres, ne pas mettre à jour filteredAnswers
-    // pour éviter que les questions disparaissent
-    if (filteredResponses.length === 0 && surveyAnswers.length > 0) {
-      toast.info("No responses match the selected filters. Showing all responses.");
-      // Ne pas mettre à jour filteredAnswers pour conserver l'affichage des questions
-      return;
-    }
-    
-    console.log("Setting filteredAnswers to", filteredResponses);
-    setFilteredAnswers(filteredResponses);
-    
-    if (filteredResponses.length < surveyAnswers.length) {
-      toast.info(`${filteredResponses.length} responses match the filters out of ${surveyAnswers.length} total.`);
-    }
-  };
+    setFilteredResponses(filtered);
+  }, [responses]);
 
   // Fonction pour calculer les statistiques d'une question
   const calculateQuestionStats = useCallback((questionId: string) => {
@@ -845,7 +840,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     if (stats.total === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          {filteredAnswers.length === 0 && surveyAnswers.length > 0 
+          {filteredResponses.length === 0 && surveyAnswers.length > 0 
             ? "No responses match the current filters. Try adjusting your filters to see data."
             : "No responses for this question."}
         </Typography>
@@ -862,7 +857,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               Most frequent answer: <strong>{stats.mostCommonAnswer}</strong> ({stats.percentages[stats.mostCommonAnswer]}% of responses)
             </Typography>
             <Box sx={{ mt: 2 }}>
-              {Object.entries(stats.answerCounts).map(([answer, count]) => (
+              {Object.entries(stats.answerCounts || {}).map(([answer, count]) => (
                 <Box key={answer} sx={{ mb: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2">{answer}</Typography>
@@ -884,7 +879,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           </Box>
         );
       case 'text':
-        const entries = Object.entries(stats.answerCounts);
+        const entries = Object.entries(stats.answerCounts || {});
         const initialDisplayCount = 3;
         const hasMoreResponses = entries.length > initialDisplayCount;
         const displayedEntries = showAllResponses[question.id] 
@@ -897,7 +892,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               Total responses: <strong>{stats.total}</strong>
             </Typography>
             <Box sx={{ mt: 2 }}>
-              {filteredAnswers.length < surveyAnswers.length && (
+              {filteredResponses.length < surveyAnswers.length && (
                 <Typography variant="caption" color="text.secondary">
                   (Filtered from {surveyAnswers.length} total responses)
                 </Typography>
@@ -912,7 +907,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         );
       case 'rating':
       case 'slider':
-        const values = Object.keys(stats.answerCounts).map(Number).sort((a, b) => a - b);
+        const values = Object.keys(stats.answerCounts || {}).map(Number).sort((a, b) => a - b);
         const min = values[0];
         const max = values[values.length - 1];
         const sum = values.reduce((acc, val) => acc + (val * stats.answerCounts[val]), 0);
@@ -960,7 +955,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     if (!question) return;
     
     // Filtrer les réponses pour cette question
-    const questionAnswers = filteredAnswers.filter(response => 
+    const questionAnswers = filteredResponses.filter(response => 
       response.answers.some(a => a.questionId === questionId)
     );
     
@@ -977,9 +972,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour préparer les données pour l'exportation
   const prepareExportData = useCallback(() => {
-    if (!survey || filteredAnswers.length === 0) return [];
+    if (!survey || filteredResponses.length === 0) return [];
 
-    return filteredAnswers.map(response => {
+    return filteredResponses.map(response => {
       const questionAnswers = survey.questions.reduce((acc: any, question) => {
         const questionAnswer = response.answers.find(a => a.questionId === question.id);
         acc[question.text] = questionAnswer?.answer || 'Pas de réponse';
@@ -998,7 +993,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         ...questionAnswers
       };
     });
-  }, [survey, filteredAnswers]);
+  }, [survey, filteredResponses]);
 
   // Fonction pour exporter en CSV
   const exportToCSV = useCallback(() => {
@@ -1068,6 +1063,43 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return survey.questions;
   };
 
+  // Fonction pour déterminer le filtre de genre à partir des réponses
+  const determineGenderFilter = (responses: SurveyResponse[]): string | undefined => {
+    // Si toutes les réponses ont le même genre, c'est probablement le filtre appliqué
+    const genders = responses
+      .map(r => r.respondent?.demographic?.gender)
+      .filter(g => g !== undefined && g !== null) as string[];
+    
+    // Si tous les genres sont identiques et il y a au moins une réponse
+    if (genders.length > 0 && new Set(genders).size === 1) {
+      return genders[0];
+    }
+    
+    return undefined; // Aucun filtre spécifique identifié
+  };
+
+  // Fonction pour déterminer le filtre de niveau d'éducation
+  const determineEducationFilter = (responses: SurveyResponse[]): string | undefined => {
+    const educationLevels = responses
+      .map(r => r.respondent?.demographic?.educationLevel)
+      .filter(e => e !== undefined && e !== null) as string[];
+    
+    if (educationLevels.length > 0 && new Set(educationLevels).size === 1) {
+      return educationLevels[0];
+    }
+    
+    return undefined;
+  };
+
+  // Fonction d'adaptation simplifiée
+  const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[]) => {
+    // Ne pas essayer de déduire les filtres, mais simplement appliquer les réponses filtrées
+    setFilteredResponses(filteredResponses);
+    
+    // Vous pourriez également mettre à jour d'autres états ou effectuer d'autres actions nécessaires
+    // mais sans avoir besoin de convertir les réponses en filtres
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1086,11 +1118,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               sx={{ ml: 1, backgroundColor: colors.primary.transparent, color: colors.primary.main }}
             />
           )}
-          {filteredAnswers.length < surveyAnswers.length && filteredAnswers.length > 0 && (
+          {filteredResponses.length < surveyAnswers.length && filteredResponses.length > 0 && (
             <Chip 
               size="small" 
               icon={<FilterListIcon />} 
-              label={`Filtered: ${filteredAnswers.length}/${surveyAnswers.length}`}
+              label={`Filtered: ${filteredResponses.length}/${surveyAnswers.length}`}
               sx={{ ml: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' }}
             />
           )}
@@ -1129,7 +1161,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 <AdvancedFilterPanel
                   survey={survey}
                   responses={surveyAnswers}
-                  onApplyFilters={handleApplyFilters}
+                  onApplyFilters={handleAdvancedFilterApply}
                 />
                   </Grid>
             )}
@@ -1180,7 +1212,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         <Typography variant="body2">
                           Total responses: <strong>{stats.total}</strong>
                         </Typography>
-                        {filteredAnswers.length < surveyAnswers.length && (
+                        {filteredResponses.length < surveyAnswers.length && (
                           <Typography variant="caption" color="text.secondary">
                             (Filtered from {surveyAnswers.length} total responses)
                           </Typography>
@@ -1230,9 +1262,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" color="text.secondary">
-                    Total responses: <strong>{filteredAnswers.length}</strong>
+                    Total responses: <strong>{filteredResponses.length}</strong>
                   </Typography>
-                  {filteredAnswers.length !== responses.length && (
+                  {filteredResponses.length !== responses.length && (
                     <Typography variant="body2" color="text.secondary">
                       (Filtered from {responses.length} total responses)
                     </Typography>
@@ -1253,8 +1285,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         First response
                     </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {filteredAnswers.length > 0 ? 
-                          new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                        {filteredResponses.length > 0 ? 
+                          new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
                           'No response'
                         }
                     </Typography>
@@ -1271,9 +1303,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         Average Daily Responses
                       </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {filteredAnswers.length > 0 ? 
-                          (filteredAnswers.length / Math.max(1, getDaysBetweenDates(
-                            new Date(Math.min(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))),
+                        {filteredResponses.length > 0 ? 
+                          (filteredResponses.length / Math.max(1, getDaysBetweenDates(
+                            new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))),
                             new Date()
                           ))).toFixed(1) :
                           '0'
@@ -1292,8 +1324,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         Last response
                       </Typography>
                       <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                        {filteredAnswers.length > 0 ? 
-                          new Date(Math.max(...filteredAnswers.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                        {filteredResponses.length > 0 ? 
+                          new Date(Math.max(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
                           'No response'
                         }
                       </Typography>
@@ -1301,7 +1333,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   </Grid>
                 </Grid>
 
-                {filteredAnswers.length > 0 && (
+                {filteredResponses.length > 0 && (
                   <Box sx={{ 
                     mt: 4,
                     width: '100%',
@@ -1311,7 +1343,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     </Typography>
                     
                     {(() => {
-                      const trends = getResponseTrends(filteredAnswers);
+                      const trends = getResponseTrends(filteredResponses);
                       
                       // Calculer le pourcentage pour chaque jour de la semaine
                       const totalWeekResponses = trends.dayOfWeekDistribution.reduce((sum, count) => sum + count, 0);
@@ -1645,7 +1677,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 )}
 
                 {/* Boutons d'exportation */}
-                {filteredAnswers.length > 0 && (
+                {filteredResponses.length > 0 && (
                     <Box sx={{ 
                     mt: 4, 
                     pt: 3, 
@@ -1687,11 +1719,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 </Grid>
 
             {/* Ajouter la section des statistiques démographiques si des données démographiques sont disponibles */}
-            {survey.demographicEnabled && filteredAnswers.some(response => response.respondent?.demographic) && (
+            {survey.demographicEnabled && filteredResponses.some(response => response.respondent?.demographic) && (
               <Grid item xs={12}>
                 <DemographicStatistics 
                   responses={responses}
-                  filteredResponses={filteredAnswers}
+                  filteredResponses={filteredResponses}
                 />
           </Grid>
         )}
