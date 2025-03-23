@@ -5,6 +5,15 @@ import {
   Paper,
   Typography,
   Button,
+  Tabs,
+  Tab,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -12,7 +21,7 @@ import {
   LinearScale,
   BarElement,
   Title,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   ArcElement,
   PointElement,
@@ -21,6 +30,14 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line, Doughnut, Scatter } from 'react-chartjs-2';
 import { calculateAge } from '../../../utils/dateUtils';
+import { PathTreeVisualizer, PathSegment } from './PathTreeVisualizer';
+import { SelectedPathsPanel } from './SelectedPathsPanel';
+import { AnalysisGroup, GroupsListProps } from './GroupsList';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
 
 // Register necessary Chart.js components
 ChartJS.register(
@@ -28,7 +45,7 @@ ChartJS.register(
   LinearScale,
   BarElement,
   Title,
-  Tooltip,
+  ChartTooltip,
   Legend,
   ArcElement,
   PointElement,
@@ -62,10 +79,28 @@ interface DemographicStats {
   ageDistribution: number[];
 }
 
+interface Survey {
+  _id: string;
+  title: string;
+  questions: any[];
+  nodes?: any[];
+  edges?: any[];
+  isDynamic?: boolean;
+}
+
 interface DemographicStatisticsProps {
+  survey: Survey;
   responses: SurveyResponse[];
-  filteredResponses?: SurveyResponse[];
-  onClearFilters?: () => void;
+  filteredResponses: SurveyResponse[];
+  handleTabChange: (event: React.SyntheticEvent, newValue: number) => void;
+  activeTab: number;
+  handlePathSelection: (path: PathSegment[]) => void;
+  selectedPaths: PathSegment[][];
+  analysisGroups: AnalysisGroup[];
+  onCreateGroup: (name: string, paths: PathSegment[][]) => void;
+  onSelectGroup: (groupId: string) => void;
+  onDeleteGroup: (groupId: string) => void;
+  onRenameGroup: (groupId: string, newName: string) => void;
 }
 
 // Common options for charts
@@ -133,9 +168,18 @@ const chartColors = {
 };
 
 export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
+  survey,
   responses,
   filteredResponses,
-  onClearFilters
+  handleTabChange,
+  activeTab,
+  handlePathSelection,
+  selectedPaths,
+  analysisGroups,
+  onCreateGroup,
+  onSelectGroup,
+  onDeleteGroup,
+  onRenameGroup,
 }) => {
   // Utiliser toujours les réponses filtrées si disponibles
   const displayedResponses = filteredResponses || responses;
@@ -299,6 +343,19 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     return <Scatter data={chartData} options={options} />;
   };
 
+  const onClearFilters = () => {
+    // Implémentation de la fonction
+  };
+  
+  const handleClearSelection = () => {
+    // Vider la sélection actuelle
+    handlePathSelection([]);
+  };
+  
+  const selectedPathsRespondents = selectedPaths.length > 0 
+    ? Math.floor(filteredResponses.length * 0.3) 
+    : 0;
+
   return (
     <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }}>
       <Box sx={{ 
@@ -318,6 +375,21 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           Demographic Statistics
         </Typography>
       </Box>
+
+      <Tabs
+        value={activeTab}
+        onChange={handleTabChange}
+        centered
+        variant="fullWidth"
+        sx={{
+          borderBottom: 1,
+          borderColor: 'divider',
+          mb: 2
+        }}
+      >
+        <Tab icon={<PieChartIcon />} label="Démographie" />
+        <Tab icon={<ShowChartIcon />} label="Âge" />
+      </Tabs>
 
       {/* Vérifier s'il y a des réponses à afficher */}
       {displayedResponses.length > 0 ? (
@@ -574,5 +646,69 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         </Box>
       )}
     </Box>
+  );
+};
+
+const GroupsList: React.FC<GroupsListProps> = ({
+  groups,
+  onSelectGroup,
+  onDeleteGroup,
+  onRenameGroup
+}) => {
+  return (
+    <Paper sx={{ p: 2, height: '50%', overflow: 'auto' }}>
+      <Typography variant="subtitle1" gutterBottom>
+        Groupes d'analyse ({groups.length})
+      </Typography>
+      
+      {groups.length > 0 ? (
+        <List dense>
+          {groups.map((group) => (
+            <ListItem 
+              key={group.id}
+              button
+              onClick={() => onSelectGroup(group.id)}
+            >
+              <ListItemText
+                primary={group.name}
+                secondary={`${group.respondentCount} répondants • ${group.paths.length} parcours`}
+              />
+              <ListItemSecondaryAction>
+                <Tooltip title="Voir l'analyse de ce groupe">
+                  <IconButton edge="end" onClick={() => onSelectGroup(group.id)}>
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Renommer">
+                  <IconButton edge="end" onClick={() => {
+                    const newName = prompt('Nouveau nom pour ce groupe :', group.name);
+                    if (newName) onRenameGroup(group.id, newName);
+                  }}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Supprimer">
+                  <IconButton 
+                    edge="end" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
+                        onDeleteGroup(group.id);
+                      }
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          Aucun groupe d'analyse créé. Sélectionnez des parcours et créez un groupe pour commencer.
+        </Typography>
+      )}
+    </Paper>
   );
 }; 

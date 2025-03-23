@@ -167,7 +167,7 @@ const AnalyticsPage: React.FC = () => {
     console.log('ID utilisateur actuel:', user?.userId || user?.id);
     
     // Fonction pour vérifier si un sondage appartient à l'utilisateur actuel
-    const belongsToCurrentUser = (survey) => {
+    const belongsToCurrentUser = (survey: any) => {
       const currentUserId = String(user?.userId || user?.id || '');
       
       if (survey.isDynamic) {

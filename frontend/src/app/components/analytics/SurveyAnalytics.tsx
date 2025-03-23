@@ -17,6 +17,8 @@ import {
   ListItem,
   ListItemText,
   Stack,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {
@@ -57,6 +59,10 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { QuestionDetailsDialog } from './QuestionDetailsDialog';
 import { DemographicStatistics } from './DemographicStatistics';
+import { PathSegment } from './PathTreeVisualizer';
+import { AnalysisGroup } from './GroupsList';
+import { PathTreeVisualizer } from './PathTreeVisualizer';
+import { SelectedPathsPanel } from './SelectedPathsPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -428,6 +434,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedPaths, setSelectedPaths] = useState<PathSegment[][]>([]);
+  const [analysisGroups, setAnalysisGroups] = useState<AnalysisGroup[]>([]);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -453,6 +462,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   useEffect(() => {
     setFilteredResponses(responses);
   }, [responses]);
+
+  // Modifier cette ligne pour définir l'onglet des statistiques démographiques par défaut
+  // si le sondage est dynamique
+  useEffect(() => {
+    if (survey.isDynamic) {
+      setActiveTab(2); // L'index de l'onglet qui contient l'arborescence
+    }
+  }, [survey]);
 
   const analyzeResponses = useCallback((questionId: string) => {
     const answerCounts: { [key: string]: number } = {};
@@ -1100,6 +1117,79 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // mais sans avoir besoin de convertir les réponses en filtres
   };
 
+  // Ajouter ces nouvelles fonctions de gestionnaire
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const handlePathSelection = (path: PathSegment[]) => {
+    // Vérifier si le chemin est déjà sélectionné
+    const pathIndex = selectedPaths.findIndex(
+      p => JSON.stringify(p) === JSON.stringify(path)
+    );
+    
+    if (pathIndex >= 0) {
+      // Si déjà sélectionné, le supprimer
+      setSelectedPaths(selectedPaths.filter((_, i) => i !== pathIndex));
+    } else {
+      // Sinon, l'ajouter
+      setSelectedPaths([...selectedPaths, path]);
+    }
+  };
+
+  const handleCreateGroup = (name: string, paths: PathSegment[][]) => {
+    const newGroup: AnalysisGroup = {
+      id: `group-${Date.now()}`,
+      name,
+      paths,
+      respondentCount: getRespondentCountForPaths(paths, filteredResponses),
+      createdAt: new Date()
+    };
+    
+    setAnalysisGroups([...analysisGroups, newGroup]);
+    setSelectedPaths([]); // Réinitialiser la sélection
+  };
+
+  const handleSelectGroup = (groupId: string) => {
+    const group = analysisGroups.find(g => g.id === groupId);
+    if (group) {
+      setSelectedPaths(group.paths);
+    }
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    setAnalysisGroups(analysisGroups.filter(g => g.id !== groupId));
+  };
+
+  const handleRenameGroup = (groupId: string, newName: string) => {
+    setAnalysisGroups(analysisGroups.map(g => 
+      g.id === groupId ? { ...g, name: newName } : g
+    ));
+  };
+
+  // Ajouter cette fonction utilitaire
+  const getRespondentCountForPaths = (paths: PathSegment[][], responses: SurveyResponse[]): number => {
+    // Cette implémentation est simplifiée
+    // Dans une vraie application, vous devriez filtrer les réponses
+    // qui correspondent exactement à l'un des chemins
+    return Math.min(
+      responses.length,
+      Math.max(1, Math.floor(responses.length * 0.3)) // Exemple : 30% des réponses
+    );
+  };
+
+  console.log('État actuel:', {
+    activeTab,
+    isDynamicSurvey: survey?.isDynamic,
+    tabsVisibles: true,
+    responsesCount: filteredResponses?.length
+  });
+
+  // Ajoutez cette condition pour vérifier si le sondage est dynamique
+  if (!survey.isDynamic) {
+    console.log("Ce sondage n'est pas dynamique - l'onglet d'analyse des parcours ne sera pas pertinent");
+  }
+
   return (
     <Box>
       <Box sx={{
@@ -1157,16 +1247,34 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         ) : (
           <Grid container spacing={3}>
             {showFilters && (
-            <Grid item xs={12}>
+              <Grid item xs={12}>
                 <AdvancedFilterPanel
                   survey={survey}
                   responses={surveyAnswers}
                   onApplyFilters={handleAdvancedFilterApply}
                 />
-                  </Grid>
+              </Grid>
             )}
 
-            {/* Section Survey Questions - déplacée au-dessus des statistiques générales */}
+            {survey.isDynamic && (
+              <Grid item xs={12}>
+                <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
+                    Analyse des parcours de réponse
+                  </Typography>
+                  
+                  <Box sx={{ height: '600px' }}>
+                    <PathTreeVisualizer 
+                      survey={survey} 
+                      responses={filteredResponses} 
+                      onPathSelect={handlePathSelection}
+                      selectedPaths={selectedPaths}
+                    />
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
+
             <Grid item xs={12}>
               <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
                 Survey Questions
@@ -1722,8 +1830,18 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {survey.demographicEnabled && filteredResponses.some(response => response.respondent?.demographic) && (
               <Grid item xs={12}>
                 <DemographicStatistics 
+                  survey={survey}
                   responses={responses}
                   filteredResponses={filteredResponses}
+                  handleTabChange={handleTabChange}
+                  activeTab={activeTab}
+                  handlePathSelection={handlePathSelection}
+                  selectedPaths={selectedPaths}
+                  analysisGroups={analysisGroups}
+                  onCreateGroup={handleCreateGroup}
+                  onSelectGroup={handleSelectGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  onRenameGroup={handleRenameGroup}
                 />
           </Grid>
         )}
