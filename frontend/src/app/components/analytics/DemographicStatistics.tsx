@@ -377,7 +377,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       </Box>
 
       <Tabs
-        value={activeTab}
+        value={activeTab > 1 ? 0 : activeTab}
         onChange={handleTabChange}
         centered
         variant="fullWidth"
