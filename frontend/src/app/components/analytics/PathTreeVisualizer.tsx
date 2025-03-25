@@ -55,16 +55,21 @@ const HIGHLIGHT_COLORS = [
 
 // Composant personnalisé pour les nœuds de question avec mise en évidence améliorée
 const QuestionNode = ({ data }: { data: any }) => {
-  // Vérifier si ce nœud fait partie d'un parcours sélectionné et obtenir l'index du parcours
-  const pathIndex = data.selectedPaths && data.selectedPaths.length > 0 
-    ? data.selectedPaths.findIndex((path: PathSegment[]) => 
-        path.some((segment: PathSegment) => segment.questionId === data.questionId)
-      )
-    : -1;
+  // Au lieu de chercher uniquement l'index du premier parcours, trouvons tous les parcours
+  const pathIndices: number[] = [];
   
-  const isInSelectedPath = pathIndex >= 0;
+  if (data.selectedPaths && data.selectedPaths.length > 0) {
+    data.selectedPaths.forEach((path: PathSegment[], index: number) => {
+      if (path.some((segment: PathSegment) => segment.questionId === data.questionId)) {
+        pathIndices.push(index);
+      }
+    });
+  }
+  
+  const isInSelectedPath = pathIndices.length > 0;
+  const primaryPathIndex = pathIndices.length > 0 ? pathIndices[0] : -1;
   const highlightColor = isInSelectedPath 
-    ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
+    ? HIGHLIGHT_COLORS[primaryPathIndex % HIGHLIGHT_COLORS.length] 
     : 'rgba(102, 126, 234, 0.2)';
 
   // Calculer la taille du cercle basée sur le nombre de répondants avec un min et max
@@ -184,7 +189,7 @@ const QuestionNode = ({ data }: { data: any }) => {
         }} 
       />
 
-      {/* Indicateur visuel avec couleur dynamique */}
+      {/* Indicateur visuel principal avec couleur dynamique */}
       {isInSelectedPath && (
         <div style={{
           position: 'absolute',
@@ -198,6 +203,33 @@ const QuestionNode = ({ data }: { data: any }) => {
           zIndex: 20,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         }} />
+      )}
+      
+      {/* Nouveaux indicateurs pour les parcours multiples */}
+      {pathIndices.length > 1 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '-12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '8px',
+          zIndex: 25
+        }}>
+          {pathIndices.slice(1).map((pathIdx: number, idx: number) => (
+            <div 
+              key={idx}
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                backgroundColor: HIGHLIGHT_COLORS[pathIdx % HIGHLIGHT_COLORS.length],
+                border: '2px solid white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }} 
+            />
+          ))}
+        </div>
       )}
     </div>
   );
