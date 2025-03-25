@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -122,6 +122,29 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     educationLevels: [] as string[],
     cities: [] as string[]
   });
+
+  // Trouver les ID des questions qui ont des réponses dans les données filtrées
+  const questionIdsWithResponses = useMemo(() => {
+    const ids = new Set<string>();
+    responses.forEach(response => {
+      response.answers.forEach(answer => {
+        ids.add(answer.questionId);
+      });
+    });
+    return ids;
+  }, [responses]);
+
+  // Filtrer les questions à afficher dans les filtres
+  const questionsToShow = useMemo(() => {
+    if (pathFilterActive) {
+      // Si le filtre de parcours est activé, afficher uniquement les questions 
+      // qui ont des réponses dans les données filtrées
+      return survey.questions.filter(q => questionIdsWithResponses.has(q.id));
+    } else {
+      // Sinon, afficher toutes les questions
+      return survey.questions;
+    }
+  }, [survey.questions, questionIdsWithResponses, pathFilterActive]);
 
   // Effet pour extraire les villes uniques des réponses
   React.useEffect(() => {
@@ -957,7 +980,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               }}
               label="Question"
             >
-              {questionsWithResponses.map(question => (
+              {questionsToShow.map(question => (
                 <MenuItem key={question.id} value={question.id}>
                   {question.text}
                 </MenuItem>

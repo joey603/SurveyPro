@@ -1319,14 +1319,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  survey={{
-                    ...survey,
-                    questions: (pathFilterActive && filteredQuestions.length > 0) 
-                      ? filteredQuestions 
-                      : survey.questions
-                  }}
-                  responses={pathFilterActive ? filteredResponsesByPath : surveyAnswers}
+                  key={pathFilterActive ? "filtered-paths" : "all-paths"}
+                  survey={survey}
+                  responses={pathFilterActive ? filteredResponsesByPath : responses}
                   onApplyFilters={handleAdvancedFilterApply}
+                  pathFilterActive={pathFilterActive}
                 />
               </Grid>
             )}
