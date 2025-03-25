@@ -1783,61 +1783,96 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 </Box>
               )}
               
-              {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => (
-                <Box 
-                  key={index}
-                  sx={{
-                    p: 1,
-                    mb: 1,
-                    border: '1px solid',
-                    borderColor: selectedPaths.some(p => 
-                      p.length === pathItem.path.length && 
-                      p.every((segment, i) => 
-                        segment.questionId === pathItem.path[i].questionId && 
-                        segment.answer === pathItem.path[i].answer
-                      )
-                    ) ? 'primary.main' : 'divider',
-                    borderRadius: 1,
-                    backgroundColor: selectedPaths.some(p => 
-                      p.length === pathItem.path.length && 
-                      p.every((segment, i) => 
-                        segment.questionId === pathItem.path[i].questionId && 
-                        segment.answer === pathItem.path[i].answer
-                      )
-                    ) ? 'rgba(57, 73, 171, 0.1)' : 'background.paper',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: 'action.hover',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                  onClick={() => handlePathSelect(pathItem.path)}
-                >
-                  <Typography variant="body2" fontWeight="bold">
-                    {pathItem.name} ({pathItem.path.length} étapes)
-                  </Typography>
-                  <Box sx={{ mt: 1 }}>
-                    {pathItem.path.map((segment, segIdx) => (
-                      <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
-                        <Typography variant="caption" sx={{ mr: 1 }}>
-                          {segIdx + 1}.
-        </Typography>
-                        <Typography 
-                          variant="caption" 
+              {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
+                // Déterminer si ce parcours est sélectionné
+                const isSelected = selectedPaths.some(p => 
+                  p.length === pathItem.path.length && 
+                  p.every((segment, i) => 
+                    segment.questionId === pathItem.path[i].questionId && 
+                    segment.answer === pathItem.path[i].answer
+                  )
+                );
+                
+                // Trouver l'index du parcours sélectionné pour déterminer sa couleur
+                const selectedPathIndex = selectedPaths.findIndex(p => 
+                  p.length === pathItem.path.length && 
+                  p.every((segment, i) => 
+                    segment.questionId === pathItem.path[i].questionId && 
+                    segment.answer === pathItem.path[i].answer
+                  )
+                );
+                
+                // Déterminer la couleur à utiliser pour ce parcours
+                const pathColor = isSelected 
+                  ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
+                  : 'divider';
+                
+                // Déterminer la couleur de fond
+                const backgroundColor = isSelected 
+                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` // Version semi-transparente
+                  : 'background.paper';
+                
+                return (
+                  <Box 
+                    key={index}
+                    sx={{
+                      p: 1,
+                      mb: 1,
+                      border: '1px solid',
+                      borderColor: isSelected ? pathColor : 'divider',
+                      borderRadius: 1,
+                      backgroundColor: backgroundColor,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: isSelected 
+                          ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}30` // Légèrement plus foncé au survol
+                          : 'action.hover',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                    onClick={() => handlePathSelect(pathItem.path)}
+                  >
+                    {/* Afficher un indicateur de couleur à côté du nom du parcours */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {isSelected && (
+                        <Box 
                           sx={{ 
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: '100%'
-                          }}
-                        >
-                          {segment.questionText.substring(0, 40)}
-                          {segment.questionText.length > 40 ? '...' : ''}
-                        </Typography>
-                      </Box>
-                    ))}
+                            width: 12, 
+                            height: 12, 
+                            borderRadius: '50%', 
+                            backgroundColor: HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length],
+                            boxShadow: `0 0 4px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}80`
+                          }} 
+                        />
+                      )}
+                      <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
+                        {pathItem.name} ({pathItem.path.length} étapes)
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ mt: 1 }}>
+                      {pathItem.path.map((segment, segIdx) => (
+                        <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
+                          <Typography variant="caption" sx={{ mr: 1 }}>
+                            {segIdx + 1}.
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '100%'
+                            }}
+                          >
+                            {segment.questionText.substring(0, 40)}
+                            {segment.questionText.length > 40 ? '...' : ''}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
