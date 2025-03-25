@@ -933,14 +933,37 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           border: '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: '4px',
           p: 2,
-          overflow: 'auto'
+          height: '100%',  // Assure que la Box prend toute la hauteur disponible
+          maxHeight: 'calc(100vh - 120px)',  // Limite la hauteur maximale
+          overflow: 'hidden'  // Cache les débordements
         }}>
           <Typography variant="subtitle2" gutterBottom>
             Parcours complets ({allPaths.length})
           </Typography>
           
           {allPaths.length > 0 ? (
-            <Box sx={{ overflowY: 'auto', flex: 1 }}>
+            <Box 
+              sx={{ 
+                overflowY: 'auto',  // Barre de défilement verticale quand nécessaire
+                overflowX: 'hidden',  // Masquer le défilement horizontal
+                flex: 1,
+                height: 'calc(100% - 30px)',  // Hauteur calculée en fonction du titre
+                '&::-webkit-scrollbar': {
+                  width: '8px',  // Largeur de la barre de défilement
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',  // Couleur de fond de la piste
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#888',  // Couleur de la glissière
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: '#555',  // Couleur au survol
+                }
+              }}
+            >
               {allPaths.map((pathItem, index) => (
                 <Box 
                   key={index}
@@ -979,7 +1002,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
                         <Typography variant="caption" sx={{ mr: 1 }}>
                           {segIdx + 1}.
-        </Typography>
+                        </Typography>
                         <Typography 
                           variant="caption" 
                           sx={{ 
@@ -988,10 +1011,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                             maxWidth: '100%'
                           }}
                         >
-                          {segment.questionText.substring(0, 20)}
-                          {segment.questionText.length > 20 ? '...' : ''} : 
-                          {segment.answer.substring(0, 15)}
-                          {segment.answer.length > 15 ? '...' : ''}
+                          {segment.questionText.substring(0, 40)}
+                          {segment.questionText.length > 40 ? '...' : ''}
                         </Typography>
                       </Box>
                     ))}
