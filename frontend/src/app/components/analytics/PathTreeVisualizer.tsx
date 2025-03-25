@@ -78,6 +78,73 @@ const QuestionNode = ({ data }: { data: any }) => {
   const maxSize = 50;
   const size = Math.min(maxSize, Math.max(minSize, 26 + (data.count * 1.5)));
   
+  // Générer les positions des indicateurs secondaires autour du contour
+  const getSecondaryIndicatorPositions = (count: number) => {
+    // Toujours garder le point principal en haut à droite
+    if (count <= 1) return [];
+    
+    // Pour les autres points, calculer les positions autour du contour
+    const positions = [];
+    
+    // Calcul du rayon du contour en fonction de la taille du nœud
+    // Nous utilisons une approximation pour un rectangle moyen
+    const nodeWidth = 240; // Largeur moyenne du nœud
+    const nodeHeight = 160; // Hauteur moyenne du nœud
+    
+    // Définir les positions pour chaque côté du contour
+    // Commencer par la droite en descendant, puis en bas de droite à gauche,
+    // puis à gauche en remontant, et enfin en haut de gauche à droite
+    
+    // Nombre maximum d'indicateurs par côté
+    const maxPerSide = Math.ceil(count / 4);
+    
+    // Côté droit (en descendant)
+    for (let i = 0; i < Math.min(maxPerSide, count - 1); i++) {
+      positions.push({
+        right: '-8px',
+        top: `${30 + i * 24}px`, // Commencer après le point principal
+      });
+    }
+    
+    // Côté bas (de droite à gauche)
+    if (count > maxPerSide) {
+      const bottomCount = Math.min(maxPerSide, count - 1 - maxPerSide);
+      for (let i = 0; i < bottomCount; i++) {
+        positions.push({
+          bottom: '-8px',
+          right: `${30 + i * 24}px`,
+        });
+      }
+    }
+    
+    // Côté gauche (en remontant)
+    if (count > maxPerSide * 2) {
+      const leftCount = Math.min(maxPerSide, count - 1 - maxPerSide * 2);
+      for (let i = 0; i < leftCount; i++) {
+        positions.push({
+          left: '-8px',
+          bottom: `${30 + i * 24}px`,
+        });
+      }
+    }
+    
+    // Côté haut (de gauche à droite)
+    if (count > maxPerSide * 3) {
+      const topCount = Math.min(maxPerSide, count - 1 - maxPerSide * 3);
+      for (let i = 0; i < topCount; i++) {
+        positions.push({
+          top: '-8px',
+          left: `${30 + i * 24}px`,
+        });
+      }
+    }
+    
+    return positions;
+  };
+  
+  // Obtenir les positions calculées
+  const secondaryIndicatorPositions = getSecondaryIndicatorPositions(pathIndices.length);
+
   return (
     <div style={{ 
       position: 'relative',
@@ -206,31 +273,26 @@ const QuestionNode = ({ data }: { data: any }) => {
         }} />
       )}
       
-      {/* Nouveaux indicateurs pour les parcours multiples */}
+      {/* Indicateurs pour les parcours multiples autour du contour */}
       {pathIndices.length > 1 && (
-        <div style={{
-          position: 'absolute',
-          bottom: '-12px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: '8px',
-          zIndex: 25
-        }}>
-          {pathIndices.slice(1).map((pathIdx: number, idx: number) => (
+        <>
+          {secondaryIndicatorPositions.map((pos, idx) => (
             <div 
               key={idx}
               style={{
+                position: 'absolute',
                 width: '16px',
                 height: '16px',
                 borderRadius: '50%',
-                backgroundColor: HIGHLIGHT_COLORS[pathIdx % HIGHLIGHT_COLORS.length],
+                backgroundColor: HIGHLIGHT_COLORS[pathIndices[idx + 1] % HIGHLIGHT_COLORS.length],
                 border: '2px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                zIndex: 19,
+                ...pos // Appliquer la position calculée
               }} 
             />
           ))}
-        </div>
+        </>
       )}
     </div>
   );
