@@ -5,7 +5,7 @@ import ReactFlow, {
   Background, 
   Controls, 
   Node, 
-  Edge,
+  Edge, 
   EdgeProps,
   MiniMap, 
   NodeTypes,
@@ -77,7 +77,7 @@ const QuestionNode = ({ data }: { data: any }) => {
   const minSize = 26;
   const maxSize = 50;
   const size = Math.min(maxSize, Math.max(minSize, 26 + (data.count * 1.5)));
-
+  
   return (
     <div style={{ 
       position: 'relative',
@@ -134,8 +134,8 @@ const QuestionNode = ({ data }: { data: any }) => {
           letterSpacing: '0.2px'
         }}
       >
-        {data.text}
-      </div>
+          {data.text}
+        </div>
 
       {/* Cercle avec le nombre de réponses - couleur dynamique */}
       <div 
@@ -392,6 +392,50 @@ const LinkComponent = ({
   );
 };
 
+// Ajouter ceci au début du composant ou dans un fichier CSS séparé
+const styles = `
+  .filtering-transition .react-flow__node {
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  }
+  
+  .filtering-transition .react-flow__edge {
+    transition: opacity 0.6s ease, stroke 0.6s ease !important;
+  }
+  
+  .react-flow__node {
+    transition: all 0.3s ease;
+  }
+`;
+
+// Ajoutez ces styles pour améliorer la visualisation hiérarchique
+const hierarchyStyles = `
+  .filtering-transition .react-flow__node {
+    transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  }
+  
+  .filtering-transition .react-flow__edge {
+    transition: all 0.6s ease !important;
+  }
+  
+  .react-flow__node {
+    transition: all 0.5s ease;
+  }
+  
+  /* Fond strié pour mieux distinguer les niveaux */
+  .react-flow__renderer {
+    background-image: linear-gradient(
+      rgba(240, 244, 255, 0.5) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(240, 244, 255, 0.5) 1px,
+      transparent 1px
+    );
+    background-size: 30px 30px;
+  }
+`;
+
 export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   survey,
   responses,
@@ -502,45 +546,45 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       // Traiter chaque réponse dans l'ordre
       if (response.answers && Array.isArray(response.answers)) {
-        response.answers.forEach((answer: any, index: number) => {
-          const question = questionsMap.get(answer.questionId);
-          if (!question) return;
-          
-          const answerText = answer.answer || 'Sans réponse';
-          const childNodeId = `${currentNodeId}-${answer.questionId}-${answerText}`;
-          
-          // Vérifier que le nœud parent existe dans la carte
+      response.answers.forEach((answer: any, index: number) => {
+        const question = questionsMap.get(answer.questionId);
+        if (!question) return;
+        
+        const answerText = answer.answer || 'Sans réponse';
+        const childNodeId = `${currentNodeId}-${answer.questionId}-${answerText}`;
+        
+        // Vérifier que le nœud parent existe dans la carte
           if (!nodeMap.has(currentNodeId)) {
             console.log(`Création du nœud parent manquant: ${currentNodeId}`);
             nodeMap.set(currentNodeId, { count: 1, children: new Map() });
           }
           
-          const currentNode = nodeMap.get(currentNodeId);
-          if (!currentNode) {
-            return;
-          }
-          
-          // Initialiser children si nécessaire
-          if (!currentNode.children) {
-            currentNode.children = new Map();
-          }
-          
-          // Vérifier si ce nœud existe déjà dans l'arbre
-          if (!currentNode.children.has(childNodeId)) {
-            // Créer un nouveau nœud
-            currentNode.children.set(childNodeId, {
-              count: 1,
-              children: new Map()
-            });
-          } else {
-            // Incrémenter le compteur du nœud existant
-            const childNode = currentNode.children.get(childNodeId);
-            childNode.count++;
-          }
-          
-          // Passer au nœud enfant pour la prochaine réponse
-          currentNodeId = childNodeId;
-        });
+        const currentNode = nodeMap.get(currentNodeId);
+        if (!currentNode) {
+          return;
+        }
+        
+        // Initialiser children si nécessaire
+        if (!currentNode.children) {
+          currentNode.children = new Map();
+        }
+        
+        // Vérifier si ce nœud existe déjà dans l'arbre
+        if (!currentNode.children.has(childNodeId)) {
+          // Créer un nouveau nœud
+          currentNode.children.set(childNodeId, {
+            count: 1,
+            children: new Map()
+          });
+        } else {
+          // Incrémenter le compteur du nœud existant
+          const childNode = currentNode.children.get(childNodeId);
+          childNode.count++;
+        }
+        
+        // Passer au nœud enfant pour la prochaine réponse
+        currentNodeId = childNodeId;
+      });
       }
     });
     
@@ -705,10 +749,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       // Créer le nœud pour cette question
       const questionNode: Node = {
         id: questionId,
-        type: 'questionNode',
-        data: {
+            type: 'questionNode',
+            data: {
           questionId: questionId,
-          text: question.text,
+              text: question.text,
           count: question.count || 0,
           isSelected: false,
           isRoot: false,
@@ -946,6 +990,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   // Fonction pour activer/désactiver le filtre
   const toggleFilter = () => {
     const newFilterState = !filterApplied;
+    
+    // Ajouter une classe d'animation à l'élément parent
+    const container = document.querySelector('.react-flow__renderer');
+    if (container) {
+      container.classList.add('filtering-transition');
+      setTimeout(() => {
+        container.classList.remove('filtering-transition');
+      }, 700); // Durée de l'animation
+    }
+    
     setFilterApplied(newFilterState);
     
     if (newFilterState) {
@@ -1062,8 +1116,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         return questionIdsInSelectedPaths.has(sourceId) && questionIdsInSelectedPaths.has(targetId);
       });
       
+      // Réorganiser les positions des nœuds pour un affichage plus propre
+      const reorganizedNodes = reorganizeNodePositions(filteredNodes);
+      
       // Mise à jour des nœuds et arêtes filtrés
-      setNodes(filteredNodes);
+      setNodes(reorganizedNodes);
       setEdges(filteredEdges);
     }
     
@@ -1071,8 +1128,228 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({ padding: 0.2 });
-      }, 200);
+      }, 300); // Un délai plus long pour permettre l'animation
     }
+  };
+  
+  // Fonction améliorée pour réorganiser les positions des nœuds
+  const reorganizeNodePositions = (filteredNodes: Node[]): Node[] => {
+    if (filteredNodes.length === 0) return [];
+    
+    // Créer une copie profonde des nœuds pour éviter de modifier les originaux
+    const nodes = JSON.parse(JSON.stringify(filteredNodes));
+    
+    // Augmenter l'espacement pour une meilleure lisibilité
+    const xGap = 350; // Plus d'espace horizontal entre les nœuds au même niveau
+    const yGap = 200; // Plus d'espace vertical entre les niveaux
+    const siblingGap = 300; // Espace supplémentaire entre les nœuds frères
+    
+    // Structure pour traquer les niveaux hiérarchiques des nœuds
+    const nodeLevels = new Map<string, number>();
+    const nodeChildren = new Map<string, string[]>();
+    
+    // Identifier les relations parent-enfant
+    edges.forEach(edge => {
+      if (!nodeChildren.has(edge.source)) {
+        nodeChildren.set(edge.source, []);
+      }
+      nodeChildren.get(edge.source)?.push(edge.target);
+    });
+    
+    // Fonction pour déterminer le niveau hiérarchique de chaque nœud
+    const determineNodeLevel = (nodeId: string, level: number = 0) => {
+      // Éviter de traiter plusieurs fois le même nœud
+      if (nodeLevels.has(nodeId) && nodeLevels.get(nodeId)! >= level) {
+        return;
+      }
+      
+      // Mettre à jour le niveau du nœud
+      nodeLevels.set(nodeId, level);
+      
+      // Traiter récursivement les enfants
+      const children = nodeChildren.get(nodeId) || [];
+      children.forEach(childId => {
+        determineNodeLevel(childId, level + 1);
+      });
+    };
+    
+    // Identifier les nœuds racines
+    const nodeIds = new Set(nodes.map((node: Node) => node.id));
+    const childIds = new Set<string>();
+    
+    edges.forEach(edge => {
+      if (nodeIds.has(edge.target)) {
+        childIds.add(edge.target);
+      }
+    });
+    
+    const rootNodes = nodes.filter((node: Node) => !childIds.has(node.id));
+    
+    // Déterminer le niveau de chaque nœud
+    rootNodes.forEach((root: Node) => {
+      determineNodeLevel(root.id);
+    });
+    
+    // Grouper les nœuds par niveau
+    const nodesByLevel = new Map<number, Node[]>();
+    nodes.forEach((node: Node) => {
+      const level = nodeLevels.get(node.id) || 0;
+      if (!nodesByLevel.has(level)) {
+        nodesByLevel.set(level, []);
+      }
+      nodesByLevel.get(level)?.push(node);
+    });
+    
+    // Positionner les nœuds par niveau
+    let maxWidth = 0;
+    
+    nodesByLevel.forEach((levelNodes, level) => {
+      const levelWidth = levelNodes.length * xGap;
+      maxWidth = Math.max(maxWidth, levelWidth);
+      
+      levelNodes.forEach((node: Node, index) => {
+        // Positionner le nœud avec un décalage pour le centrage
+        const x = (index * xGap) - (levelWidth / 2) + (xGap / 2);
+        const y = level * yGap + 50; // 50px de marge supérieure
+        
+        // Appliquer un décalage aux nœuds qui ne sont pas en position centrale
+        // pour bien les séparer des autres branches
+        const offsetX = node.id.includes('-') ? parseInt(node.id.split('-')[0]) * 30 : 0;
+        
+        node.position = { 
+          x: x + offsetX, 
+          y 
+        };
+      });
+    });
+    
+    // Deuxième passe : ajuster les positions des nœuds enfants pour les aligner sous leur parent
+    nodes.forEach((node: Node) => {
+      const children = nodeChildren.get(node.id) || [];
+      if (children.length > 0) {
+        // Trouver les nœuds enfants
+        const childNodes = nodes.filter((n: Node) => children.includes(n.id));
+        
+        if (childNodes.length > 0) {
+          // Calculer la position centrale des enfants
+          const childrenCenterX = childNodes.reduce((sum: number, child: Node) => sum + child.position.x, 0) / childNodes.length;
+          const parentX = node.position.x;
+          
+          // Si la position centrale des enfants est différente de celle du parent,
+          // décaler tous les enfants pour les centrer sous le parent
+          if (Math.abs(childrenCenterX - parentX) > 10) {
+            const offset = parentX - childrenCenterX;
+            childNodes.forEach((child: Node) => {
+              child.position.x += offset;
+            });
+          }
+          
+          // Séparer les frères en fonction de leur nombre
+          if (childNodes.length > 1) {
+            const totalWidth = (childNodes.length - 1) * siblingGap;
+            const startX = parentX - totalWidth / 2;
+            
+            childNodes.sort((a: Node, b: Node) => a.position.x - b.position.x);
+            childNodes.forEach((child: Node, index: number) => {
+              child.position.x = startX + index * siblingGap;
+            });
+          }
+        }
+      }
+    });
+    
+    // Détection des chevauchements et correction
+    const nodeBoundaries = new Map<string, {left: number, right: number, top: number, bottom: number}>();
+    
+    // Calculer les limites de chaque nœud - correction des erreurs d'opération arithmétique
+    nodes.forEach((node: Node) => {
+      const nodeWidth = node.style?.width ? Number(node.style.width) : 240;
+      const nodeHeight = node.style?.height ? Number(node.style.height) : 160;
+      
+      // S'assurer que position.x et position.y sont des nombres
+      const posX = typeof node.position.x === 'number' ? node.position.x : 0;
+      const posY = typeof node.position.y === 'number' ? node.position.y : 0;
+      
+      nodeBoundaries.set(node.id, {
+        left: posX - nodeWidth/2,
+        right: posX + nodeWidth/2,
+        top: posY - nodeHeight/2,
+        bottom: posY + nodeHeight/2
+      });
+    });
+    
+    // Détecter et corriger les chevauchements
+    let corrections = true;
+    let iterations = 0;
+    const maxIterations = 10; // Éviter les boucles infinies
+    
+    while (corrections && iterations < maxIterations) {
+      corrections = false;
+      iterations++;
+      
+      nodes.forEach((nodeA: Node) => {
+        nodes.forEach((nodeB: Node) => {
+          if (nodeA.id !== nodeB.id) {
+            const boundA = nodeBoundaries.get(nodeA.id)!;
+            const boundB = nodeBoundaries.get(nodeB.id)!;
+            
+            // Vérifier s'il y a chevauchement
+            if (boundA.left < boundB.right && boundA.right > boundB.left &&
+                boundA.top < boundB.bottom && boundA.bottom > boundB.top) {
+              
+              // Calculer le décalage nécessaire
+              const xOverlap = Math.min(boundA.right, boundB.right) - Math.max(boundA.left, boundB.left);
+              const yOverlap = Math.min(boundA.bottom, boundB.bottom) - Math.max(boundA.top, boundB.top);
+              
+              // Appliquer le décalage dans la direction qui minimise le déplacement
+              if (xOverlap < yOverlap) {
+                if (nodeA.position.x < nodeB.position.x) {
+                  nodeA.position.x -= xOverlap / 2 + 10;
+                  nodeB.position.x += xOverlap / 2 + 10;
+                } else {
+                  nodeA.position.x += xOverlap / 2 + 10;
+                  nodeB.position.x -= xOverlap / 2 + 10;
+                }
+              } else {
+                if (nodeA.position.y < nodeB.position.y) {
+                  nodeA.position.y -= yOverlap / 2 + 10;
+                  nodeB.position.y += yOverlap / 2 + 10;
+                } else {
+                  nodeA.position.y += yOverlap / 2 + 10;
+                  nodeB.position.y -= yOverlap / 2 + 10;
+                }
+              }
+              
+              // Mettre à jour les limites
+              nodeBoundaries.set(nodeA.id, {
+                left: nodeA.position.x - 120,
+                right: nodeA.position.x + 120,
+                top: nodeA.position.y - 80,
+                bottom: nodeA.position.y + 80
+              });
+              
+              nodeBoundaries.set(nodeB.id, {
+                left: nodeB.position.x - 120,
+                right: nodeB.position.x + 120,
+                top: nodeB.position.y - 80,
+                bottom: nodeB.position.y + 80
+              });
+              
+              corrections = true;
+            }
+          }
+        });
+      });
+    }
+    
+    // Ajouter une transition fluide
+    return nodes.map((node: Node) => ({
+      ...node,
+      style: {
+        ...node.style,
+        transition: 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)'
+      }
+    }));
   };
   
   // Mettre à jour la fonction handlePathSelect pour réinitialiser le filtre lors d'une nouvelle sélection
@@ -1172,8 +1449,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             nodeTypes={{ questionNode: QuestionNode }}
             edgeTypes={{ default: LinkComponent }}
             defaultViewport={defaultViewport}
-            minZoom={0.1}
-            maxZoom={2.5}
+              minZoom={0.1}
+              maxZoom={2.5}
             fitView
             fitViewOptions={{ padding: 0.3 }}
             onInit={setReactFlowInstance}
@@ -1200,7 +1477,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
               }}
               zoomable
               pannable
-              position="bottom-right"
+                position="bottom-right"
               style={{ background: 'rgba(255, 255, 255, 0.9)' }}
             />
             <Background 
@@ -1316,7 +1593,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
                         <Typography variant="caption" sx={{ mr: 1 }}>
                           {segIdx + 1}.
-                        </Typography>
+        </Typography>
                         <Typography 
                           variant="caption" 
                           sx={{ 
@@ -1341,6 +1618,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           )}
         </Box>
       </Box>
+      <style>{styles}</style>
+      <style>{hierarchyStyles}</style>
     </Paper>
   );
 };
