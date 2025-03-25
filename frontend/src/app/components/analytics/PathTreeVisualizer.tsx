@@ -38,6 +38,7 @@ export interface PathTreeVisualizerProps {
   onPathSelect: (path: PathSegment[]) => void;
   selectedPaths: PathSegment[][];
   onFilterChange?: (isFiltered: boolean, filteredResponses: any[]) => void;
+  onPathsLoad?: (paths: {name: string, path: PathSegment[], group: string}[]) => void;
 }
 
 // Ajoutez ce tableau de couleurs en haut du fichier, juste après les imports
@@ -605,7 +606,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   responses,
   onPathSelect,
   selectedPaths,
-  onFilterChange
+  onFilterChange,
+  onPathsLoad
 }) => {
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -1105,6 +1107,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setNodes(nodesWithSelection);
       setEdges(edgesWithSelection);
       setAllPaths(paths);
+      
+      // Informer le parent des chemins disponibles
+      if (onPathsLoad) {
+        onPathsLoad(paths);
+      }
+      
       setLoading(false);
     } else {
       setLoading(false);

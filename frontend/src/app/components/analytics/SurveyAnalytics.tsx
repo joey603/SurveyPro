@@ -414,6 +414,21 @@ interface QuestionDetails {
   answers: SurveyResponse[];
 }
 
+// Assurez-vous d'avoir accès aux couleurs de mise en évidence
+// Si elles ne sont pas déjà importées depuis PathTreeVisualizer, ajoutez-les:
+const HIGHLIGHT_COLORS = [
+  '#8A2BE2', // Violet
+  '#1E90FF', // Bleu dodger
+  '#FF6347', // Tomate
+  '#32CD32', // Vert lime
+  '#FF8C00', // Orange foncé
+  '#9932CC', // Orchidée foncée
+  '#20B2AA', // Turquoise
+  '#FF1493', // Rose profond
+  '#4682B4', // Bleu acier
+  '#00CED1', // Turquoise moyen
+];
+
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
   onClose,
@@ -440,6 +455,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [filteredResponsesByPath, setFilteredResponsesByPath] = useState<SurveyResponse[]>([]);
   const [pathFilterActive, setPathFilterActive] = useState(false);
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
+  const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[]}[]>([]);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1260,6 +1276,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     }
   }, [pathFilterActive, filteredResponsesByPath, filteredResponses, responses]);
 
+  // Définissez cette fonction de callback
+  const handlePathsLoad = (paths: {name: string, path: PathSegment[], group: string}[]) => {
+    setAllPaths(paths);
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1342,6 +1363,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       onPathSelect={handlePathSelection}
                       selectedPaths={selectedPaths}
                       onFilterChange={handlePathFilterChange}
+                      onPathsLoad={handlePathsLoad}
                     />
                   </Box>
                 </Paper>
@@ -1355,6 +1377,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               
               {getQuestionsToDisplay().map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
+                
+                // Nouvelles lignes: trouver les parcours associés à cette question
+                const associatedPaths = pathFilterActive ? selectedPaths.filter(path => 
+                  path.some(segment => segment.questionId === question.id)
+                ) : [];
                 
                 return (
                   <Paper
@@ -1386,6 +1413,41 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       <Typography variant="caption" color="text.secondary">
                         Question type: {question.type}
                       </Typography>
+                      
+                      {/* Nouveaux badges pour les parcours associés */}
+                      {pathFilterActive && associatedPaths.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                          {associatedPaths.map((path, pathIndex) => {
+                            // Trouver le nom du parcours
+                            const pathName = allPaths.find(p => 
+                              p.path.length === path.length && 
+                              p.path.every((segment, i) => 
+                                segment.questionId === path[i].questionId && 
+                                segment.answer === path[i].answer
+                              )
+                            )?.name || `Parcours ${pathIndex + 1}`;
+                            
+                            // Couleur du parcours
+                            const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                            
+                            return (
+                              <Chip
+                                key={pathIndex}
+                                label={pathName}
+                                size="small"
+                                sx={{
+                                  backgroundColor: `${pathColor}20`,
+                                  color: pathColor,
+                                  border: `1px solid ${pathColor}`,
+                                  '& .MuiChip-label': {
+                                    fontWeight: 'medium'
+                                  }
+                                }}
+                              />
+                            );
+                          })}
+                        </Box>
+                      )}
                     </Box>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
