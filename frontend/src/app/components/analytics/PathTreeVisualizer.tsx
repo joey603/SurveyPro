@@ -77,11 +77,11 @@ const QuestionNode = ({ data }: { data: any }) => {
         left: '5px',
         right: '5px',
         bottom: '5px',
-        backgroundColor: isInSelectedPath ? 'rgba(255, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: isInSelectedPath ? 'rgba(138, 43, 226, 0.15)' : 'rgba(255, 255, 255, 0.95)',
         borderRadius: '12px',
-        border: `${isInSelectedPath ? 4 : 2}px solid ${isInSelectedPath ? '#ff0000' : 'rgba(102, 126, 234, 0.2)'}`,
+        border: `${isInSelectedPath ? 4 : 2}px solid ${isInSelectedPath ? '#8A2BE2' : 'rgba(102, 126, 234, 0.2)'}`,
         boxShadow: isInSelectedPath 
-          ? '0 0 15px 5px rgba(255, 0, 0, 0.3)'
+          ? '0 0 15px 5px rgba(138, 43, 226, 0.3)'
           : '0 2px 8px rgba(0, 0, 0, 0.05)',
         transition: 'all 0.3s ease',
         zIndex: 1,
@@ -177,7 +177,7 @@ const QuestionNode = ({ data }: { data: any }) => {
           width: '20px',
           height: '20px',
           borderRadius: '50%',
-          backgroundColor: '#1976d2',
+          backgroundColor: '#8A2BE2',
           border: '2px solid white',
           zIndex: 20,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
@@ -220,13 +220,13 @@ const LinkComponent = ({
 
   // Style standard pour les liaisons non sélectionnées, style contrasté pour les sélectionnées
   const customStyle = {
-    stroke: isInSelectedPath ? "#ff0000" : "#dddddd", // Gris clair pour les non sélectionnés
-    strokeWidth: isInSelectedPath ? 6 : 1, // Plus fin pour les non sélectionnés
+    stroke: isInSelectedPath ? "#8A2BE2" : "#667eea", // Couleur bleue plus foncée pour les liens non sélectionnés
+    strokeWidth: isInSelectedPath ? 6 : 2.5, // Épaisseur augmentée pour les liens non sélectionnés
     strokeDasharray: isInSelectedPath ? "" : "6 4",
-    filter: isInSelectedPath ? 'drop-shadow(0 0 8px rgba(255, 0, 0, 0.8))' : 'none',
+    filter: isInSelectedPath ? 'drop-shadow(0 0 8px rgba(138, 43, 226, 0.8))' : 'none',
     transition: 'all 0.4s ease',
     strokeLinecap: "round" as const,
-    opacity: isInSelectedPath ? 1 : 0.4, // Plus transparent pour les non sélectionnés
+    opacity: isInSelectedPath ? 1 : 0.8, // Opacité augmentée pour les liens non sélectionnés
   };
 
   if (!sourceX || !sourceY || !targetX || !targetY) {
@@ -243,7 +243,7 @@ const LinkComponent = ({
         <path
           id={`${id}-glow`}
           style={{
-            stroke: "rgba(255, 0, 0, 0.3)",
+            stroke: "rgba(138, 43, 226, 0.3)", // Violet au lieu de rouge
             strokeWidth: 8,
             fillOpacity: 0,
             strokeLinecap: "round" as const,
@@ -625,7 +625,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
               animated: false,
               style: { 
                 stroke: '#667eea',
-                strokeWidth: 2
+                strokeWidth: 2.5
               },
               data: {
                 selectedPaths: selectedPaths
@@ -645,7 +645,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             animated: false,
             style: { 
               stroke: '#667eea',
-              strokeWidth: 2
+              strokeWidth: 2.5
             },
             data: {
               selectedPaths: selectedPaths
@@ -689,7 +689,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             animated: false,
             style: { 
               stroke: '#667eea',
-              strokeWidth: 2
+              strokeWidth: 2.5
             },
             data: {
               selectedPaths: selectedPaths
