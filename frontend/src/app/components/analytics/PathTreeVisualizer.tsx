@@ -37,6 +37,7 @@ export interface PathTreeVisualizerProps {
   responses: any[];
   onPathSelect: (path: PathSegment[]) => void;
   selectedPaths: PathSegment[][];
+  onFilterChange?: (isFiltered: boolean, filteredResponses: any[]) => void;
 }
 
 // Ajoutez ce tableau de couleurs en haut du fichier, juste après les imports
@@ -395,13 +396,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   survey,
   responses,
   onPathSelect,
-  selectedPaths
+  selectedPaths,
+  onFilterChange
 }) => {
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
   const [analysisGroups, setAnalysisGroups] = useState<{[key: string]: {name: string, paths: number[]}}>({}); 
+  const [filterApplied, setFilterApplied] = useState(false);
+  const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
   
   // Fonction pour générer un nom alphabétique basé sur un index
   const getAlphabeticName = (index: number) => {
@@ -939,9 +943,146 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  // Gérer la sélection d'un parcours depuis la liste
+  // Fonction pour activer/désactiver le filtre
+  const toggleFilter = () => {
+    const newFilterState = !filterApplied;
+    setFilterApplied(newFilterState);
+    
+    if (newFilterState) {
+      // Filtrer les chemins pour ne garder que ceux qui sont sélectionnés
+      const filtered = allPaths.filter(pathItem => 
+        selectedPaths.some(selectedPath => 
+          selectedPath.length === pathItem.path.length && 
+          selectedPath.every((segment, i) => 
+            segment.questionId === pathItem.path[i].questionId && 
+            segment.answer === pathItem.path[i].answer
+          )
+        )
+      );
+      setFilteredPaths(filtered);
+      
+      // Mettre à jour les nœuds et arêtes pour ne montrer que ceux qui font partie des parcours sélectionnés
+      updateVisibleElements(true);
+      
+      // Identifier les réponses qui correspondent aux parcours sélectionnés
+      if (onFilterChange) {
+        const filteredResponses = getFilteredResponses();
+        onFilterChange(true, filteredResponses);
+      }
+    } else {
+      // Réinitialiser pour afficher tous les chemins
+      setFilteredPaths([]);
+      
+      // Remettre tous les nœuds et arêtes
+      updateVisibleElements(false);
+      
+      // Notifier le parent que le filtre est désactivé
+      if (onFilterChange) {
+        onFilterChange(false, responses);
+      }
+    }
+  };
+  
+  // Nouvelle fonction pour identifier les réponses correspondant aux parcours sélectionnés
+  const getFilteredResponses = () => {
+    if (!selectedPaths.length) return responses;
+    
+    // Créer un ensemble des combinaisons questionId-answer pour chaque parcours sélectionné
+    const selectedSegments = new Set<string>();
+    
+    selectedPaths.forEach(path => {
+      path.forEach(segment => {
+        selectedSegments.add(`${segment.questionId}-${segment.answer}`);
+      });
+    });
+    
+    // Filtrer les réponses qui contiennent ces segments
+    return responses.filter(response => {
+      // Vérifier si cette réponse suit l'un des parcours sélectionnés
+      // Une réponse correspond si elle contient TOUS les segments d'UN des parcours sélectionnés
+      return selectedPaths.some(path => {
+        // Tous les segments du parcours doivent être présents dans la réponse
+        return path.every(segment => {
+          return response.answers.some((answer: any) => 
+            answer.questionId === segment.questionId && 
+            answer.answer === segment.answer
+          );
+        });
+      });
+    });
+  };
+  
+  // Mettre à jour les éléments visibles en fonction du filtre
+  const updateVisibleElements = (filtered: boolean) => {
+    if (!filtered) {
+      // Réinitialiser tous les nœuds et arêtes à leur état d'origine
+      const { nodes: originalNodes, edges: originalEdges } = processPathTree(survey, responses);
+      
+      // S'assurer que selectedPaths est correctement passé
+      const edgesWithSelection = originalEdges.map(edge => ({
+        ...edge,
+        data: {
+          ...(edge.data || {}),
+          selectedPaths: selectedPaths
+        }
+      }));
+      
+      const nodesWithSelection = originalNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          selectedPaths: selectedPaths
+        }
+      }));
+      
+      setNodes(nodesWithSelection);
+      setEdges(edgesWithSelection);
+    } else {
+      // Filtrer pour ne montrer que les nœuds et arêtes des parcours sélectionnés
+      const questionIdsInSelectedPaths = new Set<string>();
+      
+      // Collecter tous les IDs de questions dans les parcours sélectionnés
+      selectedPaths.forEach(path => {
+        path.forEach(segment => {
+          questionIdsInSelectedPaths.add(segment.questionId);
+        });
+      });
+      
+      // Filtrer les nœuds
+      const filteredNodes = nodes.filter(node => 
+        questionIdsInSelectedPaths.has(node.data.questionId)
+      );
+      
+      // Filtrer les arêtes (celles qui connectent les nœuds des parcours sélectionnés)
+      const filteredEdges = edges.filter(edge => {
+        // Extraire les IDs des questions source et cible
+        const sourceId = edge.source.includes('-') ? edge.source.split('-').slice(-1)[0] : edge.source;
+        const targetId = edge.target.includes('-') ? edge.target.split('-').slice(-1)[0] : edge.target;
+        
+        return questionIdsInSelectedPaths.has(sourceId) && questionIdsInSelectedPaths.has(targetId);
+      });
+      
+      // Mise à jour des nœuds et arêtes filtrés
+      setNodes(filteredNodes);
+      setEdges(filteredEdges);
+    }
+    
+    // Ajuster la vue après le filtrage
+    if (reactFlowInstance) {
+      setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.2 });
+      }, 200);
+    }
+  };
+  
+  // Mettre à jour la fonction handlePathSelect pour réinitialiser le filtre lors d'une nouvelle sélection
   const handlePathSelect = (path: PathSegment[]) => {
     console.log("Path selected:", path);
+    
+    // Si le filtre est appliqué, le désactiver pour une nouvelle sélection
+    if (filterApplied) {
+      setFilterApplied(false);
+    }
     
     // Appeler la fonction onPathSelect pour mettre à jour selectedPaths
     onPathSelect(path);
@@ -1122,7 +1263,22 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 }
               }}
             >
-              {allPaths.map((pathItem, index) => (
+              {/* Bouton d'application du filtre si des parcours sont sélectionnés */}
+              {selectedPaths.length > 0 && (
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Button
+                    variant={filterApplied ? "contained" : "outlined"}
+                    color={filterApplied ? "primary" : "inherit"}
+                    size="small"
+                    onClick={toggleFilter}
+                    sx={{ width: '100%' }}
+                  >
+                    {filterApplied ? "Afficher tous les parcours" : "Filtrer sur les parcours sélectionnés"}
+                  </Button>
+                </Box>
+              )}
+              
+              {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => (
                 <Box 
                   key={index}
                   sx={{

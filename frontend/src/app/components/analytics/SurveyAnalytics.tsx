@@ -430,13 +430,15 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     demographic: {},
     answers: {}
   });
-  const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>(responses);
+  const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPaths, setSelectedPaths] = useState<PathSegment[][]>([]);
   const [analysisGroups, setAnalysisGroups] = useState<AnalysisGroup[]>([]);
+  const [filteredResponsesByPath, setFilteredResponsesByPath] = useState<SurveyResponse[]>([]);
+  const [pathFilterActive, setPathFilterActive] = useState(false);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1067,8 +1069,38 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour obtenir les questions à afficher (questions standard ou nœuds pour les sondages dynamiques)
   const getQuestionsToDisplay = () => {
+    // Si le filtre de parcours est actif, filtrer les questions
+    if (pathFilterActive && selectedPaths.length > 0) {
+      // Récupérer tous les IDs de questions des parcours sélectionnés
+      const questionIdsInSelectedPaths = new Set<string>();
+      selectedPaths.forEach(path => {
+        path.forEach(segment => {
+          questionIdsInSelectedPaths.add(segment.questionId);
+        });
+      });
+
+      console.log("Questions dans les parcours sélectionnés:", Array.from(questionIdsInSelectedPaths));
+      
+      // Si c'est un sondage dynamique
+      if (survey.isDynamic && survey.nodes) {
+        return survey.nodes
+          .filter(node => questionIdsInSelectedPaths.has(node.id))
+          .map(node => ({
+            id: node.id,
+            text: node.data?.text || node.data?.label || 'Question sans texte',
+            type: node.data?.questionType || node.data?.type || 'text',
+            options: node.data?.options || []
+          }));
+      }
+      
+      // Pour les sondages standard
+      return survey.questions.filter(question => 
+        questionIdsInSelectedPaths.has(question.id)
+      );
+    }
+    
+    // Comportement normal si le filtre n'est pas actif
     if (survey.isDynamic && survey.nodes) {
-      // Pour les sondages dynamiques, extraire les questions des nœuds
       return survey.nodes.map(node => ({
         id: node.id,
         text: node.data?.text || node.data?.label || 'Question sans texte',
@@ -1076,7 +1108,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         options: node.data?.options || []
       }));
     }
-    // Pour les sondages standard, utiliser les questions normales
+    
     return survey.questions;
   };
 
@@ -1190,6 +1222,36 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     console.log("Ce sondage n'est pas dynamique - l'onglet d'analyse des parcours ne sera pas pertinent");
   }
 
+  // Gestionnaire pour le changement de filtre depuis PathTreeVisualizer
+  const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
+    console.log("Filtre de parcours changé:", isFiltered, "Réponses filtrées:", filteredResps.length);
+    setPathFilterActive(isFiltered);
+    
+    if (isFiltered) {
+      // Appliquer le filtre des parcours
+      setFilteredResponsesByPath(filteredResps);
+    } else {
+      // Désactiver le filtre des parcours
+      setFilteredResponsesByPath([]);
+    }
+  };
+  
+  // Déterminez quelles réponses afficher en fonction des filtres actifs
+  const displayResponses = pathFilterActive 
+    ? filteredResponsesByPath 
+    : (filteredResponses.length > 0 ? filteredResponses : responses);
+
+  // Cette fonction va afficher les résultats de filtrage dans la console pour le débogage
+  useEffect(() => {
+    if (pathFilterActive) {
+      console.log("Mode filtre parcours activé:", filteredResponsesByPath.length, "réponses");
+    } else if (filteredResponses.length > 0) {
+      console.log("Filtres standards appliqués:", filteredResponses.length, "réponses");
+    } else {
+      console.log("Aucun filtre actif:", responses.length, "réponses");
+    }
+  }, [pathFilterActive, filteredResponsesByPath, filteredResponses, responses]);
+
   return (
     <Box>
       <Box sx={{
@@ -1266,9 +1328,10 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
                       survey={survey} 
-                      responses={filteredResponses} 
+                      responses={filteredResponses.length > 0 ? filteredResponses : responses} 
                       onPathSelect={handlePathSelection}
                       selectedPaths={selectedPaths}
+                      onFilterChange={handlePathFilterChange}
                     />
                   </Box>
                 </Paper>
@@ -1832,7 +1895,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 <DemographicStatistics 
                   survey={survey}
                   responses={responses}
-                  filteredResponses={filteredResponses}
+                  filteredResponses={displayResponses}
                   handleTabChange={handleTabChange}
                   activeTab={activeTab}
                   handlePathSelection={handlePathSelection}
