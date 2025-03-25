@@ -236,7 +236,7 @@ const QuestionNode = ({ data }: { data: any }) => {
   );
 };
 
-// Composant d'arête personnalisé avec détection complète pour tous les types de liens
+// Composant modifié pour les liens avec atténuation lors des croisements
 const LinkComponent = ({ 
   id, 
   source, 
@@ -250,7 +250,7 @@ const LinkComponent = ({
   sourcePosition,
   targetPosition
 }: EdgeProps) => {
-  // Détection améliorée pour tous types de liens, y compris entre branches parallèles
+  // Détection des liens appartenant aux parcours sélectionnés (code existant)
   let pathIndex = -1;
   
   if (data && data.selectedPaths && data.selectedPaths.length > 0) {
@@ -365,10 +365,19 @@ const LinkComponent = ({
   }
 
   // Calculer le chemin entre les points source et cible
-  const path = `M${sourceX},${sourceY} C${sourceX},${sourceY + (targetY - sourceY) / 3} ${targetX},${targetY - (targetY - sourceY) / 3} ${targetX},${targetY}`;
+  const verticalDistance = Math.abs(targetY - sourceY);
+  const curveIntensity = Math.min(100, verticalDistance / 2);
+  
+  const path = `
+    M${sourceX},${sourceY} 
+    C${sourceX},${sourceY + curveIntensity} 
+    ${targetX},${targetY - curveIntensity} 
+    ${targetX},${targetY}
+  `;
 
   return (
     <>
+      {/* Effet de halo pour les liens sélectionnés */}
       {isInSelectedPath && (
         <path
           id={`${id}-glow`}
@@ -382,12 +391,53 @@ const LinkComponent = ({
           d={path}
         />
       )}
+      
+      {/* Chemin principal avec effet d'atténuation */}
       <path
         id={id}
         style={customStyle}
-        className="react-flow__edge-path"
+        className={`react-flow__edge-path ${isInSelectedPath ? 'highlight-path' : ''}`}
         d={path}
+        markerEnd={`url(#${id}-arrowhead)`}
       />
+      
+      {/* Définition du marqueur de flèche */}
+      <defs>
+        <marker
+          id={`${id}-arrowhead`}
+          viewBox="0 0 10 10"
+          refX="5"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill={isInSelectedPath ? highlightColor : "#667eea"} />
+        </marker>
+        
+        {/* Masque pour créer l'effet d'atténuation */}
+        {isInSelectedPath && (
+          <mask id={`${id}-mask`}>
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {/* Les cercles transparents permettront d'atténuer les parties des liens qui traversent des rectangles */}
+            {data?.nodesPositions?.map((node: any, index: number) => (
+              node.id !== source && node.id !== target ? 
+                <rect 
+                  key={index}
+                  x={node.x - (node.width/2) - 5}
+                  y={node.y - (node.height/2) - 5}
+                  width={node.width + 10}
+                  height={node.height + 10}
+                  rx="10"
+                  ry="10"
+                  fill="black"
+                  opacity="0.7"
+                /> 
+                : null
+            ))}
+          </mask>
+        )}
+      </defs>
     </>
   );
 };
@@ -464,6 +514,27 @@ const scrollStyles = `
   /* Stabiliser la hauteur du conteneur */
   .path-list-container {
     min-height: 200px;
+  }
+`;
+
+// Ajoutez ce style CSS pour l'effet d'atténuation des liens
+const linkStyles = `
+  .react-flow__edge.selected .react-flow__edge-path {
+    stroke-opacity: 1;
+  }
+  
+  .highlight-path {
+    mask: url(var(--path-mask)) !important;
+  }
+  
+  /* Effet de fondu lorsqu'un lien traverse un nœud qui n'est pas sa source ou sa cible */
+  .react-flow__edge:not(.selected) .react-flow__edge-path {
+    transition: stroke-opacity 0.3s ease;
+  }
+  
+  /* Crée un effet d'atténuation lorsqu'un lien passe près d'un nœud */
+  .react-flow__node:hover ~ .react-flow__edge:not(.selected) .react-flow__edge-path {
+    stroke-opacity: 0.3;
   }
 `;
 
@@ -1113,25 +1184,50 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       // Réinitialiser tous les nœuds et arêtes à leur état d'origine
       const { nodes: originalNodes, edges: originalEdges } = processPathTree(survey, responses);
       
-      // S'assurer que selectedPaths est correctement passé
-      const edgesWithSelection = originalEdges.map(edge => ({
+      // Récupérer les positions et dimensions des nœuds pour l'effet d'atténuation
+      const nodesPositions = originalNodes.map(node => ({
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: node.style?.width ? Number(node.style.width) : 240,
+        height: node.style?.height ? Number(node.style.height) : 160
+      }));
+      
+      // S'assurer que selectedPaths et nodesPositions sont correctement passés
+      const edgesWithData = originalEdges.map(edge => ({
         ...edge,
         data: {
           ...(edge.data || {}),
-          selectedPaths: selectedPaths
+          selectedPaths: selectedPaths,
+          nodesPositions // Ajouter les positions des nœuds
         }
       }));
       
-      const nodesWithSelection = originalNodes.map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          selectedPaths: selectedPaths
-        }
-      }));
+      // Filtrer les nœuds
+      const filteredNodes = originalNodes.filter(node => 
+        selectedPaths.some(path => 
+          path.some(segment => segment.questionId === node.data.questionId)
+        )
+      );
       
-      setNodes(nodesWithSelection);
-      setEdges(edgesWithSelection);
+      // Filtrer les arêtes (celles qui connectent les nœuds des parcours sélectionnés)
+      const filteredEdges = originalEdges.filter(edge => {
+        // Extraire les IDs des questions source et cible
+        const sourceId = edge.source.includes('-') ? edge.source.split('-').slice(-1)[0] : edge.source;
+        const targetId = edge.target.includes('-') ? edge.target.split('-').slice(-1)[0] : edge.target;
+        
+        return selectedPaths.some(path => 
+          path.some(segment => segment.questionId === sourceId) &&
+          path.some(segment => segment.questionId === targetId)
+        );
+      });
+      
+      // Réorganiser les positions des nœuds pour un affichage plus propre
+      const reorganizedNodes = reorganizeNodePositions(filteredNodes);
+      
+      // Mise à jour des nœuds et arêtes filtrés
+      setNodes(reorganizedNodes);
+      setEdges(edgesWithData);
     } else {
       // Filtrer pour ne montrer que les nœuds et arêtes des parcours sélectionnés
       const questionIdsInSelectedPaths = new Set<string>();
@@ -1160,9 +1256,27 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       // Réorganiser les positions des nœuds pour un affichage plus propre
       const reorganizedNodes = reorganizeNodePositions(filteredNodes);
       
+      // Ne pas oublier d'ajouter les positions des nœuds ici aussi
+      const filteredNodesPositions = filteredNodes.map(node => ({
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: node.style?.width ? Number(node.style.width) : 240,
+        height: node.style?.height ? Number(node.style.height) : 160
+      }));
+      
+      const edgesWithData = filteredEdges.map(edge => ({
+        ...edge,
+        data: {
+          ...(edge.data || {}),
+          selectedPaths: selectedPaths,
+          nodesPositions: filteredNodesPositions // Ajouter les positions des nœuds filtrés
+        }
+      }));
+      
       // Mise à jour des nœuds et arêtes filtrés
       setNodes(reorganizedNodes);
-      setEdges(filteredEdges);
+      setEdges(edgesWithData);
     }
     
     // Ajuster la vue après le filtrage
@@ -1665,28 +1779,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       <style>{styles}</style>
       <style>{hierarchyStyles}</style>
       <style>{scrollStyles}</style>
-      <style>
-      {`
-        .path-list-container {
-          scroll-behavior: auto !important; /* Désactiver le scroll smooth pendant la transition */
-          will-change: scroll-position;
-          overscroll-behavior: contain;
-          transition: none !important; /* Désactiver les transitions pendant le filtrage */
-        }
-        
-        .filtering-transition {
-          overflow: hidden !important; /* Bloquer complètement le défilement pendant la transition */
-        }
-        
-        .filtering-transition > * {
-          transition: opacity 0.2s ease-out;
-        }
-        
-        .path-list-container .MuiBox-root {
-          transform: translateZ(0); /* Activer l'accélération matérielle */
-        }
-      `}
-      </style>
+      <style>{linkStyles}</style>
     </Paper>
   );
 };
