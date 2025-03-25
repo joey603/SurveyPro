@@ -203,7 +203,7 @@ const QuestionNode = ({ data }: { data: any }) => {
   );
 };
 
-// Composant d'arête personnalisé avec détection améliorée pour couvrir tous les cas hiérarchiques
+// Composant d'arête personnalisé avec détection complète pour tous les types de liens
 const LinkComponent = ({ 
   id, 
   source, 
@@ -217,35 +217,45 @@ const LinkComponent = ({
   sourcePosition,
   targetPosition
 }: EdgeProps) => {
-  // Détection améliorée qui fonctionne avec tous les types de liens et niveaux hiérarchiques
+  // Détection améliorée pour tous types de liens, y compris entre branches parallèles
   let pathIndex = -1;
   
   if (data && data.selectedPaths && data.selectedPaths.length > 0) {
-    // Extraire les IDs pour la comparaison, avec plus de robustesse
-    // Prendre tous les segments possibles de l'ID pour couvrir tous les cas hiérarchiques
-    const sourceIdParts = source.split('-');
-    const targetIdParts = target.split('-');
+    // Extraire tous les identifiants possibles - complets, partiels, et composants individuels
+    const extractAllIds = (id: string) => {
+      const parts = id.split('-');
+      const result = [id]; // ID complet
+      
+      // Ajouter les segments individuels
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i]) result.push(parts[i]);
+      }
+      
+      // Ajouter les combinaisons de segments qui pourraient être des IDs
+      if (parts.length >= 2) {
+        const lastSegment = parts[parts.length - 1];
+        const secondLastSegment = parts[parts.length - 2];
+        
+        if (lastSegment) result.push(lastSegment); // Dernier segment
+        if (secondLastSegment) result.push(secondLastSegment); // Avant-dernier segment
+        if (lastSegment && secondLastSegment) {
+          result.push(`${secondLastSegment}-${lastSegment}`); // Combinaison des deux derniers
+        }
+      }
+      
+      // Retourner directement le tableau sans utiliser filter
+      return result as string[]; // Nous savons que tous les éléments sont des strings
+    };
     
-    // Créer des tableaux d'IDs possibles pour la source et la cible
-    const sourceIds = [
-      source, 
-      sourceIdParts[sourceIdParts.length - 1], // Dernier segment
-      sourceIdParts.length > 1 ? sourceIdParts[sourceIdParts.length - 2] : '', // Avant-dernier segment
-    ].filter(id => id);
-    
-    const targetIds = [
-      target, 
-      targetIdParts[targetIdParts.length - 1], // Dernier segment
-      targetIdParts.length > 1 ? targetIdParts[targetIdParts.length - 2] : '', // Avant-dernier segment
-    ].filter(id => id);
+    const sourceIds = extractAllIds(source);
+    const targetIds = extractAllIds(target);
     
     // Parcourir tous les chemins sélectionnés
     outerLoop: for (let i = 0; i < data.selectedPaths.length; i++) {
       const path = data.selectedPaths[i];
       
-      // Vérification 1: Segments consécutifs dans le parcours
+      // Vérification 1: Segments directement consécutifs dans le parcours
       for (let j = 0; j < path.length - 1; j++) {
-        // Vérifier chaque combinaison source-cible possible
         for (const srcId of sourceIds) {
           for (const tgtId of targetIds) {
             if (path[j].questionId === srcId && path[j+1].questionId === tgtId) {
@@ -256,34 +266,47 @@ const LinkComponent = ({
         }
       }
       
-      // Vérification 2: Questions faisant partie du même parcours, pas nécessairement consécutives
-      // Utile pour les liens entre niveaux hiérarchiques différents
-      let sourceFound = false;
+      // Vérification 2: Trouver toutes les questions dans le parcours
+      const questionsInPath = path.map((segment: PathSegment) => segment.questionId);
+      
+      // Vérifier si source et cible sont toutes deux dans le parcours
+      let sourceInPath = false;
       let sourceIndex = -1;
+      let targetInPath = false;
       let targetIndex = -1;
       
-      // Trouver les indices des questions dans le parcours
-      for (let j = 0; j < path.length; j++) {
+      // Trouver tous les indices possibles pour source et cible
+      for (let j = 0; j < questionsInPath.length; j++) {
         for (const srcId of sourceIds) {
-          if (path[j].questionId === srcId) {
-            sourceFound = true;
-            sourceIndex = j;
-            break;
+          if (questionsInPath[j] === srcId || questionsInPath[j].includes(srcId)) {
+            sourceInPath = true;
+            if (sourceIndex === -1 || j < sourceIndex) sourceIndex = j;
           }
         }
         
         for (const tgtId of targetIds) {
-          if (path[j].questionId === tgtId) {
-            targetIndex = j;
-            break;
+          if (questionsInPath[j] === tgtId || questionsInPath[j].includes(tgtId)) {
+            targetInPath = true;
+            if (targetIndex === -1 || j < targetIndex) targetIndex = j;
           }
         }
       }
       
-      // Si source et cible sont trouvées et la source apparaît avant la cible dans le parcours
-      if (sourceFound && targetIndex > sourceIndex && targetIndex > -1) {
-        pathIndex = i;
-        break outerLoop;
+      // Si les deux sont dans le parcours, vérifier l'ordre
+      if (sourceInPath && targetInPath) {
+        // Cas 1: Source vient avant target directement dans le parcours
+        if (sourceIndex < targetIndex) {
+          pathIndex = i;
+          break outerLoop;
+        }
+        
+        // Cas 2: Connexion entre branches parallèles
+        // Pour les liens latéraux entre enfants d'une même question critique
+        // ou autres cas spéciaux où l'ordre n'est pas strictement séquentiel
+        if (Math.abs(sourceIndex - targetIndex) <= 2) { // Tolérance de 2 positions
+          pathIndex = i;
+          break outerLoop;
+        }
       }
     }
   }
