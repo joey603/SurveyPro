@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { Paper, Typography, Box, CircularProgress, Button } from '@mui/material';
 import * as d3 from 'd3';
 import ReactFlow, { 
@@ -436,6 +436,37 @@ const hierarchyStyles = `
   }
 `;
 
+// Ajoutez ce style CSS pour une meilleure gestion des transitions
+const scrollStyles = `
+  .path-list-container {
+    scroll-behavior: smooth;
+    will-change: scroll-position;
+    overscroll-behavior: contain;
+  }
+  
+  /* Éviter les saccades pendant la transition des éléments filtrés */
+  .path-list-container > div {
+    transform: translateZ(0); /* Activer l'accélération matérielle */
+    transition: opacity 0.2s ease-in-out;
+  }
+  
+  /* Masquer temporairement la barre de défilement pendant l'animation */
+  .filtering-active .path-list-container::-webkit-scrollbar {
+    width: 0px !important;
+    background: transparent;
+  }
+  
+  /* Réafficher la barre de défilement après l'animation */
+  .filtering-active .path-list-container::-webkit-scrollbar {
+    transition: width 0.3s ease-in-out;
+  }
+  
+  /* Stabiliser la hauteur du conteneur */
+  .path-list-container {
+    min-height: 200px;
+  }
+`;
+
 export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   survey,
   responses,
@@ -450,6 +481,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   const [analysisGroups, setAnalysisGroups] = useState<{[key: string]: {name: string, paths: number[]}}>({}); 
   const [filterApplied, setFilterApplied] = useState(false);
   const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
+  
+  // Ajouter une référence au conteneur de défilement
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+  const containerHeightRef = useRef<number>(0);
   
   // Fonction pour générer un nom alphabétique basé sur un index
   const getAlphabeticName = (index: number) => {
@@ -987,23 +1023,23 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  // Fonction pour activer/désactiver le filtre
+  // Version améliorée de toggleFilter
   const toggleFilter = () => {
-    const newFilterState = !filterApplied;
-    
-    // Ajouter une classe d'animation à l'élément parent
-    const container = document.querySelector('.react-flow__renderer');
-    if (container) {
-      container.classList.add('filtering-transition');
-      setTimeout(() => {
-        container.classList.remove('filtering-transition');
-      }, 700); // Durée de l'animation
+    // Mémoriser la position de défilement et la hauteur AVANT tout changement
+    if (scrollContainerRef.current) {
+      scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      containerHeightRef.current = scrollContainerRef.current.scrollHeight;
+      
+      // Figer la hauteur explicitement pour éviter tout redimensionnement pendant la transition
+      scrollContainerRef.current.style.height = `${scrollContainerRef.current.offsetHeight}px`;
+      scrollContainerRef.current.classList.add('filtering-transition');
     }
     
+    const newFilterState = !filterApplied;
     setFilterApplied(newFilterState);
     
+    // Appliquer les filtres...
     if (newFilterState) {
-      // Filtrer les chemins pour ne garder que ceux qui sont sélectionnés
       const filtered = allPaths.filter(pathItem => 
         selectedPaths.some(selectedPath => 
           selectedPath.length === pathItem.path.length && 
@@ -1014,27 +1050,32 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         )
       );
       setFilteredPaths(filtered);
-      
-      // Mettre à jour les nœuds et arêtes pour ne montrer que ceux qui font partie des parcours sélectionnés
       updateVisibleElements(true);
-      
-      // Identifier les réponses qui correspondent aux parcours sélectionnés
       if (onFilterChange) {
         const filteredResponses = getFilteredResponses();
         onFilterChange(true, filteredResponses);
       }
     } else {
-      // Réinitialiser pour afficher tous les chemins
       setFilteredPaths([]);
-      
-      // Remettre tous les nœuds et arêtes
       updateVisibleElements(false);
-      
-      // Notifier le parent que le filtre est désactivé
       if (onFilterChange) {
         onFilterChange(false, responses);
       }
     }
+    
+    // Utiliser requestAnimationFrame pour s'assurer que le DOM a été mis à jour
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          // Libérer la hauteur fixée
+          scrollContainerRef.current.style.height = '';
+          scrollContainerRef.current.classList.remove('filtering-transition');
+          
+          // Restaurer la position de défilement
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+        }
+      }, 50); // Petit délai pour s'assurer que le rendu est terminé
+    });
   };
   
   // Nouvelle fonction pour identifier les réponses correspondant aux parcours sélectionnés
@@ -1519,24 +1560,27 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           
           {allPaths.length > 0 ? (
             <Box 
+              ref={scrollContainerRef}
+              className={`path-list-container ${filterApplied ? 'filtering-active' : ''}`}
               sx={{ 
-                overflowY: 'auto',  // Barre de défilement verticale quand nécessaire
-                overflowX: 'hidden',  // Masquer le défilement horizontal
+                overflowY: 'auto',
+                overflowX: 'hidden',
                 flex: 1,
-                height: 'calc(100% - 30px)',  // Hauteur calculée en fonction du titre
+                height: 'calc(100% - 30px)',
+                position: 'relative', // Important pour le positionnement absolu
                 '&::-webkit-scrollbar': {
-                  width: '8px',  // Largeur de la barre de défilement
+                  width: '8px',
                 },
                 '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',  // Couleur de fond de la piste
+                  background: '#f1f1f1',
                   borderRadius: '4px',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  background: '#888',  // Couleur de la glissière
+                  background: '#888',
                   borderRadius: '4px',
                 },
                 '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#555',  // Couleur au survol
+                  background: '#555',
                 }
               }}
             >
@@ -1620,6 +1664,29 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       </Box>
       <style>{styles}</style>
       <style>{hierarchyStyles}</style>
+      <style>{scrollStyles}</style>
+      <style>
+      {`
+        .path-list-container {
+          scroll-behavior: auto !important; /* Désactiver le scroll smooth pendant la transition */
+          will-change: scroll-position;
+          overscroll-behavior: contain;
+          transition: none !important; /* Désactiver les transitions pendant le filtrage */
+        }
+        
+        .filtering-transition {
+          overflow: hidden !important; /* Bloquer complètement le défilement pendant la transition */
+        }
+        
+        .filtering-transition > * {
+          transition: opacity 0.2s ease-out;
+        }
+        
+        .path-list-container .MuiBox-root {
+          transform: translateZ(0); /* Activer l'accélération matérielle */
+        }
+      `}
+      </style>
     </Paper>
   );
 };
