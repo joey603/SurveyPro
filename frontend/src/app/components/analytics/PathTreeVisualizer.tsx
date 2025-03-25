@@ -39,17 +39,33 @@ export interface PathTreeVisualizerProps {
   selectedPaths: PathSegment[][];
 }
 
+// Ajoutez ce tableau de couleurs en haut du fichier, juste après les imports
+const HIGHLIGHT_COLORS = [
+  '#8A2BE2', // Violet
+  '#1E90FF', // Bleu dodger
+  '#FF6347', // Tomate
+  '#32CD32', // Vert lime
+  '#FF8C00', // Orange foncé
+  '#9932CC', // Orchidée foncée
+  '#20B2AA', // Turquoise
+  '#FF1493', // Rose profond
+  '#4682B4', // Bleu acier
+  '#00CED1', // Turquoise moyen
+];
+
 // Composant personnalisé pour les nœuds de question avec mise en évidence améliorée
 const QuestionNode = ({ data }: { data: any }) => {
-  // Vérification précise pour déterminer si ce nœud fait partie d'un parcours sélectionné
-  const isInSelectedPath = data.selectedPaths && data.selectedPaths.length > 0 && 
-    data.selectedPaths.some((path: PathSegment[]) => 
-      path.some((segment: PathSegment) => 
-        segment.questionId === data.questionId
+  // Vérifier si ce nœud fait partie d'un parcours sélectionné et obtenir l'index du parcours
+  const pathIndex = data.selectedPaths && data.selectedPaths.length > 0 
+    ? data.selectedPaths.findIndex((path: PathSegment[]) => 
+        path.some((segment: PathSegment) => segment.questionId === data.questionId)
       )
-    );
-
-  console.log("Node:", data.questionId, "isSelected:", isInSelectedPath); // Débogage
+    : -1;
+  
+  const isInSelectedPath = pathIndex >= 0;
+  const highlightColor = isInSelectedPath 
+    ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
+    : 'rgba(102, 126, 234, 0.2)';
 
   // Calculer la taille du cercle basée sur le nombre de répondants avec un min et max
   const minSize = 26;
@@ -70,18 +86,18 @@ const QuestionNode = ({ data }: { data: any }) => {
       transform: isInSelectedPath ? 'scale(1.05)' : 'scale(1)',
       transition: 'all 0.4s ease'
     }}>
-      {/* Conteneur principal - forme et ombre avec effet de pulsation pour les items sélectionnés */}
+      {/* Conteneur principal avec couleur dynamique */}
       <div style={{
         position: 'absolute',
         top: '5px',
         left: '5px',
         right: '5px',
         bottom: '5px',
-        backgroundColor: isInSelectedPath ? 'rgba(138, 43, 226, 0.15)' : 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: isInSelectedPath ? `${highlightColor}20` : 'rgba(255, 255, 255, 0.95)',
         borderRadius: '12px',
-        border: `${isInSelectedPath ? 4 : 2}px solid ${isInSelectedPath ? '#8A2BE2' : 'rgba(102, 126, 234, 0.2)'}`,
+        border: `${isInSelectedPath ? 4 : 2}px solid ${isInSelectedPath ? highlightColor : 'rgba(102, 126, 234, 0.2)'}`,
         boxShadow: isInSelectedPath 
-          ? '0 0 15px 5px rgba(138, 43, 226, 0.3)'
+          ? `0 0 15px 5px ${highlightColor}40`
           : '0 2px 8px rgba(0, 0, 0, 0.05)',
         transition: 'all 0.3s ease',
         zIndex: 1,
@@ -115,14 +131,14 @@ const QuestionNode = ({ data }: { data: any }) => {
         {data.text}
       </div>
 
-      {/* Cercle avec le nombre de réponses */}
+      {/* Cercle avec le nombre de réponses - couleur dynamique */}
       <div 
         style={{ 
           width: `${isInSelectedPath ? size * 1.1 : size}px`,
           height: `${isInSelectedPath ? size * 1.1 : size}px`,
           borderRadius: '50%',
           backgroundColor: isInSelectedPath 
-            ? "#1976d2" 
+            ? highlightColor 
             : "rgba(102, 126, 234, 0.7)",
           border: `2px solid ${isInSelectedPath ? "#ffffff" : "rgba(255, 255, 255, 0.8)"}`,
           display: 'flex',
@@ -131,7 +147,7 @@ const QuestionNode = ({ data }: { data: any }) => {
           fontWeight: 'bold',
           color: '#ffffff',
           fontSize: isInSelectedPath ? '14px' : '12px',
-          boxShadow: isInSelectedPath ? '0 4px 8px rgba(25, 118, 210, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.15)',
+          boxShadow: isInSelectedPath ? `0 4px 8px ${highlightColor}40` : '0 2px 6px rgba(0, 0, 0, 0.15)',
           transition: 'all 0.3s ease',
           zIndex: 3,
           position: 'relative'
@@ -140,12 +156,12 @@ const QuestionNode = ({ data }: { data: any }) => {
         {data.count}
       </div>
       
-      {/* Handles - ajustés pour être bien positionnés */}
+      {/* Handles - couleur dynamique */}
       <Handle 
         type="target" 
         position={Position.Top} 
         style={{ 
-          background: isInSelectedPath ? '#1976d2' : '#667eea',
+          background: isInSelectedPath ? highlightColor : '#667eea',
           width: isInSelectedPath ? '10px' : '8px',
           height: isInSelectedPath ? '10px' : '8px',
           top: '-5px',
@@ -158,7 +174,7 @@ const QuestionNode = ({ data }: { data: any }) => {
         type="source" 
         position={Position.Bottom} 
         style={{ 
-          background: isInSelectedPath ? '#1976d2' : '#667eea',
+          background: isInSelectedPath ? highlightColor : '#667eea',
           width: isInSelectedPath ? '10px' : '8px',
           height: isInSelectedPath ? '10px' : '8px',
           bottom: '-5px',
@@ -168,7 +184,7 @@ const QuestionNode = ({ data }: { data: any }) => {
         }} 
       />
 
-      {/* Indicateur visuel supplémentaire pour les nœuds sélectionnés */}
+      {/* Indicateur visuel avec couleur dynamique */}
       {isInSelectedPath && (
         <div style={{
           position: 'absolute',
@@ -177,7 +193,7 @@ const QuestionNode = ({ data }: { data: any }) => {
           width: '20px',
           height: '20px',
           borderRadius: '50%',
-          backgroundColor: '#8A2BE2',
+          backgroundColor: highlightColor,
           border: '2px solid white',
           zIndex: 20,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
@@ -187,7 +203,7 @@ const QuestionNode = ({ data }: { data: any }) => {
   );
 };
 
-// Composant d'arête personnalisé avec mise en évidence correcte
+// Composant d'arête personnalisé avec détection améliorée pour couvrir tous les cas hiérarchiques
 const LinkComponent = ({ 
   id, 
   source, 
@@ -201,32 +217,91 @@ const LinkComponent = ({
   sourcePosition,
   targetPosition
 }: EdgeProps) => {
-  // Vérification précise pour déterminer si ce lien fait partie d'un parcours sélectionné
-  const isInSelectedPath = data && data.selectedPaths && data.selectedPaths.length > 0 && 
-    data.selectedPaths.some((path: PathSegment[]) => {
-      // Chercher si source et target apparaissent consécutivement dans le parcours
-      for (let i = 0; i < path.length - 1; i++) {
-        const sourceId = source.split('-').slice(-1)[0]; // Extraire l'ID de la question source
-        const targetId = target.split('-').slice(-1)[0]; // Extraire l'ID de la question cible
-        
-        if (path[i].questionId === sourceId && path[i+1].questionId === targetId) {
-          return true;
+  // Détection améliorée qui fonctionne avec tous les types de liens et niveaux hiérarchiques
+  let pathIndex = -1;
+  
+  if (data && data.selectedPaths && data.selectedPaths.length > 0) {
+    // Extraire les IDs pour la comparaison, avec plus de robustesse
+    // Prendre tous les segments possibles de l'ID pour couvrir tous les cas hiérarchiques
+    const sourceIdParts = source.split('-');
+    const targetIdParts = target.split('-');
+    
+    // Créer des tableaux d'IDs possibles pour la source et la cible
+    const sourceIds = [
+      source, 
+      sourceIdParts[sourceIdParts.length - 1], // Dernier segment
+      sourceIdParts.length > 1 ? sourceIdParts[sourceIdParts.length - 2] : '', // Avant-dernier segment
+    ].filter(id => id);
+    
+    const targetIds = [
+      target, 
+      targetIdParts[targetIdParts.length - 1], // Dernier segment
+      targetIdParts.length > 1 ? targetIdParts[targetIdParts.length - 2] : '', // Avant-dernier segment
+    ].filter(id => id);
+    
+    // Parcourir tous les chemins sélectionnés
+    outerLoop: for (let i = 0; i < data.selectedPaths.length; i++) {
+      const path = data.selectedPaths[i];
+      
+      // Vérification 1: Segments consécutifs dans le parcours
+      for (let j = 0; j < path.length - 1; j++) {
+        // Vérifier chaque combinaison source-cible possible
+        for (const srcId of sourceIds) {
+          for (const tgtId of targetIds) {
+            if (path[j].questionId === srcId && path[j+1].questionId === tgtId) {
+              pathIndex = i;
+              break outerLoop;
+            }
+          }
         }
       }
-      return false;
-    });
+      
+      // Vérification 2: Questions faisant partie du même parcours, pas nécessairement consécutives
+      // Utile pour les liens entre niveaux hiérarchiques différents
+      let sourceFound = false;
+      let sourceIndex = -1;
+      let targetIndex = -1;
+      
+      // Trouver les indices des questions dans le parcours
+      for (let j = 0; j < path.length; j++) {
+        for (const srcId of sourceIds) {
+          if (path[j].questionId === srcId) {
+            sourceFound = true;
+            sourceIndex = j;
+            break;
+          }
+        }
+        
+        for (const tgtId of targetIds) {
+          if (path[j].questionId === tgtId) {
+            targetIndex = j;
+            break;
+          }
+        }
+      }
+      
+      // Si source et cible sont trouvées et la source apparaît avant la cible dans le parcours
+      if (sourceFound && targetIndex > sourceIndex && targetIndex > -1) {
+        pathIndex = i;
+        break outerLoop;
+      }
+    }
+  }
+  
+  const isInSelectedPath = pathIndex >= 0;
+  const highlightColor = isInSelectedPath 
+    ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
+    : '#667eea';
 
-  console.log("Edge:", id, "isSelected:", isInSelectedPath); // Débogage
-
-  // Style standard pour les liaisons non sélectionnées, style contrasté pour les sélectionnées
+  // Style avec couleur dynamique
   const customStyle = {
-    stroke: isInSelectedPath ? "#8A2BE2" : "#667eea", // Couleur bleue plus foncée pour les liens non sélectionnés
-    strokeWidth: isInSelectedPath ? 6 : 2.5, // Épaisseur augmentée pour les liens non sélectionnés
+    stroke: isInSelectedPath ? highlightColor : "#667eea", 
+    strokeWidth: isInSelectedPath ? 6 : 2.5,
     strokeDasharray: isInSelectedPath ? "" : "6 4",
-    filter: isInSelectedPath ? 'drop-shadow(0 0 8px rgba(138, 43, 226, 0.8))' : 'none',
+    filter: isInSelectedPath ? `drop-shadow(0 0 8px ${highlightColor}80)` : 'none',
     transition: 'all 0.4s ease',
     strokeLinecap: "round" as const,
-    opacity: isInSelectedPath ? 1 : 0.8, // Opacité augmentée pour les liens non sélectionnés
+    opacity: isInSelectedPath ? 1 : 0.8,
   };
 
   if (!sourceX || !sourceY || !targetX || !targetY) {
@@ -236,14 +311,13 @@ const LinkComponent = ({
   // Calculer le chemin entre les points source et cible
   const path = `M${sourceX},${sourceY} C${sourceX},${sourceY + (targetY - sourceY) / 3} ${targetX},${targetY - (targetY - sourceY) / 3} ${targetX},${targetY}`;
 
-  // N'afficher l'effet de halo que pour les liens sélectionnés
   return (
     <>
       {isInSelectedPath && (
         <path
           id={`${id}-glow`}
           style={{
-            stroke: "rgba(138, 43, 226, 0.3)", // Violet au lieu de rouge
+            stroke: `${highlightColor}40`,
             strokeWidth: 8,
             fillOpacity: 0,
             strokeLinecap: "round" as const,
@@ -735,20 +809,23 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setLoading(true);
       const { nodes, edges, paths } = processPathTree(survey, responses);
       
+      // S'assurer que selectedPaths est correctement passé à chaque arête
+      const edgesWithSelection = edges.map(edge => ({
+        ...edge,
+        data: {
+          ...(edge.data || {}),
+          selectedPaths: selectedPaths,
+          // Ajouter les informations source et target pour faciliter la comparaison
+          source: edge.source,
+          target: edge.target
+        }
+      }));
+      
       // Ajouter selectedPaths aux données de chaque nœud
       const nodesWithSelection = nodes.map(node => ({
         ...node,
         data: {
           ...node.data,
-          selectedPaths: selectedPaths
-        }
-      }));
-      
-      // Ajouter selectedPaths aux données de chaque arête
-      const edgesWithSelection = edges.map(edge => ({
-        ...edge,
-        data: {
-          ...edge.data || {},
           selectedPaths: selectedPaths
         }
       }));
@@ -814,13 +891,39 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     // Appeler la fonction onPathSelect pour mettre à jour selectedPaths
     onPathSelect(path);
     
+    // Forcer la mise à jour complète des nœuds et des arêtes
+    if (path.length > 0) {
+      // Créer une nouvelle référence de selectedPaths pour s'assurer que la mise à jour est détectée
+      const newSelectedPaths = [path];
+      
+      // Mettre à jour toutes les arêtes avec les nouveaux chemins sélectionnés
+      const updatedEdges = edges.map(edge => ({
+        ...edge,
+        data: {
+          ...(edge.data || {}),
+          selectedPaths: newSelectedPaths
+        }
+      }));
+      
+      // Mettre à jour tous les nœuds avec les nouveaux chemins sélectionnés
+      const updatedNodes = nodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          selectedPaths: newSelectedPaths
+        }
+      }));
+      
+      // Appliquer les mises à jour
+      setEdges(updatedEdges);
+      setNodes(updatedNodes);
+    }
+    
     // Utiliser l'instance pour accéder à fitView
     if (reactFlowInstance) {
-      // Laisser un peu de temps pour que ReactFlow mette à jour les styles des nœuds
       setTimeout(() => {
-        console.log("Fitting view with selected paths:", selectedPaths);
         reactFlowInstance.fitView({ padding: 0.2 });
-      }, 100); // Augmenter légèrement le délai
+      }, 200); // Augmenter légèrement le délai pour permettre le rendu des changements
     }
   };
   
