@@ -376,20 +376,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         </Typography>
       </Box>
 
-      <Tabs
-        value={activeTab > 1 ? 0 : activeTab}
-        onChange={handleTabChange}
-        centered
-        variant="fullWidth"
-        sx={{
-          borderBottom: 1,
-          borderColor: 'divider',
-          mb: 2
-        }}
-      >
-        <Tab icon={<PieChartIcon />} label="Démographie" />
-        <Tab icon={<ShowChartIcon />} label="Âge" />
-      </Tabs>
+      
 
       {/* Vérifier s'il y a des réponses à afficher */}
       {displayedResponses.length > 0 ? (
