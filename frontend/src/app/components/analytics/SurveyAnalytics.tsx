@@ -439,6 +439,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [analysisGroups, setAnalysisGroups] = useState<AnalysisGroup[]>([]);
   const [filteredResponsesByPath, setFilteredResponsesByPath] = useState<SurveyResponse[]>([]);
   const [pathFilterActive, setPathFilterActive] = useState(false);
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1230,6 +1231,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     if (isFiltered) {
       // Appliquer le filtre des parcours
       setFilteredResponsesByPath(filteredResps);
+      
+      // Réinitialiser les filtres avancés pour être cohérent avec le nouveau filtrage
+      if (showFilters) {
+        // Fermer puis rouvrir le panneau de filtres pour forcer sa réinitialisation
+        setShowFilters(false);
+        setTimeout(() => setShowFilters(true), 100);
+      }
     } else {
       // Désactiver le filtre des parcours
       setFilteredResponsesByPath([]);
@@ -1311,8 +1319,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  survey={survey}
-                  responses={surveyAnswers}
+                  survey={{
+                    ...survey,
+                    questions: (pathFilterActive && filteredQuestions.length > 0) 
+                      ? filteredQuestions 
+                      : survey.questions
+                  }}
+                  responses={pathFilterActive ? filteredResponsesByPath : surveyAnswers}
                   onApplyFilters={handleAdvancedFilterApply}
                 />
               </Grid>

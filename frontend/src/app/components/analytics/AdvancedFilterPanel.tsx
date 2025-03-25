@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -97,12 +97,14 @@ interface AdvancedFilterPanelProps {
   survey: Survey;
   responses: SurveyResponse[];
   onApplyFilters: (filteredResponses: SurveyResponse[]) => void;
+  pathFilterActive?: boolean;
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   survey,
   responses,
   onApplyFilters,
+  pathFilterActive = false
 }) => {
   // États
   const [filters, setFilters] = useState<Filters>({
@@ -115,6 +117,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   const [ageRange, setAgeRange] = useState<[number, number]>([0, 100]);
   const [activeTab, setActiveTab] = useState(1);
   const [cities, setCities] = useState<string[]>([]);
+  const [availableFilterOptions, setAvailableFilterOptions] = useState({
+    genders: [] as string[],
+    educationLevels: [] as string[],
+    cities: [] as string[]
+  });
 
   // Effet pour extraire les villes uniques des réponses
   React.useEffect(() => {
@@ -126,6 +133,39 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     });
     setCities(Array.from(uniqueCities));
   }, [responses]);
+
+  // Effet pour mettre à jour les options de filtres disponibles
+  useEffect(() => {
+    // Recalculer les options de filtres disponibles à partir des réponses actuelles
+    const availableGenders = new Set<string>();
+    const availableEducationLevels = new Set<string>();
+    const availableCities = new Set<string>();
+    
+    responses.forEach(response => {
+      if (response.respondent?.demographic) {
+        const { gender, educationLevel, city } = response.respondent.demographic;
+        if (gender) availableGenders.add(gender);
+        if (educationLevel) availableEducationLevels.add(educationLevel);
+        if (city) availableCities.add(city);
+      }
+    });
+    
+    // Mettre à jour l'état des options disponibles
+    setAvailableFilterOptions({
+      genders: Array.from(availableGenders),
+      educationLevels: Array.from(availableEducationLevels),
+      cities: Array.from(availableCities)
+    });
+  }, [responses]);
+
+  // Ajoutez ce log pour le débogage
+  useEffect(() => {
+    console.log("AdvancedFilterPanel monté avec:", {
+      pathFilterActive,
+      questionCount: survey.questions.length,
+      responseCount: responses.length
+    });
+  }, [pathFilterActive, survey.questions.length, responses.length]);
 
   // Fonctions utilitaires
   const getOperatorsByType = (questionType: string): string[] => {
@@ -478,6 +518,14 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
       console.log("Aucune réponse ne correspond aux filtres, affichage d'un tableau vide");
     }
   }, [filters, responses, onApplyFilters, calculateAge, evaluateRule, survey.questions]);
+
+  // Début du rendu dans AdvancedFilterPanel
+  const questionsWithResponses = survey.questions.filter(question => {
+    // Vérifier si cette question a des réponses dans les réponses filtrées
+    return responses.some(response => 
+      response.answers.some(answer => answer.questionId === question.id)
+    );
+  });
 
   // Rendu du composant
   return (
@@ -909,7 +957,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               }}
               label="Question"
             >
-              {survey.questions.map(question => (
+              {questionsWithResponses.map(question => (
                 <MenuItem key={question.id} value={question.id}>
                   {question.text}
                 </MenuItem>
