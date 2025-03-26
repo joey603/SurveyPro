@@ -162,19 +162,6 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
       <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
         <Chip
-          icon={getPrivacyFilterIcon()}
-          label={getPrivacyFilterLabel()}
-          onClick={handlePrivacyFilterClick}
-          color={privacyFilter !== 'all' ? 'primary' : 'default'}
-          variant={privacyFilter !== 'all' ? 'filled' : 'outlined'}
-          sx={{
-            '&.MuiChip-filled': {
-              background: colors.primary.gradient,
-            },
-          }}
-        />
-        
-        <Chip
           icon={<FilterListIcon />}
           label="Date Filter"
           onClick={() => setShowDateFilter(!showDateFilter)}
@@ -186,6 +173,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             },
           }}
         />
+        
         <Chip
           icon={<FilterListIcon />}
           label={`Sort by ${sortBy === 'date' ? 'date' : 'popularity'}`}
@@ -202,6 +190,20 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             },
           }}
         />
+        
+        <Chip
+          icon={getPrivacyFilterIcon()}
+          label={getPrivacyFilterLabel()}
+          onClick={handlePrivacyFilterClick}
+          color={privacyFilter !== 'all' ? 'primary' : 'default'}
+          variant={privacyFilter !== 'all' ? 'filled' : 'outlined'}
+          sx={{
+            '&.MuiChip-filled': {
+              background: colors.primary.gradient,
+            },
+          }}
+        />
+        
         <Chip
           icon={<FilterListIcon />}
           label="Pending"
