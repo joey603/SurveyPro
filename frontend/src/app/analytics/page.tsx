@@ -8,6 +8,9 @@ import SearchAndFilter from '../components/analytics/SearchAndFilter';
 import { AnalyticsCard } from '../components/analytics/AnalyticsCard';
 import { useAuth } from '@/utils/AuthContext';
 import { SurveyAnalytics } from '../components/analytics/SurveyAnalytics';
+import ShareIcon from '@mui/icons-material/Share';
+import ShareDialog from '../components/analytics/ShareDialog';
+import ExportIcon from '@mui/icons-material/IosShare';
 
 interface Question {
   id: string;
@@ -72,6 +75,7 @@ const AnalyticsPage: React.FC = () => {
   const [privacyFilter, setPrivacyFilter] = useState<'all' | 'private' | 'public'>('all');
 
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -166,6 +170,32 @@ const AnalyticsPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting survey:', error);
       setSnackbarMessage('Failed to delete survey');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
+
+  const handleShareSurvey = async (email: string) => {
+    try {
+      const token = localStorage.getItem('accessToken') || '';
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/survey-shares`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          surveyId: selectedSurvey?._id,
+          recipientEmail: email
+        })
+      });
+      
+      setSnackbarMessage('Sondage partagé avec succès');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+      setSnackbarMessage('Échec du partage du sondage');
       setSnackbarSeverity('error');
       setOpenSnackbar(true);
     }
@@ -386,7 +416,13 @@ const AnalyticsPage: React.FC = () => {
               {selectedSurvey.title}
             </Typography>
 
-            <Box sx={{ width: 48 }} />
+            <IconButton
+              sx={{ color: 'white' }}
+              onClick={() => setShowShareDialog(true)}
+              title="Partager"
+            >
+              <ShareIcon />
+            </IconButton>
           </Box>
 
           <Box sx={{ p: 3 }}>
@@ -414,6 +450,13 @@ const AnalyticsPage: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+      
+      <ShareDialog
+        open={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        onShare={handleShareSurvey}
+        survey={selectedSurvey}
+      />
     </Box>
   );
 };
