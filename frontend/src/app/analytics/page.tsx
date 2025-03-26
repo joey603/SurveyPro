@@ -41,6 +41,8 @@ interface Survey {
   isDynamic?: boolean;
   nodes?: any[];
   edges?: any[];
+  isPrivate?: boolean;
+  privateLink?: string;
 }
 
 const AnalyticsPage: React.FC = () => {
@@ -65,6 +67,9 @@ const AnalyticsPage: React.FC = () => {
   });
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
+
+  // Nouvel état pour le filtre de confidentialité
+  const [privacyFilter, setPrivacyFilter] = useState<'all' | 'private' | 'public'>('all');
 
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
 
@@ -140,6 +145,11 @@ const AnalyticsPage: React.FC = () => {
     setShowPendingOnly(pending);
   };
 
+  // Nouveau gestionnaire pour le filtre de confidentialité
+  const handlePrivacyFilterChange = (filter: 'all' | 'private' | 'public') => {
+    setPrivacyFilter(filter);
+  };
+
   const handleDeleteSurvey = async (surveyId: string) => {
     try {
       const token = localStorage.getItem('accessToken') || '';
@@ -186,9 +196,27 @@ const AnalyticsPage: React.FC = () => {
       }
     };
     
+    // Fonction pour déterminer si un sondage est privé
+    const isPrivateSurvey = (survey: any) => {
+      return Boolean(
+        survey.isPrivate || 
+        survey.privateLink || 
+        (survey.title && survey.title.toLowerCase().includes('private'))
+      );
+    };
+    
     const filtered = surveys.filter((survey) => {
       // Filtrer par propriété du sondage
       if (!belongsToCurrentUser(survey)) {
+        return false;
+      }
+      
+      // Appliquer le filtre de confidentialité
+      if (privacyFilter === 'private' && !isPrivateSurvey(survey)) {
+        return false;
+      }
+      
+      if (privacyFilter === 'public' && isPrivateSurvey(survey)) {
         return false;
       }
       
@@ -217,7 +245,7 @@ const AnalyticsPage: React.FC = () => {
     console.log('Sondages dynamiques après filtrage:', filtered.filter(s => s.isDynamic).length);
     
     return filtered;
-  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId, user?.id]);
+  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId, user?.id, privacyFilter]);
 
   const sortedSurveys = useMemo(() => {
     return [...filteredSurveys].sort((a, b) => {
@@ -287,6 +315,7 @@ const AnalyticsPage: React.FC = () => {
               onDateRangeChange={handleDateRangeChange}
               onSortChange={handleSortChange}
               onPendingChange={handlePendingChange}
+              onPrivacyFilterChange={handlePrivacyFilterChange}
             />
 
             {loading && (

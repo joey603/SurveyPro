@@ -10,6 +10,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -54,6 +56,7 @@ interface SearchAndFilterProps {
   onDateRangeChange: (start: Date | null, end: Date | null) => void;
   onSortChange: (sort: 'date' | 'popular') => void;
   onPendingChange: (showPending: boolean) => void;
+  onPrivacyFilterChange: (privacyFilter: 'all' | 'private' | 'public') => void;
 }
 
 const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
@@ -61,6 +64,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   onDateRangeChange,
   onSortChange,
   onPendingChange,
+  onPrivacyFilterChange
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<{
@@ -73,6 +77,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [privacyFilter, setPrivacyFilter] = useState<'all' | 'private' | 'public'>('all');
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -80,10 +85,39 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     setShowDateFilter(false);
     setSortBy('date');
     setShowPendingOnly(false);
+    setPrivacyFilter('all');
     onSearchChange('');
     onDateRangeChange(null, null);
     onSortChange('date');
     onPendingChange(false);
+    if (onPrivacyFilterChange) {
+      onPrivacyFilterChange('all');
+    }
+  };
+
+  const handlePrivacyFilterClick = () => {
+    const newFilter = privacyFilter === 'all' 
+      ? 'private' 
+      : (privacyFilter === 'private' ? 'public' : 'all');
+    
+    setPrivacyFilter(newFilter);
+    onPrivacyFilterChange(newFilter);
+  };
+
+  const getPrivacyFilterIcon = () => {
+    switch(privacyFilter) {
+      case 'private': return <LockIcon />;
+      case 'public': return <PublicIcon />;
+      default: return <FilterListIcon />;
+    }
+  };
+
+  const getPrivacyFilterLabel = () => {
+    switch(privacyFilter) {
+      case 'private': return 'Private';
+      case 'public': return 'Public';
+      default: return 'All Surveys';
+    }
   };
 
   return (
@@ -115,7 +149,8 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           endAdornment: (searchQuery ||
             dateRange.start ||
             dateRange.end ||
-            showPendingOnly) && (
+            showPendingOnly ||
+            privacyFilter !== 'all') && (
             <InputAdornment position="end">
               <IconButton size="small" onClick={clearFilters}>
                 <ClearIcon />
@@ -125,7 +160,20 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         }}
       />
 
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+        <Chip
+          icon={getPrivacyFilterIcon()}
+          label={getPrivacyFilterLabel()}
+          onClick={handlePrivacyFilterClick}
+          color={privacyFilter !== 'all' ? 'primary' : 'default'}
+          variant={privacyFilter !== 'all' ? 'filled' : 'outlined'}
+          sx={{
+            '&.MuiChip-filled': {
+              background: colors.primary.gradient,
+            },
+          }}
+        />
+        
         <Chip
           icon={<FilterListIcon />}
           label="Date Filter"

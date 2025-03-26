@@ -39,7 +39,7 @@ interface Survey {
   edges?: any[];
   responses?: SurveyResponse[];
   isPrivate?: boolean;
-  privateLink?: boolean;
+  privateLink?: string;
 }
 
 interface Question {
@@ -90,12 +90,24 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
 
   return (
     <Card
-      elevation={3}
+      elevation={1}
       sx={{
+        borderRadius: 2,
+        overflow: 'hidden',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        transition: 'all 0.3s ease-in-out',
         position: 'relative',
+        '&:hover': {
+          boxShadow: 3,
+          zIndex: 1,
+          '& .hover-content': {
+            opacity: 1,
+            visibility: 'visible',
+            transform: 'translateY(0)',
+          }
+        }
       }}
     >
       {/* Badge Private/Public positionné en haut à droite */}
@@ -103,7 +115,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         position: 'absolute', 
         top: 8, 
         right: 8, 
-        zIndex: 1 
+        zIndex: 3 // Augmenté pour rester au-dessus du hover-content
       }}>
         <Chip 
           icon={isPrivateSurvey ? <LockIcon fontSize="small" /> : <PublicIcon fontSize="small" />}
@@ -114,7 +126,13 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         />
       </Box>
       
-      <CardContent sx={{ pt: 4 }}>  {/* Ajouter un padding en haut pour éviter le chevauchement avec le badge */}
+      <CardContent sx={{ 
+        pt: 4, 
+        position: 'relative',
+        flex: '1 0 auto', // Permet au contenu de s'étendre
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         <Typography
           variant="h6"
           sx={{
@@ -137,7 +155,6 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           color="text.secondary"
           sx={{
             mb: 2,
-            flex: 1,
             display: '-webkit-box',
             WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
@@ -148,112 +165,165 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         >
           {survey.description || 'No description available'}
         </Typography>
-
-        <Stack
-          direction="row"
-          spacing={1}
+        
+        {/* Ajout du contenu de survol */}
+        <Box
+          className="hover-content"
           sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: '8px',
-            mt: 2,
-            mb: 2,
-            '& .MuiChip-root': {
-              margin: '0 !important'
-            }
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'white',
+            p: 3,
+            opacity: 0,
+            visibility: 'hidden',
+            transform: 'translateY(-10px)',
+            transition: 'all 0.3s ease-in-out',
+            boxShadow: 3,
+            borderRadius: 2,
+            zIndex: 2,
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#888',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#666',
+              },
+            },
           }}
         >
-          <Chip
-            size="small"
-            icon={<BarChartIcon sx={{ fontSize: 16 }} />}
-            label={`${responseCount} Responses`}
-            sx={{
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              color: '#667eea',
-              height: '24px',
-              '& .MuiChip-icon': {
-                color: '#667eea'
-              },
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: 'primary.main',
+              fontWeight: 500,
+              mb: 2 
             }}
-          />
-          <Chip
-            size="small"
-            icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-            label={`${survey.questions?.length || survey.nodes?.length || 0} Questions`}
-            sx={{
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              color: '#667eea',
-              height: '24px',
-              '& .MuiChip-icon': {
-                color: '#667eea'
-              },
+          >
+            {survey.title}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'text.secondary',
+              mb: 2,
+              lineHeight: 1.6 
             }}
-          />
-          {survey.isDynamic ? (
-            <Chip
-              size="small"
-              icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-              label="Dynamic"
-              sx={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                color: '#667eea',
-                height: '24px',
-                '& .MuiChip-icon': {
-                  color: '#667eea'
-                },
-              }}
-            />
-          ) : (
-            <Chip
-              size="small"
-              icon={<ListAltIcon sx={{ fontSize: 16 }} />}
-              label="Static"
-              sx={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                color: '#667eea',
-                height: '24px',
-                '& .MuiChip-icon': {
-                  color: '#667eea'
-                },
-              }}
-            />
-          )}
-          {survey.demographicEnabled && (
-            <Chip
-              size="small"
-              label="Demographic"
-              sx={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                color: '#667eea',
-                height: '24px',
-              }}
-            />
-          )}
-          {survey.sharedBy && (
-            <Chip
-              size="small"
-              icon={<EmailIcon sx={{ fontSize: 16 }} />}
-              label={`Shared by ${survey.sharedBy}`}
-              sx={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                color: '#667eea',
-                height: '24px',
-                '& .MuiChip-icon': {
-                  color: '#667eea'
-                },
-              }}
-            />
-          )}
-        </Stack>
+          >
+            {survey.description || 'No description available'}
+          </Typography>
+        </Box>
 
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ mb: 2 }}
-        >
-          Created on {new Date(survey.createdAt).toLocaleDateString()}
-        </Typography>
+        {/* Conteneur pour les badges avec hauteur fixe */}
+        <Box sx={{ 
+          flexGrow: 1, // Fait croître cette section pour remplir l'espace
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start'
+        }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: '8px',
+              mt: 2,
+              mb: 2,
+              minHeight: '56px', // Hauteur minimale pour accommoder deux lignes de badges
+              '& .MuiChip-root': {
+                margin: '0 !important'
+              }
+            }}
+          >
+            <Chip
+              size="small"
+              icon={<BarChartIcon sx={{ fontSize: 16 }} />}
+              label={`${responseCount} Responses`}
+              sx={{
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
+              }}
+            />
+            <Chip
+              size="small"
+              icon={<QuizIcon sx={{ fontSize: 16 }} />}
+              label={`${survey.questions?.length || survey.nodes?.length || 0} Questions`}
+              sx={{
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
+              }}
+            />
+            <Chip
+              size="small"
+              icon={survey.isDynamic ? <AutoGraphIcon sx={{ fontSize: 16 }} /> : <ListAltIcon sx={{ fontSize: 16 }} />}
+              label={survey.isDynamic ? "Dynamic" : "Static"}
+              sx={{
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                height: '24px',
+                '& .MuiChip-icon': {
+                  color: '#667eea'
+                },
+              }}
+            />
+            {survey.demographicEnabled && (
+              <Chip
+                size="small"
+                label="Demographic"
+                sx={{
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  color: '#667eea',
+                  height: '24px',
+                }}
+              />
+            )}
+            {survey.sharedBy && (
+              <Chip
+                size="small"
+                icon={<EmailIcon sx={{ fontSize: 16 }} />}
+                label={`Shared by ${survey.sharedBy}`}
+                sx={{
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  color: '#667eea',
+                  height: '24px',
+                  '& .MuiChip-icon': {
+                    color: '#667eea'
+                  },
+                }}
+              />
+            )}
+          </Stack>
+          
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ 
+              mt: 'auto', // Pousse la date de création vers le bas
+              mb: 0 
+            }}
+          >
+            Created on {new Date(survey.createdAt).toLocaleDateString()}
+          </Typography>
+        </Box>
       </CardContent>
 
       <Box
