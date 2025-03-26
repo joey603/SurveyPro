@@ -6,6 +6,9 @@ import {
   Button,
   Stack,
   Chip,
+  Card,
+  CardHeader,
+  CardContent,
 } from '@mui/material';
 import {
   BarChart as BarChartIcon,
@@ -13,6 +16,11 @@ import {
   Delete as DeleteIcon,
   Email as EmailIcon,
   ListAlt as ListAltIcon,
+  Lock as LockIcon,
+  Public as PublicIcon,
+  Quiz as QuizIcon,
+  Poll as PollIcon,
+  AccountTree as AccountTreeIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 
@@ -30,6 +38,8 @@ interface Survey {
   nodes?: any[];
   edges?: any[];
   responses?: SurveyResponse[];
+  isPrivate?: boolean;
+  privateLink?: boolean;
 }
 
 interface Question {
@@ -66,32 +76,45 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   responses = [],
 }) => {
   const responseCount = responses?.length || 0;
+  const surveyType = survey.nodes ? 'dynamic' : 'static';
+  
+  // Déterminer si c'est un sondage privé
+  const isPrivateSurvey = Boolean(
+    survey.isPrivate || 
+    survey.privateLink || 
+    (survey.title && survey.title.toLowerCase().includes('private'))
+  );
+  
+  // Log pour déboguer
+  console.log(`Sondage ${survey._id}: isPrivate=${survey.isPrivate}, privateLink=${Boolean(survey.privateLink)}, calculé=${isPrivateSurvey}`);
 
   return (
-    <Paper
-      elevation={1}
+    <Card
+      elevation={3}
       sx={{
-        borderRadius: 2,
-        overflow: 'hidden',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.3s ease-in-out',
         position: 'relative',
-        '&:hover': {
-          boxShadow: 3,
-          zIndex: 1,
-          transform: 'translateY(-4px)',
-        }
       }}
     >
+      {/* Badge Private/Public positionné en haut à droite */}
       <Box sx={{ 
-        p: 3, 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column',
-        position: 'relative'
+        position: 'absolute', 
+        top: 8, 
+        right: 8, 
+        zIndex: 1 
       }}>
+        <Chip 
+          icon={isPrivateSurvey ? <LockIcon fontSize="small" /> : <PublicIcon fontSize="small" />}
+          label={isPrivateSurvey ? "Private" : "Public"}
+          size="small" 
+          color="primary"
+          variant="outlined" 
+        />
+      </Box>
+      
+      <CardContent sx={{ pt: 4 }}>  {/* Ajouter un padding en haut pour éviter le chevauchement avec le badge */}
         <Typography
           variant="h6"
           sx={{
@@ -231,7 +254,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         >
           Created on {new Date(survey.createdAt).toLocaleDateString()}
         </Typography>
-      </Box>
+      </CardContent>
 
       <Box
         sx={{
@@ -279,6 +302,6 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           View Analytics
         </Button>
       </Box>
-    </Paper>
+    </Card>
   );
 }; 

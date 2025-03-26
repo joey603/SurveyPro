@@ -16,6 +16,7 @@ import ReactFlow, {
   useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon } from '@mui/icons-material';
 
 export interface PathSegment {
   questionId: string;
@@ -145,7 +146,7 @@ const QuestionNode = ({ data }: { data: any }) => {
   
   // Obtenir les positions calculées
   const secondaryIndicatorPositions = getSecondaryIndicatorPositions(pathIndices.length);
-
+  
   return (
     <div style={{ 
       position: 'relative',
@@ -228,7 +229,7 @@ const QuestionNode = ({ data }: { data: any }) => {
         }}
       >
         {data.count}
-      </div>
+        </div>
       
       {/* Handles - couleur dynamique */}
       <Handle 
@@ -659,7 +660,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     // Créer les groupes d'analyse
     let groupIndex = 0;
     Object.entries(pathsByFirstQuestion).forEach(([key, pathIndices]) => {
-      const groupName = `Groupe ${String.fromCharCode(65 + groupIndex)}`;
+      const groupName = `Group ${String.fromCharCode(65 + groupIndex)}`;
       const groupId = `group-${groupIndex}`;
       
       groups[groupId] = {
@@ -769,7 +770,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         // C'est un nœud terminal, on sauvegarde le chemin complet
         if (currentPath.length > 0) {
           completePaths.push({
-            name: `Parcours ${getAlphabeticName(completePaths.length)}`,
+            name: `Path ${getAlphabeticName(completePaths.length)}`,
             path: [...currentPath]
           });
         }
@@ -1639,8 +1640,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         overflow: 'hidden'
       }}
     >
-      <Typography variant="subtitle1" gutterBottom>
-        Arborescence des parcours ({responses.length} répondants)
+      <Typography variant="h6" component="h2" gutterBottom>
+        Response Path Analysis
       </Typography>
       
       <Box sx={{ 
@@ -1720,7 +1721,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             height: '100%' 
           }}>
             <Typography variant="body2">
-              Aucune réponse disponible pour visualiser l'arborescence des parcours.
+              No paths available
             </Typography>
           </Box>
         )}
@@ -1738,8 +1739,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           maxHeight: 'calc(100vh - 120px)',  // Limite la hauteur maximale
           overflow: 'hidden'  // Cache les débordements
         }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Parcours complets ({allPaths.length})
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Complete Paths
           </Typography>
           
           {allPaths.length > 0 ? (
@@ -1778,7 +1779,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     onClick={toggleFilter}
                     sx={{ width: '100%' }}
                   >
-                    {filterApplied ? "Afficher tous les parcours" : "Filtrer sur les parcours sélectionnés"}
+                    {filterApplied ? "Show all paths" : "Filter on selected paths"}
                   </Button>
                 </Box>
               )}
@@ -1813,17 +1814,17 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   : 'background.paper';
                 
                 return (
-                  <Box 
-                    key={index}
-                    sx={{
-                      p: 1,
-                      mb: 1,
-                      border: '1px solid',
+                <Box 
+                  key={index}
+                  sx={{
+                    p: 1,
+                    mb: 1,
+                    border: '1px solid',
                       borderColor: isSelected ? pathColor : 'divider',
-                      borderRadius: 1,
+                    borderRadius: 1,
                       backgroundColor: backgroundColor,
-                      cursor: 'pointer',
-                      '&:hover': {
+                    cursor: 'pointer',
+                    '&:hover': {
                         backgroundColor: isSelected 
                           ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}30` // Légèrement plus foncé au survol
                           : 'action.hover',
@@ -1846,37 +1847,37 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         />
                       )}
                       <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                        {pathItem.name} ({pathItem.path.length} étapes)
-                      </Typography>
+                    {pathItem.name} ({pathItem.path.length} steps)
+                  </Typography>
                     </Box>
                     
-                    <Box sx={{ mt: 1 }}>
-                      {pathItem.path.map((segment, segIdx) => (
-                        <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
-                          <Typography variant="caption" sx={{ mr: 1 }}>
-                            {segIdx + 1}.
-                          </Typography>
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: '100%'
-                            }}
-                          >
+                  <Box sx={{ mt: 1 }}>
+                    {pathItem.path.map((segment, segIdx) => (
+                      <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
+                        <Typography variant="caption" sx={{ mr: 1 }}>
+                          {segIdx + 1}.
+        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '100%'
+                          }}
+                        >
                             {segment.questionText.substring(0, 40)}
                             {segment.questionText.length > 40 ? '...' : ''}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
+                </Box>
                 );
               })}
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              Aucun parcours disponible.
+              No paths available
             </Typography>
           )}
         </Box>

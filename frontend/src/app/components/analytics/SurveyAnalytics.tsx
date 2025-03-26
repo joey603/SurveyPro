@@ -19,6 +19,7 @@ import {
   Stack,
   Tabs,
   Tab,
+  AlertTitle,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {
@@ -30,6 +31,8 @@ import {
   DonutLarge as DonutLargeIcon,
   TableView as TableViewIcon,
   Code as CodeIcon,
+  ContentCopy as ContentCopyIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 import {
@@ -116,6 +119,8 @@ interface Survey {
   isDynamic?: boolean;
   nodes?: any[];
   edges?: any[];
+  isPrivate?: boolean;
+  privateLink?: string;
 }
 
 interface SurveyAnalyticsProps {
@@ -456,6 +461,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [pathFilterActive, setPathFilterActive] = useState(false);
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[]}[]>([]);
+  const [showPrivateLink, setShowPrivateLink] = useState(true);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1281,6 +1288,24 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     setAllPaths(paths);
   };
 
+  // Vérifier si le sondage est privé
+  const isPrivateSurvey = Boolean(
+    survey?.isPrivate || 
+    survey?.privateLink || 
+    (survey?.title && survey.title.toLowerCase().includes('private'))
+  );
+  
+  // Construire le lien privé
+  const privateLink = survey?.privateLink || `${window.location.origin}/survey-answer?surveyId=${survey?._id}`;
+  
+  // Fonction pour copier le lien privé
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(privateLink).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1326,6 +1351,49 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         </Box>
       </Box>
 
+      {/* NOUVEAU: Section du lien privé - apparaît seulement pour les sondages privés */}
+      {isPrivateSurvey && showPrivateLink && (
+        <Alert 
+          severity="info"
+          action={
+            <>
+              <Button 
+                color="inherit" 
+                size="small" 
+                onClick={copyToClipboard}
+                startIcon={copySuccess ? <CheckIcon /> : <ContentCopyIcon />}
+                sx={{ mr: 1 }}
+              >
+                {copySuccess ? 'Copied!' : 'Copy'}
+              </Button>
+              <IconButton 
+                color="inherit" 
+                size="small" 
+                onClick={() => setShowPrivateLink(false)}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </>
+          }
+          sx={{ mb: 3 }}
+        >
+          <AlertTitle>Private Survey Link</AlertTitle>
+          <Box 
+            component="span" 
+            sx={{ 
+              display: 'block',
+              wordBreak: 'break-all',
+              fontFamily: 'monospace',
+              bgcolor: 'rgba(0, 0, 0, 0.05)',
+              p: 1,
+              borderRadius: 1
+            }}
+          >
+            {privateLink}
+          </Box>
+        </Alert>
+      )}
+
       <Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -1352,8 +1420,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {survey.isDynamic && (
               <Grid item xs={12}>
                 <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
-                    Analyse des parcours de réponse
+                  <Typography variant="h5" component="h2" gutterBottom>
+                    Response Path Analysis
                   </Typography>
                   
                   <Box sx={{ height: '600px' }}>
@@ -1371,7 +1439,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             )}
 
             <Grid item xs={12}>
-              <Typography variant="h5" sx={{ fontWeight: 'medium', color: '#1a237e', mb: 3 }}>
+              <Typography variant="h5" component="h1" gutterBottom>
+                Survey Analytics
+              </Typography>
+              
+              <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
                 Survey Questions
               </Typography>
               

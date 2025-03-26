@@ -39,14 +39,14 @@ const DemographicsStatistics: React.FC<DemographicsStatisticsProps> = (props) =>
   return (
     <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
       <Typography variant="h6" sx={{ mb: 3 }}>
-        Statistiques Démographiques
+        Demographic Statistics
       </Typography>
       
       <Grid container spacing={4}>
         {/* Graphique de Démographie */}
         <Grid item xs={12}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium' }}>
-            Répartition démographique
+            Demographic Distribution
           </Typography>
           <Box sx={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -59,7 +59,7 @@ const DemographicsStatistics: React.FC<DemographicsStatisticsProps> = (props) =>
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="value" fill="#8884d8" name="Répondants" />
+                <Bar dataKey="value" fill="#8884d8" name="Respondents" />
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -68,7 +68,7 @@ const DemographicsStatistics: React.FC<DemographicsStatisticsProps> = (props) =>
         {/* Graphique d'Âge */}
         <Grid item xs={12}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium' }}>
-            Répartition par âge
+            Age Distribution
           </Typography>
           <Box sx={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -81,7 +81,7 @@ const DemographicsStatistics: React.FC<DemographicsStatisticsProps> = (props) =>
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="value" fill="#82ca9d" name="Répondants" />
+                <Bar dataKey="value" fill="#82ca9d" name="Respondents" />
               </BarChart>
             </ResponsiveContainer>
           </Box>
