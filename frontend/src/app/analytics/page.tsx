@@ -175,7 +175,7 @@ const AnalyticsPage: React.FC = () => {
     }
   };
 
-  const handleShareSurvey = async (email: string) => {
+  const handleShareSurvey = async (email: string): Promise<void> => {
     try {
       const token = localStorage.getItem('accessToken') || '';
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/survey-shares`, {
@@ -190,14 +190,12 @@ const AnalyticsPage: React.FC = () => {
         })
       });
       
-      setSnackbarMessage('Sondage partagé avec succès');
-      setSnackbarSeverity('success');
-      setOpenSnackbar(true);
+      // Ne pas utiliser le Snackbar, la boîte de dialogue affiche déjà un message
+      // Ne pas retourner true pour éviter l'erreur de type
     } catch (error) {
       console.error('Erreur lors du partage:', error);
-      setSnackbarMessage('Échec du partage du sondage');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
+      // Relancer l'erreur pour que la boîte de dialogue puisse l'afficher
+      throw error;
     }
   };
 
