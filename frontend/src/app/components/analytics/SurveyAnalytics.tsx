@@ -466,6 +466,33 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Charger les réponses au montage du composant
   useEffect(() => {
+    console.log('SurveyAnalytics mounted with survey:', {
+      id: survey._id,
+      title: survey.title,
+      isDynamic: survey.isDynamic,
+      hasQuestions: !!survey.questions,
+      questionsLength: survey.questions?.length,
+      hasNodes: !!survey.nodes,
+      nodesLength: survey.nodes?.length,
+      responsesCount: responses.length
+    });
+    
+    // Normaliser les données du sondage si nécessaire
+    if (survey.isDynamic && survey.nodes && !survey.questions) {
+      // Si c'est un sondage dynamique sans propriété questions, la créer
+      console.log('Normalizing dynamic survey data for compatibility');
+      
+      // Ceci peut être fait sans modifier le state original
+      const questionNodes = survey.nodes.filter(node => 
+        node.type === 'question' || 
+        node.type === 'multipleChoice' || 
+        node.type === 'textInput' ||
+        node.type === 'ratingScale'
+      );
+      
+      console.log(`Found ${questionNodes.length} question nodes to normalize`);
+    }
+    
     const loadAnswers = async () => {
       setLoading(true);
       try {
@@ -482,7 +509,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     };
 
     loadAnswers();
-  }, [survey._id]);
+  }, [survey, responses]);
 
   // Mettre à jour les réponses filtrées quand les réponses changent
   useEffect(() => {
@@ -1093,47 +1120,57 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour obtenir les questions à afficher (questions standard ou nœuds pour les sondages dynamiques)
   const getQuestionsToDisplay = () => {
-    // Si le filtre de parcours est actif, filtrer les questions
-    if (pathFilterActive && selectedPaths.length > 0) {
-      // Récupérer tous les IDs de questions des parcours sélectionnés
-      const questionIdsInSelectedPaths = new Set<string>();
-      selectedPaths.forEach(path => {
-        path.forEach(segment => {
-          questionIdsInSelectedPaths.add(segment.questionId);
-        });
-      });
+    console.log('Survey data in getQuestionsToDisplay:', {
+      surveyType: survey.isDynamic ? 'Dynamic' : 'Static',
+      hasQuestions: !!survey.questions,
+      questionsLength: survey.questions?.length,
+      hasNodes: !!survey.nodes,
+      nodesLength: survey.nodes?.length
+    });
 
-      console.log("Questions dans les parcours sélectionnés:", Array.from(questionIdsInSelectedPaths));
-      
-      // Si c'est un sondage dynamique
-      if (survey.isDynamic && survey.nodes) {
-        return survey.nodes
-          .filter(node => questionIdsInSelectedPaths.has(node.id))
-          .map(node => ({
-            id: node.id,
-            text: node.data?.text || node.data?.label || 'Question sans texte',
-            type: node.data?.questionType || node.data?.type || 'text',
-            options: node.data?.options || []
-          }));
+    // Si c'est un sondage dynamique
+    if (survey.isDynamic) {
+      // Extraire les questions des nœuds
+      if (survey.nodes && Array.isArray(survey.nodes)) {
+        // Filtrer pour ne garder que les nœuds de type question
+        const questionNodes = survey.nodes.filter(node => 
+          node.type === 'question' || 
+          node.type === 'multipleChoice' || 
+          node.type === 'textInput' ||
+          node.type === 'ratingScale'
+        );
+        
+        console.log('Question nodes found:', questionNodes.length);
+        
+        // Transformer les nœuds en format de question compatible
+        return questionNodes.map(node => ({
+          id: node.id,
+          text: node.data?.label || node.data?.text || 'Unnamed Question',
+          type: mapNodeTypeToQuestionType(node.type),
+          options: node.data?.options || []
+        }));
       }
-      
-      // Pour les sondages standard
-      return survey.questions.filter(question => 
-        questionIdsInSelectedPaths.has(question.id)
-      );
+      return []; // Renvoyer un tableau vide si aucun nœud n'est trouvé
     }
     
-    // Comportement normal si le filtre n'est pas actif
-    if (survey.isDynamic && survey.nodes) {
-      return survey.nodes.map(node => ({
-        id: node.id,
-        text: node.data?.text || node.data?.label || 'Question sans texte',
-        type: node.data?.questionType || node.data?.type || 'text',
-        options: node.data?.options || []
-      }));
+    // Pour les sondages statiques, utiliser les questions directement
+    return survey.questions || [];
+  };
+
+  // Fonction d'aide pour mapper les types de nœuds aux types de questions
+  const mapNodeTypeToQuestionType = (nodeType: string): string => {
+    switch (nodeType) {
+      case 'multipleChoice':
+        return 'multiple-choice';
+      case 'textInput':
+        return 'text';
+      case 'ratingScale':
+        return 'rating';
+      case 'question':
+        return 'multiple-choice'; // Par défaut, considérer comme choix multiple
+      default:
+        return nodeType;
     }
-    
-    return survey.questions;
   };
 
   // Fonction pour déterminer le filtre de genre à partir des réponses

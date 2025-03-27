@@ -415,29 +415,38 @@ export const fetchAnsweredSurveys = async (token: string) => {
   }
 };
 
-export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic = false): Promise<any[]> => {
-  // Vérifier si c'est un sondage placeholder (ID commençant par "placeholder-")
-  if (surveyId.startsWith('placeholder-')) {
-    console.log(`Sondage placeholder détecté (${surveyId}), retour d'un tableau vide sans requête au serveur`);
-    return [];
-  }
-  
+export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic = false) => {
   try {
-    // Reste du code existant pour récupérer les réponses des sondages normaux
-    const endpoint = isDynamic 
+    console.log(`Fetching ${isDynamic ? 'dynamic' : 'static'} survey answers for ${surveyId}`);
+    
+    const endpoint = isDynamic
       ? `${BASE_URL}/api/dynamic-survey-answers/survey/${surveyId}`
       : `${BASE_URL}/api/survey-answers/${surveyId}`;
     
-    console.log('Endpoint utilisé:', endpoint);
-    
     const response = await axios.get(endpoint, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     
-    console.log('Réponses reçues:', response.data.length);
-    return response.data;
+    const answers = response.data;
+    console.log(`Found ${answers.length} answers for survey ${surveyId}`);
+    
+    // Formater les réponses pour assurer la compatibilité
+    if (isDynamic) {
+      return answers.map((answer: any) => ({
+        _id: answer._id,
+        surveyId: answer.surveyId,
+        answers: (answer.answers || []).map((a: any) => ({
+          questionId: a.nodeId || a.questionId,
+          answer: a.answer || a.value
+        })),
+        submittedAt: answer.submittedAt,
+        respondent: answer.respondent
+      }));
+    }
+    
+    return answers;
   } catch (error) {
     console.error('Error fetching survey answers:', error);
     return [];
