@@ -1,16 +1,15 @@
 const SurveyShare = require('../models/SurveyShare');
 const User = require('../models/User');
 const Survey = require('../models/Survey');
+const DynamicSurvey = require('../models/DynamicSurvey');
 
 exports.shareSurvey = async (req, res) => {
   try {
     console.log('Starting shareSurvey function');
-    console.log('Utilisateur authentifié:', req.user);
     const { surveyId, recipientEmail } = req.body;
     console.log('Données reçues:', { surveyId, recipientEmail });
     
     if (!surveyId || !recipientEmail) {
-      console.log('Données invalides:', { surveyId, recipientEmail });
       return res.status(400).json({ 
         message: "Survey ID and recipient email are required" 
       });
@@ -23,9 +22,20 @@ exports.shareSurvey = async (req, res) => {
       return res.status(404).json({ message: "Sender not found" });
     }
 
-    // Check if survey exists
-    const survey = await Survey.findById(surveyId);
-    console.log('Sondage trouvé:', survey ? survey.title : 'Non trouvé');
+    // Check if survey exists (check both models)
+    let survey = await Survey.findById(surveyId);
+    let surveyModel = 'Survey';
+    
+    // Si pas trouvé dans Survey, chercher dans DynamicSurvey
+    if (!survey) {
+      console.log('Sondage non trouvé dans Survey, vérification dans DynamicSurvey');
+      survey = await DynamicSurvey.findById(surveyId);
+      surveyModel = 'DynamicSurvey';
+    }
+    
+    console.log('Sondage trouvé:', survey ? surveyModel : 'Non trouvé');
+    console.log('Détails du sondage:', survey ? { titre: survey.title, id: survey._id } : 'Aucun');
+    
     if (!survey) {
       return res.status(404).json({ message: "Survey not found" });
     }
@@ -38,11 +48,14 @@ exports.shareSurvey = async (req, res) => {
     }
 
     // Check if recipient is the survey owner
+    const surveyUserId = typeof survey.userId === 'object' ? survey.userId.toString() : survey.userId.toString();
     console.log('Vérification propriétaire:', { 
-      userId: survey.userId.toString(), 
-      recipientId: recipient._id.toString() 
+      surveyUserId: surveyUserId, 
+      recipientId: recipient._id.toString(),
+      surveyModel: surveyModel
     });
-    if (survey.userId.toString() === recipient._id.toString()) {
+    
+    if (surveyUserId === recipient._id.toString()) {
       return res.status(400).json({ 
         message: "User is already the owner of this survey" 
       });
@@ -65,12 +78,13 @@ exports.shareSurvey = async (req, res) => {
     // Create new share
     const share = new SurveyShare({
       surveyId,
+      surveyModel,
       sharedBy: sender.email,
       sharedWith: recipient._id
     });
 
     await share.save();
-    console.log('New share created:', share);
+    console.log('Nouveau partage créé:', share);
 
     res.status(201).json({
       message: "Share invitation sent successfully",
@@ -95,10 +109,29 @@ exports.getSharedSurveys = async (req, res) => {
       sharedWith: req.user.id,
       status: 'accepted'
     })
-    .populate('surveyId', 'title description')
+    .populate('surveyId')
     .populate('sharedBy', 'username email');
 
-    res.status(200).json(shares);
+    // Format the response to include survey details
+    const formattedShares = shares.map(share => {
+      return {
+        _id: share._id,
+        survey: {
+          _id: share.surveyId._id,
+          title: share.surveyId.title,
+          description: share.surveyId.description,
+          questions: share.surveyId.questions || share.surveyId.nodes,
+          demographicEnabled: share.surveyId.demographicEnabled,
+          createdAt: share.surveyId.createdAt,
+          isDynamic: share.surveyModel === 'DynamicSurvey'
+        },
+        sharedBy: share.sharedBy,
+        status: share.status,
+        createdAt: share.createdAt
+      };
+    });
+
+    res.status(200).json(formattedShares);
   } catch (error) {
     res.status(500).json({ message: "Error retrieving shares", error: error.message });
   }
@@ -118,13 +151,43 @@ exports.getPendingShares = async (req, res) => {
     const pendingShares = await SurveyShare.find({
       sharedWith: req.user.id,
       status: 'pending'
-    })
-    .populate('surveyId', 'title description questions demographicEnabled createdAt')
-    .populate('sharedBy', 'username email');
+    });
 
-    console.log('Found pending shares:', pendingShares);
+    // Traiter chaque partage pour obtenir les détails du sondage
+    const formattedShares = await Promise.all(pendingShares.map(async (share) => {
+      try {
+        // Déterminer quel modèle utiliser
+        const model = share.surveyModel === 'DynamicSurvey' ? DynamicSurvey : Survey;
+        const survey = await model.findById(share.surveyId);
+        
+        if (!survey) {
+          console.log(`Sondage non trouvé: ${share.surveyId} (${share.surveyModel})`);
+          return null;
+        }
+        
+        return {
+          _id: share._id,
+          surveyId: survey._id,
+          title: survey.title,
+          description: survey.description,
+          questions: survey.questions || survey.nodes,
+          demographicEnabled: survey.demographicEnabled,
+          createdAt: survey.createdAt,
+          status: 'pending',
+          sharedBy: share.sharedBy,
+          isDynamic: share.surveyModel === 'DynamicSurvey'
+        };
+      } catch (error) {
+        console.error(`Erreur lors du traitement du partage ${share._id}:`, error);
+        return null;
+      }
+    }));
 
-    res.status(200).json(pendingShares);
+    // Filtrer les partages où le sondage n'a pas été trouvé
+    const validShares = formattedShares.filter(share => share !== null);
+    console.log('Found pending shares:', validShares.length);
+
+    res.status(200).json(validShares);
   } catch (error) {
     console.error('Error in getPendingShares:', error);
     res.status(500).json({ 
@@ -154,27 +217,12 @@ exports.respondToShare = async (req, res) => {
     }
 
     if (accept) {
-      // Si accepté, mettre à jour le statut comme avant
+      // Si accepté, mettre à jour le statut
       share.status = 'accepted';
       await share.save();
     } else {
       // Si refusé, supprimer le partage
       await SurveyShare.deleteOne({ _id: shareId });
-    }
-
-    // Mettre à jour le statut dans le sondage uniquement si accepté
-    if (accept) {
-      await Survey.findOneAndUpdate(
-        {
-          _id: share.surveyId,
-          'sharedWith.userId': userId
-        },
-        {
-          $set: {
-            'sharedWith.$.status': 'accepted'
-          }
-        }
-      );
     }
 
     res.status(200).json({
