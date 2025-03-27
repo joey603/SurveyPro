@@ -11,7 +11,7 @@ import { SurveyAnalytics } from '../components/analytics/SurveyAnalytics';
 import ShareIcon from '@mui/icons-material/Share';
 import ShareDialog from '../components/analytics/ShareDialog';
 import ExportIcon from '@mui/icons-material/IosShare';
-import { shareSurvey } from '@/utils/surveyShareService';
+import { shareSurvey, respondToSurveyShare } from '@/utils/surveyShareService';
 
 interface Question {
   id: string;
@@ -49,16 +49,25 @@ interface Survey {
   privateLink?: string;
 }
 
+// Interface spécifique pour les sondages partagés
+interface SharedSurvey extends Survey {
+  isShared: boolean;
+  shareId: string;
+}
+
+// Type union qui peut être soit un Survey normal soit un SharedSurvey
+type SurveyWithShareInfo = Survey | SharedSurvey;
+
 const AnalyticsPage: React.FC = () => {
   const { user } = useAuth();
-  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [surveys, setSurveys] = useState<SurveyWithShareInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'error' | 'success'>('success');
   const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: SurveyResponse[] }>({});
-  const [pendingShares, setPendingShares] = useState<Survey[]>([]);
+  const [pendingShares, setPendingShares] = useState<SharedSurvey[]>([]);
 
   // États pour les filtres
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,6 +87,9 @@ const AnalyticsPage: React.FC = () => {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
+  // Ajouter un state pour le raffraîchissement de la page
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -87,13 +99,42 @@ const AnalyticsPage: React.FC = () => {
         // Charger les sondages classiques et dynamiques
         const allSurveys = await fetchSurveys(token);
         console.log('Tous les sondages chargés:', allSurveys.length);
-        console.log('Sondages dynamiques chargés:', allSurveys.filter((s: any) => s.isDynamic).length);
         
         // Charger les partages en attente séparément
         const pendingSharesData = await fetchPendingShares(token);
+        console.log('Partages en attente chargés:', pendingSharesData.length, 
+          pendingSharesData.map((s: any) => ({ 
+            id: s.surveyId, 
+            title: s.title, 
+            isDynamic: s.isDynamic 
+          }))
+        );
+        
+        // Convertir les partages en attente en format compatible pour l'affichage
+        const pendingSharesFormatted = pendingSharesData.map((share: any) => ({
+          ...share,
+          _id: share.surveyId, // Utiliser l'ID du sondage comme clé principale
+          status: 'pending',
+          isShared: true,
+          // S'assurer que les données sont compatibles avec ce qu'attend AnalyticsCard
+          nodes: share.questions && Array.isArray(share.questions) && share.isDynamic 
+            ? share.questions 
+            : undefined,
+          questions: !share.isDynamic && share.questions 
+            ? share.questions 
+            : undefined
+        }));
+        
+        // Ajouter les partages en attente aux sondages
+        const allSurveysWithPending = [...allSurveys, ...pendingSharesFormatted];
+        
+        console.log('Tous les sondages avec partages en attente:', allSurveysWithPending.length);
+        console.log('Sondages dynamiques avec partages en attente:', 
+          allSurveysWithPending.filter((s: any) => s.isDynamic).length
+        );
         
         // Charger les réponses pour tous les sondages
-        const responsesPromises = allSurveys.map((survey: any) => 
+        const responsesPromises = allSurveysWithPending.map((survey: any) => 
           getSurveyAnswers(survey._id, token, survey.isDynamic)
             .then(responses => ({ surveyId: survey._id, responses }))
             .catch(() => ({ surveyId: survey._id, responses: [] }))
@@ -105,13 +146,13 @@ const AnalyticsPage: React.FC = () => {
           return acc;
         }, {} as { [key: string]: any[] });
 
-        setSurveys(allSurveys);
-        setPendingShares(pendingSharesData);
+        setSurveys(allSurveysWithPending);
+        setPendingShares(pendingSharesFormatted);
         setSurveyResponses(responsesMap);
       } catch (error) {
         console.error('Error loading data:', error);
         setError('Failed to load surveys');
-        setSnackbarMessage('Failed to load surveys');
+        setSnackbarMessage('Erreur lors du chargement des sondages');
         setSnackbarSeverity('error');
         setOpenSnackbar(true);
       } finally {
@@ -120,7 +161,7 @@ const AnalyticsPage: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [refreshTrigger]);
 
   const handleViewAnalytics = (survey: Survey) => {
     setSelectedSurvey(survey);
@@ -179,7 +220,7 @@ const AnalyticsPage: React.FC = () => {
   const handleShareSurvey = async (email: string): Promise<void> => {
     try {
       const token = localStorage.getItem('accessToken') || '';
-      console.log('Tentative de partage du sondage:', {
+      console.log('Attempting to share survey:', {
         surveyId: selectedSurvey?._id,
         recipientEmail: email,
         tokenLength: token.length
@@ -187,43 +228,109 @@ const AnalyticsPage: React.FC = () => {
       
       await shareSurvey(selectedSurvey?._id || '', email, token);
       
-      console.log('Sondage partagé avec succès:', {
+      console.log('Survey shared successfully:', {
         surveyId: selectedSurvey?._id,
         recipientEmail: email
       });
 
-      setSnackbarMessage('Sondage partagé avec succès');
+      setSnackbarMessage('Survey shared successfully');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
-      // Ne pas retourner true pour éviter l'erreur de type
     } catch (error) {
-      console.error('Erreur lors du partage:', error);
-      // Relancer l'erreur pour que la boîte de dialogue puisse l'afficher
+      console.error('Error sharing survey:', error);
       throw error;
     }
   };
 
+  // Nouveaux gestionnaires pour les partages
+  const handleAcceptShare = async (shareId: string) => {
+    try {
+      const token = localStorage.getItem('accessToken') || '';
+      console.log('Accepting share:', shareId);
+      
+      await respondToSurveyShare(shareId, true, token);
+      
+      setSnackbarMessage('Survey accepted successfully');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      
+      // Déclencher un rechargement des données
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error accepting share:', error);
+      setSnackbarMessage('Error accepting survey');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
+  
+  const handleRejectShare = async (shareId: string) => {
+    try {
+      const token = localStorage.getItem('accessToken') || '';
+      console.log('Rejecting share:', shareId);
+      
+      await respondToSurveyShare(shareId, false, token);
+      
+      setSnackbarMessage('Share invitation rejected');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      
+      // Déclencher un rechargement des données
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error rejecting share:', error);
+      setSnackbarMessage('Error rejecting invitation');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
+
   const filteredSurveys = useMemo(() => {
+    console.log('===== DÉBUT filteredSurveys =====');
     console.log('Tous les sondages avant filtrage:', surveys.length);
     console.log('Sondages dynamiques avant filtrage:', surveys.filter(s => s.isDynamic).length);
-    console.log('ID utilisateur actuel:', user?.userId || user?.id);
     
-    // Fonction pour vérifier si un sondage appartient à l'utilisateur actuel
-    const belongsToCurrentUser = (survey: any) => {
+    // Filtrer les sondages dynamiques pour les inspecter
+    const dynamicSurveys = surveys.filter(s => s.isDynamic);
+    if (dynamicSurveys.length > 0) {
+      console.log('Détails des sondages dynamiques:', dynamicSurveys.map(s => ({
+        id: s._id,
+        title: s.title,
+        isShared: s.isShared,
+        status: s.status,
+        nodes: s.nodes?.length || 0
+      })));
+    }
+    
+    // Filtrer les sondages partagés pour les inspecter
+    const sharedSurveys = surveys.filter(s => s.isShared);
+    if (sharedSurveys.length > 0) {
+      console.log('Détails des sondages partagés:', sharedSurveys.map(s => ({
+        id: s._id,
+        title: s.title,
+        isDynamic: s.isDynamic,
+        status: s.status,
+        shareId: s.shareId
+      })));
+    }
+    
+    // Fonction pour vérifier si un sondage appartient à l'utilisateur actuel ou est partagé
+    const belongsToCurrentUserOrShared = (survey: any) => {
+      // Si c'est un sondage partagé, l'inclure toujours
+      if (survey.isShared) {
+        return true;
+      }
+      
       const currentUserId = String(user?.userId || user?.id || '');
       
       if (survey.isDynamic) {
-        // Pour les sondages dynamiques, userId est un objet avec _id
+        // Pour les sondages dynamiques
         if (survey.userId && typeof survey.userId === 'object' && survey.userId._id) {
           return survey.userId._id === currentUserId;
         }
-        
-        // Pour les sondages dynamiques sans userId défini ou null
         return survey.createdBy === currentUserId;
       } else {
-        // Pour les sondages classiques - ils semblent ne pas avoir de userId défini
-        // Nous supposons donc qu'ils appartiennent tous à l'utilisateur actuel
-        // comme c'était le cas avant notre modification
+        // Pour les sondages statiques
         return true;
       }
     };
@@ -238,8 +345,8 @@ const AnalyticsPage: React.FC = () => {
     };
     
     const filtered = surveys.filter((survey) => {
-      // Filtrer par propriété du sondage
-      if (!belongsToCurrentUser(survey)) {
+      // Inclure les sondages qui appartiennent à l'utilisateur ou sont partagés
+      if (!belongsToCurrentUserOrShared(survey)) {
         return false;
       }
       
@@ -252,20 +359,20 @@ const AnalyticsPage: React.FC = () => {
         return false;
       }
       
-      // Appliquer le filtre de recherche si présent
+      // Appliquer le filtre de recherche
       if (searchQuery && !survey.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
 
-      // Appliquer les filtres de date si présents
+      // Appliquer les filtres de date
       if (dateRange.start || dateRange.end) {
         const surveyDate = new Date(survey.createdAt);
         if (dateRange.start && surveyDate < dateRange.start) return false;
         if (dateRange.end && surveyDate > dateRange.end) return false;
       }
 
-      // Appliquer le filtre de partages en attente si actif
-      if (showPendingOnly && !pendingShares.some(s => s._id === survey._id)) {
+      // Appliquer le filtre de partages en attente
+      if (showPendingOnly && !(survey.isShared && survey.status === 'pending')) {
         return false;
       }
 
@@ -273,11 +380,12 @@ const AnalyticsPage: React.FC = () => {
     });
     
     console.log('Sondages après filtrage:', filtered.length);
-    console.log('Sondages classiques après filtrage:', filtered.filter(s => !s.isDynamic).length);
     console.log('Sondages dynamiques après filtrage:', filtered.filter(s => s.isDynamic).length);
+    console.log('Sondages partagés après filtrage:', filtered.filter(s => s.isShared).length);
+    console.log('===== FIN filteredSurveys =====');
     
     return filtered;
-  }, [surveys, searchQuery, dateRange, showPendingOnly, pendingShares, user?.userId, user?.id, privacyFilter]);
+  }, [surveys, searchQuery, dateRange, showPendingOnly, user?.userId, user?.id, privacyFilter]);
 
   const sortedSurveys = useMemo(() => {
     return [...filteredSurveys].sort((a, b) => {
@@ -365,13 +473,15 @@ const AnalyticsPage: React.FC = () => {
             {!loading && !error && (
               <Grid container spacing={3}>
                 {sortedSurveys.map((survey) => (
-                  <Grid item xs={12} sm={6} md={6} key={survey._id}>
+                  <Grid item xs={12} sm={6} md={6} key={survey._id + ('shareId' in survey ? survey.shareId : '')}>
                     <AnalyticsCard
                       survey={survey}
                       onDelete={handleDeleteSurvey}
                       onViewAnalytics={handleViewAnalytics}
                       userId={user?.id}
                       responses={surveyResponses[survey._id] || []}
+                      onAcceptShare={'shareId' in survey ? handleAcceptShare : undefined}
+                      onRejectShare={'shareId' in survey ? handleRejectShare : undefined}
                     />
                   </Grid>
                 ))}

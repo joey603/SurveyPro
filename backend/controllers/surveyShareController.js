@@ -5,54 +5,69 @@ const DynamicSurvey = require('../models/DynamicSurvey');
 
 exports.shareSurvey = async (req, res) => {
   try {
-    console.log('Starting shareSurvey function');
+    console.log('===== DÉBUT FONCTION shareSurvey =====');
     const { surveyId, recipientEmail } = req.body;
     console.log('Données reçues:', { surveyId, recipientEmail });
     
     if (!surveyId || !recipientEmail) {
+      console.log('Données invalides:', { surveyId, recipientEmail });
       return res.status(400).json({ 
         message: "Survey ID and recipient email are required" 
       });
     }
 
-    // Get the sharing user
+    // Récupérer l'expéditeur
     const sender = await User.findById(req.user.id);
     console.log('Expéditeur trouvé:', sender ? sender.email : 'Non trouvé');
     if (!sender) {
       return res.status(404).json({ message: "Sender not found" });
     }
 
-    // Check if survey exists (check both models)
+    // Vérifier si le sondage existe dans Survey
     let survey = await Survey.findById(surveyId);
     let surveyModel = 'Survey';
     
-    // Si pas trouvé dans Survey, chercher dans DynamicSurvey
+    // Si pas trouvé, vérifier dans DynamicSurvey
     if (!survey) {
       console.log('Sondage non trouvé dans Survey, vérification dans DynamicSurvey');
       survey = await DynamicSurvey.findById(surveyId);
       surveyModel = 'DynamicSurvey';
+      
+      console.log('Résultat de la recherche dans DynamicSurvey:', {
+        trouvé: !!survey,
+        id: surveyId,
+        modèle: surveyModel
+      });
     }
     
-    console.log('Sondage trouvé:', survey ? surveyModel : 'Non trouvé');
-    console.log('Détails du sondage:', survey ? { titre: survey.title, id: survey._id } : 'Aucun');
-    
     if (!survey) {
+      console.log('Sondage non trouvé dans aucun modèle');
       return res.status(404).json({ message: "Survey not found" });
     }
 
-    // Check if recipient user exists
+    console.log('Sondage trouvé:', {
+      titre: survey.title,
+      id: survey._id,
+      modèle: surveyModel,
+      userId: survey.userId
+    });
+
+    // Vérifier si le destinataire existe
     const recipient = await User.findOne({ email: recipientEmail });
     console.log('Destinataire trouvé:', recipient ? recipient.email : 'Non trouvé');
     if (!recipient) {
       return res.status(404).json({ message: "Recipient not found" });
     }
 
-    // Check if recipient is the survey owner
-    const surveyUserId = typeof survey.userId === 'object' ? survey.userId.toString() : survey.userId.toString();
+    // Vérifier si le destinataire est déjà le propriétaire
+    const surveyUserId = typeof survey.userId === 'object' ? 
+                          survey.userId.toString() : 
+                          survey.userId;
+                          
     console.log('Vérification propriétaire:', { 
       surveyUserId: surveyUserId, 
       recipientId: recipient._id.toString(),
-      surveyModel: surveyModel
+      surveyModel
     });
     
     if (surveyUserId === recipient._id.toString()) {
@@ -61,7 +76,7 @@ exports.shareSurvey = async (req, res) => {
       });
     }
 
-    // Check if share already exists (pending or accepted)
+    // Vérifier si le partage existe déjà
     const existingShare = await SurveyShare.findOne({
       surveyId,
       sharedWith: recipient._id,
@@ -75,7 +90,7 @@ exports.shareSurvey = async (req, res) => {
       });
     }
 
-    // Create new share
+    // Créer le nouveau partage
     const share = new SurveyShare({
       surveyId,
       surveyModel,
@@ -84,12 +99,19 @@ exports.shareSurvey = async (req, res) => {
     });
 
     await share.save();
-    console.log('Nouveau partage créé:', share);
+    console.log('Nouveau partage créé:', {
+      id: share._id,
+      surveyId: share.surveyId,
+      surveyModel: share.surveyModel,
+      sharedWith: share.sharedWith,
+      status: share.status
+    });
 
     res.status(201).json({
       message: "Share invitation sent successfully",
       share
     });
+    console.log('===== FIN FONCTION shareSurvey =====');
   } catch (error) {
     console.error('Erreur détaillée dans shareSurvey:', {
       message: error.message,
@@ -105,77 +127,44 @@ exports.shareSurvey = async (req, res) => {
 
 exports.getSharedSurveys = async (req, res) => {
   try {
+    console.log('Récupération des sondages partagés pour l\'utilisateur:', req.user.id);
+    
     const shares = await SurveyShare.find({
       sharedWith: req.user.id,
       status: 'accepted'
-    })
-    .populate('surveyId')
-    .populate('sharedBy', 'username email');
-
-    // Format the response to include survey details
-    const formattedShares = shares.map(share => {
-      return {
-        _id: share._id,
-        survey: {
-          _id: share.surveyId._id,
-          title: share.surveyId.title,
-          description: share.surveyId.description,
-          questions: share.surveyId.questions || share.surveyId.nodes,
-          demographicEnabled: share.surveyId.demographicEnabled,
-          createdAt: share.surveyId.createdAt,
-          isDynamic: share.surveyModel === 'DynamicSurvey'
-        },
-        sharedBy: share.sharedBy,
-        status: share.status,
-        createdAt: share.createdAt
-      };
     });
-
-    res.status(200).json(formattedShares);
-  } catch (error) {
-    res.status(500).json({ message: "Error retrieving shares", error: error.message });
-  }
-};
-
-exports.getPendingShares = async (req, res) => {
-  try {
-    console.log('Getting pending shares for user:', req.user);
     
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
-        message: "User not authenticated",
-        debug: { user: req.user }
-      });
-    }
+    console.log(`${shares.length} partages trouvés`);
 
-    const pendingShares = await SurveyShare.find({
-      sharedWith: req.user.id,
-      status: 'pending'
-    });
-
-    // Traiter chaque partage pour obtenir les détails du sondage
-    const formattedShares = await Promise.all(pendingShares.map(async (share) => {
+    // Récupérer les détails des sondages de manière plus fiable
+    const formattedShares = await Promise.all(shares.map(async (share) => {
       try {
         // Déterminer quel modèle utiliser
-        const model = share.surveyModel === 'DynamicSurvey' ? DynamicSurvey : Survey;
+        const modelName = share.surveyModel || 'Survey'; // Par défaut 'Survey' si non spécifié
+        const model = modelName === 'DynamicSurvey' ? DynamicSurvey : Survey;
+        
+        console.log(`Recherche du sondage ${share.surveyId} dans le modèle ${modelName}`);
         const survey = await model.findById(share.surveyId);
         
         if (!survey) {
-          console.log(`Sondage non trouvé: ${share.surveyId} (${share.surveyModel})`);
+          console.log(`Sondage non trouvé: ${share.surveyId}`);
           return null;
         }
+        
+        console.log(`Sondage trouvé: ${survey.title}`);
         
         return {
           _id: share._id,
           surveyId: survey._id,
-          title: survey.title,
-          description: survey.description,
-          questions: survey.questions || survey.nodes,
-          demographicEnabled: survey.demographicEnabled,
+          title: survey.title || "Sans titre",
+          description: survey.description || "",
+          questions: survey.questions || survey.nodes || [],
+          demographicEnabled: survey.demographicEnabled || false,
           createdAt: survey.createdAt,
-          status: 'pending',
+          status: 'accepted',
           sharedBy: share.sharedBy,
-          isDynamic: share.surveyModel === 'DynamicSurvey'
+          isDynamic: modelName === 'DynamicSurvey',
+          isShared: true // Indicateur que ce sondage est partagé
         };
       } catch (error) {
         console.error(`Erreur lors du traitement du partage ${share._id}:`, error);
@@ -183,15 +172,109 @@ exports.getPendingShares = async (req, res) => {
       }
     }));
 
-    // Filtrer les partages où le sondage n'a pas été trouvé
+    // Filtrer les nulls (sondages non trouvés)
     const validShares = formattedShares.filter(share => share !== null);
-    console.log('Found pending shares:', validShares.length);
+    console.log(`${validShares.length} sondages partagés valides`);
 
     res.status(200).json(validShares);
   } catch (error) {
-    console.error('Error in getPendingShares:', error);
+    console.error('Erreur lors de la récupération des sondages partagés:', error);
     res.status(500).json({ 
-      message: "Error retrieving invitations", 
+      message: "Error retrieving shared surveys", 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+exports.getPendingShares = async (req, res) => {
+  try {
+    console.log('===== DÉBUT FONCTION getPendingShares =====');
+    console.log('Utilisateur connecté:', req.user.id);
+
+    const pendingShares = await SurveyShare.find({
+      sharedWith: req.user.id,
+      status: 'pending'
+    });
+    
+    console.log(`${pendingShares.length} partages en attente trouvés:`, 
+      pendingShares.map(s => ({
+        shareId: s._id.toString(),
+        surveyId: s.surveyId.toString(),
+        model: s.surveyModel || 'non spécifié'
+      }))
+    );
+
+    const formattedShares = [];
+    
+    // Traiter chaque partage individuellement pour obtenir des logs détaillés
+    for (const share of pendingShares) {
+      try {
+        console.log(`Traitement du partage: ${share._id}`);
+        const isSurveyDynamic = share.surveyModel === 'DynamicSurvey';
+        const model = isSurveyDynamic ? DynamicSurvey : Survey;
+        
+        console.log(`Recherche du sondage ${share.surveyId} dans le modèle ${isSurveyDynamic ? 'DynamicSurvey' : 'Survey'}`);
+        const survey = await model.findById(share.surveyId);
+        
+        if (!survey) {
+          console.log(`Sondage non trouvé: ${share.surveyId}`);
+          continue;
+        }
+        
+        console.log(`Sondage trouvé: ${survey.title}`);
+        console.log(`Type de sondage: ${isSurveyDynamic ? 'Dynamique' : 'Statique'}`);
+        
+        // Former les données du sondage
+        const formattedSurvey = {
+          _id: survey._id.toString(),
+          surveyId: survey._id.toString(),
+          title: survey.title || "Sans titre",
+          description: survey.description || "",
+          demographicEnabled: survey.demographicEnabled || false,
+          createdAt: survey.createdAt,
+          status: 'pending',
+          sharedBy: share.sharedBy,
+          isShared: true,
+          shareId: share._id.toString()
+        };
+        
+        // Ajouter les données spécifiques au type de sondage
+        if (isSurveyDynamic) {
+          formattedSurvey.isDynamic = true;
+          formattedSurvey.nodes = survey.nodes || [];
+          formattedSurvey.edges = survey.edges || [];
+        } else {
+          formattedSurvey.isDynamic = false;
+          formattedSurvey.questions = survey.questions || [];
+        }
+        
+        console.log('Sondage formaté:', {
+          id: formattedSurvey._id,
+          title: formattedSurvey.title,
+          isDynamic: formattedSurvey.isDynamic,
+          shareId: formattedSurvey.shareId
+        });
+        
+        formattedShares.push(formattedSurvey);
+      } catch (error) {
+        console.error(`Erreur lors du traitement du partage ${share._id}:`, error);
+      }
+    }
+
+    console.log(`${formattedShares.length} sondages en attente formatés`);
+    console.log('Détail des sondages en attente:', formattedShares.map(s => ({ 
+      id: s._id, 
+      title: s.title, 
+      isDynamic: s.isDynamic 
+    })));
+
+    res.status(200).json(formattedShares);
+    console.log('===== FIN FONCTION getPendingShares =====');
+  } catch (error) {
+    console.error('Erreur dans getPendingShares:', error);
+    res.status(500).json({ 
+      message: "Error retrieving pending invitations", 
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });

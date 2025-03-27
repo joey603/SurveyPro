@@ -76,8 +76,8 @@ interface AnalyticsCardProps {
   onViewAnalytics: (survey: SurveyWithShare) => void;
   userId?: string;
   responses?: SurveyResponse[];
-  onAcceptShare?: (survey: SurveyWithShare) => void;
-  onRejectShare?: (survey: SurveyWithShare) => void;
+  onAcceptShare?: (shareId: string) => void;
+  onRejectShare?: (shareId: string) => void;
 }
 
 export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
@@ -90,7 +90,11 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   onRejectShare,
 }) => {
   const responseCount = responses?.length || 0;
-  const surveyType = survey.nodes ? 'dynamic' : 'static';
+  
+  // Déterminer si c'est un sondage dynamique (vérifier plusieurs façons possibles)
+  const isDynamicSurvey = survey.isDynamic || 
+                         Boolean(survey.nodes && survey.nodes.length) || 
+                         Boolean(survey.edges);
   
   // Déterminer si c'est un sondage privé
   const isPrivateSurvey = Boolean(
@@ -99,21 +103,21 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
     (survey.title && survey.title.toLowerCase().includes('private'))
   );
   
-  // Log pour déboguer
-  console.log(`Sondage ${survey._id}: isPrivate=${survey.isPrivate}, privateLink=${Boolean(survey.privateLink)}, calculé=${isPrivateSurvey}`);
-
-  // Log plus détaillé pour déboguer
-  console.log(`Rendu de la carte pour le sondage:`, {
+  // Ajoutez ce code pour afficher un badge spécial pour les sondages partagés
+  const isSharedSurvey = Boolean(survey.isShared);
+  const isPendingSurvey = isSharedSurvey && survey.status === 'pending';
+  
+  console.log('Rendu de la carte pour le sondage:', {
     id: survey._id,
     title: survey.title,
     isShared: survey.isShared, 
     status: survey.status,
     sharedBy: survey.sharedBy,
-    isDynamic: survey.isDynamic
+    isDynamic: isDynamicSurvey,
+    shareId: survey.shareId,
+    questions: survey.questions?.length || 0,
+    nodes: survey.nodes?.length || 0
   });
-
-  // Ajoutez ce code pour afficher un badge spécial pour les sondages partagés
-  const isSharedSurvey = Boolean(survey.isShared);
   
   return (
     <Card
@@ -135,7 +139,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             transform: 'translateY(0)',
           }
         },
-        border: isSharedSurvey ? '2px dashed #667eea' : 'none',
+        border: isPendingSurvey 
+          ? '2px dashed #f44336' 
+          : (isSharedSurvey ? '2px dashed #667eea' : 'none'),
       }}
     >
       {/* Badge Private/Public positionné en haut à droite */}
@@ -143,7 +149,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         position: 'absolute', 
         top: 8, 
         right: 8, 
-        zIndex: 3 // Augmenté pour rester au-dessus du hover-content
+        zIndex: 3
       }}>
         <Chip 
           icon={isPrivateSurvey ? <LockIcon fontSize="small" /> : <PublicIcon fontSize="small" />}
@@ -164,9 +170,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         }}>
           <Chip 
             icon={<ShareIcon fontSize="small" />}
-            label={survey.status === 'pending' ? "En attente" : "Partagé"}
+            label={isPendingSurvey ? "Pending" : "Shared"}
             size="small"
-            color="secondary"
+            color={isPendingSurvey ? "error" : "secondary"}
             sx={{ fontWeight: 'bold' }}
           />
         </Box>
@@ -175,7 +181,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
       <CardContent sx={{ 
         pt: 4, 
         position: 'relative',
-        flex: '1 0 auto', // Permet au contenu de s'étendre
+        flex: '1 0 auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -193,7 +199,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             height: '2.6em',
           }}
         >
-          {survey.title}
+          {survey.title || "Sans titre"}
         </Typography>
 
         <Typography
@@ -209,7 +215,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             height: '4.5em',
           }}
         >
-          {survey.description || 'No description available'}
+          {survey.description || 'Aucune description disponible'}
         </Typography>
         
         {/* Ajout du contenu de survol */}
@@ -269,9 +275,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           </Typography>
         </Box>
 
-        {/* Conteneur pour les badges avec hauteur fixe */}
+        {/* Conteneur pour les badges */}
         <Box sx={{ 
-          flexGrow: 1, // Fait croître cette section pour remplir l'espace
+          flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start'
@@ -286,7 +292,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               gap: '8px',
               mt: 2,
               mb: 2,
-              minHeight: '56px', // Hauteur minimale pour accommoder deux lignes de badges
+              minHeight: '56px',
               '& .MuiChip-root': {
                 margin: '0 !important'
               }
@@ -320,8 +326,8 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             />
             <Chip
               size="small"
-              icon={survey.isDynamic ? <AutoGraphIcon sx={{ fontSize: 16 }} /> : <ListAltIcon sx={{ fontSize: 16 }} />}
-              label={survey.isDynamic ? "Dynamic" : "Static"}
+              icon={isDynamicSurvey ? <AutoGraphIcon sx={{ fontSize: 16 }} /> : <ListAltIcon sx={{ fontSize: 16 }} />}
+              label={isDynamicSurvey ? "Dynamic" : "Static"}
               sx={{
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
                 color: '#667eea',
@@ -363,7 +369,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             variant="caption"
             color="text.secondary"
             sx={{ 
-              mt: 'auto', // Pousse la date de création vers le bas
+              mt: 'auto',
               mb: 0 
             }}
           >
@@ -384,39 +390,78 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           zIndex: 1
         }}
       >
-        {userId === survey.userId && onDelete && (
-          <Button
-            variant="outlined"
-            size="small"
-            color="error"
-            onClick={() => onDelete(survey._id)}
-            startIcon={<DeleteIcon />}
-            sx={{
-              borderColor: '#f44336',
-              color: '#f44336',
-              '&:hover': {
-                borderColor: '#d32f2f',
-                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-              },
-            }}
-          >
-            Delete
-          </Button>
+        {/* Boutons pour les sondages en attente */}
+        {isPendingSurvey && onAcceptShare && onRejectShare ? (
+          <>
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              onClick={() => onRejectShare(survey.shareId || '')}
+              sx={{
+                borderColor: '#f44336',
+                color: '#f44336',
+                '&:hover': {
+                  borderColor: '#d32f2f',
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                },
+              }}
+            >
+              Reject
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              onClick={() => onAcceptShare(survey.shareId || '')}
+              sx={{
+                ml: 1,
+                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
+                },
+              }}
+            >
+              Accept
+            </Button>
+          </>
+        ) : (
+          <>
+            {userId === survey.userId && onDelete && (
+              <Button
+                variant="outlined"
+                size="small"
+                color="error"
+                onClick={() => onDelete(survey._id)}
+                startIcon={<DeleteIcon />}
+                sx={{
+                  borderColor: '#f44336',
+                  color: '#f44336',
+                  '&:hover': {
+                    borderColor: '#d32f2f',
+                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => onViewAnalytics(survey)}
+              sx={{
+                ml: 'auto',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
+            >
+              View Analytics
+            </Button>
+          </>
         )}
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => onViewAnalytics(survey)}
-          sx={{
-            ml: 'auto',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-            },
-          }}
-        >
-          View Analytics
-        </Button>
       </Box>
     </Card>
   );

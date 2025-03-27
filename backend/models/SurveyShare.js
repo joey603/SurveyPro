@@ -3,12 +3,10 @@ const mongoose = require('mongoose');
 const surveyShareSchema = new mongoose.Schema({
   surveyId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    refPath: 'surveyModel'
+    required: true
   },
   surveyModel: {
     type: String,
-    required: true,
     enum: ['Survey', 'DynamicSurvey'],
     default: 'Survey'
   },

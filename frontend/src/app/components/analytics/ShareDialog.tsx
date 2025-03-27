@@ -77,7 +77,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ShareIcon />
-          <Typography variant="h6">Partager le sondage</Typography>
+          <Typography variant="h6">Share Survey</Typography>
         </Box>
         <IconButton onClick={handleClose} sx={{ color: 'white' }}>
           <CloseIcon />
@@ -87,7 +87,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
       <DialogContent sx={{ pt: 3, pb: 1 }}>
         {survey && (
           <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Vous allez partager : <strong>{survey.title}</strong>
+            You are sharing: <strong>{survey.title}</strong>
           </Typography>
         )}
         
@@ -95,7 +95,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
           autoFocus
           margin="dense"
           id="email"
-          label="Email du destinataire"
+          label="Recipient email"
           type="email"
           fullWidth
           variant="outlined"
@@ -113,7 +113,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
         
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
-            Sondage partagé avec succès !
+            Survey shared successfully!
           </Alert>
         )}
       </DialogContent>
@@ -123,7 +123,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
           onClick={handleClose}
           disabled={loading}
         >
-          Annuler
+          Cancel
         </Button>
         <Button 
           onClick={handleShareClick}
@@ -137,7 +137,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
             },
           }}
         >
-          {loading ? 'Partage en cours...' : 'Partager'}
+          {loading ? 'Sharing...' : 'Share'}
         </Button>
       </DialogActions>
     </Dialog>

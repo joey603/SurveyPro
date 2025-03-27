@@ -336,30 +336,42 @@ export const getSurveyById = async (id: string, token: string): Promise<any> => 
 
 export const fetchPendingShares = async (token: string) => {
   try {
-    const response = await axios({
-      method: 'GET',
-      url: `${BASE_URL}/api/survey-shares/pending`,
+    console.log('===== DÉBUT fetchPendingShares =====');
+    
+    const response = await axios.get(`${BASE_URL}/api/survey-shares/pending`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     
-    // Journaliser les données reçues pour le débogage
-    console.log('Données des partages en attente reçues:', response.data);
+    const pendingShares = response.data;
+    console.log(`${pendingShares.length} partages en attente récupérés`);
     
-    // Vérifier si nous avons des données complètes de sondage dans chaque partage
-    const shares = response.data.map((share: any) => {
-      if (!share.surveyId || typeof share.surveyId === 'string') {
-        console.warn('Partage avec ID de sondage incomplet:', share);
+    // Analyser les résultats pour les problèmes potentiels
+    if (pendingShares.length > 0) {
+      const dynamicShares = pendingShares.filter((s: any) => s.isDynamic);
+      const staticShares = pendingShares.filter((s: any) => !s.isDynamic);
+      
+      console.log(`- ${dynamicShares.length} sondages dynamiques en attente`);
+      console.log(`- ${staticShares.length} sondages statiques en attente`);
+      
+      if (dynamicShares.length > 0) {
+        console.log('Détails des sondages dynamiques en attente:', 
+          dynamicShares.map((s: any) => ({
+            id: s._id,
+            title: s.title,
+            nodes: s.nodes?.length || 0,
+            edges: s.edges?.length || 0
+          }))
+        );
       }
-      return share;
-    });
+    }
     
-    return shares;
+    console.log('===== FIN fetchPendingShares =====');
+    return pendingShares;
   } catch (error) {
-    console.error('Error fetching pending shares:', error);
-    throw error;
+    console.error('Erreur lors de la récupération des partages en attente:', error);
+    return [];
   }
 };
 
