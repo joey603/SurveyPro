@@ -21,6 +21,7 @@ import {
   Quiz as QuizIcon,
   Poll as PollIcon,
   AccountTree as AccountTreeIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 
@@ -40,6 +41,7 @@ interface Survey {
   responses?: SurveyResponse[];
   isPrivate?: boolean;
   privateLink?: string;
+  isShared?: boolean;
 }
 
 interface Question {
@@ -60,12 +62,22 @@ interface Answer {
   answer: string;
 }
 
+// Étendre l'interface Survey pour les sondages partagés
+interface SurveyWithShare extends Survey {
+  isShared?: boolean;
+  shareId?: string;
+  sharedBy?: string;
+  status?: 'pending' | 'accepted' | 'rejected';
+}
+
 interface AnalyticsCardProps {
-  survey: Survey;
+  survey: SurveyWithShare;
   onDelete?: (id: string) => void;
-  onViewAnalytics: (survey: Survey) => void;
+  onViewAnalytics: (survey: SurveyWithShare) => void;
   userId?: string;
   responses?: SurveyResponse[];
+  onAcceptShare?: (survey: SurveyWithShare) => void;
+  onRejectShare?: (survey: SurveyWithShare) => void;
 }
 
 export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
@@ -74,6 +86,8 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   onViewAnalytics,
   userId,
   responses = [],
+  onAcceptShare,
+  onRejectShare,
 }) => {
   const responseCount = responses?.length || 0;
   const surveyType = survey.nodes ? 'dynamic' : 'static';
@@ -88,6 +102,19 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   // Log pour déboguer
   console.log(`Sondage ${survey._id}: isPrivate=${survey.isPrivate}, privateLink=${Boolean(survey.privateLink)}, calculé=${isPrivateSurvey}`);
 
+  // Log plus détaillé pour déboguer
+  console.log(`Rendu de la carte pour le sondage:`, {
+    id: survey._id,
+    title: survey.title,
+    isShared: survey.isShared, 
+    status: survey.status,
+    sharedBy: survey.sharedBy,
+    isDynamic: survey.isDynamic
+  });
+
+  // Ajoutez ce code pour afficher un badge spécial pour les sondages partagés
+  const isSharedSurvey = Boolean(survey.isShared);
+  
   return (
     <Card
       elevation={1}
@@ -107,7 +134,8 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             visibility: 'visible',
             transform: 'translateY(0)',
           }
-        }
+        },
+        border: isSharedSurvey ? '2px dashed #667eea' : 'none',
       }}
     >
       {/* Badge Private/Public positionné en haut à droite */}
@@ -125,6 +153,24 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           variant="outlined" 
         />
       </Box>
+      
+      {/* Badge pour les sondages partagés */}
+      {isSharedSurvey && (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 8, 
+          left: 8, 
+          zIndex: 3 
+        }}>
+          <Chip 
+            icon={<ShareIcon fontSize="small" />}
+            label={survey.status === 'pending' ? "En attente" : "Partagé"}
+            size="small"
+            color="secondary"
+            sx={{ fontWeight: 'bold' }}
+          />
+        </Box>
+      )}
       
       <CardContent sx={{ 
         pt: 4, 

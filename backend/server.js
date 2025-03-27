@@ -11,6 +11,8 @@ const surveyAnswerRoutes = require("./routes/surveyAnswers");
 const surveyShareRoutes = require("./routes/surveyShares");
 const dynamicSurveyRoutes = require("./routes/dynamicSurveys");
 const dynamicSurveyAnswerRoutes = require("./routes/dynamicSurveyAnswers");
+const { shareSurvey } = require('./controllers/surveyShareController');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 
@@ -52,6 +54,9 @@ app.use("/api/survey-answers", surveyAnswerRoutes);
 app.use("/api/survey-shares", surveyShareRoutes);
 app.use("/api/dynamic-surveys", dynamicSurveyRoutes);
 app.use("/api/dynamic-survey-answers", dynamicSurveyAnswerRoutes);
+
+// Ajouter une route directe pour le partage de sondage
+app.post('/api/share-survey', authMiddleware, shareSurvey);
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI)

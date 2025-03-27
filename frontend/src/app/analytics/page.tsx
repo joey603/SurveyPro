@@ -11,6 +11,7 @@ import { SurveyAnalytics } from '../components/analytics/SurveyAnalytics';
 import ShareIcon from '@mui/icons-material/Share';
 import ShareDialog from '../components/analytics/ShareDialog';
 import ExportIcon from '@mui/icons-material/IosShare';
+import { shareSurvey } from '@/utils/surveyShareService';
 
 interface Question {
   id: string;
@@ -178,19 +179,22 @@ const AnalyticsPage: React.FC = () => {
   const handleShareSurvey = async (email: string): Promise<void> => {
     try {
       const token = localStorage.getItem('accessToken') || '';
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/survey-shares`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          surveyId: selectedSurvey?._id,
-          recipientEmail: email
-        })
+      console.log('Tentative de partage du sondage:', {
+        surveyId: selectedSurvey?._id,
+        recipientEmail: email,
+        tokenLength: token.length
       });
       
-      // Ne pas utiliser le Snackbar, la boîte de dialogue affiche déjà un message
+      await shareSurvey(selectedSurvey?._id || '', email, token);
+      
+      console.log('Sondage partagé avec succès:', {
+        surveyId: selectedSurvey?._id,
+        recipientEmail: email
+      });
+
+      setSnackbarMessage('Sondage partagé avec succès');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
       // Ne pas retourner true pour éviter l'erreur de type
     } catch (error) {
       console.error('Erreur lors du partage:', error);

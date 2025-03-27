@@ -5,10 +5,12 @@ const Survey = require('../models/Survey');
 exports.shareSurvey = async (req, res) => {
   try {
     console.log('Starting shareSurvey function');
+    console.log('Utilisateur authentifié:', req.user);
     const { surveyId, recipientEmail } = req.body;
-    console.log('Received data:', { surveyId, recipientEmail });
+    console.log('Données reçues:', { surveyId, recipientEmail });
     
     if (!surveyId || !recipientEmail) {
+      console.log('Données invalides:', { surveyId, recipientEmail });
       return res.status(400).json({ 
         message: "Survey ID and recipient email are required" 
       });
@@ -16,23 +18,30 @@ exports.shareSurvey = async (req, res) => {
 
     // Get the sharing user
     const sender = await User.findById(req.user.id);
+    console.log('Expéditeur trouvé:', sender ? sender.email : 'Non trouvé');
     if (!sender) {
       return res.status(404).json({ message: "Sender not found" });
     }
 
     // Check if survey exists
     const survey = await Survey.findById(surveyId);
+    console.log('Sondage trouvé:', survey ? survey.title : 'Non trouvé');
     if (!survey) {
       return res.status(404).json({ message: "Survey not found" });
     }
 
     // Check if recipient user exists
     const recipient = await User.findOne({ email: recipientEmail });
+    console.log('Destinataire trouvé:', recipient ? recipient.email : 'Non trouvé');
     if (!recipient) {
       return res.status(404).json({ message: "Recipient not found" });
     }
 
     // Check if recipient is the survey owner
+    console.log('Vérification propriétaire:', { 
+      userId: survey.userId.toString(), 
+      recipientId: recipient._id.toString() 
+    });
     if (survey.userId.toString() === recipient._id.toString()) {
       return res.status(400).json({ 
         message: "User is already the owner of this survey" 
@@ -68,7 +77,10 @@ exports.shareSurvey = async (req, res) => {
       share
     });
   } catch (error) {
-    console.error('Error while sharing:', error);
+    console.error('Erreur détaillée dans shareSurvey:', {
+      message: error.message,
+      stack: error.stack
+    });
     res.status(500).json({ 
       message: "Error while sharing", 
       error: error.message,
