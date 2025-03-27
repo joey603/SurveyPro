@@ -36,33 +36,56 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
 
 export const shareSurvey = async (surveyId: string, recipientEmail: string, token: string) => {
   try {
-    console.log('Service shareSurvey appelé avec:', {
+    console.log('Service shareSurvey called with:', {
       surveyId,
-      recipientEmail,
-      tokenPresent: !!token
+      recipientEmail
     });
     
-    const url = `${BASE_URL}/api/survey-shares/share`;
-    console.log('URL appelée:', url);
-    
-    const response = await axios({
-      method: 'POST',
-      url: url,
-      data: { surveyId, recipientEmail },
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    const response = await axios.post(
+      `${BASE_URL}/api/survey-shares/share`,
+      { surveyId, recipientEmail },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
-    });
+    );
     
-    console.log('Réponse du service de partage:', response.data);
     return response.data;
   } catch (error: any) {
-    console.error('Erreur détaillée dans shareSurvey:', {
+    console.error('Detailed error in shareSurvey:', {
+      status: error.response?.status,
       message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
+      responseData: error.response?.data
     });
-    throw error;
+    
+    // Specific case: user not found
+    if (error.response?.status === 404) {
+      throw new Error(`The user with email "${recipientEmail}" does not exist in the system.`);
+    }
+    
+    // Specific case: share already pending or accepted
+    if (error.response?.status === 400) {
+      const errorMessage = error.response?.data?.message || '';
+      
+      if (errorMessage.includes('pending')) {
+        throw new Error(`The user with email "${recipientEmail}" already has a pending invitation for this survey.`);
+      }
+      
+      if (errorMessage.includes('already accepted')) {
+        throw new Error(`The user with email "${recipientEmail}" has already accepted this survey.`);
+      }
+      
+      if (errorMessage.includes('owner')) {
+        throw new Error(`The user with email "${recipientEmail}" is already the owner of this survey.`);
+      }
+    }
+    
+    // For other types of errors
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'An error occurred while sharing the survey'
+    );
   }
 }; 

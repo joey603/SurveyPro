@@ -194,26 +194,25 @@ const AnalyticsPage: React.FC = () => {
 
   const handleShareSurvey = async (email: string): Promise<void> => {
     try {
+      setShowShareDialog(true);
       const token = localStorage.getItem('accessToken') || '';
-      console.log('Attempting to share survey:', {
-        surveyId: selectedSurvey?._id,
-        recipientEmail: email,
-        tokenLength: token.length
-      });
       
+      // Partage le sondage
       await shareSurvey(selectedSurvey?._id || '', email, token);
       
-      console.log('Survey shared successfully:', {
-        surveyId: selectedSurvey?._id,
-        recipientEmail: email
-      });
-
-      setSnackbarMessage('Survey shared successfully');
-      setSnackbarSeverity('success');
-      setOpenSnackbar(true);
-    } catch (error) {
+      // Ne pas afficher de message ici, le succès est déjà géré dans le dialogue
+      // Supprimez ou commentez les lignes qui affichent un message de succès
+      // comme setMessage ou enqueueSnackbar, etc.
+      
+      // Attendre un court délai avant de fermer le dialogue
+      // setTimeout(() => {
+      //   setIsShareDialogOpen(false);
+      // }, 2000);
+      
+      // Ne fermez pas automatiquement la boîte de dialogue, laissez l'utilisateur le faire
+    } catch (error: any) {
       console.error('Error sharing survey:', error);
-      throw error;
+      // Ne pas afficher d'erreur ici, les erreurs sont gérées dans le dialogue
     }
   };
 

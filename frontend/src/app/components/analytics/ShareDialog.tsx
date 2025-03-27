@@ -11,9 +11,11 @@ import {
   IconButton,
   Box,
   Alert,
+  Paper,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ShareIcon from '@mui/icons-material/Share';
+import InfoIcon from '@mui/icons-material/Info';
 
 interface ShareDialogProps {
   open: boolean;
@@ -33,7 +35,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
 
   const handleShareClick = async () => {
     if (!email) {
-      setError('Veuillez entrer une adresse email');
+      setError('Please enter an email address');
       return;
     }
 
@@ -46,7 +48,11 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
       setSuccess(true);
       setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue lors du partage du sondage');
+      if (err.message && err.message.includes("Recipient not found")) {
+        setError(`The user with email "${email}" does not exist in the system.`);
+      } else {
+        setError(err.message || 'An error occurred while sharing the survey');
+      }
     } finally {
       setLoading(false);
     }
@@ -91,6 +97,15 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
           </Typography>
         )}
         
+        <Paper elevation={0} sx={{ p: 2, bgcolor: 'rgba(102, 126, 234, 0.05)', mb: 3, borderRadius: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <InfoIcon color="primary" sx={{ mt: 0.5 }} />
+            <Typography variant="body2" color="text.secondary">
+              Sharing this survey will send an invitation to the recipient's email. They will need to accept the invitation to access the survey and its analytics. You can view pending and accepted shares in your analytics dashboard.
+            </Typography>
+          </Box>
+        </Paper>
+        
         <TextField
           autoFocus
           margin="dense"
@@ -103,6 +118,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
           sx={{ mb: 2 }}
+          helperText="Enter the email address of an existing SurveyPro user"
         />
         
         {error && (
@@ -113,7 +129,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
         
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
-            Survey shared successfully!
+            Survey shared successfully! The recipient will receive a notification to accept the shared survey.
           </Alert>
         )}
       </DialogContent>
