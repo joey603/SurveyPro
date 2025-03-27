@@ -211,47 +211,71 @@ interface DynamicSurvey {
   [key: string]: any;
 }
 
-export const fetchSurveys = async (token: string): Promise<any> => {
+export const fetchSurveys = async (token: string) => {
   try {
-    // Récupérer les sondages classiques
-    const classicResponse = await axios.get(`${API_URL}/surveys`, {
+    console.log('===== DÉBUT fetchSurveys =====');
+    
+    // Récupérer les sondages statiques de l'utilisateur
+    const response = await axios.get(`${BASE_URL}/api/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
-    // Récupérer les sondages dynamiques
-    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
+    // Récupérer les sondages dynamiques de l'utilisateur
+    const dynamicResponse = await axios.get(`${BASE_URL}/api/dynamic-surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
-    console.log('Sondages classiques récupérés:', classicResponse.data.length);
-    console.log('Sondages dynamiques récupérés:', dynamicResponse.data.length);
+    // Récupérer les sondages partagés et acceptés
+    const sharedResponse = await axios.get(`${BASE_URL}/api/survey-shares/shared-with-me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     
-    // Formater les sondages dynamiques pour avoir la même structure
-    const dynamicSurveys = dynamicResponse.data.map((survey: DynamicSurvey) => ({
+    const surveys = response.data.map((survey: any) => ({
       ...survey,
-      isDynamic: true,
-      questions: survey.nodes?.map((node: DynamicSurveyNode) => ({
-        id: node.id,
-        text: node.data?.text || node.data?.label || 'Question sans texte',
-        type: node.data?.questionType || node.data?.type || 'text',
-        options: node.data?.options || []
-      })) || []
+      isDynamic: false,
+      isOwner: true // Marquer comme appartenant à l'utilisateur
     }));
     
-    console.log('Sondages dynamiques formatés:', dynamicSurveys.length);
-    if (dynamicSurveys.length > 0) {
-      console.log('Exemple de sondage dynamique:', dynamicSurveys[0].title);
+    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: true,
+      isOwner: true // Marquer comme appartenant à l'utilisateur
+    }));
+    
+    const sharedSurveys = sharedResponse.data;
+    
+    console.log(`Sondages récupérés: ${surveys.length} statiques, ${dynamicSurveys.length} dynamiques, ${sharedSurveys.length} partagés`);
+    
+    // Valider chaque sondage partagé pour le débogage
+    if (sharedSurveys.length > 0) {
+      console.log('Détails des sondages partagés:');
+      sharedSurveys.forEach((survey: any, index: number) => {
+        console.log(`Sondage partagé #${index+1}:`, {
+          id: survey._id,
+          title: survey.title || 'Sans titre',
+          isDynamic: survey.isDynamic,
+          shareId: survey.shareId,
+          isShared: survey.isShared,
+          status: survey.status
+        });
+      });
     }
     
-    // Combiner les deux types de sondages
-    return [...classicResponse.data, ...dynamicSurveys];
-  } catch (error: any) {
-    console.error("Error fetching surveys:", error);
-    throw error.response?.data || error;
+    // Combiner tous les types de sondages
+    const allSurveys = [...surveys, ...dynamicSurveys, ...sharedSurveys];
+    console.log(`Total de ${allSurveys.length} sondages récupérés`);
+    
+    console.log('===== FIN fetchSurveys =====');
+    return allSurveys;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages:', error);
+    return [];
   }
 };
 

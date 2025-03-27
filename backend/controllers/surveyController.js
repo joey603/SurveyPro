@@ -90,42 +90,12 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    // Récupérer les sondages créés par l'utilisateur
-    const ownedSurveys = await Survey.find({ userId: req.user.id })
-      .select('title description questions demographicEnabled createdAt')
-      .lean();
-
-    // Récupérer les sondages partagés avec l'utilisateur
-    const sharedSurveys = await SurveyShare.find({
-      sharedWith: req.user.id,
-      status: 'accepted'
-    })
-    .populate({
-      path: 'surveyId',
-      select: 'title description questions demographicEnabled createdAt'
-    })
-    .lean();
-
-    // Combiner et formater les résultats
-    const allSurveys = [
-      ...ownedSurveys.map(survey => ({
-        ...survey,
-        isOwner: true
-      })),
-      ...sharedSurveys.map(share => ({
-        ...share.surveyId,
-        isOwner: false,
-        sharedBy: share.sharedBy
-      }))
-    ];
-
-    res.status(200).json(allSurveys);
+    // Ne récupérer que les sondages de l'utilisateur actuel
+    const surveys = await Survey.find({ userId: req.user.id });
+    res.status(200).json(surveys);
   } catch (error) {
-    console.error("Error fetching surveys:", error);
-    res.status(500).json({ 
-      message: "Erreur lors de la récupération des sondages", 
-      error: error.message 
-    });
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

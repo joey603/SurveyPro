@@ -91,10 +91,20 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
 }) => {
   const responseCount = responses?.length || 0;
   
+  // Vérifier la validité des données du sondage pour le débogage
+  const isValidSurvey = Boolean(survey && survey._id);
+  
+  if (!isValidSurvey) {
+    console.error('Invalid survey data:', survey);
+    return null; // Ne pas rendre ce composant si les données sont invalides
+  }
+  
   // Déterminer si c'est un sondage dynamique (vérifier plusieurs façons possibles)
-  const isDynamicSurvey = survey.isDynamic || 
-                         Boolean(survey.nodes && survey.nodes.length) || 
-                         Boolean(survey.edges);
+  const isDynamicSurvey = Boolean(
+    survey.isDynamic || 
+    (survey.nodes && survey.nodes.length > 0) || 
+    (survey.edges && survey.edges.length > 0)
+  );
   
   // Déterminer si c'est un sondage privé
   const isPrivateSurvey = Boolean(
@@ -103,18 +113,18 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
     (survey.title && survey.title.toLowerCase().includes('private'))
   );
   
-  // Ajoutez ce code pour afficher un badge spécial pour les sondages partagés
+  // Déterminer si c'est un sondage partagé
   const isSharedSurvey = Boolean(survey.isShared);
   const isPendingSurvey = isSharedSurvey && survey.status === 'pending';
   
   console.log('Rendu de la carte pour le sondage:', {
     id: survey._id,
-    title: survey.title,
-    isShared: survey.isShared, 
+    title: survey.title || 'No title',
+    isShared: isSharedSurvey, 
     status: survey.status,
     sharedBy: survey.sharedBy,
     isDynamic: isDynamicSurvey,
-    shareId: survey.shareId,
+    shareId: survey.shareId || 'none',
     questions: survey.questions?.length || 0,
     nodes: survey.nodes?.length || 0
   });
@@ -199,7 +209,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             height: '2.6em',
           }}
         >
-          {survey.title || "Sans titre"}
+          {survey.title || "Untitled"}
         </Typography>
 
         <Typography
@@ -215,7 +225,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             height: '4.5em',
           }}
         >
-          {survey.description || 'Aucune description disponible'}
+          {survey.description || 'No description available'}
         </Typography>
         
         {/* Ajout du contenu de survol */}

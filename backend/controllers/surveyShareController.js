@@ -127,56 +127,91 @@ exports.shareSurvey = async (req, res) => {
 
 exports.getSharedSurveys = async (req, res) => {
   try {
+    console.log('===== DÉBUT FONCTION getSharedSurveys =====');
     console.log('Récupération des sondages partagés pour l\'utilisateur:', req.user.id);
     
-    const shares = await SurveyShare.find({
+    // Récupérer tous les partages acceptés
+    const acceptedShares = await SurveyShare.find({
       sharedWith: req.user.id,
       status: 'accepted'
     });
     
-    console.log(`${shares.length} partages trouvés`);
+    console.log(`${acceptedShares.length} partages acceptés trouvés`);
+    
+    if (acceptedShares.length === 0) {
+      return res.status(200).json([]);
+    }
+    
+    // Détail des partages pour le débogage
+    acceptedShares.forEach(share => {
+      console.log(`Partage accepté: ID=${share._id}, SurveyID=${share.surveyId}, Modèle=${share.surveyModel || 'Survey'}`);
+    });
 
-    // Récupérer les détails des sondages de manière plus fiable
-    const formattedShares = await Promise.all(shares.map(async (share) => {
+    // Traiter chaque partage pour obtenir les détails complets
+    const formattedShares = [];
+    
+    for (const share of acceptedShares) {
       try {
         // Déterminer quel modèle utiliser
-        const modelName = share.surveyModel || 'Survey'; // Par défaut 'Survey' si non spécifié
+        const modelName = share.surveyModel || 'Survey';
         const model = modelName === 'DynamicSurvey' ? DynamicSurvey : Survey;
         
         console.log(`Recherche du sondage ${share.surveyId} dans le modèle ${modelName}`);
         const survey = await model.findById(share.surveyId);
         
         if (!survey) {
-          console.log(`Sondage non trouvé: ${share.surveyId}`);
-          return null;
+          console.log(`Sondage partagé non trouvé: ${share.surveyId}`);
+          continue;
         }
         
-        console.log(`Sondage trouvé: ${survey.title}`);
+        console.log(`Sondage partagé trouvé: ${survey.title || 'Sans titre'}`);
         
-        return {
-          _id: share._id,
-          surveyId: survey._id,
-          title: survey.title || "Sans titre",
+        // Former les données du sondage en fonction de son type
+        const formattedSurvey = {
+          _id: survey._id.toString(),
+          surveyId: survey._id.toString(),
+          title: survey.title || "Untitled",
           description: survey.description || "",
-          questions: survey.questions || survey.nodes || [],
           demographicEnabled: survey.demographicEnabled || false,
           createdAt: survey.createdAt,
           status: 'accepted',
           sharedBy: share.sharedBy,
           isDynamic: modelName === 'DynamicSurvey',
-          isShared: true // Indicateur que ce sondage est partagé
+          isShared: true,
+          shareId: share._id.toString(),
+          userId: req.user.id // Ajouter l'ID de l'utilisateur pour les filtres
         };
+        
+        // Ajouter les données spécifiques au type
+        if (modelName === 'DynamicSurvey') {
+          formattedSurvey.nodes = survey.nodes || [];
+          formattedSurvey.edges = survey.edges || [];
+        } else {
+          formattedSurvey.questions = survey.questions || [];
+        }
+        
+        console.log('Sondage formaté:', {
+          id: formattedSurvey._id,
+          title: formattedSurvey.title,
+          isDynamic: formattedSurvey.isDynamic,
+          shareId: formattedSurvey.shareId
+        });
+        
+        formattedShares.push(formattedSurvey);
       } catch (error) {
         console.error(`Erreur lors du traitement du partage ${share._id}:`, error);
-        return null;
       }
-    }));
+    }
 
-    // Filtrer les nulls (sondages non trouvés)
-    const validShares = formattedShares.filter(share => share !== null);
-    console.log(`${validShares.length} sondages partagés valides`);
+    console.log(`${formattedShares.length} sondages partagés formatés avec succès`);
+    
+    // Logs détaillés pour le débogage
+    formattedShares.forEach(survey => {
+      console.log(`Sondage partagé formaté: ID=${survey._id}, Titre="${survey.title}", isDynamic=${survey.isDynamic}`);
+    });
 
-    res.status(200).json(validShares);
+    res.status(200).json(formattedShares);
+    console.log('===== FIN FONCTION getSharedSurveys =====');
   } catch (error) {
     console.error('Erreur lors de la récupération des sondages partagés:', error);
     res.status(500).json({ 
