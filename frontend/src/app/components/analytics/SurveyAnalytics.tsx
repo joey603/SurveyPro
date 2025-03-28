@@ -67,7 +67,7 @@ import { AnalysisGroup } from './GroupsList';
 import { PathTreeVisualizer } from './PathTreeVisualizer';
 import { SelectedPathsPanel } from './SelectedPathsPanel';
 import { SurveyQuestions } from './SurveyQuestions';
-import { TabPanel } from './TabPanel';
+import TabPanel from '@mui/lab/TabPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -1482,9 +1482,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 Survey Analytics
               </Typography>
               
-              <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
-                Survey Questions
-              </Typography>
+              
               
               {getQuestionsToDisplay().map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
@@ -1610,26 +1608,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
             {/* Ajouter la section des questions ici */}
             <Box sx={{ my: 4 }}>
-              <Typography variant="h5" gutterBottom sx={{ 
-                fontWeight: 'medium', 
-                color: 'text.primary',
-                display: 'flex',
-                alignItems: 'center',
-                '&:before': {
-                  content: '""',
-                  display: 'block',
-                  width: 4,
-                  height: 24,
-                  backgroundColor: '#667eea',
-                  marginRight: 1,
-                  borderRadius: 1
-                }
-              }}>
-                Questions du sondage
-              </Typography>
-              
-              <Divider sx={{ mb: 3 }} />
-              
               <SurveyQuestions 
                 survey={survey}
                 responses={filteredResponses}
