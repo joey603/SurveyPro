@@ -66,6 +66,8 @@ import { PathSegment } from './PathTreeVisualizer';
 import { AnalysisGroup } from './GroupsList';
 import { PathTreeVisualizer } from './PathTreeVisualizer';
 import { SelectedPathsPanel } from './SelectedPathsPanel';
+import { SurveyQuestions } from './SurveyQuestions';
+import { TabPanel } from './TabPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -1605,6 +1607,37 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 );
               })}
             </Grid>
+
+            {/* Ajouter la section des questions ici */}
+            <Box sx={{ my: 4 }}>
+              <Typography variant="h5" gutterBottom sx={{ 
+                fontWeight: 'medium', 
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                '&:before': {
+                  content: '""',
+                  display: 'block',
+                  width: 4,
+                  height: 24,
+                  backgroundColor: '#667eea',
+                  marginRight: 1,
+                  borderRadius: 1
+                }
+              }}>
+                Questions du sondage
+              </Typography>
+              
+              <Divider sx={{ mb: 3 }} />
+              
+              <SurveyQuestions 
+                survey={survey}
+                responses={filteredResponses}
+                renderChart={renderChart}
+                getAvailableChartTypes={getAvailableChartTypes}
+                getChartIcon={getChartIcon}
+              />
+            </Box>
 
             <Grid item xs={12}>
               <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
