@@ -1458,10 +1458,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
             {survey.isDynamic && (
               <Grid item xs={12}>
-                <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-                  <Typography variant="h5" component="h2" gutterBottom>
-                    Response Path Analysis
-                  </Typography>
+              
                   
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
@@ -1473,7 +1470,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       onPathsLoad={handlePathsLoad}
                     />
                   </Box>
-                </Paper>
               </Grid>
             )}
 
