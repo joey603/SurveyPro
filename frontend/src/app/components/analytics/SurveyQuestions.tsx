@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -95,6 +95,7 @@ interface SurveyQuestionsProps {
   renderChart: (questionId: string, chartType: ChartType) => JSX.Element;
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
+  showTitle?: boolean;
 }
 
 export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
@@ -102,7 +103,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   responses,
   renderChart,
   getAvailableChartTypes,
-  getChartIcon
+  getChartIcon,
+  showTitle = true
 }) => {
   const theme = useTheme();
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
@@ -114,6 +116,7 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     mostCommonAnswer?: string,
     avgRating?: number
   }}>({});
+  const lastMemoKey = useRef<string>('');
 
   // Function to convert a node to a question
   const nodeToQuestion = (node: Node): Question => {
@@ -148,6 +151,24 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
 
   // Calculate statistics for each question
   useEffect(() => {
+    // Si les questions ou les réponses sont vides, ne faites rien
+    if (questions.length === 0 || responses.length === 0) {
+      setQuestionStats({});
+      return;
+    }
+    
+    // Clé de mémorisation pour éviter des recalculs inutiles
+    const questionsKey = questions.map(q => q.id).join('|');
+    const responsesKey = responses.map(r => r._id).join('|');
+    const memoKey = `${questionsKey}|${responsesKey}`;
+    
+    // Si nous avons déjà calculé les stats pour cette combinaison, ne refaites pas le calcul
+    if (lastMemoKey.current === memoKey) {
+      return;
+    }
+    
+    lastMemoKey.current = memoKey;
+    
     const stats: {[key: string]: any} = {};
     
     questions.forEach(question => {
@@ -422,30 +443,32 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
         boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
       }}
     >
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6" sx={{ 
-          fontWeight: 'medium', 
-          display: 'flex', 
-          alignItems: 'center',
-          color: theme.palette.text.primary
-        }}>
-          <PollIcon sx={{ mr: 1, color: '#667eea' }} />
-          Survey Questions ({questions.length})
-        </Typography>
-        
-        <Box>
-          <Chip 
-            label={`${responses.length} total responses`}
-            sx={{ 
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              color: '#667eea',
-              fontWeight: 'medium'
-            }}
-          />
+      {showTitle && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 'medium', 
+            display: 'flex', 
+            alignItems: 'center',
+            color: theme.palette.text.primary
+          }}>
+            <PollIcon sx={{ mr: 1, color: '#667eea' }} />
+            Survey Questions ({questions.length})
+          </Typography>
+          
+          <Box>
+            <Chip 
+              label={`${responses.length} total responses`}
+              sx={{ 
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                fontWeight: 'medium'
+              }}
+            />
+          </Box>
         </Box>
-      </Box>
+      )}
       
-      <Divider sx={{ mb: 3 }} />
+      {showTitle && <Divider sx={{ mb: 3 }} />}
       
       <Grid container spacing={2}>
         {questions.map((question, index) => {

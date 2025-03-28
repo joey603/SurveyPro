@@ -57,7 +57,7 @@ import { calculateAge } from '../../../utils/dateUtils';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { FilterPanel } from './FilterPanel';
-import { AdvancedFilterPanel } from './AdvancedFilterPanel';
+import { AdvancedFilterPanel } from './AdvancedFilterPanelFixed';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { QuestionDetailsDialog } from './QuestionDetailsDialog';
@@ -1458,7 +1458,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
             {survey.isDynamic && (
               <Grid item xs={12}>
-              
+               
                   
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
@@ -1470,6 +1470,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       onPathsLoad={handlePathsLoad}
                     />
                   </Box>
+              
               </Grid>
             )}
 
@@ -1478,7 +1479,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 Survey Analytics
               </Typography>
               
-              
+              <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
+                Survey Questions
+              </Typography>
               
               {getQuestionsToDisplay().map((question, index) => {
                 const stats = calculateQuestionStats(question.id);
@@ -1610,6 +1613,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 renderChart={renderChart}
                 getAvailableChartTypes={getAvailableChartTypes}
                 getChartIcon={getChartIcon}
+                showTitle={false} // Masquer le titre
               />
             </Box>
 

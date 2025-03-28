@@ -49,6 +49,7 @@ interface Survey {
   userId: string;
   sharedBy?: string;
   status?: 'pending' | 'accepted' | 'rejected';
+  nodes?: any[];
 }
 
 interface SurveyResponse {
@@ -185,10 +186,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   useEffect(() => {
     console.log("AdvancedFilterPanel monté avec:", {
       pathFilterActive,
-      questionCount: survey.questions.length,
+      questionCount: survey.questions?.length || survey.nodes?.length || 0,
       responseCount: responses.length
     });
-  }, [pathFilterActive, survey.questions.length, responses.length]);
+  }, [pathFilterActive, survey.questions?.length || survey.nodes?.length || 0, responses.length]);
 
   // Fonctions utilitaires
   const getOperatorsByType = (questionType: string): string[] => {
