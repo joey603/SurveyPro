@@ -50,6 +50,7 @@ interface Survey {
   sharedBy?: string;
   status?: 'pending' | 'accepted' | 'rejected';
   nodes?: any[];
+  isDynamic: boolean;
 }
 
 interface SurveyResponse {
@@ -107,6 +108,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   onApplyFilters,
   pathFilterActive = false
 }) => {
+  // Ajouter cette ligne au début du composant pour éviter l'erreur
+  const surveyWithQuestions = {
+    ...survey,
+    questions: survey.questions || []
+  };
+
   // États
   const [filters, setFilters] = useState<Filters>({
     demographic: {},
@@ -140,12 +147,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     if (pathFilterActive) {
       // Si le filtre de parcours est activé, afficher uniquement les questions 
       // qui ont des réponses dans les données filtrées
-      return survey.questions.filter(q => questionIdsWithResponses.has(q.id));
+      return surveyWithQuestions.questions.filter(q => questionIdsWithResponses.has(q.id));
     } else {
       // Sinon, afficher toutes les questions
-      return survey.questions;
+      return surveyWithQuestions.questions;
     }
-  }, [survey.questions, questionIdsWithResponses, pathFilterActive]);
+  }, [surveyWithQuestions.questions, questionIdsWithResponses, pathFilterActive]);
 
   // Effet pour extraire les villes uniques des réponses
   React.useEffect(() => {
@@ -186,10 +193,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   useEffect(() => {
     console.log("AdvancedFilterPanel monté avec:", {
       pathFilterActive,
-      questionCount: survey.questions?.length || survey.nodes?.length || 0,
+      questionCount: surveyWithQuestions.questions?.length || surveyWithQuestions.nodes?.length || 0,
       responseCount: responses.length
     });
-  }, [pathFilterActive, survey.questions?.length || survey.nodes?.length || 0, responses.length]);
+  }, [pathFilterActive, surveyWithQuestions.questions?.length || surveyWithQuestions.nodes?.length || 0, responses.length]);
 
   // Fonctions utilitaires
   const getOperatorsByType = (questionType: string): string[] => {
@@ -319,7 +326,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   };
 
   const handleOpenAnswerFilterDialog = (questionId: string) => {
-    const question = survey.questions.find(q => q.id === questionId);
+    const question = surveyWithQuestions.questions.find(q => q.id === questionId);
     if (question) {
       setSelectedQuestionId(questionId);
       setTempRule({ 
@@ -493,7 +500,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         }
         
         // Trouver la question correspondante pour connaître son type
-        const question = survey.questions.find(q => q.id === questionId);
+        const question = surveyWithQuestions.questions.find(q => q.id === questionId);
         console.log("Question type:", question?.type);
         
         // Vérifier chaque règle pour cette question
@@ -541,15 +548,59 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     if (filteredResponses.length === 0) {
       console.log("Aucune réponse ne correspond aux filtres, affichage d'un tableau vide");
     }
-  }, [filters, responses, onApplyFilters, calculateAge, evaluateRule, survey.questions]);
+  }, [filters, responses, onApplyFilters, calculateAge, evaluateRule, surveyWithQuestions.questions]);
 
   // Début du rendu dans AdvancedFilterPanel
-  const questionsWithResponses = survey.questions.filter(question => {
+  const questionsWithResponses = surveyWithQuestions.questions.filter(question => {
     // Vérifier si cette question a des réponses dans les réponses filtrées
     return responses.some(response => 
       response.answers.some(answer => answer.questionId === question.id)
     );
   });
+
+  // Ajouter cette fonction pour obtenir les questions à afficher comme dans SurveyAnalytics
+  const getQuestionsToDisplay = () => {
+    if (!surveyWithQuestions) return [];
+    
+    // Si c'est un sondage dynamique, extraire les questions des nodes
+    if (surveyWithQuestions.isDynamic && surveyWithQuestions.nodes) {
+      return surveyWithQuestions.nodes
+        .filter(node => 
+          node.type === 'questionNode' || 
+          node.type === 'question' || 
+          (node.data && (node.data.questionType || node.data.type))
+        )
+        .map(node => {
+          // Extraire les données de question du nœud
+          const nodeData = node.data || {};
+          return {
+            id: node.id,
+            text: nodeData.text || nodeData.label || 'Question sans titre',
+            type: mapNodeTypeToQuestionType(nodeData.questionType || nodeData.type || 'text'),
+            options: nodeData.options || []
+          };
+        });
+    }
+    
+    // Sinon, retourner les questions standards
+    return surveyWithQuestions.questions || [];
+  };
+
+  // Fonction d'aide pour mapper les types de nœuds aux types de questions
+  const mapNodeTypeToQuestionType = (nodeType: string): string => {
+    switch (nodeType) {
+      case 'multipleChoice':
+        return 'multiple-choice';
+      case 'textInput':
+        return 'text';
+      case 'ratingScale':
+        return 'rating';
+      case 'question':
+        return 'multiple-choice'; // Par défaut, considérer comme choix multiple
+      default:
+        return nodeType;
+    }
+  };
 
   // Rendu du composant
   return (
@@ -610,11 +661,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
             }
           }}
         >
-          <Tab label="Demographic Filters" disabled={!survey.demographicEnabled} />
+          <Tab label="Demographic Filters" disabled={!surveyWithQuestions.demographicEnabled} />
           <Tab label="Answer Filters" />
         </Tabs>
 
-        {activeTab === 0 && survey.demographicEnabled && (
+        {activeTab === 0 && surveyWithQuestions.demographicEnabled && (
           <>
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
@@ -857,7 +908,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 gap: 1
               }}>
                 {Object.entries(filters.answers).map(([questionId, rules]) => {
-                  const question = survey.questions.find(q => q.id === questionId);
+                  const question = getQuestionsToDisplay().find(q => q.id === questionId);
                   // Utiliser un Set pour suivre les règles déjà affichées et éviter les doublons
                   const displayedRules = new Set();
                   
@@ -971,7 +1022,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               onChange={(e) => {
                 const questionId = e.target.value;
                 setSelectedQuestionId(questionId);
-                const question = survey.questions.find(q => q.id === questionId);
+                const question = getQuestionsToDisplay().find(q => q.id === questionId);
                 if (question) {
                   setTempRule(prev => ({
                     ...prev,
@@ -998,7 +1049,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   onChange={(e) => setTempRule(prev => ({ ...prev, operator: e.target.value }))}
                   label="Operator"
                 >
-                  {getOperatorsByType(survey.questions.find(q => q.id === selectedQuestionId)?.type || '').map(op => (
+                  {getOperatorsByType(getQuestionsToDisplay().find(q => q.id === selectedQuestionId)?.type || '').map(op => (
                     <MenuItem key={op} value={op}>
                       {getOperatorLabel(op)}
                     </MenuItem>
@@ -1010,7 +1061,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
                     {(() => {
-                      const question = survey.questions.find(q => q.id === selectedQuestionId);
+                      const question = getQuestionsToDisplay().find(q => q.id === selectedQuestionId);
                       if (!question) return null;
 
                       switch (question.type) {
@@ -1041,7 +1092,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   </Grid>
                   <Grid item xs={6}>
                     {(() => {
-                      const question = survey.questions.find(q => q.id === selectedQuestionId);
+                      const question = getQuestionsToDisplay().find(q => q.id === selectedQuestionId);
                       if (!question) return null;
 
                       switch (question.type) {
@@ -1074,7 +1125,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               ) : (
                 <>
                   {(() => {
-                    const question = survey.questions.find(q => q.id === selectedQuestionId);
+                    const question = getQuestionsToDisplay().find(q => q.id === selectedQuestionId);
                     if (!question) return null;
 
                     switch (question.type) {

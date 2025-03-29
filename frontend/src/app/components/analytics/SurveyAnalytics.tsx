@@ -1200,13 +1200,25 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return undefined;
   };
 
-  // Fonction d'adaptation simplifiée
-  const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[]) => {
-    // Ne pas essayer de déduire les filtres, mais simplement appliquer les réponses filtrées
-    setFilteredResponses(filteredResponses);
+  // Modifier la fonction handleAdvancedFilterApply pour mieux gérer les règles de filtrage
+  const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[], appliedFilters?: Filters) => {
+    console.log("Applying advanced filters:", appliedFilters);
     
-    // Vous pourriez également mettre à jour d'autres états ou effectuer d'autres actions nécessaires
-    // mais sans avoir besoin de convertir les réponses en filtres
+    // Désactiver le filtre de parcours si on applique un filtre avancé
+    if (pathFilterActive) {
+      setPathFilterActive(false); 
+    }
+    
+    // Mettre à jour l'état des filtres si disponible
+    if (appliedFilters) {
+      setFilters(appliedFilters);
+    }
+    
+    // Mettre à jour les deux états de filtrage
+    setFilteredResponses(filteredResponses);
+    setFilteredResponsesByPath(filteredResponses);
+    
+    console.log("Filtres avancés appliqués:", filteredResponses.length, "réponses");
   };
 
   // Ajouter ces nouvelles fonctions de gestionnaire
@@ -1282,24 +1294,19 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     console.log("Ce sondage n'est pas dynamique - l'onglet d'analyse des parcours ne sera pas pertinent");
   }
 
-  // Gestionnaire pour le changement de filtre depuis PathTreeVisualizer
+  // Modifier la fonction handlePathFilterChange pour qu'elle synchronise avec les questions
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
     console.log("Filtre de parcours changé:", isFiltered, "Réponses filtrées:", filteredResps.length);
     setPathFilterActive(isFiltered);
     
     if (isFiltered) {
-      // Appliquer le filtre des parcours
+      // Mettre à jour les deux états pour assurer la cohérence
       setFilteredResponsesByPath(filteredResps);
-      
-      // Réinitialiser les filtres avancés pour être cohérent avec le nouveau filtrage
-      if (showFilters) {
-        // Fermer puis rouvrir le panneau de filtres pour forcer sa réinitialisation
-        setShowFilters(false);
-        setTimeout(() => setShowFilters(true), 100);
-      }
+      setFilteredResponses(filteredResps); // Ceci permet de synchroniser les questions
     } else {
-      // Désactiver le filtre des parcours
+      // Réinitialiser les filtres
       setFilteredResponsesByPath([]);
+      setFilteredResponses(responses); // Revenir aux réponses d'origine
     }
   };
   
@@ -1342,6 +1349,19 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
   };
 
+  // Ajoutez une fonction pour réinitialiser les filtres
+  const handleResetFilters = () => {
+    setFilters({
+      demographic: {},
+      answers: {}
+    });
+    setFilteredResponses(responses);
+    setFilteredResponsesByPath([]);
+    setPathFilterActive(false);
+    
+    console.log("Tous les filtres réinitialisés");
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1374,7 +1394,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           <Button
             variant={showFilters ? "contained" : "outlined"}
             startIcon={showFilters ? <ClearIcon /> : <FilterListIcon />}
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={() => {
+              if (showFilters) {
+                // Si on ferme le panneau, réinitialiser les filtres
+                handleResetFilters();
+              }
+              setShowFilters(!showFilters);
+            }}
             sx={{
               mr: 1,
               ...(showFilters ? {
@@ -1444,9 +1470,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={pathFilterActive ? "filtered-paths" : "all-paths"}
-                  survey={survey}
-                  responses={pathFilterActive ? filteredResponsesByPath : responses}
+                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${filteredResponses.length}`} // Clé unique pour forcer le rafraîchissement
+                  survey={{
+                    ...survey,
+                    questions: getQuestionsToDisplay(),
+                    isDynamic: survey.isDynamic || false
+                  }}
+                  responses={filteredResponses} // Toujours utiliser filteredResponses pour cohérence
                   onApplyFilters={handleAdvancedFilterApply}
                   pathFilterActive={pathFilterActive}
                 />
@@ -1463,7 +1493,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
                       survey={survey} 
-                      responses={filteredResponses.length > 0 ? filteredResponses : responses} 
+                      responses={filteredResponses} // Utiliser directement filteredResponses au lieu de la condition
                       onPathSelect={handlePathSelection}
                       selectedPaths={selectedPaths}
                       onFilterChange={handlePathFilterChange}
@@ -2075,7 +2105,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 <DemographicStatistics 
                   survey={survey}
                   responses={responses}
-                  filteredResponses={displayResponses}
+                  filteredResponses={filteredResponses} // Utiliser uniquement filteredResponses
                   handleTabChange={handleTabChange}
                   activeTab={activeTab}
                   handlePathSelection={handlePathSelection}
