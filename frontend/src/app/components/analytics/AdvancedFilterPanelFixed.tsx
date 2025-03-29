@@ -360,16 +360,36 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     
     setIsResetting(true);
     
-    const emptyFilters: Filters = {
-      demographic: {},
-      answers: {}
-    };
-    setFilters(emptyFilters);
+    if (pathFilterActive) {
+      // Si le filtre de chemin est actif, conservez-le et réinitialisez uniquement les autres filtres
+      const emptyFilters: Filters = {
+        demographic: {},
+        answers: {}
+      };
+      setFilters(emptyFilters);
+      
+      // Réinitialiser les réponses filtrées pour qu'elles correspondent uniquement au filtre de chemin
+      // On va laisser le composant parent gérer cette partie
+      onResetFilters();
+      
+      // Indique qu'on veut conserver le filtre de chemin
+      console.log("Reset applied with path filter preserved");
+    } else {
+      // Si aucun filtre de chemin n'est actif, réinitialiser tous les filtres
+      const emptyFilters: Filters = {
+        demographic: {},
+        answers: {}
+      };
+      setFilters(emptyFilters);
+      
+      // Réinitialiser toutes les réponses filtrées
+      setFilteredResponses(responses);
+      onResetFilters();
+      
+      console.log("Full reset applied");
+    }
     
-    setFilteredResponses(responses);
-    
-    onResetFilters();
-    
+    // Réactiver le bouton après un délai
     setTimeout(() => {
       setIsResetting(false);
     }, 300);

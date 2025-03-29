@@ -1347,20 +1347,42 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // D'abord, ajoutez la fonction handleResetAllFilters dans votre composant SurveyAnalytics
   const handleResetAllFilters = () => {
-    // Réinitialiser les réponses filtrées aux réponses originales
-    setFilteredResponses(responses);
+    if (pathFilterActive) {
+      // Réinitialiser tout sauf le filtre de chemin
+      const pathFilteredResponses = filterResponsesByPath(responses);
+      setFilteredResponses(pathFilteredResponses);
+      setResetCounter(prev => prev + 1);
+    } else {
+      // Réinitialisation complète
+      setFilteredResponses(responses);
+      handlePathFilterChange(false, responses);
+      setResetCounter(prev => prev + 1);
+    }
+  };
+
+  // Fonction utilitaire pour filtrer les réponses selon les chemins sélectionnés
+  const filterResponsesByPath = (resps: SurveyResponse[]): SurveyResponse[] => {
+    if (!pathFilterActive || selectedPaths.length === 0) {
+      return resps;
+    }
     
-    // Notifier le PathTreeVisualizer que les filtres sont réinitialisés
-    handlePathFilterChange(false, responses);
+    // Construire des ensembles d'IDs de questions pour chaque chemin
+    const pathQuestionSets = selectedPaths.map(path => {
+      return new Set(path.map(segment => segment.questionId));
+    });
     
-    // Vous pouvez aussi réinitialiser d'autres états si nécessaire
-    // Par exemple, si vous avez un état pour les filtres démographiques actifs
-    // setActiveDemographicFilters({});
-    
-    // Incrémenter le compteur pour forcer une mise à jour des composants enfants
-    setResetCounter(prev => prev + 1);
-    
-    console.log("All filters have been reset");
+    // Filtrer les réponses
+    return resps.filter(response => {
+      // Pour chaque chemin sélectionné
+      return pathQuestionSets.some(questionSet => {
+        // Vérifier si la réponse correspond à ce chemin
+        // Cette logique dépend de votre modèle de données exact
+        const matchesPath = Array.from(questionSet).every(questionId => {
+          return response.answers.some(answer => answer.questionId === questionId);
+        });
+        return matchesPath;
+      });
+    });
   };
 
   return (
