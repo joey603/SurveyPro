@@ -24,6 +24,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import WarningIcon from '@mui/icons-material/Warning';
+import { PathSegment } from './PathTreeVisualizer';
 
 // Types
 interface Question {
@@ -95,6 +96,7 @@ interface AdvancedFilterPanelProps {
   onApplyFilters: (filteredResponses: SurveyResponse[]) => void;
   onResetFilters: () => void;
   pathFilterActive?: boolean;
+  selectedPaths?: PathSegment[][];
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
@@ -102,7 +104,8 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   responses,
   onApplyFilters,
   onResetFilters,
-  pathFilterActive = false
+  pathFilterActive = false,
+  selectedPaths = []
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -120,14 +123,13 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   // Cette fonction récupère les questions, peu importe le type de sondage
   const getQuestionsList = (): Question[] => {
-    // Si nous avons des questions standard
-    if (survey.questions && survey.questions.length > 0) {
-      return survey.questions;
-    }
+    let allQuestions: Question[] = [];
     
-    // Si nous avons un sondage dynamique avec des nodes
-    if (survey.nodes && survey.nodes.length > 0) {
-      return survey.nodes
+    // Récupérer toutes les questions selon le type de sondage
+    if (survey.questions) {
+      allQuestions = survey.questions;
+    } else if (survey.nodes) {
+      allQuestions = survey.nodes
         .filter(node => 
           node.type === 'questionNode' || 
           node.data?.questionType || 
@@ -141,8 +143,22 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         }));
     }
     
-    // Si nous n'avons ni questions ni nodes, retourner un tableau vide
-    return [];
+    // Si le filtre de chemin est actif et qu'il y a des chemins sélectionnés
+    if (pathFilterActive && selectedPaths.length > 0) {
+      // Construire un ensemble d'IDs de questions présentes dans les chemins sélectionnés
+      const questionIdsInPath = new Set<string>();
+      selectedPaths.forEach(path => {
+        path.forEach(segment => {
+          questionIdsInPath.add(segment.questionId);
+        });
+      });
+      
+      // Ne conserver que les questions présentes dans les chemins
+      return allQuestions.filter(question => questionIdsInPath.has(question.id));
+    }
+    
+    // Sinon, retourner toutes les questions
+    return allQuestions;
   };
 
   useEffect(() => {

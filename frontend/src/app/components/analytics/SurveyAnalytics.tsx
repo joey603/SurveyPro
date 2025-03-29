@@ -1469,8 +1469,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   survey={survey}
                   responses={responses}
                   onApplyFilters={handleAdvancedFilterApply}
-                  onResetFilters={handleResetAllFilters} // Ajoutez cette ligne
+                  onResetFilters={handleResetAllFilters}
                   pathFilterActive={pathFilterActive}
+                  selectedPaths={selectedPaths}
                 />
               </Grid>
             )}
