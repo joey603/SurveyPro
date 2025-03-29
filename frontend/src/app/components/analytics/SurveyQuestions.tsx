@@ -30,6 +30,7 @@ import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import PollIcon from '@mui/icons-material/Poll';
 import { QuestionDetailsDialog } from './QuestionDetailsDialog';
 import { Doughnut, Bar } from 'react-chartjs-2';
+import { PathSegment } from './PathTreeVisualizer';
 
 // Types
 interface Question {
@@ -95,6 +96,8 @@ interface SurveyQuestionsProps {
   renderChart: (questionId: string, chartType: ChartType) => JSX.Element;
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
+  selectedPaths?: PathSegment[][];
+  pathFilterActive?: boolean;
   showTitle?: boolean;
 }
 
@@ -104,6 +107,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   renderChart,
   getAvailableChartTypes,
   getChartIcon,
+  selectedPaths = [],
+  pathFilterActive = false,
   showTitle = true
 }) => {
   const theme = useTheme();
@@ -130,10 +135,11 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
 
   // Get questions to display (either standard survey questions or converted nodes for dynamic surveys)
   const getQuestionsToDisplay = (): Question[] => {
+    let allQuestions: Question[] = [];
+    
     if (survey.isDynamic && survey.nodes) {
-      return survey.nodes
+      allQuestions = survey.nodes
         .filter(node => {
-          // Filter only nodes that represent questions
           return (
             node.type === 'questionNode' || 
             node.data.questionType || 
@@ -142,9 +148,21 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
         })
         .map(nodeToQuestion);
     } else if (survey.questions) {
-      return survey.questions;
+      allQuestions = survey.questions;
     }
-    return [];
+    
+    if (pathFilterActive && selectedPaths.length > 0) {
+      const questionIdsInPath = new Set<string>();
+      selectedPaths.forEach(path => {
+        path.forEach(segment => {
+          questionIdsInPath.add(segment.questionId);
+        });
+      });
+      
+      return allQuestions.filter(question => questionIdsInPath.has(question.id));
+    }
+    
+    return allQuestions;
   };
 
   const questions = getQuestionsToDisplay();

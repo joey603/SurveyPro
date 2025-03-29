@@ -23,6 +23,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import WarningIcon from '@mui/icons-material/Warning';
 
 // Types
 interface Question {
@@ -92,6 +93,7 @@ interface AdvancedFilterPanelProps {
   survey: Survey;
   responses: SurveyResponse[];
   onApplyFilters: (filteredResponses: SurveyResponse[]) => void;
+  onResetFilters: () => void;
   pathFilterActive?: boolean;
 }
 
@@ -99,6 +101,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   survey,
   responses,
   onApplyFilters,
+  onResetFilters,
   pathFilterActive = false
 }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -113,6 +116,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     value: null
   });
   const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>(responses);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Cette fonction récupère les questions, peu importe le type de sondage
   const getQuestionsList = (): Question[] => {
@@ -335,14 +339,24 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     });
   };
 
-  const handleClearFilters = () => {
+  const handleResetFilters = () => {
+    if (isResetting) return;
+    
+    setIsResetting(true);
+    
     const emptyFilters: Filters = {
       demographic: {},
       answers: {}
     };
-    
     setFilters(emptyFilters);
-    applyFilters(emptyFilters);
+    
+    setFilteredResponses(responses);
+    
+    onResetFilters();
+    
+    setTimeout(() => {
+      setIsResetting(false);
+    }, 300);
   };
 
   const applyFilters = (currentFilters: Filters) => {
@@ -440,7 +454,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   const questions = getQuestionsList();
   const hasDemographicData = responses.some(r => r.respondent?.demographic);
-  const hasActiveFilters = Object.keys(filters.answers).length > 0 || Object.keys(filters.demographic).length > 0;
+  const hasActiveFilters = Object.keys(filters.answers).length > 0 || 
+                          Object.keys(filters.demographic).length > 0 ||
+                          filteredResponses.length < responses.length;
   
   let selectedQuestion = null;
   if (currentQuestionId) {
@@ -464,12 +480,32 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         </Typography>
         
         <Box>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            size="small" 
+            onClick={handleResetFilters}
+            disabled={isResetting}
+            startIcon={<FilterListIcon />}
+            sx={{ 
+              mr: 1,
+              borderColor: '#667eea',
+              color: '#667eea',
+              '&:hover': {
+                borderColor: '#764ba2',
+                backgroundColor: 'rgba(102, 126, 234, 0.04)'
+              }
+            }}
+          >
+            {isResetting ? "Resetting..." : "Reset Filters"}
+          </Button>
+          
           {hasActiveFilters && (
             <Button 
               variant="outlined" 
               color="inherit" 
               size="small" 
-              onClick={handleClearFilters}
+              onClick={handleResetFilters}
               sx={{ mr: 1 }}
             >
               Clear Filters
@@ -477,7 +513,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           )}
           
           <Chip
-            label={`${filteredResponses.length} / ${responses.length} responses`}
+            label={
+              filteredResponses.length === 0 && responses.length > 0
+                ? "0 / " + responses.length + " responses"
+                : `${filteredResponses.length} / ${responses.length} responses`
+            }
             color={hasActiveFilters ? "primary" : "default"}
             sx={{
               background: hasActiveFilters ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : undefined,
@@ -741,6 +781,25 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           )}
         </Box>
       </Box>
+      
+      {filteredResponses.length === 0 && responses.length > 0 && (
+        <Typography 
+          variant="body2" 
+          color="error" 
+          sx={{ 
+            mt: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 1,
+            bgcolor: 'rgba(211, 47, 47, 0.1)',
+            borderRadius: 1
+          }}
+        >
+          <WarningIcon fontSize="small" sx={{ mr: 1 }} />
+          No responses match the current filters.
+        </Typography>
+      )}
       
       {/* Filter Dialog */}
       <Dialog 

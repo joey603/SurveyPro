@@ -465,6 +465,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[]}[]>([]);
   const [showPrivateLink, setShowPrivateLink] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [resetCounter, setResetCounter] = useState(0);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1203,13 +1204,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return undefined;
   };
 
-  // Fonction d'adaptation simplifiée
+  // Modifiez la fonction qui gère l'application des filtres
   const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[]) => {
-    // Ne pas essayer de déduire les filtres, mais simplement appliquer les réponses filtrées
     setFilteredResponses(filteredResponses);
     
-    // Vous pourriez également mettre à jour d'autres états ou effectuer d'autres actions nécessaires
-    // mais sans avoir besoin de convertir les réponses en filtres
+    // Utilisez handlePathFilterChange au lieu de onPathFilterChange
+    handlePathFilterChange(filteredResponses.length < responses.length, filteredResponses);
   };
 
   // Ajouter ces nouvelles fonctions de gestionnaire
@@ -1345,6 +1345,24 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
   };
 
+  // D'abord, ajoutez la fonction handleResetAllFilters dans votre composant SurveyAnalytics
+  const handleResetAllFilters = () => {
+    // Réinitialiser les réponses filtrées aux réponses originales
+    setFilteredResponses(responses);
+    
+    // Notifier le PathTreeVisualizer que les filtres sont réinitialisés
+    handlePathFilterChange(false, responses);
+    
+    // Vous pouvez aussi réinitialiser d'autres états si nécessaire
+    // Par exemple, si vous avez un état pour les filtres démographiques actifs
+    // setActiveDemographicFilters({});
+    
+    // Incrémenter le compteur pour forcer une mise à jour des composants enfants
+    setResetCounter(prev => prev + 1);
+    
+    console.log("All filters have been reset");
+  };
+
   return (
     <Box>
       <Box sx={{
@@ -1447,10 +1465,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={pathFilterActive ? "filtered-paths" : "all-paths"}
+                  key={`filter-panel-${resetCounter}`}
                   survey={survey}
-                  responses={pathFilterActive ? filteredResponsesByPath : responses}
+                  responses={responses}
                   onApplyFilters={handleAdvancedFilterApply}
+                  onResetFilters={handleResetAllFilters} // Ajoutez cette ligne
                   pathFilterActive={pathFilterActive}
                 />
               </Grid>
@@ -1462,8 +1481,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
-                      survey={survey} 
-                      responses={filteredResponses.length > 0 ? filteredResponses : responses} 
+                      key={`tree-${resetCounter}`}
+                      survey={survey}
+                      responses={filteredResponses}
                       onPathSelect={handlePathSelection}
                       selectedPaths={selectedPaths}
                       onFilterChange={handlePathFilterChange}
@@ -1608,12 +1628,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {/* Ajouter la section des questions ici */}
             <Box sx={{ my: 4 }}>
               <SurveyQuestions 
+                key={`questions-${resetCounter}`}
                 survey={survey}
                 responses={filteredResponses}
                 renderChart={renderChart}
                 getAvailableChartTypes={getAvailableChartTypes}
                 getChartIcon={getChartIcon}
-                showTitle={false} // Masquer le titre
+                selectedPaths={selectedPaths} // Ajoutez cette prop
+                pathFilterActive={pathFilterActive} // Ajoutez cette prop
               />
             </Box>
 
