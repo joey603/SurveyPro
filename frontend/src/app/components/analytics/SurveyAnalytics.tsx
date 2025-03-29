@@ -57,7 +57,7 @@ import { calculateAge } from '../../../utils/dateUtils';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { FilterPanel } from './FilterPanel';
-import { AdvancedFilterPanel } from './AdvancedFilterPanelFixed';
+import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { QuestionDetailsDialog } from './QuestionDetailsDialog';
@@ -66,8 +66,6 @@ import { PathSegment } from './PathTreeVisualizer';
 import { AnalysisGroup } from './GroupsList';
 import { PathTreeVisualizer } from './PathTreeVisualizer';
 import { SelectedPathsPanel } from './SelectedPathsPanel';
-import { SurveyQuestions } from './SurveyQuestions';
-import TabPanel from '@mui/lab/TabPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -465,7 +463,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[]}[]>([]);
   const [showPrivateLink, setShowPrivateLink] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [resetCounter, setResetCounter] = useState(0);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -908,7 +905,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour afficher un résumé de la question
   const renderQuestionSummary = (question: Question) => {
-    const stats = calculateQuestionStats(question.id);
+    // Pour les questions extraites des sondages dynamiques, assurez-vous que questionId est défini
+    const questionId = question.id;
+    if (!questionId) return null;
+    
+    const stats = calculateQuestionStats(questionId);
     
     if (stats.total === 0) {
       return (
@@ -1024,8 +1025,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour gérer le clic sur une question
   const handleQuestionClick = (questionId: string) => {
-    const question = survey.questions.find(q => q.id === questionId);
-    if (!question) return;
+    // Utiliser getQuestionsToDisplay() pour obtenir les questions, qu'elles soient standard ou dynamiques
+    const allQuestions = getQuestionsToDisplay();
+    const question = allQuestions.find(q => q.id === questionId);
+    
+    if (!question) {
+      console.error(`Question avec ID ${questionId} non trouvée`);
+      return;
+    }
     
     // Filtrer les réponses pour cette question
     const questionAnswers = filteredResponses.filter(response => 
@@ -1039,7 +1046,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       answers: questionAnswers
     });
     
-    // Ouvrir la boîte de dialogue ou changer la vue
+    // Ouvrir la boîte de dialogue
     setShowResponseDetails(true);
   };
 
@@ -1123,40 +1130,29 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Fonction pour obtenir les questions à afficher (questions standard ou nœuds pour les sondages dynamiques)
   const getQuestionsToDisplay = () => {
-    console.log('Survey data in getQuestionsToDisplay:', {
-      surveyType: survey.isDynamic ? 'Dynamic' : 'Static',
-      hasQuestions: !!survey.questions,
-      questionsLength: survey.questions?.length,
-      hasNodes: !!survey.nodes,
-      nodesLength: survey.nodes?.length
-    });
-
-    // Si c'est un sondage dynamique
-    if (survey.isDynamic) {
-      // Extraire les questions des nœuds
-      if (survey.nodes && Array.isArray(survey.nodes)) {
-        // Filtrer pour ne garder que les nœuds de type question
-        const questionNodes = survey.nodes.filter(node => 
+    if (!survey) return [];
+    
+    // Si c'est un sondage dynamique, extraire les questions des nodes
+    if (survey.isDynamic && survey.nodes) {
+      return survey.nodes
+        .filter(node => 
+          node.type === 'questionNode' || 
           node.type === 'question' || 
-          node.type === 'multipleChoice' || 
-          node.type === 'textInput' ||
-          node.type === 'ratingScale'
-        );
-        
-        console.log('Question nodes found:', questionNodes.length);
-        
-        // Transformer les nœuds en format de question compatible
-        return questionNodes.map(node => ({
-          id: node.id,
-          text: node.data?.label || node.data?.text || 'Unnamed Question',
-          type: mapNodeTypeToQuestionType(node.type),
-          options: node.data?.options || []
-        }));
-      }
-      return []; // Renvoyer un tableau vide si aucun nœud n'est trouvé
+          (node.data && (node.data.questionType || node.data.type))
+        )
+        .map(node => {
+          // Extraire les données de question du nœud
+          const nodeData = node.data || {};
+          return {
+            id: node.id,
+            text: nodeData.text || nodeData.label || 'Question sans titre',
+            type: mapNodeTypeToQuestionType(nodeData.questionType || nodeData.type || 'text'),
+            options: nodeData.options || []
+          };
+        });
     }
     
-    // Pour les sondages statiques, utiliser les questions directement
+    // Sinon, retourner les questions standards
     return survey.questions || [];
   };
 
@@ -1204,12 +1200,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return undefined;
   };
 
-  // Modifiez la fonction qui gère l'application des filtres
+  // Fonction d'adaptation simplifiée
   const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[]) => {
+    // Ne pas essayer de déduire les filtres, mais simplement appliquer les réponses filtrées
     setFilteredResponses(filteredResponses);
     
-    // Utilisez handlePathFilterChange au lieu de onPathFilterChange
-    handlePathFilterChange(filteredResponses.length < responses.length, filteredResponses);
+    // Vous pourriez également mettre à jour d'autres états ou effectuer d'autres actions nécessaires
+    // mais sans avoir besoin de convertir les réponses en filtres
   };
 
   // Ajouter ces nouvelles fonctions de gestionnaire
@@ -1345,46 +1342,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
   };
 
-  // D'abord, ajoutez la fonction handleResetAllFilters dans votre composant SurveyAnalytics
-  const handleResetAllFilters = () => {
-    if (pathFilterActive) {
-      // Réinitialiser tout sauf le filtre de chemin
-      const pathFilteredResponses = filterResponsesByPath(responses);
-      setFilteredResponses(pathFilteredResponses);
-      setResetCounter(prev => prev + 1);
-    } else {
-      // Réinitialisation complète
-      setFilteredResponses(responses);
-      handlePathFilterChange(false, responses);
-      setResetCounter(prev => prev + 1);
-    }
-  };
-
-  // Fonction utilitaire pour filtrer les réponses selon les chemins sélectionnés
-  const filterResponsesByPath = (resps: SurveyResponse[]): SurveyResponse[] => {
-    if (!pathFilterActive || selectedPaths.length === 0) {
-      return resps;
-    }
-    
-    // Construire des ensembles d'IDs de questions pour chaque chemin
-    const pathQuestionSets = selectedPaths.map(path => {
-      return new Set(path.map(segment => segment.questionId));
-    });
-    
-    // Filtrer les réponses
-    return resps.filter(response => {
-      // Pour chaque chemin sélectionné
-      return pathQuestionSets.some(questionSet => {
-        // Vérifier si la réponse correspond à ce chemin
-        // Cette logique dépend de votre modèle de données exact
-        const matchesPath = Array.from(questionSet).every(questionId => {
-          return response.answers.some(answer => answer.questionId === questionId);
-        });
-        return matchesPath;
-      });
-    });
-  };
-
   return (
     <Box>
       <Box sx={{
@@ -1487,33 +1444,33 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={`filter-panel-${resetCounter}`}
+                  key={pathFilterActive ? "filtered-paths" : "all-paths"}
                   survey={survey}
-                  responses={responses}
+                  responses={pathFilterActive ? filteredResponsesByPath : responses}
                   onApplyFilters={handleAdvancedFilterApply}
-                  onResetFilters={handleResetAllFilters}
                   pathFilterActive={pathFilterActive}
-                  selectedPaths={selectedPaths}
                 />
               </Grid>
             )}
 
             {survey.isDynamic && (
               <Grid item xs={12}>
-               
+                <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+                  <Typography variant="h5" component="h2" gutterBottom>
+                    Response Path Analysis
+                  </Typography>
                   
                   <Box sx={{ height: '600px' }}>
                     <PathTreeVisualizer 
-                      key={`tree-${resetCounter}`}
-                      survey={survey}
-                      responses={filteredResponses}
+                      survey={survey} 
+                      responses={filteredResponses.length > 0 ? filteredResponses : responses} 
                       onPathSelect={handlePathSelection}
                       selectedPaths={selectedPaths}
                       onFilterChange={handlePathFilterChange}
                       onPathsLoad={handlePathsLoad}
                     />
                   </Box>
-              
+                </Paper>
               </Grid>
             )}
 
@@ -1647,20 +1604,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 );
               })}
             </Grid>
-
-            {/* Ajouter la section des questions ici */}
-            <Box sx={{ my: 4 }}>
-              <SurveyQuestions 
-                key={`questions-${resetCounter}`}
-                survey={survey}
-                responses={filteredResponses}
-                renderChart={renderChart}
-                getAvailableChartTypes={getAvailableChartTypes}
-                getChartIcon={getChartIcon}
-                selectedPaths={selectedPaths} // Ajoutez cette prop
-                pathFilterActive={pathFilterActive} // Ajoutez cette prop
-              />
-            </Box>
 
             <Grid item xs={12}>
               <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>

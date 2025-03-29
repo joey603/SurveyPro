@@ -23,8 +23,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import WarningIcon from '@mui/icons-material/Warning';
-import { PathSegment } from './PathTreeVisualizer';
 
 // Types
 interface Question {
@@ -94,18 +92,14 @@ interface AdvancedFilterPanelProps {
   survey: Survey;
   responses: SurveyResponse[];
   onApplyFilters: (filteredResponses: SurveyResponse[]) => void;
-  onResetFilters: () => void;
   pathFilterActive?: boolean;
-  selectedPaths?: PathSegment[][];
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   survey,
   responses,
   onApplyFilters,
-  onResetFilters,
-  pathFilterActive = false,
-  selectedPaths = []
+  pathFilterActive = false
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -119,17 +113,17 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     value: null
   });
   const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>(responses);
-  const [isResetting, setIsResetting] = useState(false);
 
   // Cette fonction récupère les questions, peu importe le type de sondage
   const getQuestionsList = (): Question[] => {
-    let allQuestions: Question[] = [];
+    // Si nous avons des questions standard
+    if (survey.questions && survey.questions.length > 0) {
+      return survey.questions;
+    }
     
-    // Récupérer toutes les questions selon le type de sondage
-    if (survey.questions) {
-      allQuestions = survey.questions;
-    } else if (survey.nodes) {
-      allQuestions = survey.nodes
+    // Si nous avons un sondage dynamique avec des nodes
+    if (survey.nodes && survey.nodes.length > 0) {
+      return survey.nodes
         .filter(node => 
           node.type === 'questionNode' || 
           node.data?.questionType || 
@@ -143,22 +137,8 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         }));
     }
     
-    // Si le filtre de chemin est actif et qu'il y a des chemins sélectionnés
-    if (pathFilterActive && selectedPaths.length > 0) {
-      // Construire un ensemble d'IDs de questions présentes dans les chemins sélectionnés
-      const questionIdsInPath = new Set<string>();
-      selectedPaths.forEach(path => {
-        path.forEach(segment => {
-          questionIdsInPath.add(segment.questionId);
-        });
-      });
-      
-      // Ne conserver que les questions présentes dans les chemins
-      return allQuestions.filter(question => questionIdsInPath.has(question.id));
-    }
-    
-    // Sinon, retourner toutes les questions
-    return allQuestions;
+    // Si nous n'avons ni questions ni nodes, retourner un tableau vide
+    return [];
   };
 
   useEffect(() => {
@@ -166,27 +146,22 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   }, [responses]);
 
   const getOperatorsByType = (questionType: string): string[] => {
-    switch (questionType.toLowerCase()) {
-      case 'yes-no':
-        return ['equals', 'not equals']; // Seulement égal/pas égal pour oui/non
-        
+    const commonOperators = ['equals', 'not equals', 'contains', 'not contains'];
+    
+    switch (questionType) {
       case 'multiple-choice':
       case 'dropdown':
-        return ['equals', 'not equals']; // Opérateurs simples pour les choix prédéfinis
-        
+      case 'yes-no':
+        return ['equals', 'not equals'];
       case 'text':
-        return ['equals', 'not equals', 'contains', 'not contains', 'is empty']; // Plus d'options pour le texte
-        
+        return commonOperators;
       case 'rating':
       case 'slider':
-        return ['equals', 'not equals', 'greater than', 'less than', 'between']; // Opérateurs numériques
-        
+        return ['equals', 'not equals', 'greater than', 'less than', 'between'];
       case 'date':
-        return ['equals', 'not equals', 'before', 'after', 'between']; // Opérateurs temporels
-        
+        return ['equals', 'not equals', 'after', 'before', 'between'];
       default:
-        // Fallback pour les autres types
-        return ['equals', 'not equals', 'contains', 'not contains'];
+        return commonOperators;
     }
   };
 
@@ -270,13 +245,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
       case 'equals': return 'is';
       case 'not equals': return 'is not';
       case 'contains': return 'contains';
-      case 'not contains': return 'does not contain';
+      case 'not contains': return 'doesn\'t contain';
       case 'greater than': return 'is greater than';
       case 'less than': return 'is less than';
       case 'between': return 'is between';
-      case 'before': return 'is before';
-      case 'after': return 'is after';
-      case 'is empty': return 'is empty';
       default: return operator;
     }
   };
@@ -355,44 +327,14 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     });
   };
 
-  const handleResetFilters = () => {
-    if (isResetting) return;
+  const handleClearFilters = () => {
+    const emptyFilters: Filters = {
+      demographic: {},
+      answers: {}
+    };
     
-    setIsResetting(true);
-    
-    if (pathFilterActive) {
-      // Si le filtre de chemin est actif, conservez-le et réinitialisez uniquement les autres filtres
-      const emptyFilters: Filters = {
-        demographic: {},
-        answers: {}
-      };
-      setFilters(emptyFilters);
-      
-      // Réinitialiser les réponses filtrées pour qu'elles correspondent uniquement au filtre de chemin
-      // On va laisser le composant parent gérer cette partie
-      onResetFilters();
-      
-      // Indique qu'on veut conserver le filtre de chemin
-      console.log("Reset applied with path filter preserved");
-    } else {
-      // Si aucun filtre de chemin n'est actif, réinitialiser tous les filtres
-      const emptyFilters: Filters = {
-        demographic: {},
-        answers: {}
-      };
-      setFilters(emptyFilters);
-      
-      // Réinitialiser toutes les réponses filtrées
-      setFilteredResponses(responses);
-      onResetFilters();
-      
-      console.log("Full reset applied");
-    }
-    
-    // Réactiver le bouton après un délai
-    setTimeout(() => {
-      setIsResetting(false);
-    }, 300);
+    setFilters(emptyFilters);
+    applyFilters(emptyFilters);
   };
 
   const applyFilters = (currentFilters: Filters) => {
@@ -490,9 +432,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   const questions = getQuestionsList();
   const hasDemographicData = responses.some(r => r.respondent?.demographic);
-  const hasActiveFilters = Object.keys(filters.answers).length > 0 || 
-                          Object.keys(filters.demographic).length > 0 ||
-                          filteredResponses.length < responses.length;
+  const hasActiveFilters = Object.keys(filters.answers).length > 0 || Object.keys(filters.demographic).length > 0;
   
   let selectedQuestion = null;
   if (currentQuestionId) {
@@ -516,32 +456,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         </Typography>
         
         <Box>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            size="small" 
-            onClick={handleResetFilters}
-            disabled={isResetting}
-            startIcon={<FilterListIcon />}
-            sx={{ 
-              mr: 1,
-              borderColor: '#667eea',
-              color: '#667eea',
-              '&:hover': {
-                borderColor: '#764ba2',
-                backgroundColor: 'rgba(102, 126, 234, 0.04)'
-              }
-            }}
-          >
-            {isResetting ? "Resetting..." : "Reset Filters"}
-          </Button>
-          
           {hasActiveFilters && (
             <Button 
               variant="outlined" 
               color="inherit" 
               size="small" 
-              onClick={handleResetFilters}
+              onClick={handleClearFilters}
               sx={{ mr: 1 }}
             >
               Clear Filters
@@ -549,11 +469,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           )}
           
           <Chip
-            label={
-              filteredResponses.length === 0 && responses.length > 0
-                ? "0 / " + responses.length + " responses"
-                : `${filteredResponses.length} / ${responses.length} responses`
-            }
+            label={`${filteredResponses.length} / ${responses.length} responses`}
             color={hasActiveFilters ? "primary" : "default"}
             sx={{
               background: hasActiveFilters ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : undefined,
@@ -777,7 +693,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                               age: [
                                 isNaN(min) ? 0 : min,
                                 prev.demographic.age?.[1] || 100
-                              ] as [number, number]
+                              ]
                             }
                           };
                           applyFilters(newFilters);
@@ -801,7 +717,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                               age: [
                                 prev.demographic.age?.[0] || 0,
                                 isNaN(max) ? 100 : max
-                              ] as [number, number]
+                              ]
                             }
                           };
                           applyFilters(newFilters);
@@ -817,25 +733,6 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           )}
         </Box>
       </Box>
-      
-      {filteredResponses.length === 0 && responses.length > 0 && (
-        <Typography 
-          variant="body2" 
-          color="error" 
-          sx={{ 
-            mt: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 1,
-            bgcolor: 'rgba(211, 47, 47, 0.1)',
-            borderRadius: 1
-          }}
-        >
-          <WarningIcon fontSize="small" sx={{ mr: 1 }} />
-          No responses match the current filters.
-        </Typography>
-      )}
       
       {/* Filter Dialog */}
       <Dialog 
@@ -870,16 +767,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   <InputLabel>Operator</InputLabel>
                   <Select
                     value={tempRule.operator}
-                    onChange={(e) => {
-                      // Réinitialiser les valeurs lors du changement d'opérateur
-                      const newOperator = e.target.value;
-                      const newRule = { 
-                        operator: newOperator, 
-                        value: null,
-                        secondValue: null
-                      };
-                      setTempRule(newRule);
-                    }}
+                    onChange={(e) => setTempRule({ ...tempRule, operator: e.target.value })}
                     label="Operator"
                   >
                     {getOperatorsByType(selectedQuestion.type).map(op => (
@@ -890,113 +778,82 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   </Select>
                 </FormControl>
                 
-                {/* Ne pas afficher de champ de valeur pour "is empty" */}
-                {tempRule.operator !== 'is empty' && (
+                {(selectedQuestion.type === 'multiple-choice' || selectedQuestion.type === 'dropdown' || selectedQuestion.type === 'yes-no') && (
+                  <FormControl fullWidth>
+                    <InputLabel>Value</InputLabel>
+                    <Select
+                      value={tempRule.value || ''}
+                      onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
+                      label="Value"
+                    >
+                      {selectedQuestion.type === 'yes-no' ? (
+                        [
+                          <MenuItem key="yes" value="yes">Yes</MenuItem>,
+                          <MenuItem key="no" value="no">No</MenuItem>
+                        ]
+                      ) : (
+                        selectedQuestion.options?.map(option => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        )) || []
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
+                
+                {(selectedQuestion.type === 'text') && (
+                  <TextField
+                    fullWidth
+                    label="Value"
+                    value={tempRule.value || ''}
+                    onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
+                  />
+                )}
+                
+                {(selectedQuestion.type === 'rating' || selectedQuestion.type === 'slider') && (
                   <>
-                    {/* Champs pour yes-no */}
-                    {selectedQuestion.type.toLowerCase() === 'yes-no' && (
-                      <FormControl fullWidth>
-                        <InputLabel>Value</InputLabel>
-                        <Select
-                          value={tempRule.value || ''}
-                          onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
-                          label="Value"
-                        >
-                          <MenuItem value="yes">Yes</MenuItem>
-                          <MenuItem value="no">No</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Value"
+                      value={tempRule.value === null ? '' : tempRule.value}
+                      onChange={(e) => setTempRule({ ...tempRule, value: parseFloat(e.target.value) || 0 })}
+                      sx={{ mb: 2 }}
+                    />
                     
-                    {/* Champs pour choix multiple et dropdown */}
-                    {(selectedQuestion.type.toLowerCase() === 'multiple-choice' || 
-                      selectedQuestion.type.toLowerCase() === 'dropdown') && (
-                      <FormControl fullWidth>
-                        <InputLabel>Value</InputLabel>
-                        <Select
-                          value={tempRule.value || ''}
-                          onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
-                          label="Value"
-                        >
-                          {selectedQuestion.options?.map(option => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                    
-                    {/* Champs pour texte */}
-                    {selectedQuestion.type.toLowerCase() === 'text' && (
+                    {tempRule.operator === 'between' && (
                       <TextField
                         fullWidth
-                        label="Value"
-                        value={tempRule.value || ''}
-                        onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
+                        type="number"
+                        label="Second Value"
+                        value={tempRule.secondValue === null ? '' : tempRule.secondValue}
+                        onChange={(e) => setTempRule({ ...tempRule, secondValue: parseFloat(e.target.value) || 0 })}
                       />
                     )}
+                  </>
+                )}
+                
+                {selectedQuestion.type === 'date' && (
+                  <>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label="Value"
+                      value={tempRule.value || ''}
+                      onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
+                      sx={{ mb: 2 }}
+                      InputLabelProps={{ shrink: true }}
+                    />
                     
-                    {/* Champs pour rating et slider */}
-                    {(selectedQuestion.type.toLowerCase() === 'rating' || 
-                      selectedQuestion.type.toLowerCase() === 'slider') && (
-                      <>
-                        <TextField
-                          fullWidth
-                          type="number"
-                          label="Value"
-                          value={tempRule.value === null ? '' : tempRule.value}
-                          onChange={(e) => setTempRule({ ...tempRule, value: parseFloat(e.target.value) || 0 })}
-                          sx={{ mb: tempRule.operator === 'between' ? 2 : 0 }}
-                        />
-                        
-                        {tempRule.operator === 'between' && (
-                          <TextField
-                            fullWidth
-                            type="number"
-                            label="Second Value"
-                            value={tempRule.secondValue === null ? '' : tempRule.secondValue}
-                            onChange={(e) => setTempRule({ ...tempRule, secondValue: parseFloat(e.target.value) || 0 })}
-                            sx={{ mt: 2 }}
-                          />
-                        )}
-                      </>
-                    )}
-                    
-                    {/* Champs pour date */}
-                    {selectedQuestion.type.toLowerCase() === 'date' && (
-                      <>
-                        <TextField
-                          fullWidth
-                          type="date"
-                          label="Value"
-                          value={tempRule.value || ''}
-                          onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{ mb: tempRule.operator === 'between' ? 2 : 0 }}
-                        />
-                        
-                        {tempRule.operator === 'between' && (
-                          <TextField
-                            fullWidth
-                            type="date"
-                            label="Second Value"
-                            value={tempRule.secondValue || ''}
-                            onChange={(e) => setTempRule({ ...tempRule, secondValue: e.target.value })}
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ mt: 2 }}
-                          />
-                        )}
-                      </>
-                    )}
-                    
-                    {/* Fallback pour les autres types de questions */}
-                    {!['yes-no', 'multiple-choice', 'dropdown', 'text', 'rating', 'slider', 'date'].includes(selectedQuestion.type.toLowerCase()) && (
+                    {tempRule.operator === 'between' && (
                       <TextField
                         fullWidth
-                        label="Value"
-                        value={tempRule.value || ''}
-                        onChange={(e) => setTempRule({ ...tempRule, value: e.target.value })}
+                        type="date"
+                        label="Second Value"
+                        value={tempRule.secondValue || ''}
+                        onChange={(e) => setTempRule({ ...tempRule, secondValue: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
                       />
                     )}
                   </>
