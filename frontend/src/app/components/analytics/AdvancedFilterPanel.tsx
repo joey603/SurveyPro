@@ -628,24 +628,6 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               Filter Responses
             </Typography>
           </Box>
-          <Button
-            startIcon={<ClearIcon />}
-            onClick={handleClearFilters}
-            disabled={Object.keys(filters.answers).length === 0 && Object.keys(filters.demographic).length === 0}
-            sx={{
-              color: '#667eea',
-              borderColor: 'rgba(102, 126, 234, 0.3)',
-              '&:hover': {
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.04)'
-              },
-              '&.Mui-disabled': {
-                color: 'rgba(0, 0, 0, 0.26)'
-              }
-            }}
-          >
-            Clear All Filters
-          </Button>
         </Box>
 
         <Tabs 
@@ -974,7 +956,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               }
             }}
           >
-            Reset
+            Reset 
           </Button>
           <Button
             variant="contained"
@@ -1154,8 +1136,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                               onChange={(e) => setTempRule(prev => ({ ...prev, value: e.target.value }))}
                               label="Value"
                             >
-                              {question.options?.map(option => (
-                                <MenuItem key={option} value={option}>{option}</MenuItem>
+                              {question.options?.map((option: string, index: number) => (
+                                <MenuItem key={`${question.id}-option-${index}`} value={option}>
+                                  {option}
+                                </MenuItem>
                               ))}
                             </Select>
                           </FormControl>

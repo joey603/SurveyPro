@@ -56,7 +56,6 @@ import { toast } from 'react-toastify';
 import { calculateAge } from '../../../utils/dateUtils';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-import { FilterPanel } from './FilterPanel';
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -66,6 +65,7 @@ import { PathSegment } from './PathTreeVisualizer';
 import { AnalysisGroup } from './GroupsList';
 import { PathTreeVisualizer } from './PathTreeVisualizer';
 import { SelectedPathsPanel } from './SelectedPathsPanel';
+import { usePathFilter } from './PathFilterManager';
 
 ChartJS.register(
   CategoryScale,
@@ -463,6 +463,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[]}[]>([]);
   const [showPrivateLink, setShowPrivateLink] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [filteredPathResponses, setFilteredPathResponses] = useState<SurveyResponse[]>([]);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1201,7 +1202,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   };
 
   // Modifier la fonction handleAdvancedFilterApply pour mieux gérer les règles de filtrage
-  const handleAdvancedFilterApply = (filteredResponses: SurveyResponse[], appliedFilters?: Filters) => {
+  const handleAdvancedFilterApply = (filteredResps: SurveyResponse[], appliedFilters?: Filters) => {
     console.log("Applying advanced filters:", appliedFilters);
     
     // Désactiver le filtre de parcours si on applique un filtre avancé
@@ -1214,11 +1215,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       setFilters(appliedFilters);
     }
     
-    // Mettre à jour les deux états de filtrage
-    setFilteredResponses(filteredResponses);
-    setFilteredResponsesByPath(filteredResponses);
+    // Mettre à jour les réponses filtrées, mais pas les réponses originales
+    setFilteredResponses(filteredResps);
+    setFilteredPathResponses(filteredResps);
     
-    console.log("Filtres avancés appliqués:", filteredResponses.length, "réponses");
+    // Toujours comparer avec les réponses originales pour montrer le badge
+    console.log("Filtres avancés appliqués:", filteredResps.length, "réponses filtrées sur", responses.length, "originales");
   };
 
   // Ajouter ces nouvelles fonctions de gestionnaire
@@ -1296,35 +1298,29 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Modifier la fonction handlePathFilterChange pour qu'elle synchronise avec les questions
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    console.log("Filtre de parcours changé:", isFiltered, "Réponses filtrées:", filteredResps.length);
     setPathFilterActive(isFiltered);
-    
     if (isFiltered) {
-      // Mettre à jour les deux états pour assurer la cohérence
-      setFilteredResponsesByPath(filteredResps);
-      setFilteredResponses(filteredResps); // Ceci permet de synchroniser les questions
+      setFilteredPathResponses(filteredResps);
     } else {
-      // Réinitialiser les filtres
-      setFilteredResponsesByPath([]);
-      setFilteredResponses(responses); // Revenir aux réponses d'origine
+      setFilteredPathResponses([]);
     }
   };
   
   // Déterminez quelles réponses afficher en fonction des filtres actifs
   const displayResponses = pathFilterActive 
-    ? filteredResponsesByPath 
+    ? filteredPathResponses 
     : (filteredResponses.length > 0 ? filteredResponses : responses);
 
   // Cette fonction va afficher les résultats de filtrage dans la console pour le débogage
   useEffect(() => {
     if (pathFilterActive) {
-      console.log("Mode filtre parcours activé:", filteredResponsesByPath.length, "réponses");
+      console.log("Mode filtre parcours activé:", filteredPathResponses.length, "réponses");
     } else if (filteredResponses.length > 0) {
       console.log("Filtres standards appliqués:", filteredResponses.length, "réponses");
     } else {
       console.log("Aucun filtre actif:", responses.length, "réponses");
     }
-  }, [pathFilterActive, filteredResponsesByPath, filteredResponses, responses]);
+  }, [pathFilterActive, filteredPathResponses, filteredResponses, responses]);
 
   // Définissez cette fonction de callback
   const handlePathsLoad = (paths: {name: string, path: PathSegment[], group: string}[]) => {
@@ -1351,15 +1347,26 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Ajoutez une fonction pour réinitialiser les filtres
   const handleResetFilters = () => {
+    // Réinitialiser tous les filtres
+    if (pathFilterActive) {
+      const pathFilterContext = usePathFilter();
+      pathFilterContext.clearPathFilter();
+    }
+    
+    // IMPORTANT: Restaurer les réponses originales
+    setFilteredResponses(responses);
+    
+    // Réinitialiser les états de filtre
     setFilters({
       demographic: {},
       answers: {}
     });
-    setFilteredResponses(responses);
-    setFilteredResponsesByPath([]);
-    setPathFilterActive(false);
     
-    console.log("Tous les filtres réinitialisés");
+    // Réinitialiser les autres états liés au filtrage
+    setPathFilterActive(false);
+    setFilteredPathResponses([]);
+    
+    console.log("Tous les filtres ont été réinitialisés - retour aux données d'origine:", responses.length, "réponses");
   };
 
   return (
@@ -1380,11 +1387,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               sx={{ ml: 1, backgroundColor: colors.primary.transparent, color: colors.primary.main }}
             />
           )}
-          {filteredResponses.length < surveyAnswers.length && filteredResponses.length > 0 && (
+          {filteredResponses.length !== responses.length && (
             <Chip 
               size="small" 
               icon={<FilterListIcon />} 
-              label={`Filtered: ${filteredResponses.length}/${surveyAnswers.length}`}
+              label={`Filtered: ${filteredResponses.length}/${responses.length}`}
               sx={{ ml: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' }}
             />
           )}
@@ -1409,6 +1416,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             }}
           >
             {showFilters ? "Hide Filters" : "Filters"}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ClearIcon />}
+            onClick={handleResetFilters}
+            sx={{ mr: 1 }}
+          >
+            Reset Filters
           </Button>
         </Box>
       </Box>
@@ -1593,9 +1608,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         <Typography variant="body2">
                           Total responses: <strong>{stats.total}</strong>
                         </Typography>
-                        {filteredResponses.length < surveyAnswers.length && (
+                        {filteredResponses.length !== responses.length && (
                           <Typography variant="caption" color="text.secondary">
-                            (Filtered from {surveyAnswers.length} total responses)
+                            (Filtered from {responses.length} total responses)
                           </Typography>
                         )}
                         {stats.total > 0 && stats.mostCommonAnswer && (
