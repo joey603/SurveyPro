@@ -60,7 +60,8 @@ type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
 interface PathSegment {
   questionId: string;
-  segment: string;
+  questionText: string;
+  answer: string;
 }
 
 interface SurveyQuestionsProps {
@@ -74,6 +75,7 @@ interface SurveyQuestionsProps {
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
   selectedPaths: PathSegment[][];
+  allPaths?: {name: string, path: PathSegment[], group: string}[];
 }
 
 export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
@@ -82,7 +84,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   renderChart,
   getAvailableChartTypes,
   getChartIcon,
-  selectedPaths
+  selectedPaths,
+  allPaths = []
 }) => {
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
@@ -161,6 +164,31 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     return -1;
   };
 
+  // Fonction pour obtenir le nom du parcours contenant cette question
+  const getPathName = (questionId: string): string | null => {
+    if (!selectedPaths || selectedPaths.length === 0 || !allPaths || allPaths.length === 0) 
+      return null;
+    
+    // Trouver l'index du parcours sélectionné qui contient cette question
+    const selectedPathIndex = selectedPaths.findIndex(path => 
+      path.some(segment => segment.questionId === questionId)
+    );
+    
+    if (selectedPathIndex === -1) return null;
+    
+    // Trouver le parcours correspondant dans allPaths
+    const selectedPath = selectedPaths[selectedPathIndex];
+    const matchingPath = allPaths.find(p => 
+      p.path.length === selectedPath.length && 
+      p.path.every((segment, i) => 
+        segment.questionId === selectedPath[i].questionId && 
+        segment.answer === selectedPath[i].answer
+      )
+    );
+    
+    return matchingPath ? matchingPath.name : `Path ${String.fromCharCode(65 + selectedPathIndex)}`;
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h6" gutterBottom>
@@ -230,15 +258,29 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                         
                         {/* Ajouter le badge de parcours si la question est dans un parcours */}
                         {isQuestionInPath(question.id) && (
-                          <Chip 
-                            size="small"
-                            label={`Étape ${getPathPosition(question.id)} du parcours`}
-                            sx={{ 
-                              bgcolor: '#667eea',
-                              color: 'white',
-                              fontSize: '0.75rem'
-                            }}
-                          />
+                          <>
+                            <Chip 
+                              size="small"
+                              label={`Step ${getPathPosition(question.id)}`}
+                              sx={{ 
+                                bgcolor: '#667eea',
+                                color: 'white',
+                                fontSize: '0.75rem',
+                                mr: 1
+                              }}
+                            />
+                            {getPathName(question.id) && (
+                              <Chip 
+                                size="small"
+                                label={getPathName(question.id)}
+                                sx={{ 
+                                  bgcolor: 'rgba(102, 126, 234, 0.2)',
+                                  color: '#667eea',
+                                  fontSize: '0.75rem'
+                                }}
+                              />
+                            )}
+                          </>
                         )}
                       </Box>
                     }

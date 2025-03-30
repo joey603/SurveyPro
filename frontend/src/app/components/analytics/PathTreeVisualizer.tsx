@@ -1518,7 +1518,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }}
     >
       <Typography variant="h6" component="h2" gutterBottom>
-        Analyse des Parcours de Réponses
+        Response Path Analysis
       </Typography>
       
       <Box sx={{ 
@@ -1572,7 +1572,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       alignItems: 'center'
                     }}
                   >
-                    <Box>Parcours {String.fromCharCode(65 + index)}</Box>
+                    <Box>Path {String.fromCharCode(65 + index)}</Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <Box sx={{ 
                         display: 'flex', 
@@ -1583,7 +1583,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         borderRadius: 1,
                         fontSize: '0.8rem'
                       }}>
-                        {selectedPaths[index].length} étapes
+                        {selectedPaths[index].length} steps
                       </Box>
                       <Box sx={{ 
                         display: 'flex', 
@@ -1595,7 +1595,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         fontSize: '0.8rem',
                         fontWeight: 'bold'
                       }}>
-                        {getRespondentCountForPath(selectedPaths[index], responses)} répondants
+                        {getRespondentCountForPath(selectedPaths[index], responses)} respondents
                       </Box>
                     </Box>
                   </Typography>
@@ -1705,7 +1705,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             height: '100%' 
           }}>
             <Typography variant="body2">
-              Aucun parcours disponible
+              No paths available
             </Typography>
           </Box>
         )}
@@ -1723,7 +1723,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           overflow: 'hidden'
         }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Parcours Complets
+            Complete Paths
           </Typography>
           
           {allPaths.length > 0 ? (
@@ -1761,7 +1761,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     onClick={toggleFilter}
                     sx={{ width: '100%' }}
                   >
-                    {filterApplied ? "Afficher tous les parcours" : "Filtrer sur les parcours sélectionnés"}
+                    {filterApplied ? "Show all paths" : "Filter on selected paths"}
                   </Button>
                 </Box>
               )}
@@ -1824,7 +1824,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         />
                       )}
                       <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                    {pathItem.name} ({pathItem.path.length} étapes)
+                    {pathItem.name} ({pathItem.path.length} steps)
                   </Typography>
                     </Box>
                     
@@ -1854,7 +1854,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              Aucun parcours disponible
+              No paths available
             </Typography>
           )}
         </Box>

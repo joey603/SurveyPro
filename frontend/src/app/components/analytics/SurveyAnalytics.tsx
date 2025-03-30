@@ -1536,9 +1536,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 const stats = calculateQuestionStats(question.id);
                 
                 // Nouvelles lignes: trouver les parcours associés à cette question
-                const associatedPaths = pathFilterActive ? selectedPaths.filter(path => 
+                const associatedPaths = selectedPaths.filter(path => 
                   path.some(segment => segment.questionId === question.id)
-                ) : [];
+                );
                 
                 return (
                   <Paper
@@ -1571,8 +1571,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         Question type: {question.type}
                       </Typography>
                       
-                      {/* Nouveaux badges pour les parcours associés */}
-                      {pathFilterActive && associatedPaths.length > 0 && (
+                      {/* Nouveaux badges pour les parcours associés - Affichés quand associatedPaths a des éléments */}
+                      {associatedPaths.length > 0 && (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                           {associatedPaths.map((path, pathIndex) => {
                             // Trouver le nom du parcours
@@ -1582,7 +1582,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                                 segment.questionId === path[i].questionId && 
                                 segment.answer === path[i].answer
                               )
-                            )?.name || `Parcours ${pathIndex + 1}`;
+                            )?.name || `Path ${String.fromCharCode(65 + pathIndex)}`;
                             
                             // Couleur du parcours
                             const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
