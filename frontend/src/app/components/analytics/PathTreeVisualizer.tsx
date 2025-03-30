@@ -14,10 +14,12 @@ import ReactFlow, {
   BaseEdge,
   getStraightPath,
   useReactFlow,
-  ReactFlowInstance
+  ReactFlowInstance,
+  getBezierPath,
+  BackgroundVariant
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon } from '@mui/icons-material';
+import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon, Splitscreen as SplitscreenIcon } from '@mui/icons-material';
 
 export interface PathSegment {
   questionId: string;
@@ -57,100 +59,39 @@ const HIGHLIGHT_COLORS = [
   '#00CED1', // Turquoise moyen
 ];
 
-// Composant personnalisé pour les nœuds de question avec mise en évidence améliorée
-const QuestionNode = ({ data }: { data: any }) => {
-  // Au lieu de chercher uniquement l'index du premier parcours, trouvons tous les parcours
-  const pathIndices: number[] = [];
-  
-  if (data.selectedPaths && data.selectedPaths.length > 0) {
-    data.selectedPaths.forEach((path: PathSegment[], index: number) => {
-      if (path.some((segment: PathSegment) => segment.questionId === data.questionId)) {
-        pathIndices.push(index);
-      }
-    });
-  }
-  
-  const isInSelectedPath = pathIndices.length > 0;
-  const primaryPathIndex = pathIndices.length > 0 ? pathIndices[0] : -1;
-  
-  // Utiliser la couleur du parcours si elle est fournie dans les données, sinon utiliser les couleurs par défaut
-  const highlightColor = data.pathColor 
-    ? data.pathColor 
-    : (isInSelectedPath 
-        ? HIGHLIGHT_COLORS[primaryPathIndex % HIGHLIGHT_COLORS.length] 
-        : 'rgba(102, 126, 234, 0.2)');
-
-  // Calculer la taille du cercle basée sur le nombre de répondants avec un min et max
-  const minSize = 26;
-  const maxSize = 50;
-  const size = Math.min(maxSize, Math.max(minSize, 26 + (data.count * 1.5)));
-  
-  // Générer les positions des indicateurs secondaires autour du contour
-  const getSecondaryIndicatorPositions = (count: number) => {
-    // Toujours garder le point principal en haut à droite
-    if (count <= 1) return [];
-    
-    // Pour les autres points, calculer les positions autour du contour
-    const positions = [];
-    
-    // Calcul du rayon du contour en fonction de la taille du nœud
-    // Nous utilisons une approximation pour un rectangle moyen
-    const nodeWidth = 240; // Largeur moyenne du nœud
-    const nodeHeight = 160; // Hauteur moyenne du nœud
-    
-    // Définir les positions pour chaque côté du contour
-    // Commencer par la droite en descendant, puis en bas de droite à gauche,
-    // puis à gauche en remontant, et enfin en haut de gauche à droite
-    
-    // Nombre maximum d'indicateurs par côté
-    const maxPerSide = Math.ceil(count / 4);
-    
-    // Côté droit (en descendant)
-    for (let i = 0; i < Math.min(maxPerSide, count - 1); i++) {
-      positions.push({
-        right: '-8px',
-        top: `${30 + i * 24}px`, // Commencer après le point principal
-      });
-    }
-    
-    // Côté bas (de droite à gauche)
-    if (count > maxPerSide) {
-      const bottomCount = Math.min(maxPerSide, count - 1 - maxPerSide);
-      for (let i = 0; i < bottomCount; i++) {
-        positions.push({
-          bottom: '-8px',
-          right: `${30 + i * 24}px`,
-        });
-      }
-    }
-    
-    // Côté gauche (en remontant)
-    if (count > maxPerSide * 2) {
-      const leftCount = Math.min(maxPerSide, count - 1 - maxPerSide * 2);
-      for (let i = 0; i < leftCount; i++) {
-        positions.push({
-          left: '-8px',
-          bottom: `${30 + i * 24}px`,
-        });
-      }
-    }
-    
-    // Côté haut (de gauche à droite)
-    if (count > maxPerSide * 3) {
-      const topCount = Math.min(maxPerSide, count - 1 - maxPerSide * 3);
-      for (let i = 0; i < topCount; i++) {
-        positions.push({
-          top: '-8px',
-          left: `${30 + i * 24}px`,
-        });
-      }
-    }
-    
-    return positions;
+// Ajout de l'interface nécessaire pour QuestionNode
+interface QuestionNodeProps {
+  data: {
+    text: string;
+    count: number;
+    isSelected?: boolean;
+    highlightColor?: string;
+    secondaryPathIndices?: number[];
+    primaryPathIndex?: number;
+    [key: string]: any;
   };
+}
+
+// Composant personnalisé pour les nœuds de question avec mise en évidence améliorée
+const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
+  // Calculer dynamiquement si le nœud est dans un chemin sélectionné plutôt que de se fier à isSelected directement
+  const isInSelectedPath = data.isSelected || (data.selectedPaths && data.selectedPaths.some((path: PathSegment[]) => 
+    path.some((segment: PathSegment) => segment.questionId === data.questionId)
+  ));
+  const highlightColor = data.highlightColor || '#667eea';
+  const size = 48; // Taille du cercle représentant le nombre de réponses
   
-  // Obtenir les positions calculées
-  const secondaryIndicatorPositions = getSecondaryIndicatorPositions(pathIndices.length);
+  // Calculer les positions des indicateurs secondaires (pour montrer qu'un nœud appartient à plusieurs parcours)
+  const secondaryIndicatorPositions = data.secondaryPathIndices?.map((idx: number, i: number) => {
+    const angle = (Math.PI * 2 / (data.secondaryPathIndices?.length || 1)) * i;
+    return {
+      top: `calc(50% - 28px + ${Math.sin(angle) * 24}px)`,
+      left: `calc(50% + ${Math.cos(angle) * 24}px)`,
+    };
+  }) || [];
+  
+  // L'index du parcours principal pour ce nœud 
+  const primaryPathIndex = data.primaryPathIndex !== undefined ? data.primaryPathIndex : 0;
   
   return (
     <div style={{ 
@@ -164,7 +105,7 @@ const QuestionNode = ({ data }: { data: any }) => {
       padding: '20px 15px',
       boxSizing: 'border-box',
       transform: isInSelectedPath ? 'scale(1.05)' : 'scale(1)',
-      transition: 'all 0.4s ease'
+      transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
     }}>
       {/* Conteneur principal avec couleur dynamique */}
       <div style={{
@@ -173,15 +114,15 @@ const QuestionNode = ({ data }: { data: any }) => {
         left: '5px',
         right: '5px',
         bottom: '5px',
-        backgroundColor: isInSelectedPath ? `${highlightColor}20` : 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '12px',
-        border: `${isInSelectedPath ? 4 : 2}px solid ${isInSelectedPath ? highlightColor : 'rgba(102, 126, 234, 0.2)'}`,
+        backgroundColor: isInSelectedPath ? `${highlightColor}10` : 'rgba(255, 255, 255, 0.95)',
+        borderRadius: '16px',
+        border: `${isInSelectedPath ? 3 : 2}px solid ${isInSelectedPath ? highlightColor : 'rgba(102, 126, 234, 0.2)'}`,
         boxShadow: isInSelectedPath 
-          ? `0 0 15px 5px ${highlightColor}40`
-          : '0 2px 8px rgba(0, 0, 0, 0.05)',
-        transition: 'all 0.3s ease',
+          ? `0 10px 20px -5px ${highlightColor}30, 0 0 15px 5px ${highlightColor}20`
+          : '0 8px 16px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
         zIndex: 1,
-        animation: isInSelectedPath ? 'pulse 2s infinite' : 'none'
+        animation: isInSelectedPath ? 'pulse 2.5s infinite' : 'none'
       }} />
 
       {/* Texte de la question */}
@@ -190,11 +131,11 @@ const QuestionNode = ({ data }: { data: any }) => {
           width: '100%',
           textAlign: 'center',
           fontSize: isInSelectedPath ? '15px' : '14px',
-          lineHeight: '1.4',
-          fontWeight: isInSelectedPath ? '600' : 'normal',
+          lineHeight: '1.5',
+          fontWeight: isInSelectedPath ? '600' : '500',
           color: isInSelectedPath ? '#1565c0' : '#333333',
-          padding: '8px 10px',
-          borderRadius: '8px',
+          padding: '10px 12px',
+          borderRadius: '12px',
           whiteSpace: 'normal',
           overflowWrap: 'break-word',
           wordBreak: 'break-word',
@@ -203,13 +144,14 @@ const QuestionNode = ({ data }: { data: any }) => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: '10px',
+          marginBottom: '12px',
           zIndex: 2,
-          letterSpacing: '0.2px'
+          letterSpacing: '0.2px',
+          textShadow: isInSelectedPath ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
         }}
       >
-        {data.text}
-      </div>
+          {data.text}
+        </div>
 
       {/* Cercle avec le nombre de réponses - couleur dynamique */}
       <div 
@@ -217,67 +159,77 @@ const QuestionNode = ({ data }: { data: any }) => {
           width: `${isInSelectedPath ? size * 1.1 : size}px`,
           height: `${isInSelectedPath ? size * 1.1 : size}px`,
           borderRadius: '50%',
-          backgroundColor: isInSelectedPath 
-            ? highlightColor 
-            : "rgba(102, 126, 234, 0.7)",
-          border: `2px solid ${isInSelectedPath ? "#ffffff" : "rgba(255, 255, 255, 0.8)"}`,
+          backgroundImage: isInSelectedPath 
+            ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}dd)` 
+            : 'linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8))',
+          border: `2px solid ${isInSelectedPath ? "#ffffff" : "rgba(255, 255, 255, 0.9)"}`,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           fontWeight: 'bold',
           color: '#ffffff',
-          fontSize: isInSelectedPath ? '14px' : '12px',
-          boxShadow: isInSelectedPath ? `0 4px 8px ${highlightColor}40` : '0 2px 6px rgba(0, 0, 0, 0.15)',
-          transition: 'all 0.3s ease',
+          fontSize: isInSelectedPath ? '15px' : '13px',
+          boxShadow: isInSelectedPath 
+            ? `0 8px 16px ${highlightColor}40, 0 0 0 2px ${highlightColor}20` 
+            : '0 4px 12px rgba(0, 0, 0, 0.15)',
+          transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
           zIndex: 3,
-          position: 'relative'
+          position: 'relative',
+          textShadow: '0 1px 3px rgba(0,0,0,0.2)'
         }}
       >
         {data.count}
-      </div>
-
+        </div>
+      
       {/* Handles pour les connexions */}
-      <Handle
-        type="target"
-        position={Position.Top}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
         style={{ 
           width: '12px', 
           height: '12px',
-          background: isInSelectedPath ? highlightColor : '#667eea',
+          background: isInSelectedPath 
+            ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+            : 'linear-gradient(135deg, #667eea, #764ba2)',
           border: '2px solid white',
-          zIndex: 10
-        }}
+          zIndex: 10,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+        }} 
       />
       
-      <Handle
-        type="source"
-        position={Position.Bottom}
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
         style={{ 
           width: '12px', 
           height: '12px',
-          background: isInSelectedPath ? highlightColor : '#667eea',
+          background: isInSelectedPath 
+            ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+            : 'linear-gradient(135deg, #667eea, #764ba2)',
           border: '2px solid white',
-          zIndex: 10
+          zIndex: 10,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
         }}
       />
 
       {/* Indicateurs secondaires pour montrer l'appartenance à d'autres parcours */}
-      {secondaryIndicatorPositions.map((pos, idx) => (
-        <div
-          key={idx}
-          style={{
-            position: 'absolute',
-            width: '12px',
-            height: '12px',
-            borderRadius: '50%',
-            backgroundColor: HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length],
-            boxShadow: `0 0 4px ${HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length]}80`,
+          {secondaryIndicatorPositions.map((pos, idx) => (
+            <div 
+              key={idx}
+              style={{
+                position: 'absolute',
+            width: '14px',
+            height: '14px',
+                borderRadius: '50%',
+            background: `linear-gradient(135deg, ${HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length]}, ${HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length]}dd)`,
+            boxShadow: `0 0 10px ${HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length]}60, 0 0 0 2px white`,
             border: '2px solid #fff',
             ...pos,
-            zIndex: 20
-          }}
-        />
-      ))}
+            zIndex: 20,
+            transition: 'all 0.3s ease'
+              }} 
+            />
+          ))}
     </div>
   );
 };
@@ -296,87 +248,40 @@ const LinkComponent = ({
   sourcePosition,
   targetPosition
 }: EdgeProps) => {
-  // Détection des liens appartenant aux parcours sélectionnés (code existant)
-  let pathIndex = -1;
   
-  if (data && data.selectedPaths && data.selectedPaths.length > 0) {
-    // Extraire tous les identifiants possibles - complets, partiels, et composants individuels
-    const extractAllIds = (id: string) => {
-      const parts = id.split('-');
-      const result = [id]; // ID complet
+  // Check if this link is in a selected path
+  const isInSelectedPath = data?.isSelected || (data?.selectedPaths && data?.selectedPaths.length > 0 && data.selectedPaths.some((path: PathSegment[]) => {
+    // Check if the link matches a selected path
+    for (let i = 0; i < path.length - 1; i++) {
+      const sourceQuestionId = source.includes('-') ? source.split('-').pop() : source;
+      const targetQuestionId = target.includes('-') ? target.split('-').pop() : target;
       
-      // Ajouter les segments individuels
-      for (let i = 0; i < parts.length; i++) {
-        if (parts[i]) result.push(parts[i]);
-      }
-      
-      // Ajouter les combinaisons de segments qui pourraient être des IDs
-      if (parts.length >= 2) {
-        const lastSegment = parts[parts.length - 1];
-        const secondLastSegment = parts[parts.length - 2];
-        
-        if (lastSegment) result.push(lastSegment); // Dernier segment
-        if (secondLastSegment) result.push(secondLastSegment); // Avant-dernier segment
-        if (lastSegment && secondLastSegment) {
-          result.push(`${secondLastSegment}-${lastSegment}`); // Combinaison des deux derniers
-        }
-      }
-      
-      // Retourner directement le tableau sans utiliser filter
-      return result as string[]; // Nous savons que tous les éléments sont des strings
-    };
-    
-    const sourceIds = extractAllIds(source);
-    const targetIds = extractAllIds(target);
-    
-    // Parcourir tous les chemins sélectionnés
-    outerLoop: for (let i = 0; i < data.selectedPaths.length; i++) {
-      const path = data.selectedPaths[i];
-      
-      // Vérification 1: Segments directement consécutifs dans le parcours
-      for (let j = 0; j < path.length - 1; j++) {
-        for (const srcId of sourceIds) {
-          if (srcId === path[j].questionId || source.includes(path[j].questionId)) {
-            for (const tgtId of targetIds) {
-              if (tgtId === path[j+1].questionId || target.includes(path[j+1].questionId)) {
-                pathIndex = i;
-                break outerLoop;
-              }
-            }
-          }
-        }
-      }
-      
-      // Vérification 2: Les deux questions sont dans le même parcours
-      const sourceInPath = path.some((segment: PathSegment) => sourceIds.includes(segment.questionId) || source.includes(segment.questionId));
-      const targetInPath = path.some((segment: PathSegment) => targetIds.includes(segment.questionId) || target.includes(segment.questionId));
-      
-      if (sourceInPath && targetInPath) {
-        pathIndex = i;
-        break outerLoop;
+      if (path[i].questionId === sourceQuestionId && path[i+1].questionId === targetQuestionId) {
+        return true;
       }
     }
-  }
+    return false;
+  }));
   
-  const isPartOfSelectedPath = pathIndex !== -1;
+  // Link color and thickness
+  const linkColor = data?.pathColor || 'rgba(102, 126, 234, 0.7)';
   
-  // Déterminer la couleur du lien: couleur personnalisée du parcours si disponible, 
-  // sinon couleur basée sur l'index du parcours, sinon couleur par défaut
-  const linkColor = data && data.pathColor 
-    ? data.pathColor 
-    : (isPartOfSelectedPath 
-        ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
-        : style?.stroke || 'rgba(102, 126, 234, 0.7)');
-        
-  const strokeWidth = isPartOfSelectedPath ? 3 : 2;
-  const opacity = isPartOfSelectedPath ? 1 : 0.5;
+  const strokeWidth = isInSelectedPath ? 3 : 2;
+  const opacity = isInSelectedPath ? 1 : 0.7;
   
-  // Génération du chemin avec getStraightPath
+  // Créer un chemin incurvé pour le lien
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
+  
+  // Déterminer si c'est un lien vertical ou horizontal 
+  const isVertical = Math.abs(targetY - sourceY) > Math.abs(targetX - sourceX);
+  
+  // Générer le chemin avec getStraightPath
   const [edgePath] = getStraightPath({
     sourceX, 
     sourceY,
-    targetX,
-    targetY,
+    targetX, 
+    targetY
   });
 
   return (
@@ -384,14 +289,29 @@ const LinkComponent = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        style={{
+          style={{
           ...style,
           stroke: linkColor,
           strokeWidth: strokeWidth,
           opacity: opacity,
-          transition: 'all 0.3s ease',
+          transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          filter: isInSelectedPath ? `drop-shadow(0 0 3px ${linkColor})` : 'none'
         }}
       />
+      
+        {isInSelectedPath && (
+        <BaseEdge
+          id={`${id}-glow`}
+          path={edgePath}
+          style={{
+            stroke: linkColor,
+            strokeWidth: 1,
+            opacity: 0.3,
+            filter: `blur(4px) drop-shadow(0 0 5px ${linkColor})`,
+            transition: 'all 0.4s ease'
+          }}
+        />
+      )}
     </>
   );
 };
@@ -475,6 +395,7 @@ const scrollStyles = `
 const linkStyles = `
   .react-flow__edge.selected .react-flow__edge-path {
     stroke-opacity: 1;
+    filter: drop-shadow(0 0 3px var(--path-color, rgba(102, 126, 234, 0.5)));
   }
   
   .highlight-path {
@@ -483,12 +404,111 @@ const linkStyles = `
   
   /* Effet de fondu lorsqu'un lien traverse un nœud qui n'est pas sa source ou sa cible */
   .react-flow__edge:not(.selected) .react-flow__edge-path {
-    transition: stroke-opacity 0.3s ease;
+    transition: stroke-opacity 0.3s ease, stroke-width 0.3s ease;
   }
   
   /* Crée un effet d'atténuation lorsqu'un lien passe près d'un nœud */
   .react-flow__node:hover ~ .react-flow__edge:not(.selected) .react-flow__edge-path {
     stroke-opacity: 0.3;
+  }
+  
+  /* Amélioration des fonds pour les composants ReactFlow */
+  .react-flow__background {
+    background-size: 20px 20px !important;
+    background-image: radial-gradient(circle at 1px 1px, rgba(220, 230, 250, 0.5) 1px, transparent 0) !important;
+  }
+  
+  .react-flow__controls {
+    background-color: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+    padding: 4px !important;
+  }
+  
+  .react-flow__controls-button {
+    border-radius: 6px !important;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    color: #667eea !important;
+    transition: all 0.2s ease !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin: 3px !important;
+  }
+  
+  .react-flow__controls-button:hover {
+    background-color: rgba(102, 126, 234, 0.1) !important;
+    transform: scale(1.05) !important;
+  }
+  
+  .react-flow__controls-button svg {
+    fill: #667eea !important;
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
+  /* Minimap personnalisée */
+  .react-flow__minimap {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(102, 126, 234, 0.15) !important;
+  }
+`;
+
+// Définir une animation de pulse pour les nœuds sélectionnés
+const pulseCss = `
+@keyframes pulse {
+  0% {
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.2), 0 0 15px 5px rgba(102, 126, 234, 0.15);
+  }
+  50% {
+    box-shadow: 0 10px 25px -2px rgba(102, 126, 234, 0.35), 0 0 20px 8px rgba(102, 126, 234, 0.25);
+  }
+  100% {
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.2), 0 0 15px 5px rgba(102, 126, 234, 0.15);
+  }
+}
+`;
+
+// Améliorations visuelles pour ReactFlow
+const reactFlowCustomStyles = `
+  /* Amélioration des fonds et contrôles pour les composants ReactFlow */
+  .react-flow__background {
+    background-size: 20px 20px;
+    background-image: radial-gradient(circle at 1px 1px, rgba(220, 230, 250, 0.5) 1px, transparent 0);
+  }
+  
+  .react-flow__controls {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+  }
+  
+  .react-flow__controls-button {
+    border-radius: 6px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+    transition: all 0.2s ease;
+  }
+  
+  .react-flow__controls-button:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+    transform: scale(1.05);
+  }
+  
+  .react-flow__controls-button svg {
+    fill: #667eea;
+  }
+  
+  /* Minimap personnalisée */
+  .react-flow__minimap {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.15);
   }
 `;
 
@@ -607,11 +627,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         const answerText = answer.answer || 'Sans réponse';
         const childNodeId = `${currentNodeId}-${answer.questionId}-${answerText}`;
         
-        if (!nodeMap.has(currentNodeId)) {
-          console.log(`Création du nœud parent manquant: ${currentNodeId}`);
-          nodeMap.set(currentNodeId, { count: 1, children: new Map() });
-        }
-        
+          if (!nodeMap.has(currentNodeId)) {
+            console.log(`Création du nœud parent manquant: ${currentNodeId}`);
+            nodeMap.set(currentNodeId, { count: 1, children: new Map() });
+          }
+          
         const currentNode = nodeMap.get(currentNodeId);
         if (!currentNode) {
           return;
@@ -777,10 +797,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       const questionNode: Node = {
         id: questionId,
-        type: 'questionNode',
-        data: {
+            type: 'questionNode',
+            data: {
           questionId: questionId,
-          text: question.text,
+              text: question.text,
           count: question.count || 0,
           isSelected: false,
           isRoot: false,
@@ -1371,25 +1391,61 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     if (path.length > 0) {
       const newSelectedPaths = [path];
+      const pathColor = HIGHLIGHT_COLORS[0]; // Utiliser la première couleur pour le nouveau chemin sélectionné
       
-      const updatedEdges = edges.map(edge => ({
-        ...edge,
-        data: {
-          ...(edge.data || {}),
-          selectedPaths: newSelectedPaths
+      // Créer un ensemble des IDs de questions dans le chemin pour recherche rapide
+      const questionIdsInPath = new Set(path.map(segment => segment.questionId));
+      
+      // Mettre à jour les nœuds avec les informations de sélection et de coloration
+      const updatedNodes = nodes.map(node => {
+        const nodeQuestionId = node.data.questionId;
+        const isInPath = questionIdsInPath.has(nodeQuestionId);
+        
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            selectedPaths: newSelectedPaths,
+            isSelected: isInPath,
+            highlightColor: isInPath ? pathColor : node.data.highlightColor
+          }
+        };
+      });
+      
+      // Mettre à jour les liens avec les informations de sélection et de coloration
+      const updatedEdges = edges.map(edge => {
+        // Extraire les IDs de questions des identifiants de source et de cible
+        const sourceId = edge.source.includes('-') ? edge.source.split('-').pop() : edge.source;
+        const targetId = edge.target.includes('-') ? edge.target.split('-').pop() : edge.target;
+        
+        // Vérifier si ce lien fait partie du chemin sélectionné
+        let isInPath = false;
+        for (let i = 0; i < path.length - 1; i++) {
+          if (path[i].questionId === sourceId && path[i+1].questionId === targetId) {
+            isInPath = true;
+            break;
+          }
         }
-      }));
+        
+        return {
+          ...edge,
+          data: {
+            ...(edge.data || {}),
+            selectedPaths: newSelectedPaths,
+            isSelected: isInPath,
+            pathColor: isInPath ? pathColor : edge.data?.pathColor
+          },
+          style: {
+            ...edge.style,
+            stroke: isInPath ? pathColor : edge.style?.stroke || 'rgba(102, 126, 234, 0.7)',
+            strokeWidth: isInPath ? 3 : 2,
+            opacity: isInPath ? 1 : 0.7
+          }
+        };
+      });
       
-      const updatedNodes = nodes.map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          selectedPaths: newSelectedPaths
-        }
-      }));
-      
-      setEdges(updatedEdges);
       setNodes(updatedNodes);
+      setEdges(updatedEdges);
     }
     
     if (reactFlowInstance) {
@@ -1408,7 +1464,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     const pathNodes: Node[] = [];
     const pathEdges: Edge[] = [];
     
-    // Calculer d'abord le nombre exact de répondants qui ont suivi ce parcours complet
+    // Calculate first the exact number of respondents who followed this complete path
     const respondentsFollowingPath = responses.filter(response => 
       path.every(segment => {
         const answer = response.answers.find((a: { questionId: string; answer: string }) => 
@@ -1418,10 +1474,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       })
     );
     
-    // Nombre total de répondants pour ce parcours spécifique
+    // Total number of respondents for this specific path
     const totalRespondentsForPath = respondentsFollowingPath.length;
     
-    // Couleur du parcours actuel
+    // Path color
     const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
     
     path.forEach((segment, index) => {
@@ -1440,13 +1496,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           count: totalRespondentsForPath,
           highlightLevel: 3,
           selectedPaths: [path],
-          pathColor: pathColor // Ajouter la couleur du parcours dans les données
+          pathColor: pathColor // Add path color to data
         },
         style: {
           width: 240,
           height: 170,
-          backgroundColor: `${pathColor}10`, // Couleur de fond légère basée sur la couleur du parcours
-          borderColor: pathColor, // Bordure avec la couleur du parcours
+          backgroundColor: `${pathColor}10`, // Light background based on path color
+          borderColor: pathColor, // Border with path color
           borderWidth: 2,
           transition: 'all 0.3s ease'
         }
@@ -1465,12 +1521,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           type: 'default',
           animated: false,
           style: { 
-            stroke: pathColor, // Utiliser la même couleur pour les arêtes
+            stroke: pathColor, // Use the same color for edges
             strokeWidth: 3
           },
           data: {
             selectedPaths: [path],
-            pathColor: pathColor // Ajouter la couleur du parcours dans les données
+            pathColor: pathColor // Add path color to data
           }
         });
       }
@@ -1479,7 +1535,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     return { nodes: pathNodes, edges: pathEdges };
   };
   
-  // Nouvelle fonction qui compte les répondants ayant suivi exactement un chemin spécifique
+  // New function that counts respondents who followed exactly a specific path
   const getRespondentCountForPath = (path: PathSegment[], responses: any[]): number => {
     return responses.filter(response => 
       path.every(segment => {
@@ -1514,10 +1570,19 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         p: 2, 
         display: 'flex', 
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(220, 230, 250, 0.2) 1px, transparent 0)',
+        backgroundSize: '25px 25px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+        borderRadius: '16px',
+        border: '1px solid rgba(102, 126, 234, 0.15)'
       }}
     >
-      <Typography variant="h6" component="h2" gutterBottom>
+      <Typography variant="h6" component="h2" gutterBottom sx={{ 
+        fontWeight: '600', 
+        color: '#1e3a8a',
+        letterSpacing: '0.2px'
+      }}>
         Response Path Analysis
       </Typography>
       
@@ -1529,200 +1594,206 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }}>
         <Box sx={{ 
           flex: 3, 
-          border: '1px solid rgba(0, 0, 0, 0.1)', 
-          borderRadius: '4px',
+          border: '1px solid rgba(102, 126, 234, 0.2)', 
+          borderRadius: '12px',
           position: 'relative',
           minHeight: '500px',
           overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
-      }}>
-        {loading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%' 
-          }}>
-            <CircularProgress />
-          </Box>
-        ) : responses.length > 0 ? (
-          filterApplied && multipleTreeNodes.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
-              {multipleTreeNodes.map((pathNodes, index) => (
-                <Box 
-                  key={`path-tree-${index}`} 
-                  sx={{ 
-                    border: `2px solid ${HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length]}`,
-                    borderRadius: '8px',
-                    height: '400px',
-                    mb: 2,
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <Typography 
-                    variant="subtitle2" 
+          background: 'rgba(252, 253, 255, 0.7)',
+          backdropFilter: 'blur(8px)',
+          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
+        }}>
+          {loading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%' 
+            }}>
+              <CircularProgress />
+            </Box>
+          ) : responses.length > 0 ? (
+            filterApplied && multipleTreeNodes.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
+                {multipleTreeNodes.map((pathNodes, index) => (
+                  <Box 
+                    key={`path-tree-${index}`} 
                     sx={{ 
-                      p: 1, 
-                      backgroundColor: HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length],
-                      color: 'white',
-                      borderTopLeftRadius: '6px',
-                      borderTopRightRadius: '6px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      border: `2px solid ${HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length]}`,
+                      borderRadius: '8px',
+                      height: '400px',
+                      mb: 2,
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    <Box>Path {String.fromCharCode(65 + index)}</Box>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        backgroundColor: 'rgba(255,255,255,0.2)', 
-                        px: 1, 
-                        py: 0.5, 
-                        borderRadius: 1,
-                        fontSize: '0.8rem'
-                      }}>
-                        {selectedPaths[index].length} steps
+                    <Typography 
+                      variant="subtitle2" 
+                      sx={{ 
+                        p: 1, 
+                        backgroundColor: HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length],
+                        color: 'white',
+                        borderTopLeftRadius: '6px',
+                        borderTopRightRadius: '6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Box>Parcours {String.fromCharCode(65 + index)}</Box>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          px: 1, 
+                          py: 0.5, 
+                          borderRadius: 1,
+                          fontSize: '0.8rem'
+                        }}>
+                          {selectedPaths[index].length} steps
+                        </Box>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          px: 1, 
+                          py: 0.5, 
+                          borderRadius: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
+                          {getRespondentCountForPath(selectedPaths[index], responses)} respondents
+                        </Box>
                       </Box>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        backgroundColor: 'rgba(255,255,255,0.2)', 
-                        px: 1, 
-                        py: 0.5, 
-                        borderRadius: 1,
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold'
-                      }}>
-                        {getRespondentCountForPath(selectedPaths[index], responses)} respondents
-                      </Box>
-                    </Box>
-                  </Typography>
-                  
-                  <ReactFlow
-                    key={`flow-${index}`}
-                    nodes={pathNodes}
-                    edges={multipleTreeEdges[index]}
-                    nodeTypes={{ questionNode: QuestionNode }}
-                    edgeTypes={{ default: LinkComponent }}
-                    defaultViewport={defaultViewport}
-                    minZoom={0.1}
-                    maxZoom={2.5}
-                    fitView
-                    fitViewOptions={{ padding: 0.3 }}
-                    onInit={(instance) => setReactFlowInstances(instance, index)}
-                    zoomOnScroll={false}
-                    zoomOnPinch={true}
-                    panOnScroll={true}
-                    panOnScrollMode={'free' as any}
-                    nodesDraggable={false}
-                    elementsSelectable={true}
-                    selectNodesOnDrag={false}
-                  >
-                    <Controls 
-                      position="top-right" 
-                      showInteractive={true} 
+                    </Typography>
+                    
+                    <ReactFlow
+                      key={`flow-${index}`}
+                      nodes={pathNodes}
+                      edges={multipleTreeEdges[index]}
+                      nodeTypes={{ questionNode: QuestionNode }}
+                      edgeTypes={{ default: LinkComponent }}
+                      defaultViewport={defaultViewport}
+                      minZoom={0.1}
+                      maxZoom={2.5}
+                      fitView
                       fitViewOptions={{ padding: 0.3 }}
-                    />
-                    <Background 
-                      color="#f0f4ff" 
-                      gap={20} 
-                      size={1.5}
-                      variant={'dots' as any}
-                    />
-                  </ReactFlow>
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={onNodeClick}
-              nodeTypes={{ questionNode: QuestionNode }}
-              edgeTypes={{ default: LinkComponent }}
-              defaultViewport={defaultViewport}
-              minZoom={0.1}
-              maxZoom={2.5}
-              fitView
-              fitViewOptions={{ padding: 0.3 }}
-              onInit={setReactFlowInstance}
-              zoomOnScroll={false}
-              zoomOnPinch={true}
-              panOnScroll={true}
-              panOnScrollMode={'free' as any}
-              nodesDraggable={false}
-              elementsSelectable={true}
-              selectNodesOnDrag={false}
-            >
-              <Controls 
-                position="top-right" 
-                showInteractive={true} 
+                      onInit={(instance) => setReactFlowInstances(instance, index)}
+                      zoomOnScroll={false}
+                      zoomOnPinch={true}
+                      panOnScroll={true}
+                      nodesDraggable={false}
+                      elementsSelectable={true}
+                    >
+                      <Controls 
+                        position="top-right" 
+                        showInteractive={true} 
+                        fitViewOptions={{ padding: 0.3 }}
+                      />
+                      <Background 
+                        color="#f0f4ff" 
+                        gap={20} 
+                        size={1.5}
+                        variant={BackgroundVariant.Dots}
+                      />
+                    </ReactFlow>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={onNodeClick}
+                nodeTypes={{ questionNode: QuestionNode }}
+                edgeTypes={{ default: LinkComponent }}
+                defaultViewport={defaultViewport}
+                minZoom={0.1}
+                maxZoom={2.5}
+                fitView
                 fitViewOptions={{ padding: 0.3 }}
-              />
-              <MiniMap
-                nodeStrokeWidth={3}
-                nodeColor={(node) => {
-                  // Utiliser la couleur spécifique du parcours si disponible
-                  if (node.data.pathColor) {
-                    return node.data.pathColor;
-                  }
-                  
-                  // Sinon, utiliser le système existant basé sur la sélection
-                  const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
-                    path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
-                  );
-                  
-                  if (isSelected) {
-                    // Trouver l'index du premier parcours contenant ce nœud
-                    const pathIndex = node.data.selectedPaths.findIndex((path: PathSegment[]) => 
+                onInit={setReactFlowInstance}
+                zoomOnScroll={false}
+                zoomOnPinch={true}
+                panOnScroll={true}
+                nodesDraggable={false}
+                elementsSelectable={true}
+              >
+                <Controls 
+                  position="top-right" 
+                  showInteractive={true} 
+                  fitViewOptions={{ padding: 0.3 }}
+                />
+                <MiniMap
+                  nodeStrokeWidth={3}
+                  nodeColor={(node) => {
+                    if (node.data.pathColor) {
+                      return node.data.pathColor;
+                    }
+                    
+                    const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
                       path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
                     );
-                    return HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
-                  }
-                  
-                  return '#667eea';
-                }}
-                zoomable
-                pannable
-                position="bottom-right"
-                style={{ background: 'rgba(255, 255, 255, 0.9)' }}
-              />
-              <Background 
-                color="#f0f4ff" 
-                gap={20} 
-                size={1.5}
-                variant={'dots' as any}
-              />
-            </ReactFlow>
-          )
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%' 
-          }}>
-            <Typography variant="body2">
-              No paths available
-            </Typography>
-          </Box>
-        )}
-      </Box>
-      
+                    
+                    if (isSelected) {
+                      const pathIndex = node.data.selectedPaths.findIndex((path: PathSegment[]) => 
+                        path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
+                      );
+                      return HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                    }
+                    
+                    return '#667eea';
+                  }}
+                  zoomable
+                  pannable
+                  position="bottom-right"
+                  style={{ background: 'rgba(255, 255, 255, 0.9)' }}
+                />
+                <Background 
+                  color="#f0f4ff" 
+                  gap={20} 
+                  size={1.5}
+                  variant={BackgroundVariant.Dots}
+                />
+              </ReactFlow>
+            )
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%' 
+            }}>
+              <Typography variant="body2">
+                No paths available
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        
         <Box sx={{ 
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
-          borderRadius: '4px',
+          border: '1px solid rgba(102, 126, 234, 0.2)',
+          borderRadius: '12px',
           p: 2,
           height: '100%',
           maxHeight: 'calc(100vh - 120px)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          background: 'rgba(252, 253, 255, 0.7)',
+          backdropFilter: 'blur(8px)'
         }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ 
+            mb: 1, 
+            fontWeight: 600, 
+            color: '#1e3a8a',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
             Complete Paths
           </Typography>
           
@@ -1744,11 +1815,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   borderRadius: '4px',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  background: '#888',
+                  background: '#667eea99',
                   borderRadius: '4px',
                 },
                 '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#555',
+                  background: '#667eea',
                 }
               }}
             >
@@ -1759,9 +1830,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     color={filterApplied ? "primary" : "inherit"}
                     size="small"
                     onClick={toggleFilter}
-                    sx={{ width: '100%' }}
+                    sx={{ 
+                      width: '100%',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      boxShadow: filterApplied ? '0 4px 12px rgba(102, 126, 234, 0.25)' : 'none',
+                      transition: 'all 0.3s ease'
+                    }}
                   >
-                    {filterApplied ? "Show all paths" : "Filter on selected paths"}
+                    {filterApplied ? "Show all paths" : "Filter selected paths"}
                   </Button>
                 </Box>
               )}
@@ -1788,52 +1866,70 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   : 'divider';
                 
                 const backgroundColor = isSelected 
-                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20`
+                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
                   : 'background.paper';
                 
                 return (
                 <Box 
                   key={index}
                   sx={{
-                    p: 1,
-                    mb: 1,
+                    p: 1.5,
+                    mb: 1.5,
                     border: '1px solid',
-                      borderColor: isSelected ? pathColor : 'divider',
-                    borderRadius: 1,
-                      backgroundColor: backgroundColor,
+                    borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
+                    borderRadius: '12px',
+                    backgroundColor: backgroundColor,
                     cursor: 'pointer',
+                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                     '&:hover': {
-                        backgroundColor: isSelected 
-                          ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}30`
-                          : 'action.hover',
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                    onClick={() => handlePathSelect(pathItem.path)}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {isSelected && (
-                        <Box 
-                          sx={{ 
-                            width: 12, 
-                            height: 12, 
-                            borderRadius: '50%', 
-                            backgroundColor: HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length],
-                            boxShadow: `0 0 4px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}80`
-                          }} 
-                        />
-                      )}
-                      <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                    {pathItem.name} ({pathItem.path.length} steps)
-                  </Typography>
-                    </Box>
-                    
+                      backgroundColor: isSelected 
+                        ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20`
+                        : 'rgba(102, 126, 234, 0.04)',
+                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
+                      transform: 'scale(1.02)'
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    boxShadow: isSelected 
+                      ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
+                      : '0 2px 8px rgba(0, 0, 0, 0.02)'
+                  }}
+                  onClick={() => handlePathSelect(pathItem.path)}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {isSelected && (
+                      <Box 
+                        sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          backgroundColor: HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length],
+                          boxShadow: `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`,
+                          border: '2px solid white'
+                        }} 
+                      />
+                    )}
+                    <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
+                      {pathItem.name} ({pathItem.path.length} steps)
+                    </Typography>
+                  </Box>
+                  
                   <Box sx={{ mt: 1 }}>
                     {pathItem.path.map((segment, segIdx) => (
-                      <Box key={segIdx} sx={{ display: 'flex', mb: 0.5, fontSize: '0.8rem' }}>
-                        <Typography variant="caption" sx={{ mr: 1 }}>
+                      <Box key={segIdx} sx={{ 
+                        display: 'flex', 
+                        mb: 0.5, 
+                        fontSize: '0.8rem',
+                        p: 0.5,
+                        borderRadius: '4px',
+                        backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
+                      }}>
+                        <Typography variant="caption" sx={{ 
+                          mr: 1,
+                          fontWeight: 'bold', 
+                          color: isSelected ? pathColor : 'text.secondary'
+                        }}>
                           {segIdx + 1}.
-        </Typography>
+                        </Typography>
                         <Typography 
                           variant="caption" 
                           sx={{ 
@@ -1842,8 +1938,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                             maxWidth: '100%'
                           }}
                         >
-                            {segment.questionText.substring(0, 40)}
-                            {segment.questionText.length > 40 ? '...' : ''}
+                          {segment.questionText.substring(0, 40)}
+                          {segment.questionText.length > 40 ? '...' : ''}
                         </Typography>
                       </Box>
                     ))}
@@ -1863,6 +1959,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       <style>{hierarchyStyles}</style>
       <style>{scrollStyles}</style>
       <style>{linkStyles}</style>
+      <style>{pulseCss}</style>
+      <style>{reactFlowCustomStyles}</style>
     </Paper>
   );
 };

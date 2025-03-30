@@ -1506,7 +1506,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               <Grid item xs={12}>
                 <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
                   <Typography variant="h5" component="h2" gutterBottom>
-                    Response Path Analysis
+                    Analyse des Parcours de Réponse
                   </Typography>
                   
                   <Box sx={{ height: '600px' }}>
