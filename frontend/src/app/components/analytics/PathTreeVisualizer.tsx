@@ -1890,7 +1890,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   }}
                   zoomable
                   pannable
-                  position="bottom-right"
+                  position="bottom-left"
                   style={{ background: 'rgba(255, 255, 255, 0.9)' }}
                 />
                 <Background 
