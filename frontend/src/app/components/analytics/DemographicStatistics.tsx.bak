@@ -327,7 +327,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     const sortedAges = Object.keys(truncatedAges).sort((a, b) => parseInt(a) - parseInt(b));
     
     const datasets = sortedAges.map((age, index) => ({
-      label: `${age} years`,
+      label: `${age} ans`,
       data: [{
         x: parseInt(age),
         y: truncatedAges[age]
@@ -356,7 +356,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)"
+        transition: 'all 0.5s ease-in-out'
       }}>
         <Scatter 
           data={chartData} 
@@ -372,7 +372,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   delay = context.dataIndex * 50 + context.datasetIndex * 100;
                 }
                 return delay;
-              }
+              },
             },
             plugins: {
               legend: {
@@ -400,7 +400,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   label: (context: any) => {
                     const age = context.parsed.x;
                     const count = context.parsed.y;
-                    return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+                    return `${count} participant${count > 1 ? 's' : ''} de ${age} ans`;
                   }
                 },
                 titleFont: {
@@ -425,7 +425,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 position: 'bottom' as const,
                 title: {
                   display: true,
-                  text: 'Age',
+                  text: 'Âge',
                   font: {
                     size: fullSize ? 16 : 14,
                     weight: 'bold' as const
@@ -448,7 +448,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 position: 'left' as const,
                 title: {
                   display: true,
-                  text: 'Number of participants',
+                  text: 'Nombre de participants',
                   font: {
                     size: fullSize ? 16 : 14,
                     weight: 'bold' as const
@@ -471,14 +471,12 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             transitions: {
               active: {
                 animation: {
-                  duration: 400,
-                  easing: 'easeOutQuart' as const
+                  duration: 400
                 }
               },
               resize: {
                 animation: {
-                  duration: 500,
-                  easing: 'easeOutQuart' as const
+                  duration: 500
                 }
               },
               show: {
@@ -515,7 +513,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             pointerEvents: 'none'
           }}>
             <Typography variant="caption" color="text.secondary">
-              {totalAges - Object.keys(truncatedAges).length} more ages hidden. Click to view all.
+              {totalAges - Object.keys(truncatedAges).length} autres âges masqués. Cliquez pour voir tout.
             </Typography>
           </Box>
         )}
@@ -577,7 +575,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             pointerEvents: 'none'
           }}>
             <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedCities).length} more cities hidden. Click to view all.
+              {total - Object.keys(truncatedCities).length} autres villes masquées. Cliquez pour voir tout.
             </Typography>
           </Box>
         )}
@@ -632,7 +630,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           {sortedAges.map(([age, count], index) => (
             <ListItem key={index} divider>
               <ListItemText 
-                primary={`${age} years`} 
+                primary={`${age} ans`} 
                 secondary={`${count} participant${count > 1 ? 's' : ''}`} 
                 primaryTypographyProps={{ fontWeight: index < 3 ? 'bold' : 'normal' }}
               />
@@ -686,7 +684,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         width: '100%',
         height: '100%',
         position: 'relative',
-        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        transition: 'all 0.5s ease-in-out',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -699,7 +697,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             maintainAspectRatio: fullSize ? false : true,
             animation: {
               duration: fullSize ? 800 : 500,
-              easing: 'easeOutQuart' as const
+              easing: 'easeOutQuart' as const,
             },
             plugins: {
               ...pieOptions.plugins,
@@ -776,14 +774,12 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             transitions: {
               active: {
                 animation: {
-                  duration: 400,
-                  easing: 'easeOutQuart' as const
+                  duration: 400
                 }
               },
               resize: {
                 animation: {
-                  duration: 500,
-                  easing: 'easeOutQuart' as const
+                  duration: 500
                 }
               },
               show: {
@@ -824,7 +820,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             }
           }}>
             <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedGenders).length} more genders hidden. Click to view all.
+              {total - Object.keys(truncatedGenders).length} autres genres masqués. Cliquez pour voir tout.
             </Typography>
           </Box>
         )}
@@ -890,7 +886,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 },
                 title: {
                   display: fullSize,
-                  text: 'Number of participants',
+                  text: 'Nombre de participants',
                   font: {
                     size: fullSize ? 16 : 14,
                     weight: 'bold' as const
@@ -920,7 +916,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             pointerEvents: 'none'
           }}>
             <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedEducation).length} autres levels hidden. Click to view all.
+              {total - Object.keys(truncatedEducation).length} autres niveaux masqués. Cliquez pour voir tout.
             </Typography>
           </Box>
         )}
@@ -991,7 +987,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         return (
           <>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
+              height: '500px', 
               width: '100%', 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1007,7 +1003,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         return (
           <>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
+              height: '500px', 
               width: '100%', 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1023,7 +1019,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         return (
           <>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
+              height: '500px', 
               width: '100%', 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1039,7 +1035,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         return (
           <>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
+              height: '500px', 
               width: '100%', 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1072,7 +1068,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          Demographic Statistics
+          Statistiques Démographiques
         </Typography>
       </Box>
 
@@ -1086,13 +1082,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           <Grid item xs={12} md={6}>
             <Paper 
               elevation={0} 
-              onClick={() => handleOpenDialog('gender', 'Gender Distribution')}
+              onClick={() => handleOpenDialog('gender', 'Distribution par Genre')}
               sx={{ 
                 p: 3, 
                 height: '400px',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -1121,7 +1117,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   mb: 3
                 }}
               >
-                Gender Distribution
+                Distribution par Genre
               </Typography>
               <Box sx={{ 
                 height: 'calc(100% - 60px)',
@@ -1139,13 +1135,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           <Grid item xs={12} md={6}>
             <Paper 
               elevation={0} 
-              onClick={() => handleOpenDialog('education', "Education Level Distribution")}
+              onClick={() => handleOpenDialog('education', "Distribution par Niveau d'Éducation")}
               sx={{ 
                 p: 3, 
                 height: '400px',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -1174,7 +1170,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   mb: 3
                 }}
               >
-                Education Level Distribution
+                Distribution par Niveau d'Éducation
               </Typography>
               <Box sx={{ 
                 height: 'calc(100% - 60px)',
@@ -1192,13 +1188,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           <Grid item xs={12} md={6}>
             <Paper 
               elevation={0} 
-              onClick={() => handleOpenDialog('age', 'Distribution par age')}
+              onClick={() => handleOpenDialog('age', 'Distribution par âge')}
               sx={{ 
                 p: 3, 
                 height: '400px',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -1227,7 +1223,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   mb: 3
                 }}
               >
-                Age Distribution
+                Distribution par Âge
               </Typography>
               <Box sx={{ 
                 height: 'calc(100% - 60px)',
@@ -1245,13 +1241,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           <Grid item xs={12} md={6}>
             <Paper 
               elevation={0} 
-              onClick={() => handleOpenDialog('city', 'City Distribution')}
+              onClick={() => handleOpenDialog('city', 'Distribution par ville')}
               sx={{ 
                 p: 3, 
                 height: '400px',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -1280,7 +1276,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   mb: 3
                 }}
               >
-                City Distribution
+                Distribution par Ville
               </Typography>
               <Box sx={{ 
                 height: 'calc(100% - 60px)',
@@ -1298,14 +1294,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         // Afficher ce message quand aucune réponse ne correspond aux filtres
         <Box sx={{ textAlign: 'center', p: 3 }}>
           <Typography variant="h6" color="text.secondary">
-            No responses match the filtering criteria
+            Aucune réponse ne correspond aux critères de filtrage
           </Typography>
           <Button 
             variant="outlined" 
             onClick={onClearFilters || (() => {})}
             sx={{ mt: 2 }}
           >
-            Reset filters
+            Réinitialiser les filtres
           </Button>
         </Box>
       )}
@@ -1350,7 +1346,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={handleCloseDialog} variant="outlined" color="primary">
-            Close
+            Fermer
           </Button>
         </DialogActions>
       </Dialog>
@@ -1367,7 +1363,7 @@ const GroupsList: React.FC<GroupsListProps> = ({
   return (
     <Paper sx={{ p: 2, height: '50%', overflow: 'auto' }}>
       <Typography variant="subtitle1" gutterBottom>
-        Analysis Groups ({groups.length})
+        Groupes d'analyse ({groups.length})
       </Typography>
       
       {groups.length > 0 ? (
@@ -1380,7 +1376,7 @@ const GroupsList: React.FC<GroupsListProps> = ({
             >
               <ListItemText
                 primary={group.name}
-                secondary={`${group.respondentCount} respondents • ${group.paths.length} paths`}
+                secondary={`${group.respondentCount} répondants • ${group.paths.length} parcours`}
               />
               <ListItemSecondaryAction>
                 <Tooltip title="Voir l'analyse de ce groupe">
@@ -1415,7 +1411,7 @@ const GroupsList: React.FC<GroupsListProps> = ({
         </List>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          No analysis groups created. Select paths and create a group to start.
+          Aucun groupe d'analyse créé. Sélectionnez des parcours et créez un groupe pour commencer.
         </Typography>
       )}
     </Paper>

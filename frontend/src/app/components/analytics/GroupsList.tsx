@@ -42,7 +42,7 @@ export const GroupsList: React.FC<GroupsListProps> = ({
   return (
     <Paper sx={{ p: 2, height: '50%', overflow: 'auto' }}>
       <Typography variant="subtitle1" gutterBottom>
-        Groupes d'analyse ({groups.length})
+        Analysis Groups ({groups.length})
       </Typography>
       
       <List dense>
@@ -54,28 +54,28 @@ export const GroupsList: React.FC<GroupsListProps> = ({
           >
             <ListItemText
               primary={group.name}
-              secondary={`${group.respondentCount} répondants • ${group.paths.length} parcours`}
+              secondary={`${group.respondentCount} respondents • ${group.paths.length} paths`}
             />
             <ListItemSecondaryAction>
-              <Tooltip title="Voir l'analyse de ce groupe">
+              <Tooltip title="View group analysis">
                 <IconButton edge="end" onClick={() => onSelectGroup(group.id)}>
                   <VisibilityIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Renommer">
+              <Tooltip title="Rename">
                 <IconButton edge="end" onClick={() => {
-                  const newName = prompt('Nouveau nom pour ce groupe :', group.name);
+                  const newName = prompt('New name for this group:', group.name);
                   if (newName) onRenameGroup(group.id, newName);
                 }}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Supprimer">
+              <Tooltip title="Delete">
                 <IconButton 
                   edge="end" 
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
+                    if (confirm('Are you sure you want to delete this group?')) {
                       onDeleteGroup(group.id);
                     }
                   }}

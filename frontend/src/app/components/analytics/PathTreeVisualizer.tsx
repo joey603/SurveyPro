@@ -187,31 +187,31 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
       {/* Handles pour les connexions - différentes selon le type d'arbre */}
       {isFilteredTree ? (
         <>
-          <Handle 
-            type="target" 
+      <Handle 
+        type="target" 
             position={Position.Left} 
-            style={{ 
+        style={{ 
               width: '12px', 
               height: '12px',
               background: isInSelectedPath 
                 ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
-              border: '2px solid white',
+          border: '2px solid white',
               zIndex: 10,
               boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-            }} 
-          />
+        }} 
+      />
           
-          <Handle 
-            type="source" 
+      <Handle 
+        type="source" 
             position={Position.Right} 
-            style={{ 
+        style={{ 
               width: '12px', 
               height: '12px',
               background: isInSelectedPath 
                 ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
-              border: '2px solid white',
+          border: '2px solid white',
               zIndex: 10,
               boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
             }}
@@ -243,7 +243,7 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
               background: isInSelectedPath 
                 ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
-              border: '2px solid white',
+          border: '2px solid white',
               zIndex: 10,
               boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
             }}
