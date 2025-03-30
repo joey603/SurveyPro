@@ -67,6 +67,7 @@ interface QuestionNodeProps {
     highlightColor?: string;
     secondaryPathIndices?: number[];
     primaryPathIndex?: number;
+    isFilteredTree?: boolean;
     [key: string]: any;
   };
 }
@@ -91,6 +92,9 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
   
   // L'index du parcours principal pour ce nœud 
   const primaryPathIndex = data.primaryPathIndex !== undefined ? data.primaryPathIndex : 0;
+  
+  // Déterminer s'il s'agit d'un nœud dans un arbre filtré (horizontal) ou principal (vertical)
+  const isFilteredTree = data.isFilteredTree === true;
   
   return (
     <div style={{ 
@@ -180,36 +184,72 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
         {data.count}
         </div>
       
-      {/* Handles pour les connexions */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
-        style={{ 
-          width: '12px', 
-          height: '12px',
-          background: isInSelectedPath 
-            ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
-            : 'linear-gradient(135deg, #667eea, #764ba2)',
-          border: '2px solid white',
-          zIndex: 10,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-        }} 
-      />
-      
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        style={{ 
-          width: '12px', 
-          height: '12px',
-          background: isInSelectedPath 
-            ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
-            : 'linear-gradient(135deg, #667eea, #764ba2)',
-          border: '2px solid white',
-          zIndex: 10,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-        }}
-      />
+      {/* Handles pour les connexions - différentes selon le type d'arbre */}
+      {isFilteredTree ? (
+        <>
+          <Handle 
+            type="target" 
+            position={Position.Left} 
+            style={{ 
+              width: '12px', 
+              height: '12px',
+              background: isInSelectedPath 
+                ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+                : 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: '2px solid white',
+              zIndex: 10,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }} 
+          />
+          
+          <Handle 
+            type="source" 
+            position={Position.Right} 
+            style={{ 
+              width: '12px', 
+              height: '12px',
+              background: isInSelectedPath 
+                ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+                : 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: '2px solid white',
+              zIndex: 10,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <Handle 
+            type="target" 
+            position={Position.Top} 
+            style={{ 
+              width: '12px', 
+              height: '12px',
+              background: isInSelectedPath 
+                ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+                : 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: '2px solid white',
+              zIndex: 10,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }} 
+          />
+          
+          <Handle 
+            type="source" 
+            position={Position.Bottom} 
+            style={{ 
+              width: '12px', 
+              height: '12px',
+              background: isInSelectedPath 
+                ? `linear-gradient(135deg, ${highlightColor}, ${highlightColor}cc)` 
+                : 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: '2px solid white',
+              zIndex: 10,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }}
+          />
+        </>
+      )}
 
       {/* Indicateurs secondaires pour montrer l'appartenance à d'autres parcours */}
           {secondaryIndicatorPositions.map((pos, idx) => (
@@ -1489,9 +1529,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         );
         
         return {
-          ...node,
-          data: {
-            ...node.data,
+        ...node,
+        data: {
+          ...node.data,
             selectedPaths: newSelectedPaths,
             isSelected: isInAnyPath,
             highlightColor: questionColors.get(nodeQuestionId) || node.data.highlightColor,
@@ -1602,7 +1642,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           selectedPaths: [path],
           pathColor: pathColor,
           primaryPathIndex: pathIndex,
-          secondaryPathIndices: []
+          secondaryPathIndices: [],
+          isFilteredTree: true // Indiquer qu'il s'agit d'un nœud dans un arbre filtré
         },
         style: {
           width: 240,
@@ -1739,24 +1780,24 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             flexBasis: 0,
             border: '1px solid rgba(102, 126, 234, 0.2)', 
             borderRadius: '12px',
-            position: 'relative',
-            minHeight: '500px',
+          position: 'relative',
+          minHeight: '500px',
             transition: 'flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
             overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
             background: 'rgba(252, 253, 255, 0.7)',
             backdropFilter: 'blur(8px)',
             boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
+      }}>
+        {loading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
           }}>
-          {loading ? (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%' 
-            }}>
-              <CircularProgress />
-            </Box>
-          ) : responses.length > 0 ? (
+            <CircularProgress />
+          </Box>
+        ) : responses.length > 0 ? (
             filterApplied && multipleTreeNodes.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
                 {multipleTreeNodes.map((pathNodes, index) => (
@@ -1845,39 +1886,39 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 ))}
               </Box>
             ) : (
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodeClick={onNodeClick}
-                nodeTypes={{ questionNode: QuestionNode }}
-                edgeTypes={{ default: LinkComponent }}
-                defaultViewport={defaultViewport}
-                minZoom={0.1}
-                maxZoom={2.5}
-                fitView
-                fitViewOptions={{ padding: 0.3 }}
-                onInit={setReactFlowInstance}
-                zoomOnScroll={false}
-                zoomOnPinch={true}
-                panOnScroll={true}
-                nodesDraggable={false}
-                elementsSelectable={true}
-              >
-                <Controls 
-                  position="top-right" 
-                  showInteractive={true} 
-                  fitViewOptions={{ padding: 0.3 }}
-                />
-                <MiniMap
-                  nodeStrokeWidth={3}
-                  nodeColor={(node) => {
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodeClick={onNodeClick}
+            nodeTypes={{ questionNode: QuestionNode }}
+            edgeTypes={{ default: LinkComponent }}
+            defaultViewport={defaultViewport}
+              minZoom={0.1}
+              maxZoom={2.5}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            onInit={setReactFlowInstance}
+            zoomOnScroll={false}
+            zoomOnPinch={true}
+            panOnScroll={true}
+            nodesDraggable={false}
+            elementsSelectable={true}
+          >
+            <Controls 
+              position="top-right" 
+              showInteractive={true} 
+              fitViewOptions={{ padding: 0.3 }}
+            />
+            <MiniMap
+              nodeStrokeWidth={3}
+              nodeColor={(node) => {
                     if (node.data.pathColor) {
                       return node.data.pathColor;
                     }
                     
-                    const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
-                      path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
-                    );
+                const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
+                  path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
+                );
                     
                     if (isSelected) {
                       const pathIndex = node.data.selectedPaths.findIndex((path: PathSegment[]) => 
@@ -1887,33 +1928,33 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     }
                     
                     return '#667eea';
-                  }}
-                  zoomable
-                  pannable
+              }}
+              zoomable
+              pannable
                   position="bottom-left"
-                  style={{ background: 'rgba(255, 255, 255, 0.9)' }}
-                />
-                <Background 
-                  color="#f0f4ff" 
-                  gap={20} 
-                  size={1.5}
-                />
-              </ReactFlow>
+              style={{ background: 'rgba(255, 255, 255, 0.9)' }}
+            />
+            <Background 
+              color="#f0f4ff" 
+              gap={20} 
+              size={1.5}
+            />
+          </ReactFlow>
             )
-          ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%' 
-            }}>
-              <Typography variant="body2">
-                No paths available
-              </Typography>
-            </Box>
-          )}
-        </Box>
-        
+        ) : (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
+          }}>
+            <Typography variant="body2">
+              No paths available
+            </Typography>
+          </Box>
+        )}
+      </Box>
+      
         {/* Bouton pour afficher/masquer le panneau (visible lorsque le panneau est rétracté) */}
         {!pathsPanelOpen && (
           <Box 
@@ -1926,8 +1967,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
               background: 'white',
               borderRadius: '8px 0 0 8px',
               boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-              display: 'flex',
-              flexDirection: 'column',
+          display: 'flex',
+          flexDirection: 'column',
               alignItems: 'center',
               padding: '10px 5px',
               cursor: 'pointer',
@@ -1995,8 +2036,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   gap: 1
                 }}>
                   <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
-                  Complete Paths
-                </Typography>
+            Complete Paths
+          </Typography>
                 
                 <Button
                   size="small"
@@ -2018,40 +2059,40 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
                 </Button>
               </Box>
-              
-              {allPaths.length > 0 ? (
-                <Box 
-                  ref={scrollContainerRef}
-                  className={`path-list-container ${filterApplied ? 'filtering-active' : ''}`}
-                  sx={{ 
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    flex: 1,
-                    height: 'calc(100% - 30px)',
+          
+          {allPaths.length > 0 ? (
+            <Box 
+              ref={scrollContainerRef}
+              className={`path-list-container ${filterApplied ? 'filtering-active' : ''}`}
+              sx={{ 
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                flex: 1,
+                height: 'calc(100% - 30px)',
                     position: 'relative',
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      background: '#f1f1f1',
-                      borderRadius: '4px',
-                    },
-                    '&::-webkit-scrollbar-thumb': {
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
                       background: '#667eea99',
-                      borderRadius: '4px',
-                    },
-                    '&::-webkit-scrollbar-thumb:hover': {
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
                       background: '#667eea',
-                    }
-                  }}
-                >
-                  {selectedPaths.length > 0 && (
-                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Button
-                        variant={filterApplied ? "contained" : "outlined"}
-                        color={filterApplied ? "primary" : "inherit"}
-                        size="small"
-                        onClick={toggleFilter}
+                }
+              }}
+            >
+              {selectedPaths.length > 0 && (
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Button
+                    variant={filterApplied ? "contained" : "outlined"}
+                    color={filterApplied ? "primary" : "inherit"}
+                    size="small"
+                    onClick={toggleFilter}
                         sx={{ 
                           width: '100%',
                           borderRadius: '10px',
@@ -2062,53 +2103,53 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         }}
                       >
                         {filterApplied ? "Show all paths" : "Filter selected paths"}
-                      </Button>
-                    </Box>
-                  )}
-                  
-                  {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
-                    const isSelected = selectedPaths.some(p => 
-                      p.length === pathItem.path.length && 
-                      p.every((segment, i) => 
-                        segment.questionId === pathItem.path[i].questionId && 
-                        segment.answer === pathItem.path[i].answer
-                      )
-                    );
-                    
-                    const selectedPathIndex = selectedPaths.findIndex(p => 
-                      p.length === pathItem.path.length && 
-                      p.every((segment, i) => 
-                        segment.questionId === pathItem.path[i].questionId && 
-                        segment.answer === pathItem.path[i].answer
-                      )
-                    );
-                    
+                  </Button>
+                </Box>
+              )}
+              
+              {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
+                const isSelected = selectedPaths.some(p => 
+                  p.length === pathItem.path.length && 
+                  p.every((segment, i) => 
+                    segment.questionId === pathItem.path[i].questionId && 
+                    segment.answer === pathItem.path[i].answer
+                  )
+                );
+                
+                const selectedPathIndex = selectedPaths.findIndex(p => 
+                  p.length === pathItem.path.length && 
+                  p.every((segment, i) => 
+                    segment.questionId === pathItem.path[i].questionId && 
+                    segment.answer === pathItem.path[i].answer
+                  )
+                );
+                
                     const pathColorIndex = selectedPathIndex !== -1 
                       ? selectedPathIndex 
                       : selectedPaths.length % HIGHLIGHT_COLORS.length;
                     
                     const pathColor = selectedPathIndex !== -1 
-                      ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
+                  ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
                       : 'rgba(102, 126, 234, 0.7)';
-                    
-                    const backgroundColor = isSelected 
+                
+                const backgroundColor = isSelected 
                       ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
-                      : 'background.paper';
-                    
-                    return (
-                    <Box 
-                      key={index}
-                      sx={{
+                  : 'background.paper';
+                
+                return (
+                <Box 
+                  key={index}
+                  sx={{
                         p: 1.5,
                         mb: 1.5,
-                        border: '1px solid',
+                    border: '1px solid',
                         borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
                         borderRadius: '12px',
-                        backgroundColor: backgroundColor,
-                        cursor: 'pointer',
+                      backgroundColor: backgroundColor,
+                    cursor: 'pointer',
                         transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                        '&:hover': {
-                          backgroundColor: isSelected 
+                    '&:hover': {
+                        backgroundColor: isSelected 
                             ? `${HIGHLIGHT_COLORS[pathColorIndex % HIGHLIGHT_COLORS.length]}20`
                             : 'rgba(102, 126, 234, 0.04)',
                           boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
@@ -2118,10 +2159,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         boxShadow: isSelected 
                           ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
                           : '0 2px 8px rgba(0, 0, 0, 0.02)'
-                      }}
-                      onClick={() => handlePathSelect(pathItem.path)}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    }}
+                    onClick={() => handlePathSelect(pathItem.path)}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box 
                           sx={{ 
                             width: 12, 
@@ -2136,13 +2177,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                             border: '2px solid white'
                           }} 
                         />
-                        <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                          {pathItem.name} ({pathItem.path.length} steps)
-                        </Typography>
-                      </Box>
-                      
-                      <Box sx={{ mt: 1 }}>
-                        {pathItem.path.map((segment, segIdx) => (
+                      <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
+                    {pathItem.name} ({pathItem.path.length} steps)
+                  </Typography>
+                    </Box>
+                    
+                  <Box sx={{ mt: 1 }}>
+                    {pathItem.path.map((segment, segIdx) => (
                           <Box key={segIdx} sx={{ 
                             display: 'flex', 
                             mb: 0.5, 
@@ -2156,30 +2197,30 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                               fontWeight: 'bold', 
                               color: isSelected ? pathColor : 'text.secondary'
                             }}>
-                              {segIdx + 1}.
-                            </Typography>
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '100%'
-                              }}
-                            >
-                              {segment.questionText.substring(0, 40)}
-                              {segment.questionText.length > 40 ? '...' : ''}
-                            </Typography>
-                          </Box>
-                        ))}
+                          {segIdx + 1}.
+        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '100%'
+                          }}
+                        >
+                            {segment.questionText.substring(0, 40)}
+                            {segment.questionText.length > 40 ? '...' : ''}
+                        </Typography>
                       </Box>
-                    </Box>
-                    );
-                  })}
+                    ))}
+                  </Box>
                 </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No paths available
-                </Typography>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No paths available
+            </Typography>
               )}
             </>
           )}
