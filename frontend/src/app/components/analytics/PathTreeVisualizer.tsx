@@ -16,10 +16,9 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowInstance,
   getBezierPath,
-  BackgroundVariant
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon, Splitscreen as SplitscreenIcon } from '@mui/icons-material';
+import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon, Splitscreen as SplitscreenIcon, ChevronRight as ChevronRightIcon, ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
 
 export interface PathSegment {
   questionId: string;
@@ -368,7 +367,7 @@ const scrollStyles = `
     overscroll-behavior: contain;
   }
   
-  /* Éviter les saccades pendant la transition des éléments filtrés */
+  /* Avoid jerkiness during filtered elements transition */
   .path-list-container > div {
     transform: translateZ(0); /* Activer l'accélération matérielle */
     transition: opacity 0.2s ease-in-out;
@@ -512,6 +511,35 @@ const reactFlowCustomStyles = `
   }
 `;
 
+// Ajoutez ces styles spécifiques pour l'animation du panneau
+const panelTransitionStyles = `
+  .panel-slide-enter {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  
+  .panel-slide-enter-active {
+    transform: translateX(0);
+    opacity: 1;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .panel-slide-exit {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  
+  .panel-slide-exit-active {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .react-flow-container {
+    transition: flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+`;
+
 export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   survey,
   responses,
@@ -529,6 +557,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
   const [multipleTreeNodes, setMultipleTreeNodes] = useState<Node[][]>([]);
   const [multipleTreeEdges, setMultipleTreeEdges] = useState<Edge[][]>([]);
+  const [pathsPanelOpen, setPathsPanelOpen] = useState(true);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
@@ -1018,6 +1047,25 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
+  // Ajoutons un effet pour gérer le recentrage lorsque le mode filtré change
+  useEffect(() => {
+    if (filterApplied && multipleTreeNodes.length > 0) {
+      // Donner le temps aux composants de se rendre
+      setTimeout(() => {
+        reactFlowInstancesRef.current.forEach((instance, idx) => {
+          if (instance) {
+            instance.fitView({ padding: 0.3 });
+          }
+        });
+      }, 300);
+    } else if (!filterApplied && reactFlowInstance) {
+      setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.2 });
+      }, 300);
+    }
+  }, [filterApplied, multipleTreeNodes.length, pathsPanelOpen]);
+
+  // Modifions également la fonction toggleFilter pour mieux gérer le recentrage
   const toggleFilter = () => {
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollTop;
@@ -1054,6 +1102,15 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         
         setMultipleTreeNodes(multipleNodes);
         setMultipleTreeEdges(multipleEdges);
+        
+        // Préparons le recentrage pour les arbres filtrés
+        setTimeout(() => {
+          reactFlowInstancesRef.current.forEach((instance, idx) => {
+            if (instance) {
+              instance.fitView({ padding: 0.3 });
+            }
+          });
+        }, 500);
       }
       
       updateVisibleElements(true);
@@ -1069,6 +1126,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       if (onFilterChange) {
         onFilterChange(false, responses);
       }
+      
+      // Recentrons la vue principale
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.2 });
+        }
+      }, 500);
     }
     
     requestAnimationFrame(() => {
@@ -1390,56 +1454,95 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     onPathSelect(path);
     
     if (path.length > 0) {
-      const newSelectedPaths = [path];
-      const pathColor = HIGHLIGHT_COLORS[0]; // Utiliser la première couleur pour le nouveau chemin sélectionné
+      const existingPathIndex = selectedPaths.findIndex(selectedPath => 
+        selectedPath.length === path.length && 
+        selectedPath.every((segment, i) => 
+          segment.questionId === path[i].questionId && 
+          segment.answer === path[i].answer
+        )
+      );
       
-      // Créer un ensemble des IDs de questions dans le chemin pour recherche rapide
-      const questionIdsInPath = new Set(path.map(segment => segment.questionId));
+      let newSelectedPaths: PathSegment[][];
       
-      // Mettre à jour les nœuds avec les informations de sélection et de coloration
+      if (existingPathIndex !== -1) {
+        newSelectedPaths = selectedPaths.filter((_, index) => index !== existingPathIndex);
+      } else {
+        newSelectedPaths = [...selectedPaths, path];
+      }
+      
+      const questionColors = new Map<string, string>();
+      
+      newSelectedPaths.forEach((selectedPath, pathIndex) => {
+        const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+        
+        selectedPath.forEach(segment => {
+          if (!questionColors.has(segment.questionId) || selectedPath === path) {
+            questionColors.set(segment.questionId, pathColor);
+          }
+        });
+      });
+      
       const updatedNodes = nodes.map(node => {
         const nodeQuestionId = node.data.questionId;
-        const isInPath = questionIdsInPath.has(nodeQuestionId);
+        const isInAnyPath = newSelectedPaths.some(selectedPath => 
+          selectedPath.some(segment => segment.questionId === nodeQuestionId)
+        );
         
         return {
           ...node,
           data: {
             ...node.data,
             selectedPaths: newSelectedPaths,
-            isSelected: isInPath,
-            highlightColor: isInPath ? pathColor : node.data.highlightColor
+            isSelected: isInAnyPath,
+            highlightColor: questionColors.get(nodeQuestionId) || node.data.highlightColor,
+            secondaryPathIndices: isInAnyPath ? 
+              newSelectedPaths
+                .map((selectedPath, index) => selectedPath.some(segment => segment.questionId === nodeQuestionId) ? index : -1)
+                .filter(index => index !== -1) : 
+              [],
+            primaryPathIndex: newSelectedPaths.findIndex(selectedPath => 
+              selectedPath.some(segment => segment.questionId === nodeQuestionId)
+            )
           }
         };
       });
       
-      // Mettre à jour les liens avec les informations de sélection et de coloration
       const updatedEdges = edges.map(edge => {
-        // Extraire les IDs de questions des identifiants de source et de cible
         const sourceId = edge.source.includes('-') ? edge.source.split('-').pop() : edge.source;
         const targetId = edge.target.includes('-') ? edge.target.split('-').pop() : edge.target;
         
-        // Vérifier si ce lien fait partie du chemin sélectionné
-        let isInPath = false;
-        for (let i = 0; i < path.length - 1; i++) {
-          if (path[i].questionId === sourceId && path[i+1].questionId === targetId) {
-            isInPath = true;
-            break;
+        if (!sourceId || !targetId) return edge;
+        
+        const pathIndices: number[] = [];
+        
+        newSelectedPaths.forEach((selectedPath, pathIndex) => {
+          for (let i = 0; i < selectedPath.length - 1; i++) {
+            if (selectedPath[i].questionId === sourceId && selectedPath[i+1].questionId === targetId) {
+              pathIndices.push(pathIndex);
+              break;
+            }
           }
-        }
+        });
+        
+        const isInAnyPath = pathIndices.length > 0;
+        const pathColor = isInAnyPath 
+          ? HIGHLIGHT_COLORS[pathIndices[0] % HIGHLIGHT_COLORS.length]
+          : undefined;
         
         return {
           ...edge,
           data: {
             ...(edge.data || {}),
             selectedPaths: newSelectedPaths,
-            isSelected: isInPath,
-            pathColor: isInPath ? pathColor : edge.data?.pathColor
+            isSelected: isInAnyPath,
+            pathColor: pathColor,
+            pathIndices
           },
           style: {
             ...edge.style,
-            stroke: isInPath ? pathColor : edge.style?.stroke || 'rgba(102, 126, 234, 0.7)',
-            strokeWidth: isInPath ? 3 : 2,
-            opacity: isInPath ? 1 : 0.7
+            stroke: pathColor || edge.style?.stroke || 'rgba(102, 126, 234, 0.7)',
+            strokeWidth: isInAnyPath ? 3 : 2,
+            opacity: isInAnyPath ? 1 : 0.7
           }
         };
       });
@@ -1477,7 +1580,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     // Total number of respondents for this specific path
     const totalRespondentsForPath = respondentsFollowingPath.length;
     
-    // Path color
+    // Path color - Use the pathIndex to select the color from HIGHLIGHT_COLORS
     const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
     
     path.forEach((segment, index) => {
@@ -1487,7 +1590,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         type: 'questionNode',
         position: { 
           x: index * 300, 
-          y: pathIndex * 300
+          y: 0 // Mettre tous les nœuds sur la même ligne pour plus de clarté
         },
         data: {
           questionId: segment.questionId,
@@ -1495,14 +1598,17 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           answer: segment.answer,
           count: totalRespondentsForPath,
           highlightLevel: 3,
+          isSelected: true,
           selectedPaths: [path],
-          pathColor: pathColor // Add path color to data
+          pathColor: pathColor,
+          primaryPathIndex: pathIndex,
+          secondaryPathIndices: []
         },
         style: {
           width: 240,
           height: 170,
-          backgroundColor: `${pathColor}10`, // Light background based on path color
-          borderColor: pathColor, // Border with path color
+          backgroundColor: `${pathColor}10`,
+          borderColor: pathColor,
           borderWidth: 2,
           transition: 'all 0.3s ease'
         }
@@ -1521,12 +1627,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           type: 'default',
           animated: false,
           style: { 
-            stroke: pathColor, // Use the same color for edges
+            stroke: pathColor,
             strokeWidth: 3
           },
           data: {
             selectedPaths: [path],
-            pathColor: pathColor // Add path color to data
+            pathColor: pathColor,
+            isSelected: true
           }
         });
       }
@@ -1562,6 +1669,36 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   const defaultViewport = { x: 0, y: 0, zoom: 0.8 };
   
+  // Améliorons la fonction togglePathsPanel pour mieux gérer le recentrage des arbres
+  const togglePathsPanel = () => {
+    const wasOpen = pathsPanelOpen;
+    setPathsPanelOpen(!pathsPanelOpen);
+    
+    // Donner le temps à ReactFlow de se redimensionner après la transition
+    setTimeout(() => {
+      // Si nous sommes en mode normal (pas filtré), centrer la vue principale
+      if (reactFlowInstance) {
+        reactFlowInstance.fitView({ padding: 0.2 });
+      }
+      
+      // Si nous sommes en mode filtré avec plusieurs arbres, recentrer chaque arbre
+      if (filterApplied && multipleTreeNodes.length > 0) {
+        reactFlowInstancesRef.current.forEach((instance, idx) => {
+          if (instance) {
+            console.log(`Recentrage de l'arbre ${idx}`);
+            instance.fitView({ padding: 0.3 });
+          }
+        });
+      }
+      
+      // Si nous venons juste de fermer le panneau, donnons plus d'espace au flow principal
+      if (wasOpen && reactFlowInstance) {
+        console.log("Recentrage après fermeture du panneau");
+        reactFlowInstance.fitView({ padding: 0.1 });
+      }
+    }, 500);
+  };
+  
   return (
     <Paper 
       sx={{ 
@@ -1590,19 +1727,26 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         display: 'flex',
         flexDirection: 'row',
         gap: 2,
-        height: 'calc(100% - 60px)'
+        height: 'calc(100% - 60px)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <Box sx={{ 
-          flex: 3, 
-          border: '1px solid rgba(102, 126, 234, 0.2)', 
-          borderRadius: '12px',
-          position: 'relative',
-          minHeight: '500px',
-          overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
-          background: 'rgba(252, 253, 255, 0.7)',
-          backdropFilter: 'blur(8px)',
-          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
-        }}>
+        <Box 
+          className="react-flow-container"
+          sx={{ 
+            flex: pathsPanelOpen ? 4 : 1,
+            flexGrow: pathsPanelOpen ? 4 : 1,
+            flexBasis: 0,
+            border: '1px solid rgba(102, 126, 234, 0.2)', 
+            borderRadius: '12px',
+            position: 'relative',
+            minHeight: '500px',
+            transition: 'flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
+            background: 'rgba(252, 253, 255, 0.7)',
+            backdropFilter: 'blur(8px)',
+            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
+          }}>
           {loading ? (
             <Box sx={{ 
               display: 'flex', 
@@ -1640,7 +1784,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         alignItems: 'center'
                       }}
                     >
-                      <Box>Parcours {String.fromCharCode(65 + index)}</Box>
+                      <Box>Path {String.fromCharCode(65 + index)}</Box>
                       <Box sx={{ display: 'flex', gap: 2 }}>
                         <Box sx={{ 
                           display: 'flex', 
@@ -1695,7 +1839,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         color="#f0f4ff" 
                         gap={20} 
                         size={1.5}
-                        variant={BackgroundVariant.Dots}
                       />
                     </ReactFlow>
                   </Box>
@@ -1754,7 +1897,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   color="#f0f4ff" 
                   gap={20} 
                   size={1.5}
-                  variant={BackgroundVariant.Dots}
                 />
               </ReactFlow>
             )
@@ -1772,186 +1914,274 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           )}
         </Box>
         
-        <Box sx={{ 
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          border: '1px solid rgba(102, 126, 234, 0.2)',
-          borderRadius: '12px',
-          p: 2,
-          height: '100%',
-          maxHeight: 'calc(100vh - 120px)',
-          overflow: 'hidden',
-          background: 'rgba(252, 253, 255, 0.7)',
-          backdropFilter: 'blur(8px)'
-        }}>
-          <Typography variant="subtitle2" sx={{ 
-            mb: 1, 
-            fontWeight: 600, 
-            color: '#1e3a8a',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-            <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
-            Complete Paths
-          </Typography>
-          
-          {allPaths.length > 0 ? (
+        {/* Bouton pour afficher/masquer le panneau (visible lorsque le panneau est rétracté) */}
+        {!pathsPanelOpen && (
+          <Box 
+            onClick={togglePathsPanel}
+            sx={{
+              position: 'absolute',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'white',
+              borderRadius: '8px 0 0 8px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '10px 5px',
+              cursor: 'pointer',
+              zIndex: 10,
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              borderRight: 'none',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                background: 'rgba(102, 126, 234, 0.05)',
+              }
+            }}
+          >
+            <ChevronLeftIcon sx={{ color: '#667eea' }} />
             <Box 
-              ref={scrollContainerRef}
-              className={`path-list-container ${filterApplied ? 'filtering-active' : ''}`}
               sx={{ 
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                flex: 1,
-                height: 'calc(100% - 30px)',
-                position: 'relative',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#667eea99',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#667eea',
-                }
+                writingMode: 'vertical-rl', 
+                transform: 'rotate(180deg)',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                color: '#1e3a8a',
+                mt: 1
               }}
             >
-              {selectedPaths.length > 0 && (
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Button
-                    variant={filterApplied ? "contained" : "outlined"}
-                    color={filterApplied ? "primary" : "inherit"}
-                    size="small"
-                    onClick={toggleFilter}
-                    sx={{ 
-                      width: '100%',
-                      borderRadius: '10px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      boxShadow: filterApplied ? '0 4px 12px rgba(102, 126, 234, 0.25)' : 'none',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {filterApplied ? "Show all paths" : "Filter selected paths"}
-                  </Button>
-                </Box>
-              )}
-              
-              {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
-                const isSelected = selectedPaths.some(p => 
-                  p.length === pathItem.path.length && 
-                  p.every((segment, i) => 
-                    segment.questionId === pathItem.path[i].questionId && 
-                    segment.answer === pathItem.path[i].answer
-                  )
-                );
+              Complete Paths
+            </Box>
+          </Box>
+        )}
+        
+        <Box 
+          sx={{ 
+            flex: pathsPanelOpen ? 0.7 : 0,
+            minWidth: pathsPanelOpen ? '250px' : 0,
+            maxWidth: pathsPanelOpen ? '350px' : 0,
+            width: pathsPanelOpen ? 'auto' : 0,
+            display: 'flex',
+            flexDirection: 'column',
+            border: pathsPanelOpen ? '1px solid rgba(102, 126, 234, 0.2)' : 'none',
+            borderRadius: '12px',
+            p: pathsPanelOpen ? 2 : 0,
+            pl: pathsPanelOpen ? 2 : 0,
+            height: '100%',
+            maxHeight: 'calc(100vh - 120px)',
+            overflow: 'hidden',
+            background: pathsPanelOpen ? 'rgba(252, 253, 255, 0.7)' : 'transparent',
+            backdropFilter: pathsPanelOpen ? 'blur(8px)' : 'none',
+            opacity: pathsPanelOpen ? 1 : 0,
+            transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            position: 'relative',
+            visibility: pathsPanelOpen ? 'visible' : 'hidden'
+          }}
+        >
+          {pathsPanelOpen && (
+            <>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 1
+              }}>
+                <Typography variant="subtitle2" sx={{ 
+                  fontWeight: 600, 
+                  color: '#1e3a8a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}>
+                  <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
+                  Complete Paths
+                </Typography>
                 
-                const selectedPathIndex = selectedPaths.findIndex(p => 
-                  p.length === pathItem.path.length && 
-                  p.every((segment, i) => 
-                    segment.questionId === pathItem.path[i].questionId && 
-                    segment.answer === pathItem.path[i].answer
-                  )
-                );
-                
-                const pathColor = isSelected 
-                  ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
-                  : 'divider';
-                
-                const backgroundColor = isSelected 
-                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
-                  : 'background.paper';
-                
-                return (
-                <Box 
-                  key={index}
+                <Button
+                  size="small"
+                  onClick={togglePathsPanel}
                   sx={{
-                    p: 1.5,
-                    mb: 1.5,
-                    border: '1px solid',
-                    borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
-                    borderRadius: '12px',
-                    backgroundColor: backgroundColor,
-                    cursor: 'pointer',
-                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                    minWidth: 'auto',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    p: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                     '&:hover': {
-                      backgroundColor: isSelected 
-                        ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20`
-                        : 'rgba(102, 126, 234, 0.04)',
-                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
-                      transform: 'scale(1.02)'
-                    },
-                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    boxShadow: isSelected 
-                      ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
-                      : '0 2px 8px rgba(0, 0, 0, 0.02)'
+                      background: 'rgba(102, 126, 234, 0.1)',
+                    }
                   }}
-                  onClick={() => handlePathSelect(pathItem.path)}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {isSelected && (
-                      <Box 
+                  <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
+                </Button>
+              </Box>
+              
+              {allPaths.length > 0 ? (
+                <Box 
+                  ref={scrollContainerRef}
+                  className={`path-list-container ${filterApplied ? 'filtering-active' : ''}`}
+                  sx={{ 
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    flex: 1,
+                    height: 'calc(100% - 30px)',
+                    position: 'relative',
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#f1f1f1',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#667eea99',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#667eea',
+                    }
+                  }}
+                >
+                  {selectedPaths.length > 0 && (
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Button
+                        variant={filterApplied ? "contained" : "outlined"}
+                        color={filterApplied ? "primary" : "inherit"}
+                        size="small"
+                        onClick={toggleFilter}
                         sx={{ 
-                          width: 12, 
-                          height: 12, 
-                          borderRadius: '50%', 
-                          backgroundColor: HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length],
-                          boxShadow: `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`,
-                          border: '2px solid white'
-                        }} 
-                      />
-                    )}
-                    <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                      {pathItem.name} ({pathItem.path.length} steps)
-                    </Typography>
-                  </Box>
+                          width: '100%',
+                          borderRadius: '10px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          boxShadow: filterApplied ? '0 4px 12px rgba(102, 126, 234, 0.25)' : 'none',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {filterApplied ? "Show all paths" : "Filter selected paths"}
+                      </Button>
+                    </Box>
+                  )}
                   
-                  <Box sx={{ mt: 1 }}>
-                    {pathItem.path.map((segment, segIdx) => (
-                      <Box key={segIdx} sx={{ 
-                        display: 'flex', 
-                        mb: 0.5, 
-                        fontSize: '0.8rem',
-                        p: 0.5,
-                        borderRadius: '4px',
-                        backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
-                      }}>
-                        <Typography variant="caption" sx={{ 
-                          mr: 1,
-                          fontWeight: 'bold', 
-                          color: isSelected ? pathColor : 'text.secondary'
-                        }}>
-                          {segIdx + 1}.
-                        </Typography>
-                        <Typography 
-                          variant="caption" 
+                  {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
+                    const isSelected = selectedPaths.some(p => 
+                      p.length === pathItem.path.length && 
+                      p.every((segment, i) => 
+                        segment.questionId === pathItem.path[i].questionId && 
+                        segment.answer === pathItem.path[i].answer
+                      )
+                    );
+                    
+                    const selectedPathIndex = selectedPaths.findIndex(p => 
+                      p.length === pathItem.path.length && 
+                      p.every((segment, i) => 
+                        segment.questionId === pathItem.path[i].questionId && 
+                        segment.answer === pathItem.path[i].answer
+                      )
+                    );
+                    
+                    const pathColorIndex = selectedPathIndex !== -1 
+                      ? selectedPathIndex 
+                      : selectedPaths.length % HIGHLIGHT_COLORS.length;
+                    
+                    const pathColor = selectedPathIndex !== -1 
+                      ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
+                      : 'rgba(102, 126, 234, 0.7)';
+                    
+                    const backgroundColor = isSelected 
+                      ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
+                      : 'background.paper';
+                    
+                    return (
+                    <Box 
+                      key={index}
+                      sx={{
+                        p: 1.5,
+                        mb: 1.5,
+                        border: '1px solid',
+                        borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
+                        borderRadius: '12px',
+                        backgroundColor: backgroundColor,
+                        cursor: 'pointer',
+                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                        '&:hover': {
+                          backgroundColor: isSelected 
+                            ? `${HIGHLIGHT_COLORS[pathColorIndex % HIGHLIGHT_COLORS.length]}20`
+                            : 'rgba(102, 126, 234, 0.04)',
+                          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
+                          transform: 'scale(1.02)'
+                        },
+                        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        boxShadow: isSelected 
+                          ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
+                          : '0 2px 8px rgba(0, 0, 0, 0.02)'
+                      }}
+                      onClick={() => handlePathSelect(pathItem.path)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box 
                           sx={{ 
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: '100%'
-                          }}
-                        >
-                          {segment.questionText.substring(0, 40)}
-                          {segment.questionText.length > 40 ? '...' : ''}
+                            width: 12, 
+                            height: 12, 
+                            borderRadius: '50%', 
+                            backgroundColor: isSelected 
+                              ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]
+                              : 'rgba(102, 126, 234, 0.4)',
+                            boxShadow: isSelected 
+                              ? `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`
+                              : 'none',
+                            border: '2px solid white'
+                          }} 
+                        />
+                        <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
+                          {pathItem.name} ({pathItem.path.length} steps)
                         </Typography>
                       </Box>
-                    ))}
-                  </Box>
+                      
+                      <Box sx={{ mt: 1 }}>
+                        {pathItem.path.map((segment, segIdx) => (
+                          <Box key={segIdx} sx={{ 
+                            display: 'flex', 
+                            mb: 0.5, 
+                            fontSize: '0.8rem',
+                            p: 0.5,
+                            borderRadius: '4px',
+                            backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
+                          }}>
+                            <Typography variant="caption" sx={{ 
+                              mr: 1,
+                              fontWeight: 'bold', 
+                              color: isSelected ? pathColor : 'text.secondary'
+                            }}>
+                              {segIdx + 1}.
+                            </Typography>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '100%'
+                              }}
+                            >
+                              {segment.questionText.substring(0, 40)}
+                              {segment.questionText.length > 40 ? '...' : ''}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    );
+                  })}
                 </Box>
-                );
-              })}
-            </Box>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No paths available
-            </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No paths available
+                </Typography>
+              )}
+            </>
           )}
         </Box>
       </Box>
@@ -1961,6 +2191,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       <style>{linkStyles}</style>
       <style>{pulseCss}</style>
       <style>{reactFlowCustomStyles}</style>
+      <style>{panelTransitionStyles}</style>
     </Paper>
   );
 };
