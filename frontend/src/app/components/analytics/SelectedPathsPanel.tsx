@@ -40,9 +40,13 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
   };
   
   return (
-    <Paper sx={{ p: 2, height: '50%', overflow: 'auto' }}>
-      <Typography variant="subtitle1" gutterBottom>
-        Parcours sélectionnés ({selectedPaths.length})
+    <Paper elevation={1} sx={{ p: 3, borderRadius: 2, width: '100%', height: '500px', overflow: 'auto' }}>
+      <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
+        Response Path Analysis
+      </Typography>
+      
+      <Typography variant="body2" sx={{ mb: 2 }}>
+        Selected Paths ({selectedPaths.length})
       </Typography>
       
       {selectedPaths.length > 0 ? (
@@ -51,7 +55,7 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
             {selectedPaths.map((path, index) => (
               <ListItem key={index} divider={index < selectedPaths.length - 1}>
                 <ListItemText
-                  primary={`Parcours ${index + 1}`}
+                  primary={`Path ${index + 1}`}
                   secondary={formatPath(path)}
                 />
               </ListItem>
@@ -60,7 +64,7 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
           
           <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Chip 
-              label={`${totalRespondents} répondants`} 
+              label={`${totalRespondents} respondents`} 
               color="primary" 
               variant="outlined" 
             />
@@ -70,10 +74,10 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
             <TextField
               fullWidth
               size="small"
-              label="Nom du groupe"
+              label="Group name"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Ex: Utilisateurs satisfaits"
+              placeholder="Ex: Satisfied users"
             />
             
             <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
@@ -83,7 +87,7 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
                 size="small"
                 onClick={onClearSelection}
               >
-                Effacer la sélection
+                Clear selection
               </Button>
               
               <Button 
@@ -92,14 +96,14 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
                 onClick={handleCreateGroup}
                 disabled={!groupName.trim() || selectedPaths.length === 0}
               >
-                Créer un groupe
+                Create group
               </Button>
             </Box>
           </Box>
         </>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          Cliquez sur des chemins dans l'arborescence pour les sélectionner et créer un groupe d'analyse.
+          Click on paths in the tree to select them and create an analysis group.
         </Typography>
       )}
     </Paper>

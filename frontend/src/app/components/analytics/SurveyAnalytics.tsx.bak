@@ -1521,592 +1521,615 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             )}
 
             <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
-                  Survey Questions
-                </Typography>
+             
               
-                {getQuestionsToDisplay().map((question, index) => {
-                  const stats = calculateQuestionStats(question.id);
-                  
-                  // Nouvelles lignes: trouver les parcours associés à cette question
-                  const associatedPaths = selectedPaths.filter(path => 
-                    path.some(segment => segment.questionId === question.id)
-                  );
-                  
-                  return (
-                    <Paper
-                      key={question.id}
-                      elevation={1}
+              <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
+                Survey Questions
+              </Typography>
+              
+              {getQuestionsToDisplay().map((question, index) => {
+                const stats = calculateQuestionStats(question.id);
+                
+                // Nouvelles lignes: trouver les parcours associés à cette question
+                const associatedPaths = selectedPaths.filter(path => 
+                  path.some(segment => segment.questionId === question.id)
+                );
+                
+                return (
+                  <Paper
+                    key={question.id}
+                    elevation={1}
+                    sx={{
+                      p: 3,
+                      mb: 3,
+                      borderRadius: 2,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <Box
                       sx={{
-                        p: 3,
-                        mb: 3,
-                        borderRadius: 2,
-                        position: 'relative',
-                        overflow: 'hidden'
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '8px',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       }}
-                    >
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '8px',
-                          height: '100%',
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        }}
-                      />
+                    />
 
-                      <Box sx={{ pl: 1 }}>
-                        <Typography variant="h6" gutterBottom>
-                          {question.text}
+                    <Box sx={{ pl: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {question.text}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Question type: {question.type}
+                      </Typography>
+                      
+                      {/* Nouveaux badges pour les parcours associés - Affichés quand associatedPaths a des éléments */}
+                      {associatedPaths.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                          {associatedPaths.map((path, pathIndex) => {
+                            // Trouver le nom du parcours
+                            const pathName = allPaths.find(p => 
+                              p.path.length === path.length && 
+                              p.path.every((segment, i) => 
+                                segment.questionId === path[i].questionId && 
+                                segment.answer === path[i].answer
+                              )
+                            )?.name || `Path ${String.fromCharCode(65 + pathIndex)}`;
+                            
+                            // Couleur du parcours
+                            const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                            
+                            return (
+                              <Chip
+                                key={pathIndex}
+                                label={pathName}
+                                size="small"
+                                sx={{
+                                  backgroundColor: `${pathColor}20`,
+                                  color: pathColor,
+                                  border: `1px solid ${pathColor}`,
+                                  '& .MuiChip-label': {
+                                    fontWeight: 'medium'
+                                  }
+                                }}
+                              />
+                            );
+                          })}
+                        </Box>
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="body2">
+                          Total responses: <strong>{stats.total}</strong>
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Question type: {question.type}
-                        </Typography>
-                        
-                        {/* Nouveaux badges pour les parcours associés - Affichés quand associatedPaths a des éléments */}
-                        {associatedPaths.length > 0 && (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {associatedPaths.map((path, pathIndex) => {
-                              // Trouver le nom du parcours
-                              const pathName = allPaths.find(p => 
-                                p.path.length === path.length && 
-                                p.path.every((segment, i) => 
-                                  segment.questionId === path[i].questionId && 
-                                  segment.answer === path[i].answer
-                                )
-                              )?.name || `Path ${String.fromCharCode(65 + pathIndex)}`;
-                              
-                              // Couleur du parcours
-                              const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
-                              
-                              return (
-                                <Chip
-                                  key={pathIndex}
-                                  label={pathName}
-                                  size="small"
-                                  sx={{
-                                    backgroundColor: `${pathColor}20`,
-                                    color: pathColor,
-                                    border: `1px solid ${pathColor}`,
-                                    '& .MuiChip-label': {
-                                      fontWeight: 'medium'
-                                    }
-                                  }}
-                                />
-                              );
-                            })}
-                          </Box>
+                        {filteredResponses.length !== responses.length && (
+                          <Typography variant="caption" color="text.secondary">
+                            (Filtered from {responses.length} total responses)
+                          </Typography>
+                        )}
+                        {stats.total > 0 && stats.mostCommonAnswer && (
+                          <Typography variant="body2">
+                            Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
+                          </Typography>
                         )}
                       </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="body2">
-                            Total responses: <strong>{stats.total}</strong>
-                          </Typography>
-                          {filteredResponses.length !== responses.length && (
-                            <Typography variant="caption" color="text.secondary">
-                              (Filtered from {responses.length} total responses)
-                            </Typography>
-                          )}
-                          {stats.total > 0 && stats.mostCommonAnswer && (
-                            <Typography variant="body2">
-                              Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
-                            </Typography>
-                          )}
-                        </Box>
-                          
-                          <Button
-                            variant="contained"
-                            startIcon={<BarChartIcon />}
-                            onClick={() => handleQuestionClick(question.id)}
-                            disabled={stats.total === 0}
-                            sx={{
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                              },
-                              '&.Mui-disabled': {
-                                background: 'rgba(0, 0, 0, 0.12)',
-                                color: 'rgba(0, 0, 0, 0.26)'
-                              }
-                            }}
-                          >
-                            Show details ({stats.total} responses)
-                          </Button>
-                        </Box>
-
-                        <Divider sx={{ my: 2 }} />
-
-                        <Box sx={{ mt: 2 }}>
-                          {renderQuestionSummary(question)}
-                        </Box>
-                      </Paper>
-                    );
-                  })}
-                </Paper>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
-                      General Statistics
-                    </Typography>
-                    
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Total responses: <strong>{filteredResponses.length}</strong>
-                      </Typography>
-                      {filteredResponses.length !== responses.length && (
-                        <Typography variant="body2" color="text.secondary">
-                          (Filtered from {responses.length} total responses)
-                        </Typography>
-                      )}
+                        
+                      <Button
+                        variant="contained"
+                        startIcon={<BarChartIcon />}
+                        onClick={() => handleQuestionClick(question.id)}
+                        disabled={stats.total === 0}
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                          },
+                          '&.Mui-disabled': {
+                            background: 'rgba(0, 0, 0, 0.12)',
+                            color: 'rgba(0, 0, 0, 0.26)'
+                          }
+                        }}
+                      >
+                        Show details ({stats.total} responses)
+                      </Button>
                     </Box>
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                          p: 2, 
-                          bgcolor: 'rgba(102, 126, 234, 0.1)',
-                          borderRadius: 1,
-                          textAlign: 'center'
-                        }}>
-                          <Typography variant="caption" color="text.secondary">
-                            First response
-                        </Typography>
-                          <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                            {filteredResponses.length > 0 ? 
-                              new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
-                              'No response'
-                            }
-                        </Typography>
-                      </Box>
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                      <Box sx={{ 
-                          p: 2, 
-                          bgcolor: 'rgba(102, 126, 234, 0.1)',
-                          borderRadius: 1,
-                          textAlign: 'center'
-                        }}>
-                        <Typography variant="caption" color="text.secondary">
-                            Average Daily Responses
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                            {filteredResponses.length > 0 ? 
-                              (filteredResponses.length / Math.max(1, getDaysBetweenDates(
-                                new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))),
-                                new Date()
-                              ))).toFixed(1) :
-                              '0'
-                            }
-                        </Typography>
-                      </Box>
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                    <Box sx={{ 
-                      p: 2,
-                          bgcolor: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: 1,
-                          textAlign: 'center'
-                        }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Last response
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
-                            {filteredResponses.length > 0 ? 
-                              new Date(Math.max(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
-                              'No response'
-                            }
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
+                    <Box sx={{ mt: 2 }}>
+                      {renderQuestionSummary(question)}
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Grid>
 
-                    {filteredResponses.length > 0 && (
-                      <Box sx={{ 
-                        mt: 4,
-                        width: '100%',
+            <Grid item xs={12}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 3, 
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  borderRadius: 2,
+                  transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  mb: 4
+                }}
+              >
+                <Typography 
+                  variant="subtitle1" 
+                  gutterBottom 
+                  align="center" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: '#2d3748',
+                    mb: 3
+                  }}
+                >
+                  Survey Questions
+                </Typography>
+              
+                <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
+                    General Statistics
+                  </Typography>
+                  
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Total responses: <strong>{filteredResponses.length}</strong>
+                    </Typography>
+                    {filteredResponses.length !== responses.length && (
+                      <Typography variant="body2" color="text.secondary">
+                        (Filtered from {responses.length} total responses)
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                  <Box sx={{ 
+                        p: 2, 
+                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                        borderRadius: 1,
+                        textAlign: 'center'
                       }}>
-                        <Typography variant="h6" sx={{ mb: 3, color: '#1a237e', fontWeight: 'medium', textAlign: 'center' }}>
-                          Participation Trend Analysis
+                        <Typography variant="caption" color="text.secondary">
+                          First response
+                      </Typography>
+                        <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                          {filteredResponses.length > 0 ? 
+                            new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                            'No response'
+                          }
+                      </Typography>
+                    </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                    <Box sx={{ 
+                        p: 2, 
+                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                        borderRadius: 1,
+                        textAlign: 'center'
+                      }}>
+                      <Typography variant="caption" color="text.secondary">
+                          Average Daily Responses
                         </Typography>
+                        <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                          {filteredResponses.length > 0 ? 
+                            (filteredResponses.length / Math.max(1, getDaysBetweenDates(
+                              new Date(Math.min(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))),
+                              new Date()
+                            ))).toFixed(1) :
+                            '0'
+                          }
+                      </Typography>
+                    </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                  <Box sx={{ 
+                    p: 2,
+                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                    borderRadius: 1,
+                        textAlign: 'center'
+                      }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Last response
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#1a237e', fontWeight: 'medium' }}>
+                          {filteredResponses.length > 0 ? 
+                            new Date(Math.max(...filteredResponses.map(r => new Date(r.submittedAt).getTime()))).toLocaleDateString() :
+                            'No response'
+                          }
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+
+                  {filteredResponses.length > 0 && (
+                    <Box sx={{ 
+                      mt: 4,
+                      width: '100%',
+                    }}>
+                      <Typography variant="h6" sx={{ mb: 3, color: '#1a237e', fontWeight: 'medium', textAlign: 'center' }}>
+                        Participation Trend Analysis
+                      </Typography>
+                      
+                      {(() => {
+                        const trends = getResponseTrends(filteredResponses);
                         
-                        {(() => {
-                          const trends = getResponseTrends(filteredResponses);
-                          
-                          // Calculer le pourcentage pour chaque jour de la semaine
-                          const totalWeekResponses = trends.dayOfWeekDistribution.reduce((sum, count) => sum + count, 0);
-                          const dayPercentages = trends.dayOfWeekDistribution.map(count => 
-                            totalWeekResponses > 0 ? Math.round((count / totalWeekResponses) * 100) : 0
-                          );
-                          
-                          return (
-                            <Box>
-                              {/* Visualisation principale - Tendance et total */}
-                              <Paper 
-                                elevation={2} 
-                                sx={{ 
-                                  p: 3, 
-                                  mb: 3, 
-                                  borderRadius: 3,
-                                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-                                  border: '1px solid rgba(102, 126, 234, 0.2)',
-                                  overflow: 'hidden'
-                                }}
-                              >
-                                <Box sx={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center' }}>
-                                  {/* Cercle central avec le nombre total de réponses */}
+                        // Calculer le pourcentage pour chaque jour de la semaine
+                        const totalWeekResponses = trends.dayOfWeekDistribution.reduce((sum, count) => sum + count, 0);
+                        const dayPercentages = trends.dayOfWeekDistribution.map(count => 
+                          totalWeekResponses > 0 ? Math.round((count / totalWeekResponses) * 100) : 0
+                        );
+                        
+                        return (
+                          <Box>
+                            {/* Visualisation principale - Tendance et total */}
+                            <Paper 
+                              elevation={2} 
+                              sx={{ 
+                                p: 3, 
+                                mb: 3, 
+                                borderRadius: 3,
+                                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                                border: '1px solid rgba(102, 126, 234, 0.2)',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              <Box sx={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center' }}>
+                                {/* Cercle central avec le nombre total de réponses */}
+                                <Box sx={{ 
+                                  width: '180px',
+                                  height: '180px',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  color: 'white',
+                                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+                                  zIndex: 2
+                                }}>
+                                  <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                                    {trends.total}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    total responses
+                                  </Typography>
+                                </Box>
+                                
+                                {/* Indicateur de tendance */}
+                                <Box sx={{ 
+                                  flex: 1,
+                                  ml: 3,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-start',
+                                  justifyContent: 'center'
+                                }}>
+                                  <Typography variant="h6" sx={{ color: '#1a237e', mb: 1 }}>
+                                    Participation Trend
+                                  </Typography>
+                                  
                                   <Box sx={{ 
-                                    width: '180px',
-                                    height: '180px',
-                                    borderRadius: '50%',
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
                                     alignItems: 'center',
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    color: 'white',
-                                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
-                                    zIndex: 2
+                                    mb: 2
                                   }}>
-                                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                                      {trends.total}
+                                    <Typography 
+                                      variant="h4" 
+                                      sx={{ 
+                                        fontWeight: 'bold',
+                                        color: trends.trend === 'increasing' 
+                                          ? '#4caf50' 
+                                          : trends.trend === 'decreasing' 
+                                            ? '#f44336' 
+                                            : '#ff9800',
+                                        mr: 2
+                                      }}
+                                    >
+                                      {trends.trend === 'increasing' 
+                                        ? '↗️' 
+                                        : trends.trend === 'decreasing' 
+                                          ? '↘️' 
+                                          : '→'}
                                     </Typography>
-                                    <Typography variant="body2">
-                                      total responses
+                                    
+                                    <Typography 
+                                      variant="h5" 
+                                      sx={{ 
+                                        fontWeight: 'medium',
+                                        color: trends.trend === 'increasing' 
+                                          ? '#4caf50' 
+                                          : trends.trend === 'decreasing' 
+                                            ? '#f44336' 
+                                            : '#ff9800'
+                                      }}
+                                    >
+                                      {trends.trend === 'stable' 
+                                        ? 'Stable' 
+                                        : `${trends.trendPercentage > 0 ? '+' : ''}${trends.trendPercentage}%`}
                                     </Typography>
                                   </Box>
                                   
-                                  {/* Indicateur de tendance */}
-                                  <Box sx={{ 
-                                    flex: 1,
-                                    ml: 3,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'flex-start',
-                                    justifyContent: 'center'
-                                  }}>
-                                    <Typography variant="h6" sx={{ color: '#1a237e', mb: 1 }}>
-                                      Participation Trend
-                                    </Typography>
-                                    
-                                    <Box sx={{ 
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      mb: 2
-                                    }}>
+                                  <Typography variant="body2" sx={{ color: '#475569' }}>
+                                    {trends.trend === 'increasing' 
+                                      ? 'Participation is increasing! Your survey is gaining popularity.' 
+                                      : trends.trend === 'decreasing' 
+                                        ? 'Participation is decreasing. Consider promoting your survey more.' 
+                                        : 'Participation is stable.'}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Paper>
+                            
+                            {/* Visualisation des jours de la semaine */}
+                            <Paper 
+                              elevation={2} 
+                              sx={{ 
+                                p: 3, 
+                                borderRadius: 3,
+                                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                                border: '1px solid rgba(102, 126, 234, 0.2)'
+                              }}
+                            >
+                              <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
+                                Distribution by Day of Week
+                              </Typography>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                {trends.dayNames.map((day, index) => {
+                                  const isActive = index === trends.mostActiveDay;
+                                  const percentage = dayPercentages[index];
+                                  
+                                  return (
+                                    <Box 
+                                      key={day} 
+                                      sx={{ 
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        width: `${100 / 7}%`
+                                      }}
+                                    >
                                       <Typography 
-                                        variant="h4" 
+                                        variant="body2" 
                                         sx={{ 
-                                          fontWeight: 'bold',
-                                          color: trends.trend === 'increasing' 
-                                            ? '#4caf50' 
-                                            : trends.trend === 'decreasing' 
-                                              ? '#f44336' 
-                                              : '#ff9800',
-                                          mr: 2
+                                          fontWeight: isActive ? 'bold' : 'regular',
+                                          color: isActive ? '#1a237e' : '#64748b',
+                                          mb: 3
                                         }}
                                       >
-                                        {trends.trend === 'increasing' 
-                                          ? '↗️' 
-                                          : trends.trend === 'decreasing' 
-                                            ? '↘️' 
-                                            : '→'}
+                                        {day}
                                       </Typography>
                                       
+                                      <Box sx={{ 
+                                        width: '100%',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'flex-end',
+                                        height: '120px',
+                                        position: 'relative',
+                                        mt: 3
+                                      }}>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            position: 'absolute',
+                                            top: '-24px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            color: isActive ? '#1a237e' : '#64748b',
+                                            fontWeight: isActive ? 'bold' : 'regular',
+                                            fontSize: '0.7rem'
+                                          }}
+                                        >
+                                          {percentage}%
+                                        </Typography>
+                                        <Box 
+                                          sx={{ 
+                                            width: '70%',
+                                            height: `${Math.max(5, percentage)}%`,
+                                            bgcolor: isActive 
+                                              ? 'linear-gradient(to top, #667eea, #764ba2)' 
+                                              : 'rgba(102, 126, 234, 0.3)',
+                                            borderRadius: '4px 4px 0 0',
+                                            position: 'relative',
+                                            transition: 'height 0.3s ease',
+                                            background: isActive 
+                                              ? 'linear-gradient(to top, #667eea, #764ba2)' 
+                                              : undefined,
+                                            '&:hover': {
+                                              filter: 'brightness(1.1)',
+                                            }
+                                          }}
+                                        />
+                                      </Box>
+                                      
                                       <Typography 
-                                        variant="h5" 
+                                        variant="caption" 
                                         sx={{ 
-                                          fontWeight: 'medium',
-                                          color: trends.trend === 'increasing' 
-                                            ? '#4caf50' 
-                                            : trends.trend === 'decreasing' 
-                                              ? '#f44336' 
-                                              : '#ff9800'
+                                          mt: 1,
+                                          color: isActive ? '#1a237e' : '#64748b',
+                                          fontWeight: isActive ? 'bold' : 'regular'
                                         }}
                                       >
-                                        {trends.trend === 'stable' 
-                                          ? 'Stable' 
-                                          : `${trends.trendPercentage > 0 ? '+' : ''}${trends.trendPercentage}%`}
+                                        {trends.dayOfWeekDistribution[index]}
                                       </Typography>
                                     </Box>
-                                    
-                                    <Typography variant="body2" sx={{ color: '#475569' }}>
-                                      {trends.trend === 'increasing' 
-                                        ? 'Participation is increasing! Your survey is gaining popularity.' 
-                                        : trends.trend === 'decreasing' 
-                                          ? 'Participation is decreasing. Consider promoting your survey more.' 
-                                          : 'Participation is stable.'}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              </Paper>
+                                  );
+                                })}
+                              </Box>
                               
-                              {/* Visualisation des jours de la semaine */}
+                              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                                <Typography variant="body2" sx={{ color: '#475569' }}>
+                                  <strong>{trends.dayNames[trends.mostActiveDay]}</strong> is the most active day with <strong>{trends.dayOfWeekDistribution[trends.mostActiveDay]}</strong> responses ({dayPercentages[trends.mostActiveDay]}% of total)
+                                </Typography>
+                              </Box>
+                            </Paper>
+                            
+                            {/* Mini-timeline des réponses */}
+                            {trends.dates.length > 1 && (
                               <Paper 
                                 elevation={2} 
                                 sx={{ 
                                   p: 3, 
+                                  mt: 3,
                                   borderRadius: 3,
                                   background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
                                   border: '1px solid rgba(102, 126, 234, 0.2)'
                                 }}
                               >
                                 <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
-                                  Distribution by Day of Week
+                                  Response Timeline
                                 </Typography>
                                 
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                                  {trends.dayNames.map((day, index) => {
-                                    const isActive = index === trends.mostActiveDay;
-                                    const percentage = dayPercentages[index];
-                                    
-                                    return (
-                                      <Box 
-                                        key={day} 
-                                        sx={{ 
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          alignItems: 'center',
-                                          width: `${100 / 7}%`
-                                        }}
-                                      >
-                                        <Typography 
-                                          variant="body2" 
+                                <Box sx={{ position: 'relative', mt: 4, mb: 2 }}>
+                                  {/* Ligne de temps */}
+                                  <Box sx={{ 
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: 0,
+                                    right: 0,
+                                    height: '4px',
+                                    bgcolor: 'rgba(102, 126, 234, 0.2)',
+                                    zIndex: 1
+                                  }} />
+                                  
+                                  {/* Points sur la timeline */}
+                                  <Box sx={{ 
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    position: 'relative',
+                                    zIndex: 2
+                                  }}>
+                                    {trends.dates.map((date, index) => {
+                                      const count = trends.counts[index];
+                                      const isMax = date === trends.maxResponsesDay;
+                                      const size = isMax ? 16 : 12;
+                                      
+                                      return (
+                                        <Box 
+                                          key={date}
                                           sx={{ 
-                                            fontWeight: isActive ? 'bold' : 'regular',
-                                            color: isActive ? '#1a237e' : '#64748b',
-                                            mb: 3
+                                            width: size,
+                                            height: size,
+                                            borderRadius: '50%',
+                                            bgcolor: isMax ? '#764ba2' : '#667eea',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            boxShadow: isMax ? '0 0 0 4px rgba(118, 75, 162, 0.2)' : 'none',
+                                            position: 'relative',
+                                            '&:hover': {
+                                              zIndex: 3,
+                                              '& .tooltip': {
+                                                opacity: 1,
+                                                visibility: 'visible'
+                                              }
+                                            }
                                           }}
                                         >
-                                          {day}
-                                        </Typography>
-                                        
-                                        <Box sx={{ 
-                                          width: '100%',
-                                          display: 'flex',
-                                          justifyContent: 'center',
-                                          alignItems: 'flex-end',
-                                          height: '120px',
-                                          position: 'relative',
-                                          mt: 3
-                                        }}>
-                                          <Typography
-                                            variant="caption"
-                                            sx={{
+                                          {/* Tooltip */}
+                                          <Box 
+                                            className="tooltip"
+                                            sx={{ 
                                               position: 'absolute',
-                                              top: '-24px',
+                                              bottom: '100%',
                                               left: '50%',
                                               transform: 'translateX(-50%)',
-                                              color: isActive ? '#1a237e' : '#64748b',
-                                              fontWeight: isActive ? 'bold' : 'regular',
-                                              fontSize: '0.7rem'
+                                              mb: 1,
+                                              bgcolor: 'rgba(0, 0, 0, 0.8)',
+                                              color: 'white',
+                                              padding: '4px 8px',
+                                              borderRadius: 1,
+                                              fontSize: '0.75rem',
+                                              whiteSpace: 'nowrap',
+                                              opacity: 0,
+                                              visibility: 'hidden',
+                                              transition: 'opacity 0.2s',
+                                              zIndex: 10
                                             }}
                                           >
-                                            {percentage}%
-                                          </Typography>
-                                          <Box 
-                                            sx={{ 
-                                              width: '70%',
-                                              height: `${Math.max(5, percentage)}%`,
-                                              bgcolor: isActive 
-                                                ? 'linear-gradient(to top, #667eea, #764ba2)' 
-                                                : 'rgba(102, 126, 234, 0.3)',
-                                              borderRadius: '4px 4px 0 0',
-                                              position: 'relative',
-                                              transition: 'height 0.3s ease',
-                                              background: isActive 
-                                                ? 'linear-gradient(to top, #667eea, #764ba2)' 
-                                                : undefined,
-                                              '&:hover': {
-                                                filter: 'brightness(1.1)',
-                                              }
-                                            }}
-                                          />
+                                            {date}: {count} responses
+                                          </Box>
                                         </Box>
-                                        
-                                        <Typography 
-                                          variant="caption" 
-                                          sx={{ 
-                                            mt: 1,
-                                            color: isActive ? '#1a237e' : '#64748b',
-                                            fontWeight: isActive ? 'bold' : 'regular'
-                                          }}
-                                        >
-                                          {trends.dayOfWeekDistribution[index]}
-                                        </Typography>
-                                      </Box>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                  </Box>
+                                </Box>
+                                
+                                {/* Dates de début et de fin */}
+                                <Box sx={{ 
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  mt: 1
+                                }}>
+                                  <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                    {trends.dates[0]}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                    {trends.dates[trends.dates.length - 1]}
+                                  </Typography>
                                 </Box>
                                 
                                 <Box sx={{ mt: 3, textAlign: 'center' }}>
                                   <Typography variant="body2" sx={{ color: '#475569' }}>
-                                    <strong>{trends.dayNames[trends.mostActiveDay]}</strong> is the most active day with <strong>{trends.dayOfWeekDistribution[trends.mostActiveDay]}</strong> responses ({dayPercentages[trends.mostActiveDay]}% of total)
+                                    Peak participation on <strong>{trends.maxResponsesDay}</strong> with <strong>{trends.maxResponsesCount}</strong> responses
                                   </Typography>
                                 </Box>
                               </Paper>
-                              
-                              {/* Mini-timeline des réponses */}
-                              {trends.dates.length > 1 && (
-                                <Paper 
-                                  elevation={2} 
-                                  sx={{ 
-                                    p: 3, 
-                                    mt: 3,
-                                    borderRadius: 3,
-                                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-                                    border: '1px solid rgba(102, 126, 234, 0.2)'
-                                  }}
-                                >
-                                  <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, textAlign: 'center' }}>
-                                    Response Timeline
-                                  </Typography>
-                                  
-                                  <Box sx={{ position: 'relative', mt: 4, mb: 2 }}>
-                                    {/* Ligne de temps */}
-                                    <Box sx={{ 
-                                      position: 'absolute',
-                                      top: '50%',
-                                      left: 0,
-                                      right: 0,
-                                      height: '4px',
-                                      bgcolor: 'rgba(102, 126, 234, 0.2)',
-                                      zIndex: 1
-                                    }} />
-                                    
-                                    {/* Points sur la timeline */}
-                                    <Box sx={{ 
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      position: 'relative',
-                                      zIndex: 2
-                                    }}>
-                                      {trends.dates.map((date, index) => {
-                                        const count = trends.counts[index];
-                                        const isMax = date === trends.maxResponsesDay;
-                                        const size = isMax ? 16 : 12;
-                                        
-                                        return (
-                                          <Box 
-                                            key={date}
-                                            sx={{ 
-                                              width: size,
-                                              height: size,
-                                              borderRadius: '50%',
-                                              bgcolor: isMax ? '#764ba2' : '#667eea',
-                                              display: 'flex',
-                                              justifyContent: 'center',
-                                              alignItems: 'center',
-                                              boxShadow: isMax ? '0 0 0 4px rgba(118, 75, 162, 0.2)' : 'none',
-                                              position: 'relative',
-                                              '&:hover': {
-                                                zIndex: 3,
-                                                '& .tooltip': {
-                                                  opacity: 1,
-                                                  visibility: 'visible'
-                                                }
-                                              }
-                                            }}
-                                          >
-                                            {/* Tooltip */}
-                                            <Box 
-                                              className="tooltip"
-                                              sx={{ 
-                                                position: 'absolute',
-                                                bottom: '100%',
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                mb: 1,
-                                                bgcolor: 'rgba(0, 0, 0, 0.8)',
-                                                color: 'white',
-                                                padding: '4px 8px',
-                                                borderRadius: 1,
-                                                fontSize: '0.75rem',
-                                                whiteSpace: 'nowrap',
-                                                opacity: 0,
-                                                visibility: 'hidden',
-                                                transition: 'opacity 0.2s',
-                                                zIndex: 10
-                                              }}
-                                            >
-                                              {date}: {count} responses
-                                            </Box>
-                                          </Box>
-                                        );
-                                      })}
-                                    </Box>
-                                  </Box>
-                                  
-                                  {/* Dates de début et de fin */}
-                                  <Box sx={{ 
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    mt: 1
-                                  }}>
-                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                      {trends.dates[0]}
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                      {trends.dates[trends.dates.length - 1]}
-                                    </Typography>
-                                  </Box>
-                                  
-                                  <Box sx={{ mt: 3, textAlign: 'center' }}>
-                                    <Typography variant="body2" sx={{ color: '#475569' }}>
-                                      Peak participation on <strong>{trends.maxResponsesDay}</strong> with <strong>{trends.maxResponsesCount}</strong> responses
-                                    </Typography>
-                                  </Box>
-                                </Paper>
-                              )}
-                            </Box>
-                          );
-                        })()}
-                      </Box>
-                    )}
+                            )}
+                          </Box>
+                        );
+                      })()}
+                    </Box>
+                  )}
 
-                    {/* Boutons d'exportation */}
-                    {filteredResponses.length > 0 && (
-                        <Box sx={{ 
-                        mt: 4, 
-                        pt: 3, 
-                        borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-                          display: 'flex',
-                        justifyContent: 'center'
-                      }}>
-                        <Stack direction="row" spacing={2}>
-                          <Button
-                            variant="contained"
-                            startIcon={<TableViewIcon />}
-                            onClick={exportToCSV}
-                            sx={{ 
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                              }
-                            }}
-                          >
-                            Export to CSV
-                          </Button>
-                              <Button
-                            variant="contained"
-                            startIcon={<CodeIcon />}
-                            onClick={exportToJSON}
-                                sx={{
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                          }
-                        }}
-                      >
-                        Export to JSON
-                          </Button>
+                  {/* Boutons d'exportation */}
+                  {filteredResponses.length > 0 && (
+                      <Box sx={{ 
+                      mt: 4, 
+                      pt: 3, 
+                      borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+                        display: 'flex',
+                      justifyContent: 'center'
+                    }}>
+                      <Stack direction="row" spacing={2}>
+                        <Button
+                          variant="contained"
+                          startIcon={<TableViewIcon />}
+                          onClick={exportToCSV}
+                          sx={{ 
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                            }
+                          }}
+                        >
+                          Export to CSV
+                        </Button>
+                            <Button
+                          variant="contained"
+                          startIcon={<CodeIcon />}
+                          onClick={exportToJSON}
+                              sx={{
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                            }
+                          }}
+                        >
+                          Export to JSON
+                            </Button>
                         </Stack>
                       </Box>
                   )}

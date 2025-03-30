@@ -361,7 +361,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         <Scatter 
           data={chartData} 
           options={{
-            responsive: true,
+      responsive: true,
             maintainAspectRatio: fullSize ? false : true,
             animation: {
               duration: fullSize ? 800 : 500,
@@ -374,15 +374,15 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 return delay;
               }
             },
-            plugins: {
-              legend: {
-                display: true,
-                position: 'right' as const,
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: {
+      plugins: {
+        legend: {
+          display: true,
+          position: 'right' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: {
                     size: fullSize ? 14 : 12
                   }
                 },
@@ -394,12 +394,12 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                     }
                   }
                 }
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context: any) => {
-                    const age = context.parsed.x;
-                    const count = context.parsed.y;
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const age = context.parsed.x;
+              const count = context.parsed.y;
                     return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
                   }
                 },
@@ -417,56 +417,56 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 borderWidth: 1,
                 caretSize: 8,
                 cornerRadius: 6,
-              }
-            },
-            scales: {
-              x: {
-                type: 'linear' as const,
-                position: 'bottom' as const,
-                title: {
-                  display: true,
-                  text: 'Age',
-                  font: {
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear' as const,
+          position: 'bottom' as const,
+          title: {
+            display: true,
+            text: 'Age',
+            font: {
                     size: fullSize ? 16 : 14,
-                    weight: 'bold' as const
-                  }
-                },
-                min: 1,
-                max: 100,
-                ticks: {
-                  stepSize: 5,
-                  callback: function(tickValue: number | string): string | number {
-                    return Math.floor(Number(tickValue));
-                  }
-                },
-                grid: {
-                  color: 'rgba(102, 126, 234, 0.1)'
-                }
-              },
-              y: {
-                type: 'linear' as const,
-                position: 'left' as const,
-                title: {
-                  display: true,
-                  text: 'Number of participants',
-                  font: {
+              weight: 'bold' as const
+            }
+          },
+          min: 1,
+          max: 100,
+          ticks: {
+            stepSize: 5,
+            callback: function(tickValue: number | string): string | number {
+              return Math.floor(Number(tickValue));
+            }
+          },
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)'
+          }
+        },
+        y: {
+          type: 'linear' as const,
+          position: 'left' as const,
+          title: {
+            display: true,
+            text: 'Number of participants',
+            font: {
                     size: fullSize ? 16 : 14,
-                    weight: 'bold' as const
-                  }
-                },
-                beginAtZero: true,
-                ticks: {
-                  stepSize: 1,
-                  precision: 0
-                },
-                grid: {
-                  color: 'rgba(102, 126, 234, 0.1)'
-                }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'nearest' as const
+              weight: 'bold' as const
+            }
+          },
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            precision: 0
+          },
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)'
+          }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'nearest' as const
             },
             transitions: {
               active: {
@@ -1088,20 +1088,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               elevation={0} 
               onClick={() => handleOpenDialog('gender', 'Gender Distribution')}
               sx={{ 
-                p: 3, 
-                height: '400px',
-                border: '1px solid rgba(0,0,0,0.1)',
-                borderRadius: 2,
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
                 transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
                 cursor: 'pointer',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
-                '&:hover': {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   transform: 'translateY(-2px)',
                   borderColor: 'rgba(102, 126, 234, 0.5)'
                 },
@@ -1141,20 +1141,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               elevation={0} 
               onClick={() => handleOpenDialog('education', "Education Level Distribution")}
               sx={{ 
-                p: 3, 
-                height: '400px',
-                border: '1px solid rgba(0,0,0,0.1)',
-                borderRadius: 2,
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
                 transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
                 cursor: 'pointer',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
-                '&:hover': {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   transform: 'translateY(-2px)',
                   borderColor: 'rgba(102, 126, 234, 0.5)'
                 },
@@ -1194,20 +1194,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               elevation={0} 
               onClick={() => handleOpenDialog('age', 'Distribution par age')}
               sx={{ 
-                p: 3, 
-                height: '400px',
-                border: '1px solid rgba(0,0,0,0.1)',
-                borderRadius: 2,
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
                 transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
                 cursor: 'pointer',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
-                '&:hover': {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   transform: 'translateY(-2px)',
                   borderColor: 'rgba(102, 126, 234, 0.5)'
                 },
@@ -1247,20 +1247,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               elevation={0} 
               onClick={() => handleOpenDialog('city', 'City Distribution')}
               sx={{ 
-                p: 3, 
-                height: '400px',
-                border: '1px solid rgba(0,0,0,0.1)',
-                borderRadius: 2,
+              p: 3, 
+              height: '400px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 2,
                 transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
                 cursor: 'pointer',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
-                '&:hover': {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   transform: 'translateY(-2px)',
                   borderColor: 'rgba(102, 126, 234, 0.5)'
                 },
@@ -1420,4 +1420,4 @@ const GroupsList: React.FC<GroupsListProps> = ({
       )}
     </Paper>
   );
-};
+}; 
