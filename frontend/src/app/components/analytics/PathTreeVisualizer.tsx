@@ -13,7 +13,8 @@ import ReactFlow, {
   Position,
   BaseEdge,
   getStraightPath,
-  useReactFlow
+  useReactFlow,
+  ReactFlowInstance
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon } from '@mui/icons-material';
@@ -71,9 +72,13 @@ const QuestionNode = ({ data }: { data: any }) => {
   
   const isInSelectedPath = pathIndices.length > 0;
   const primaryPathIndex = pathIndices.length > 0 ? pathIndices[0] : -1;
-  const highlightColor = isInSelectedPath 
-    ? HIGHLIGHT_COLORS[primaryPathIndex % HIGHLIGHT_COLORS.length] 
-    : 'rgba(102, 126, 234, 0.2)';
+  
+  // Utiliser la couleur du parcours si elle est fournie dans les données, sinon utiliser les couleurs par défaut
+  const highlightColor = data.pathColor 
+    ? data.pathColor 
+    : (isInSelectedPath 
+        ? HIGHLIGHT_COLORS[primaryPathIndex % HIGHLIGHT_COLORS.length] 
+        : 'rgba(102, 126, 234, 0.2)');
 
   // Calculer la taille du cercle basée sur le nombre de répondants avec un min et max
   const minSize = 26;
@@ -193,7 +198,7 @@ const QuestionNode = ({ data }: { data: any }) => {
           whiteSpace: 'normal',
           overflowWrap: 'break-word',
           wordBreak: 'break-word',
-          maxHeight: '90px',
+          maxHeight: '100px',
           overflow: 'hidden',
           display: 'flex',
           justifyContent: 'center',
@@ -203,8 +208,8 @@ const QuestionNode = ({ data }: { data: any }) => {
           letterSpacing: '0.2px'
         }}
       >
-          {data.text}
-        </div>
+        {data.text}
+      </div>
 
       {/* Cercle avec le nombre de réponses - couleur dynamique */}
       <div 
@@ -229,73 +234,50 @@ const QuestionNode = ({ data }: { data: any }) => {
         }}
       >
         {data.count}
-        </div>
-      
-      {/* Handles - couleur dynamique */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
+      </div>
+
+      {/* Handles pour les connexions */}
+      <Handle
+        type="target"
+        position={Position.Top}
         style={{ 
+          width: '12px', 
+          height: '12px',
           background: isInSelectedPath ? highlightColor : '#667eea',
-          width: isInSelectedPath ? '10px' : '8px',
-          height: isInSelectedPath ? '10px' : '8px',
-          top: '-5px',
-          borderRadius: '50%',
           border: '2px solid white',
           zIndex: 10
-        }} 
+        }}
       />
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
+      
+      <Handle
+        type="source"
+        position={Position.Bottom}
         style={{ 
+          width: '12px', 
+          height: '12px',
           background: isInSelectedPath ? highlightColor : '#667eea',
-          width: isInSelectedPath ? '10px' : '8px',
-          height: isInSelectedPath ? '10px' : '8px',
-          bottom: '-5px',
-          borderRadius: '50%',
           border: '2px solid white',
           zIndex: 10
-        }} 
+        }}
       />
 
-      {/* Indicateur visuel principal avec couleur dynamique */}
-      {isInSelectedPath && (
-        <div style={{
-          position: 'absolute',
-          top: '-8px',
-          right: '-8px',
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          backgroundColor: highlightColor,
-          border: '2px solid white',
-          zIndex: 20,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }} />
-      )}
-      
-      {/* Indicateurs pour les parcours multiples autour du contour */}
-      {pathIndices.length > 1 && (
-        <>
-          {secondaryIndicatorPositions.map((pos, idx) => (
-            <div 
-              key={idx}
-              style={{
-                position: 'absolute',
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                backgroundColor: HIGHLIGHT_COLORS[pathIndices[idx + 1] % HIGHLIGHT_COLORS.length],
-                border: '2px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                zIndex: 19,
-                ...pos // Appliquer la position calculée
-              }} 
-            />
-          ))}
-        </>
-      )}
+      {/* Indicateurs secondaires pour montrer l'appartenance à d'autres parcours */}
+      {secondaryIndicatorPositions.map((pos, idx) => (
+        <div
+          key={idx}
+          style={{
+            position: 'absolute',
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length],
+            boxShadow: `0 0 4px ${HIGHLIGHT_COLORS[(primaryPathIndex + idx + 1) % HIGHLIGHT_COLORS.length]}80`,
+            border: '2px solid #fff',
+            ...pos,
+            zIndex: 20
+          }}
+        />
+      ))}
     </div>
   );
 };
@@ -354,154 +336,62 @@ const LinkComponent = ({
       // Vérification 1: Segments directement consécutifs dans le parcours
       for (let j = 0; j < path.length - 1; j++) {
         for (const srcId of sourceIds) {
-          for (const tgtId of targetIds) {
-            if (path[j].questionId === srcId && path[j+1].questionId === tgtId) {
-              pathIndex = i;
-              break outerLoop;
+          if (srcId === path[j].questionId || source.includes(path[j].questionId)) {
+            for (const tgtId of targetIds) {
+              if (tgtId === path[j+1].questionId || target.includes(path[j+1].questionId)) {
+                pathIndex = i;
+                break outerLoop;
+              }
             }
           }
         }
       }
       
-      // Vérification 2: Trouver toutes les questions dans le parcours
-      const questionsInPath = path.map((segment: PathSegment) => segment.questionId);
+      // Vérification 2: Les deux questions sont dans le même parcours
+      const sourceInPath = path.some((segment: PathSegment) => sourceIds.includes(segment.questionId) || source.includes(segment.questionId));
+      const targetInPath = path.some((segment: PathSegment) => targetIds.includes(segment.questionId) || target.includes(segment.questionId));
       
-      // Vérifier si source et cible sont toutes deux dans le parcours
-      let sourceInPath = false;
-      let sourceIndex = -1;
-      let targetInPath = false;
-      let targetIndex = -1;
-      
-      // Trouver tous les indices possibles pour source et cible
-      for (let j = 0; j < questionsInPath.length; j++) {
-        for (const srcId of sourceIds) {
-          if (questionsInPath[j] === srcId || questionsInPath[j].includes(srcId)) {
-            sourceInPath = true;
-            if (sourceIndex === -1 || j < sourceIndex) sourceIndex = j;
-          }
-        }
-        
-        for (const tgtId of targetIds) {
-          if (questionsInPath[j] === tgtId || questionsInPath[j].includes(tgtId)) {
-            targetInPath = true;
-            if (targetIndex === -1 || j < targetIndex) targetIndex = j;
-          }
-        }
-      }
-      
-      // Si les deux sont dans le parcours, vérifier l'ordre
       if (sourceInPath && targetInPath) {
-        // Cas 1: Source vient avant target directement dans le parcours
-        if (sourceIndex < targetIndex) {
-          pathIndex = i;
-          break outerLoop;
-        }
-        
-        // Cas 2: Connexion entre branches parallèles
-        // Pour les liens latéraux entre enfants d'une même question critique
-        // ou autres cas spéciaux où l'ordre n'est pas strictement séquentiel
-        if (Math.abs(sourceIndex - targetIndex) <= 2) { // Tolérance de 2 positions
-          pathIndex = i;
-          break outerLoop;
-        }
+        pathIndex = i;
+        break outerLoop;
       }
     }
   }
   
-  const isInSelectedPath = pathIndex >= 0;
-  const highlightColor = isInSelectedPath 
-    ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
-    : '#667eea';
-
-  // Style avec couleur dynamique
-  const customStyle = {
-    stroke: isInSelectedPath ? highlightColor : "#667eea", 
-    strokeWidth: isInSelectedPath ? 6 : 2.5,
-    strokeDasharray: isInSelectedPath ? "" : "6 4",
-    filter: isInSelectedPath ? `drop-shadow(0 0 8px ${highlightColor}80)` : 'none',
-    transition: 'all 0.4s ease',
-    strokeLinecap: "round" as const,
-    opacity: isInSelectedPath ? 1 : 0.8,
-  };
-
-  if (!sourceX || !sourceY || !targetX || !targetY) {
-    return null;
-  }
-
-  // Calculer le chemin entre les points source et cible
-  const verticalDistance = Math.abs(targetY - sourceY);
-  const curveIntensity = Math.min(100, verticalDistance / 2);
+  const isPartOfSelectedPath = pathIndex !== -1;
   
-  const path = `
-    M${sourceX},${sourceY} 
-    C${sourceX},${sourceY + curveIntensity} 
-    ${targetX},${targetY - curveIntensity} 
-    ${targetX},${targetY}
-  `;
+  // Déterminer la couleur du lien: couleur personnalisée du parcours si disponible, 
+  // sinon couleur basée sur l'index du parcours, sinon couleur par défaut
+  const linkColor = data && data.pathColor 
+    ? data.pathColor 
+    : (isPartOfSelectedPath 
+        ? HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length] 
+        : style?.stroke || 'rgba(102, 126, 234, 0.7)');
+        
+  const strokeWidth = isPartOfSelectedPath ? 3 : 2;
+  const opacity = isPartOfSelectedPath ? 1 : 0.5;
+  
+  // Génération du chemin avec getStraightPath
+  const [edgePath] = getStraightPath({
+    sourceX, 
+    sourceY,
+    targetX,
+    targetY,
+  });
 
   return (
     <>
-      {/* Effet de halo pour les liens sélectionnés */}
-      {isInSelectedPath && (
-        <path
-          id={`${id}-glow`}
-          style={{
-            stroke: `${highlightColor}40`,
-            strokeWidth: 8,
-            fillOpacity: 0,
-            strokeLinecap: "round" as const,
-          }}
-          className="react-flow__edge-path"
-          d={path}
-        />
-      )}
-      
-      {/* Chemin principal avec effet d'atténuation */}
-      <path
+      <BaseEdge
         id={id}
-        style={customStyle}
-        className={`react-flow__edge-path ${isInSelectedPath ? 'highlight-path' : ''}`}
-        d={path}
-        markerEnd={`url(#${id}-arrowhead)`}
+        path={edgePath}
+        style={{
+          ...style,
+          stroke: linkColor,
+          strokeWidth: strokeWidth,
+          opacity: opacity,
+          transition: 'all 0.3s ease',
+        }}
       />
-      
-      {/* Définition du marqueur de flèche */}
-      <defs>
-        <marker
-          id={`${id}-arrowhead`}
-          viewBox="0 0 10 10"
-          refX="5"
-          refY="5"
-          markerWidth="5"
-          markerHeight="5"
-          orient="auto"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill={isInSelectedPath ? highlightColor : "#667eea"} />
-        </marker>
-        
-        {/* Masque pour créer l'effet d'atténuation */}
-        {isInSelectedPath && (
-          <mask id={`${id}-mask`}>
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {/* Les cercles transparents permettront d'atténuer les parties des liens qui traversent des rectangles */}
-            {data?.nodesPositions?.map((node: any, index: number) => (
-              node.id !== source && node.id !== target ? 
-                <rect 
-                  key={index}
-                  x={node.x - (node.width/2) - 5}
-                  y={node.y - (node.height/2) - 5}
-                  width={node.width + 10}
-                  height={node.height + 10}
-                  rx="10"
-                  ry="10"
-                  fill="black"
-                  opacity="0.7"
-                /> 
-                : null
-            ))}
-          </mask>
-        )}
-      </defs>
     </>
   );
 };
@@ -617,13 +507,14 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   const [analysisGroups, setAnalysisGroups] = useState<{[key: string]: {name: string, paths: number[]}}>({}); 
   const [filterApplied, setFilterApplied] = useState(false);
   const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
+  const [multipleTreeNodes, setMultipleTreeNodes] = useState<Node[][]>([]);
+  const [multipleTreeEdges, setMultipleTreeEdges] = useState<Edge[][]>([]);
   
-  // Ajouter une référence au conteneur de défilement
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
   const containerHeightRef = useRef<number>(0);
+  const reactFlowInstancesRef = useRef<ReactFlowInstance[]>([]);
   
-  // Fonction pour générer un nom alphabétique basé sur un index
   const getAlphabeticName = (index: number) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     
@@ -636,12 +527,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  // Fonction pour créer et attribuer des groupes d'analyse
   const assignAnalysisGroups = (paths: {name: string, path: PathSegment[]}[]): {name: string, path: PathSegment[], group: string}[] => {
     const groupedPaths: {name: string, path: PathSegment[], group: string}[] = [];
     const groups: {[key: string]: {name: string, paths: number[]}} = {};
     
-    // Regrouper les parcours en fonction de leurs premières réponses
     const pathsByFirstQuestion: {[key: string]: number[]} = {};
     
     paths.forEach((path, index) => {
@@ -657,7 +546,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     });
     
-    // Créer les groupes d'analyse
     let groupIndex = 0;
     Object.entries(pathsByFirstQuestion).forEach(([key, pathIndices]) => {
       const groupName = `Group ${String.fromCharCode(65 + groupIndex)}`;
@@ -668,7 +556,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         paths: pathIndices
       };
       
-      // Assigner le groupe à chaque parcours
       pathIndices.forEach(pathIndex => {
         if (pathIndex < paths.length) {
           groupedPaths.push({
@@ -686,9 +573,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     return groupedPaths;
   };
   
-  // Fonction pour extraire tous les chemins complets de l'arbre
   const extractAllPaths = (survey: any, responses: any[]) => {
-    // Créer la Map de questions
     const questionsMap = new Map<string, any>();
     
     if (survey.questions) {
@@ -707,16 +592,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     }
     
-    // Créer la structure de données pour suivre les nœuds
     const nodeMap = new Map<string, any>();
     nodeMap.set('root', { count: responses.length, children: new Map() });
     
-    // Parcourir chaque réponse pour construire l'arbre
     responses.forEach(response => {
       let currentNodeId = 'root';
       let yOffset = 0;
       
-      // Traiter chaque réponse dans l'ordre
       if (response.answers && Array.isArray(response.answers)) {
       response.answers.forEach((answer: any, index: number) => {
         const question = questionsMap.get(answer.questionId);
@@ -725,36 +607,30 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         const answerText = answer.answer || 'Sans réponse';
         const childNodeId = `${currentNodeId}-${answer.questionId}-${answerText}`;
         
-        // Vérifier que le nœud parent existe dans la carte
-          if (!nodeMap.has(currentNodeId)) {
-            console.log(`Création du nœud parent manquant: ${currentNodeId}`);
-            nodeMap.set(currentNodeId, { count: 1, children: new Map() });
-          }
-          
+        if (!nodeMap.has(currentNodeId)) {
+          console.log(`Création du nœud parent manquant: ${currentNodeId}`);
+          nodeMap.set(currentNodeId, { count: 1, children: new Map() });
+        }
+        
         const currentNode = nodeMap.get(currentNodeId);
         if (!currentNode) {
           return;
         }
         
-        // Initialiser children si nécessaire
         if (!currentNode.children) {
           currentNode.children = new Map();
         }
         
-        // Vérifier si ce nœud existe déjà dans l'arbre
         if (!currentNode.children.has(childNodeId)) {
-          // Créer un nouveau nœud
           currentNode.children.set(childNodeId, {
             count: 1,
             children: new Map()
           });
         } else {
-          // Incrémenter le compteur du nœud existant
           const childNode = currentNode.children.get(childNodeId);
           childNode.count++;
         }
         
-        // Passer au nœud enfant pour la prochaine réponse
         currentNodeId = childNodeId;
       });
       }
@@ -762,12 +638,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     const completePaths: {name: string, path: PathSegment[]}[] = [];
     
-    // Fonction récursive pour parcourir l'arbre et collecter les chemins
     const traversePath = (nodeId: string, currentPath: PathSegment[], depth: number = 0) => {
       const node = nodeMap.get(nodeId);
       
       if (!node || !node.children || node.children.size === 0) {
-        // C'est un nœud terminal, on sauvegarde le chemin complet
         if (currentPath.length > 0) {
           completePaths.push({
             name: `Path ${getAlphabeticName(completePaths.length)}`,
@@ -777,9 +651,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         return;
       }
       
-      // Pour chaque enfant, continuer à construire le chemin
       node.children.forEach((childNode: any, childId: string) => {
-        // Extraire questionId et answer du format de l'ID (parentId-questionId-answer)
         const parts = childId.split('-');
         if (parts.length >= 3) {
           const questionId = parts[parts.length - 2];
@@ -793,26 +665,21 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
               answer
             };
             
-            // Ajouter ce segment au chemin et continuer à traverser
             traversePath(childId, [...currentPath, pathSegment], depth + 1);
           }
         }
       });
     };
     
-    // Commencer la traversée à partir de la racine
     traversePath('root', []);
     
-    // Assigner des groupes d'analyse aux parcours et retourner le résultat correctement typé
     return assignAnalysisGroups(completePaths);
   };
   
-  // Définition des types de nœuds personnalisés
   const nodeTypes: NodeTypes = {
     questionNode: QuestionNode,
   };
   
-  // Fonction pour convertir l'arbre des chemins en nœuds et arêtes pour ReactFlow
   const processPathTree = (survey: any, responses: any[]) => {
     if (!survey || responses.length === 0) {
       return { nodes: [], edges: [], paths: [] };
@@ -821,11 +688,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
     
-    // Créer un Map pour stocker les questions
     const questionMap = new Map<string, any>();
     const questionsArray: any[] = [];
     
-    // Si c'est un sondage dynamique, collecter les nœuds
     if (survey.isDynamic && survey.nodes) {
       survey.nodes.forEach((node: any) => {
         if (node.id !== 'root' && node.data) {
@@ -834,7 +699,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             text: node.data.text || node.data.label || 'Question',
             type: node.data.questionType || node.data.type || 'text',
             count: 0,
-            children: [] // Pour stocker les IDs des questions enfants
+            children: []
           });
           
           questionsArray.push({
@@ -847,9 +712,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       });
       
-      // Détecter les questions critiques (qui ont plusieurs enfants)
       if (survey.edges) {
-        // Construire une map des relations parent-enfant
         const parentChildMap = new Map<string, string[]>();
         
         survey.edges.forEach((edge: any) => {
@@ -858,14 +721,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           }
           parentChildMap.get(edge.source)?.push(edge.target);
           
-          // Ajouter cette relation à notre questionMap
           const question = questionMap.get(edge.source);
           if (question) {
             question.children.push(edge.target);
           }
         });
         
-        // Marquer les questions critiques (qui ont plus d'un enfant)
         parentChildMap.forEach((children, parentId) => {
           const question = questionMap.get(parentId);
           if (question && children.length > 1) {
@@ -874,7 +735,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         });
       }
     } else if (survey.questions) {
-      // Pour les sondages standards, utiliser le tableau de questions
       survey.questions.forEach((question: any) => {
         questionMap.set(question.id, {
           id: question.id,
@@ -892,7 +752,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     }
     
-    // Compter les réponses pour chaque question
     responses.forEach((response: any) => {
       response.answers.forEach((answer: { questionId: string, answer: string }) => {
         const question = questionMap.get(answer.questionId);
@@ -902,15 +761,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     });
     
-    // Positionner les questions
     let xPos = 0;
     let yPos = 0;
-    const xGap = 450; // Augmenter l'espacement horizontal
-    const yGap = 250; // Augmenter l'espacement vertical
-    const usedPositions = new Set<string>(); // Pour éviter les chevauchements
-    const processedNodes = new Set<string>(); // Pour éviter de traiter deux fois un nœud
+    const xGap = 450;
+    const yGap = 250;
+    const usedPositions = new Set<string>();
+    const processedNodes = new Set<string>();
     
-    // Fonction pour positionner une question et ses enfants (orientation verticale)
     const positionQuestion = (questionId: string, x: number, y: number) => {
       if (processedNodes.has(questionId)) return;
       processedNodes.add(questionId);
@@ -918,28 +775,27 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       const question = questionMap.get(questionId);
       if (!question) return;
       
-      // Créer le nœud pour cette question
       const questionNode: Node = {
         id: questionId,
-            type: 'questionNode',
-            data: {
+        type: 'questionNode',
+        data: {
           questionId: questionId,
-              text: question.text,
+          text: question.text,
           count: question.count || 0,
           isSelected: false,
           isRoot: false,
           isCritical: question.isCritical,
           selectedPaths: selectedPaths,
-          answer: question.answer // Si disponible
+          answer: question.answer,
+          pathColor: question.pathColor
         },
         position: { x, y },
         style: {
-          width: 240,  // Augmenter la largeur pour plus d'espace
-          height: 160  // Hauteur adaptée au nouveau design
+          width: 240,
+          height: 160
         }
       };
       
-      // S'assurer que la position n'est pas déjà occupée
       let posKey = `${x},${y}`;
       while (usedPositions.has(posKey)) {
         x += xGap;
@@ -950,14 +806,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       flowNodes.push(questionNode);
       
-      // Pour les questions critiques, positionner les enfants horizontalement
       if (question.children && question.children.length > 0) {
         if (question.isCritical) {
-          // Question critique: enfants au même niveau vertical mais espacés horizontalement
           let childX = x + xGap;
           
           question.children.forEach((childId: string) => {
-            // Vérifier que la position n'est pas déjà utilisée
             let childPosKey = `${childX},${y + yGap}`;
             while (usedPositions.has(childPosKey)) {
               childX += xGap;
@@ -966,7 +819,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             
             positionQuestion(childId, childX, y + yGap);
             
-            // Ajouter l'arête
             flowEdges.push({
               id: `e-${questionId}-${childId}`,
               source: questionId,
@@ -982,11 +834,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             });
           });
         } else {
-          // Question normale: positionner l'enfant directement en dessous
           const childId = question.children[0];
           positionQuestion(childId, x, y + yGap);
           
-          // Ajouter l'arête
           flowEdges.push({
             id: `e-${questionId}-${childId}`,
             source: questionId,
@@ -1004,10 +854,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     };
     
-    // Pour les sondages standards, positionner les questions en séquence verticale
     if (!survey.isDynamic) {
       questionsArray.forEach((question, index) => {
-        // Créer le nœud pour la question
         const questionNode: Node = {
           id: question.id,
           type: 'questionNode',
@@ -1017,18 +865,18 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             count: question.count || 0,
             isSelected: false,
             isRoot: false,
-            selectedPaths: selectedPaths
+            selectedPaths: selectedPaths,
+            pathColor: question.pathColor
           },
           position: { x: 400, y: index * yGap },
           style: {
-            width: 240,  // Augmenter la largeur pour plus d'espace
-            height: 160  // Hauteur adaptée au nouveau design
+            width: 240,
+            height: 160
           }
         };
         
         flowNodes.push(questionNode);
         
-        // Connecter à la question précédente
         if (index > 0) {
           const prevQuestion = questionsArray[index - 1];
           flowEdges.push({
@@ -1047,7 +895,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       });
     } else {
-      // Pour les sondages dynamiques, trouver les questions de départ
       const childNodes = new Set<string>();
       survey.edges.forEach((edge: any) => {
         childNodes.add(edge.target);
@@ -1055,14 +902,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       const startingNodes = [...questionMap.keys()].filter(id => !childNodes.has(id));
       
-      // Positionner chaque branche à partir des questions de départ
       let startX = 0;
       startingNodes.forEach(nodeId => {
         positionQuestion(nodeId, startX, 0);
-        startX += xGap * 2; // Donner plus d'espace entre les branches de départ
+        startX += xGap * 2;
       });
       
-      // Si aucune question de départ n'est trouvée, positionner toutes les questions en séquence
       if (startingNodes.length === 0 && questionsArray.length > 0) {
         questionsArray.forEach((question, index) => {
           if (!processedNodes.has(question.id)) {
@@ -1072,31 +917,26 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     }
     
-    // Extraire les chemins pour l'affichage dans le panneau latéral
     const paths = extractAllPaths(survey, responses);
     
     return { nodes: flowNodes, edges: flowEdges, paths };
   };
   
-  // Générer les nœuds et arêtes au chargement ou lorsque les réponses changent
   useEffect(() => {
     if (survey && responses.length > 0) {
       setLoading(true);
       const { nodes, edges, paths } = processPathTree(survey, responses);
       
-      // S'assurer que selectedPaths est correctement passé à chaque arête
       const edgesWithSelection = edges.map(edge => ({
         ...edge,
         data: {
           ...(edge.data || {}),
           selectedPaths: selectedPaths,
-          // Ajouter les informations source et target pour faciliter la comparaison
           source: edge.source,
           target: edge.target
         }
       }));
       
-      // Ajouter selectedPaths aux données de chaque nœud
       const nodesWithSelection = nodes.map(node => ({
         ...node,
         data: {
@@ -1109,7 +949,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setEdges(edgesWithSelection);
       setAllPaths(paths);
       
-      // Informer le parent des chemins disponibles
       if (onPathsLoad) {
         onPathsLoad(paths);
       }
@@ -1121,21 +960,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   }, [survey, responses, selectedPaths]);
   
-  // Créez une instance de reactFlowInstance au niveau supérieur du composant
-  // Cette variable sera définie après le montage du composant
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   
-  // Gérer la sélection d'un nœud
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     if (node.id === 'root') return;
     
-    // Construire le chemin complet jusqu'à ce nœud
     const pathSegments: PathSegment[] = [];
     const buildPath = (nodeId: string) => {
       if (nodeId === 'root') return;
       
       const parts = nodeId.split('-');
-      // Le format est: parentId-questionId-answer
       if (parts.length >= 3) {
         const questionId = parts[parts.length - 2];
         const answer = parts[parts.length - 1];
@@ -1150,7 +984,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           });
         }
         
-        // Remonter au parent
         const parentId = parts.slice(0, parts.length - 2).join('-');
         if (parentId !== '') {
           buildPath(parentId);
@@ -1165,14 +998,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  // Version améliorée de toggleFilter
   const toggleFilter = () => {
-    // Mémoriser la position de défilement et la hauteur AVANT tout changement
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollTop;
       containerHeightRef.current = scrollContainerRef.current.scrollHeight;
       
-      // Figer la hauteur explicitement pour éviter tout redimensionnement pendant la transition
       scrollContainerRef.current.style.height = `${scrollContainerRef.current.offsetHeight}px`;
       scrollContainerRef.current.classList.add('filtering-transition');
     }
@@ -1180,7 +1010,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     const newFilterState = !filterApplied;
     setFilterApplied(newFilterState);
     
-    // Appliquer les filtres...
     if (newFilterState) {
       const filtered = allPaths.filter(pathItem => 
         selectedPaths.some(selectedPath => 
@@ -1192,6 +1021,21 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         )
       );
       setFilteredPaths(filtered);
+      
+      if (selectedPaths.length > 0) {
+        const multipleNodes: Node[][] = [];
+        const multipleEdges: Edge[][] = [];
+        
+        selectedPaths.forEach((path, pathIndex) => {
+          const { nodes: pathNodes, edges: pathEdges } = createSinglePathTree(survey, responses, path, pathIndex);
+          multipleNodes.push(pathNodes);
+          multipleEdges.push(pathEdges);
+        });
+        
+        setMultipleTreeNodes(multipleNodes);
+        setMultipleTreeEdges(multipleEdges);
+      }
+      
       updateVisibleElements(true);
       if (onFilterChange) {
         const filteredResponses = getFilteredResponses();
@@ -1199,57 +1043,47 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     } else {
       setFilteredPaths([]);
+      setMultipleTreeNodes([]);
+      setMultipleTreeEdges([]);
       updateVisibleElements(false);
       if (onFilterChange) {
         onFilterChange(false, responses);
       }
     }
     
-    // Utiliser requestAnimationFrame pour s'assurer que le DOM a été mis à jour
     requestAnimationFrame(() => {
       setTimeout(() => {
         if (scrollContainerRef.current) {
-          // Libérer la hauteur fixée
           scrollContainerRef.current.style.height = '';
           scrollContainerRef.current.classList.remove('filtering-transition');
           
-          // Restaurer la position de défilement
           scrollContainerRef.current.scrollTop = scrollPositionRef.current;
         }
-      }, 50); // Petit délai pour s'assurer que le rendu est terminé
+      }, 50);
     });
   };
   
-  // Nouvelle fonction pour identifier les réponses correspondant aux parcours sélectionnés
   const getFilteredResponses = () => {
     if (!selectedPaths || selectedPaths.length === 0) {
       return responses;
     }
 
-    // Filtrer les réponses qui suivent au moins un des chemins sélectionnés
     return responses.filter(response => {
-      // Pour chaque chemin sélectionné
       return selectedPaths.some(path => {
-        // Vérifier si cette réponse suit ce chemin (toutes les étapes du chemin)
         return path.every(segment => {
-          // Chercher la réponse correspondante à cette question
           const answer = response.answers.find((a: { questionId: string; answer: string }) => 
             a.questionId === segment.questionId
           );
-          // Si la réponse existe et correspond à la valeur attendue
           return answer && answer.answer === segment.answer;
         });
       });
     });
   };
   
-  // Mettre à jour les éléments visibles en fonction du filtre
   const updateVisibleElements = (filtered: boolean) => {
     if (!filtered) {
-      // Réinitialiser tous les nœuds et arêtes à leur état d'origine
       const { nodes: originalNodes, edges: originalEdges } = processPathTree(survey, responses);
       
-      // Récupérer les positions et dimensions des nœuds pour l'effet d'atténuation
       const nodesPositions = originalNodes.map(node => ({
         id: node.id,
         x: node.position.x,
@@ -1258,26 +1092,22 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         height: node.style?.height ? Number(node.style.height) : 160
       }));
       
-      // S'assurer que selectedPaths et nodesPositions sont correctement passés
       const edgesWithData = originalEdges.map(edge => ({
         ...edge,
         data: {
           ...(edge.data || {}),
           selectedPaths: selectedPaths,
-          nodesPositions // Ajouter les positions des nœuds
+          nodesPositions
         }
       }));
       
-      // Filtrer les nœuds
       const filteredNodes = originalNodes.filter(node => 
         selectedPaths.some(path => 
           path.some(segment => segment.questionId === node.data.questionId)
         )
       );
       
-      // Filtrer les arêtes (celles qui connectent les nœuds des parcours sélectionnés)
       const filteredEdges = originalEdges.filter(edge => {
-        // Extraire les IDs des questions source et cible
         const sourceId = edge.source.includes('-') ? edge.source.split('-').slice(-1)[0] : edge.source;
         const targetId = edge.target.includes('-') ? edge.target.split('-').slice(-1)[0] : edge.target;
         
@@ -1287,41 +1117,32 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         );
       });
       
-      // Réorganiser les positions des nœuds pour un affichage plus propre
       const reorganizedNodes = reorganizeNodePositions(filteredNodes);
       
-      // Mise à jour des nœuds et arêtes filtrés
       setNodes(reorganizedNodes);
       setEdges(edgesWithData);
     } else {
-      // Filtrer pour ne montrer que les nœuds et arêtes des parcours sélectionnés
       const questionIdsInSelectedPaths = new Set<string>();
       
-      // Collecter tous les IDs de questions dans les parcours sélectionnés
       selectedPaths.forEach(path => {
         path.forEach(segment => {
           questionIdsInSelectedPaths.add(segment.questionId);
         });
       });
       
-      // Filtrer les nœuds
       const filteredNodes = nodes.filter(node => 
         questionIdsInSelectedPaths.has(node.data.questionId)
       );
       
-      // Filtrer les arêtes (celles qui connectent les nœuds des parcours sélectionnés)
       const filteredEdges = edges.filter(edge => {
-        // Extraire les IDs des questions source et cible
         const sourceId = edge.source.includes('-') ? edge.source.split('-').slice(-1)[0] : edge.source;
         const targetId = edge.target.includes('-') ? edge.target.split('-').slice(-1)[0] : edge.target;
         
         return questionIdsInSelectedPaths.has(sourceId) && questionIdsInSelectedPaths.has(targetId);
       });
       
-      // Réorganiser les positions des nœuds pour un affichage plus propre
       const reorganizedNodes = reorganizeNodePositions(filteredNodes);
       
-      // Ne pas oublier d'ajouter les positions des nœuds ici aussi
       const filteredNodesPositions = filteredNodes.map(node => ({
         id: node.id,
         x: node.position.x,
@@ -1335,40 +1156,33 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         data: {
           ...(edge.data || {}),
           selectedPaths: selectedPaths,
-          nodesPositions: filteredNodesPositions // Ajouter les positions des nœuds filtrés
+          nodesPositions: filteredNodesPositions
         }
       }));
       
-      // Mise à jour des nœuds et arêtes filtrés
       setNodes(reorganizedNodes);
       setEdges(edgesWithData);
     }
     
-    // Ajuster la vue après le filtrage
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({ padding: 0.2 });
-      }, 300); // Un délai plus long pour permettre l'animation
+      }, 300);
     }
   };
   
-  // Fonction améliorée pour réorganiser les positions des nœuds
   const reorganizeNodePositions = (filteredNodes: Node[]): Node[] => {
     if (filteredNodes.length === 0) return [];
     
-    // Créer une copie profonde des nœuds pour éviter de modifier les originaux
     const nodes = JSON.parse(JSON.stringify(filteredNodes));
     
-    // Augmenter l'espacement pour une meilleure lisibilité
-    const xGap = 350; // Plus d'espace horizontal entre les nœuds au même niveau
-    const yGap = 200; // Plus d'espace vertical entre les niveaux
-    const siblingGap = 300; // Espace supplémentaire entre les nœuds frères
+    const xGap = 350;
+    const yGap = 200;
+    const siblingGap = 300;
     
-    // Structure pour traquer les niveaux hiérarchiques des nœuds
     const nodeLevels = new Map<string, number>();
     const nodeChildren = new Map<string, string[]>();
     
-    // Identifier les relations parent-enfant
     edges.forEach(edge => {
       if (!nodeChildren.has(edge.source)) {
         nodeChildren.set(edge.source, []);
@@ -1376,24 +1190,19 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       nodeChildren.get(edge.source)?.push(edge.target);
     });
     
-    // Fonction pour déterminer le niveau hiérarchique de chaque nœud
     const determineNodeLevel = (nodeId: string, level: number = 0) => {
-      // Éviter de traiter plusieurs fois le même nœud
       if (nodeLevels.has(nodeId) && nodeLevels.get(nodeId)! >= level) {
         return;
       }
       
-      // Mettre à jour le niveau du nœud
       nodeLevels.set(nodeId, level);
       
-      // Traiter récursivement les enfants
       const children = nodeChildren.get(nodeId) || [];
       children.forEach(childId => {
         determineNodeLevel(childId, level + 1);
       });
     };
     
-    // Identifier les nœuds racines
     const nodeIds = new Set(nodes.map((node: Node) => node.id));
     const childIds = new Set<string>();
     
@@ -1405,12 +1214,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     const rootNodes = nodes.filter((node: Node) => !childIds.has(node.id));
     
-    // Déterminer le niveau de chaque nœud
     rootNodes.forEach((root: Node) => {
       determineNodeLevel(root.id);
     });
     
-    // Grouper les nœuds par niveau
     const nodesByLevel = new Map<number, Node[]>();
     nodes.forEach((node: Node) => {
       const level = nodeLevels.get(node.id) || 0;
@@ -1420,7 +1227,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       nodesByLevel.get(level)?.push(node);
     });
     
-    // Positionner les nœuds par niveau
     let maxWidth = 0;
     
     nodesByLevel.forEach((levelNodes, level) => {
@@ -1428,12 +1234,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       maxWidth = Math.max(maxWidth, levelWidth);
       
       levelNodes.forEach((node: Node, index) => {
-        // Positionner le nœud avec un décalage pour le centrage
         const x = (index * xGap) - (levelWidth / 2) + (xGap / 2);
-        const y = level * yGap + 50; // 50px de marge supérieure
+        const y = level * yGap + 50;
         
-        // Appliquer un décalage aux nœuds qui ne sont pas en position centrale
-        // pour bien les séparer des autres branches
         const offsetX = node.id.includes('-') ? parseInt(node.id.split('-')[0]) * 30 : 0;
         
         node.position = { 
@@ -1443,20 +1246,15 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     });
     
-    // Deuxième passe : ajuster les positions des nœuds enfants pour les aligner sous leur parent
     nodes.forEach((node: Node) => {
       const children = nodeChildren.get(node.id) || [];
       if (children.length > 0) {
-        // Trouver les nœuds enfants
         const childNodes = nodes.filter((n: Node) => children.includes(n.id));
         
         if (childNodes.length > 0) {
-          // Calculer la position centrale des enfants
           const childrenCenterX = childNodes.reduce((sum: number, child: Node) => sum + child.position.x, 0) / childNodes.length;
           const parentX = node.position.x;
           
-          // Si la position centrale des enfants est différente de celle du parent,
-          // décaler tous les enfants pour les centrer sous le parent
           if (Math.abs(childrenCenterX - parentX) > 10) {
             const offset = parentX - childrenCenterX;
             childNodes.forEach((child: Node) => {
@@ -1464,7 +1262,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             });
           }
           
-          // Séparer les frères en fonction de leur nombre
           if (childNodes.length > 1) {
             const totalWidth = (childNodes.length - 1) * siblingGap;
             const startX = parentX - totalWidth / 2;
@@ -1478,15 +1275,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     });
     
-    // Détection des chevauchements et correction
     const nodeBoundaries = new Map<string, {left: number, right: number, top: number, bottom: number}>();
     
-    // Calculer les limites de chaque nœud - correction des erreurs d'opération arithmétique
     nodes.forEach((node: Node) => {
       const nodeWidth = node.style?.width ? Number(node.style.width) : 240;
       const nodeHeight = node.style?.height ? Number(node.style.height) : 160;
       
-      // S'assurer que position.x et position.y sont des nombres
       const posX = typeof node.position.x === 'number' ? node.position.x : 0;
       const posY = typeof node.position.y === 'number' ? node.position.y : 0;
       
@@ -1498,10 +1292,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     });
     
-    // Détecter et corriger les chevauchements
     let corrections = true;
     let iterations = 0;
-    const maxIterations = 10; // Éviter les boucles infinies
+    const maxIterations = 10;
     
     while (corrections && iterations < maxIterations) {
       corrections = false;
@@ -1513,15 +1306,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             const boundA = nodeBoundaries.get(nodeA.id)!;
             const boundB = nodeBoundaries.get(nodeB.id)!;
             
-            // Vérifier s'il y a chevauchement
             if (boundA.left < boundB.right && boundA.right > boundB.left &&
                 boundA.top < boundB.bottom && boundA.bottom > boundB.top) {
               
-              // Calculer le décalage nécessaire
               const xOverlap = Math.min(boundA.right, boundB.right) - Math.max(boundA.left, boundB.left);
               const yOverlap = Math.min(boundA.bottom, boundB.bottom) - Math.max(boundA.top, boundB.top);
               
-              // Appliquer le décalage dans la direction qui minimise le déplacement
               if (xOverlap < yOverlap) {
                 if (nodeA.position.x < nodeB.position.x) {
                   nodeA.position.x -= xOverlap / 2 + 10;
@@ -1540,7 +1330,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 }
               }
               
-              // Mettre à jour les limites
               nodeBoundaries.set(nodeA.id, {
                 left: nodeA.position.x - 120,
                 right: nodeA.position.x + 120,
@@ -1562,7 +1351,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     }
     
-    // Ajouter une transition fluide
     return nodes.map((node: Node) => ({
       ...node,
       style: {
@@ -1572,24 +1360,18 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }));
   };
   
-  // Mettre à jour la fonction handlePathSelect pour réinitialiser le filtre lors d'une nouvelle sélection
   const handlePathSelect = (path: PathSegment[]) => {
     console.log("Path selected:", path);
     
-    // Si le filtre est appliqué, le désactiver pour une nouvelle sélection
     if (filterApplied) {
       setFilterApplied(false);
     }
     
-    // Appeler la fonction onPathSelect pour mettre à jour selectedPaths
     onPathSelect(path);
     
-    // Forcer la mise à jour complète des nœuds et des arêtes
     if (path.length > 0) {
-      // Créer une nouvelle référence de selectedPaths pour s'assurer que la mise à jour est détectée
       const newSelectedPaths = [path];
       
-      // Mettre à jour toutes les arêtes avec les nouveaux chemins sélectionnés
       const updatedEdges = edges.map(edge => ({
         ...edge,
         data: {
@@ -1598,7 +1380,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       }));
       
-      // Mettre à jour tous les nœuds avec les nouveaux chemins sélectionnés
       const updatedNodes = nodes.map(node => ({
         ...node,
         data: {
@@ -1607,20 +1388,122 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       }));
       
-      // Appliquer les mises à jour
       setEdges(updatedEdges);
       setNodes(updatedNodes);
     }
     
-    // Utiliser l'instance pour accéder à fitView
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({ padding: 0.2 });
-      }, 200); // Augmenter légèrement le délai pour permettre le rendu des changements
+      }, 200);
     }
   };
   
-  // Options ReactFlow
+  const createSinglePathTree = (survey: any, responses: any[], path: PathSegment[], pathIndex: number) => {
+    const questionIdsInPath = new Set<string>();
+    path.forEach(segment => {
+      questionIdsInPath.add(segment.questionId);
+    });
+    
+    const pathNodes: Node[] = [];
+    const pathEdges: Edge[] = [];
+    
+    // Calculer d'abord le nombre exact de répondants qui ont suivi ce parcours complet
+    const respondentsFollowingPath = responses.filter(response => 
+      path.every(segment => {
+        const answer = response.answers.find((a: { questionId: string; answer: string }) => 
+          a.questionId === segment.questionId
+        );
+        return answer && answer.answer === segment.answer;
+      })
+    );
+    
+    // Nombre total de répondants pour ce parcours spécifique
+    const totalRespondentsForPath = respondentsFollowingPath.length;
+    
+    // Couleur du parcours actuel
+    const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+    
+    path.forEach((segment, index) => {
+      const nodeId = `path-${pathIndex}-${segment.questionId}`;
+      const questionNode = {
+        id: nodeId,
+        type: 'questionNode',
+        position: { 
+          x: index * 300, 
+          y: pathIndex * 300
+        },
+        data: {
+          questionId: segment.questionId,
+          text: segment.questionText,
+          answer: segment.answer,
+          count: totalRespondentsForPath,
+          highlightLevel: 3,
+          selectedPaths: [path],
+          pathColor: pathColor // Ajouter la couleur du parcours dans les données
+        },
+        style: {
+          width: 240,
+          height: 170,
+          backgroundColor: `${pathColor}10`, // Couleur de fond légère basée sur la couleur du parcours
+          borderColor: pathColor, // Bordure avec la couleur du parcours
+          borderWidth: 2,
+          transition: 'all 0.3s ease'
+        }
+      };
+      pathNodes.push(questionNode);
+      
+      if (index > 0) {
+        const sourceId = `path-${pathIndex}-${path[index-1].questionId}`;
+        const targetId = nodeId;
+        
+        const edgeId = `edge-${pathIndex}-${index}`;
+        pathEdges.push({
+          id: edgeId,
+          source: sourceId,
+          target: targetId,
+          type: 'default',
+          animated: false,
+          style: { 
+            stroke: pathColor, // Utiliser la même couleur pour les arêtes
+            strokeWidth: 3
+          },
+          data: {
+            selectedPaths: [path],
+            pathColor: pathColor // Ajouter la couleur du parcours dans les données
+          }
+        });
+      }
+    });
+    
+    return { nodes: pathNodes, edges: pathEdges };
+  };
+  
+  // Nouvelle fonction qui compte les répondants ayant suivi exactement un chemin spécifique
+  const getRespondentCountForPath = (path: PathSegment[], responses: any[]): number => {
+    return responses.filter(response => 
+      path.every(segment => {
+        const answer = response.answers.find((a: { questionId: string; answer: string }) => 
+          a.questionId === segment.questionId
+        );
+        return answer && answer.answer === segment.answer;
+      })
+    ).length;
+  };
+  
+  const getRespondentCountForSegment = (segment: PathSegment, responses: any[]): number => {
+    return responses.filter(response => {
+      const answer = response.answers.find((a: { questionId: string; answer: string }) => 
+        a.questionId === segment.questionId
+      );
+      return answer && answer.answer === segment.answer;
+    }).length;
+  };
+  
+  const setReactFlowInstances = (instance: ReactFlowInstance, index: number) => {
+    reactFlowInstancesRef.current[index] = instance;
+  };
+  
   const defaultViewport = { x: 0, y: 0, zoom: 0.8 };
   
   return (
@@ -1635,7 +1518,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }}
     >
       <Typography variant="h6" component="h2" gutterBottom>
-        Response Path Analysis
+        Analyse des Parcours de Réponses
       </Typography>
       
       <Box sx={{ 
@@ -1644,13 +1527,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         gap: 2,
         height: 'calc(100% - 60px)'
       }}>
-        {/* Panneau principal - Arborescence */}
         <Box sx={{ 
           flex: 3, 
-        border: '1px solid rgba(0, 0, 0, 0.1)', 
-        borderRadius: '4px',
+          border: '1px solid rgba(0, 0, 0, 0.1)', 
+          borderRadius: '4px',
           position: 'relative',
           minHeight: '500px',
+          overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
       }}>
         {loading ? (
           <Box sx={{ 
@@ -1662,51 +1545,158 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             <CircularProgress />
           </Box>
         ) : responses.length > 0 ? (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodeClick={onNodeClick}
-            nodeTypes={{ questionNode: QuestionNode }}
-            edgeTypes={{ default: LinkComponent }}
-            defaultViewport={defaultViewport}
+          filterApplied && multipleTreeNodes.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
+              {multipleTreeNodes.map((pathNodes, index) => (
+                <Box 
+                  key={`path-tree-${index}`} 
+                  sx={{ 
+                    border: `2px solid ${HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length]}`,
+                    borderRadius: '8px',
+                    height: '400px',
+                    mb: 2,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      p: 1, 
+                      backgroundColor: HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length],
+                      color: 'white',
+                      borderTopLeftRadius: '6px',
+                      borderTopRightRadius: '6px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Box>Parcours {String.fromCharCode(65 + index)}</Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        backgroundColor: 'rgba(255,255,255,0.2)', 
+                        px: 1, 
+                        py: 0.5, 
+                        borderRadius: 1,
+                        fontSize: '0.8rem'
+                      }}>
+                        {selectedPaths[index].length} étapes
+                      </Box>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        backgroundColor: 'rgba(255,255,255,0.2)', 
+                        px: 1, 
+                        py: 0.5, 
+                        borderRadius: 1,
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {getRespondentCountForPath(selectedPaths[index], responses)} répondants
+                      </Box>
+                    </Box>
+                  </Typography>
+                  
+                  <ReactFlow
+                    key={`flow-${index}`}
+                    nodes={pathNodes}
+                    edges={multipleTreeEdges[index]}
+                    nodeTypes={{ questionNode: QuestionNode }}
+                    edgeTypes={{ default: LinkComponent }}
+                    defaultViewport={defaultViewport}
+                    minZoom={0.1}
+                    maxZoom={2.5}
+                    fitView
+                    fitViewOptions={{ padding: 0.3 }}
+                    onInit={(instance) => setReactFlowInstances(instance, index)}
+                    zoomOnScroll={false}
+                    zoomOnPinch={true}
+                    panOnScroll={true}
+                    panOnScrollMode={'free' as any}
+                    nodesDraggable={false}
+                    elementsSelectable={true}
+                    selectNodesOnDrag={false}
+                  >
+                    <Controls 
+                      position="top-right" 
+                      showInteractive={true} 
+                      fitViewOptions={{ padding: 0.3 }}
+                    />
+                    <Background 
+                      color="#f0f4ff" 
+                      gap={20} 
+                      size={1.5}
+                      variant={'dots' as any}
+                    />
+                  </ReactFlow>
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodeClick={onNodeClick}
+              nodeTypes={{ questionNode: QuestionNode }}
+              edgeTypes={{ default: LinkComponent }}
+              defaultViewport={defaultViewport}
               minZoom={0.1}
               maxZoom={2.5}
-            fitView
-            fitViewOptions={{ padding: 0.3 }}
-            onInit={setReactFlowInstance}
-            zoomOnScroll={false}
-            zoomOnPinch={true}
-            panOnScroll={true}
-            panOnScrollMode={'free' as any}
-            nodesDraggable={false}
-            elementsSelectable={true}
-            selectNodesOnDrag={false}
-          >
-            <Controls 
-              position="top-right" 
-              showInteractive={true} 
+              fitView
               fitViewOptions={{ padding: 0.3 }}
-            />
-            <MiniMap
-              nodeStrokeWidth={3}
-              nodeColor={(node) => {
-                const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
-                  path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
-                );
-                return isSelected ? '#3949ab' : '#667eea';
-              }}
-              zoomable
-              pannable
+              onInit={setReactFlowInstance}
+              zoomOnScroll={false}
+              zoomOnPinch={true}
+              panOnScroll={true}
+              panOnScrollMode={'free' as any}
+              nodesDraggable={false}
+              elementsSelectable={true}
+              selectNodesOnDrag={false}
+            >
+              <Controls 
+                position="top-right" 
+                showInteractive={true} 
+                fitViewOptions={{ padding: 0.3 }}
+              />
+              <MiniMap
+                nodeStrokeWidth={3}
+                nodeColor={(node) => {
+                  // Utiliser la couleur spécifique du parcours si disponible
+                  if (node.data.pathColor) {
+                    return node.data.pathColor;
+                  }
+                  
+                  // Sinon, utiliser le système existant basé sur la sélection
+                  const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
+                    path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
+                  );
+                  
+                  if (isSelected) {
+                    // Trouver l'index du premier parcours contenant ce nœud
+                    const pathIndex = node.data.selectedPaths.findIndex((path: PathSegment[]) => 
+                      path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
+                    );
+                    return HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                  }
+                  
+                  return '#667eea';
+                }}
+                zoomable
+                pannable
                 position="bottom-right"
-              style={{ background: 'rgba(255, 255, 255, 0.9)' }}
-            />
-            <Background 
-              color="#f0f4ff" 
-              gap={20} 
-              size={1.5}
-              variant={'dots' as any}
-            />
-          </ReactFlow>
+                style={{ background: 'rgba(255, 255, 255, 0.9)' }}
+              />
+              <Background 
+                color="#f0f4ff" 
+                gap={20} 
+                size={1.5}
+                variant={'dots' as any}
+              />
+            </ReactFlow>
+          )
         ) : (
           <Box sx={{ 
             display: 'flex', 
@@ -1715,13 +1705,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             height: '100%' 
           }}>
             <Typography variant="body2">
-              No paths available
+              Aucun parcours disponible
             </Typography>
           </Box>
         )}
       </Box>
       
-        {/* Panneau latéral - Liste alphabétique de tous les parcours */}
         <Box sx={{ 
           flex: 1,
           display: 'flex',
@@ -1729,12 +1718,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           border: '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: '4px',
           p: 2,
-          height: '100%',  // Assure que la Box prend toute la hauteur disponible
-          maxHeight: 'calc(100vh - 120px)',  // Limite la hauteur maximale
-          overflow: 'hidden'  // Cache les débordements
+          height: '100%',
+          maxHeight: 'calc(100vh - 120px)',
+          overflow: 'hidden'
         }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Complete Paths
+            Parcours Complets
           </Typography>
           
           {allPaths.length > 0 ? (
@@ -1746,7 +1735,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 overflowX: 'hidden',
                 flex: 1,
                 height: 'calc(100% - 30px)',
-                position: 'relative', // Important pour le positionnement absolu
+                position: 'relative',
                 '&::-webkit-scrollbar': {
                   width: '8px',
                 },
@@ -1763,7 +1752,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 }
               }}
             >
-              {/* Bouton d'application du filtre si des parcours sont sélectionnés */}
               {selectedPaths.length > 0 && (
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Button
@@ -1773,13 +1761,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     onClick={toggleFilter}
                     sx={{ width: '100%' }}
                   >
-                    {filterApplied ? "Show all paths" : "Filter on selected paths"}
+                    {filterApplied ? "Afficher tous les parcours" : "Filtrer sur les parcours sélectionnés"}
                   </Button>
                 </Box>
               )}
               
               {(filterApplied ? filteredPaths : allPaths).map((pathItem, index) => {
-                // Déterminer si ce parcours est sélectionné
                 const isSelected = selectedPaths.some(p => 
                   p.length === pathItem.path.length && 
                   p.every((segment, i) => 
@@ -1788,7 +1775,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   )
                 );
                 
-                // Trouver l'index du parcours sélectionné pour déterminer sa couleur
                 const selectedPathIndex = selectedPaths.findIndex(p => 
                   p.length === pathItem.path.length && 
                   p.every((segment, i) => 
@@ -1797,14 +1783,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   )
                 );
                 
-                // Déterminer la couleur à utiliser pour ce parcours
                 const pathColor = isSelected 
                   ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
                   : 'divider';
                 
-                // Déterminer la couleur de fond
                 const backgroundColor = isSelected 
-                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` // Version semi-transparente
+                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20`
                   : 'background.paper';
                 
                 return (
@@ -1820,14 +1804,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                     cursor: 'pointer',
                     '&:hover': {
                         backgroundColor: isSelected 
-                          ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}30` // Légèrement plus foncé au survol
+                          ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}30`
                           : 'action.hover',
                       },
                       transition: 'all 0.3s ease'
                     }}
                     onClick={() => handlePathSelect(pathItem.path)}
                   >
-                    {/* Afficher un indicateur de couleur à côté du nom du parcours */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {isSelected && (
                         <Box 
@@ -1841,7 +1824,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         />
                       )}
                       <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                    {pathItem.name} ({pathItem.path.length} steps)
+                    {pathItem.name} ({pathItem.path.length} étapes)
                   </Typography>
                     </Box>
                     
@@ -1871,7 +1854,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              No paths available
+              Aucun parcours disponible
             </Typography>
           )}
         </Box>
