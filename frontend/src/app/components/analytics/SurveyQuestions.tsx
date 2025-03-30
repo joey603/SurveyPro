@@ -58,6 +58,11 @@ interface QuestionDetails {
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
+interface PathSegment {
+  questionId: string;
+  segment: string;
+}
+
 interface SurveyQuestionsProps {
   survey: {
     _id: string;
@@ -68,6 +73,7 @@ interface SurveyQuestionsProps {
   renderChart: (questionId: string, chartType: ChartType) => JSX.Element;
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
+  selectedPaths: PathSegment[][];
 }
 
 export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
@@ -75,7 +81,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   responses,
   renderChart,
   getAvailableChartTypes,
-  getChartIcon
+  getChartIcon,
+  selectedPaths
 }) => {
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
@@ -129,6 +136,31 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     ).length;
   };
 
+  // Fonction pour vérifier si une question fait partie d'un parcours
+  const isQuestionInPath = (questionId: string): boolean => {
+    if (!selectedPaths || selectedPaths.length === 0) return false;
+    
+    // Vérifier si la question apparaît dans l'un des parcours sélectionnés
+    return selectedPaths.some(path => 
+      path.some(segment => segment.questionId === questionId)
+    );
+  };
+
+  // Fonction pour obtenir la position de la question dans le parcours
+  const getPathPosition = (questionId: string): number => {
+    if (!selectedPaths || selectedPaths.length === 0) return -1;
+    
+    // Chercher dans tous les parcours
+    for (const path of selectedPaths) {
+      for (let i = 0; i < path.length; i++) {
+        if (path[i].questionId === questionId) {
+          return i + 1; // Position de base 1
+        }
+      }
+    }
+    return -1;
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h6" gutterBottom>
@@ -150,7 +182,12 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                   transition: 'background-color 0.2s',
                   '&:hover': {
                     backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                  }
+                  },
+                  // Ajouter un arrière-plan spécial si la question fait partie d'un parcours
+                  ...(isQuestionInPath(question.id) ? {
+                    backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                    borderLeft: '4px solid #667eea'
+                  } : {})
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -159,8 +196,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                     alignItems: 'center', 
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    bgcolor: 'rgba(102, 126, 234, 0.1)',
-                    color: '#667eea',
+                    bgcolor: isQuestionInPath(question.id) ? '#667eea' : 'rgba(102, 126, 234, 0.1)',
+                    color: isQuestionInPath(question.id) ? 'white' : '#667eea',
                     width: 40,
                     height: 40,
                     mr: 2,
@@ -186,9 +223,23 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                           sx={{ 
                             bgcolor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
-                            fontSize: '0.75rem'
+                            fontSize: '0.75rem',
+                            mr: 1
                           }}
                         />
+                        
+                        {/* Ajouter le badge de parcours si la question est dans un parcours */}
+                        {isQuestionInPath(question.id) && (
+                          <Chip 
+                            size="small"
+                            label={`Étape ${getPathPosition(question.id)} du parcours`}
+                            sx={{ 
+                              bgcolor: '#667eea',
+                              color: 'white',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        )}
                       </Box>
                     }
                   />

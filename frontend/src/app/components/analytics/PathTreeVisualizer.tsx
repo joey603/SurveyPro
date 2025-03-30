@@ -1222,28 +1222,22 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   // Nouvelle fonction pour identifier les réponses correspondant aux parcours sélectionnés
   const getFilteredResponses = () => {
-    if (!selectedPaths.length) return responses;
-    
-    // Créer un ensemble des combinaisons questionId-answer pour chaque parcours sélectionné
-    const selectedSegments = new Set<string>();
-    
-    selectedPaths.forEach(path => {
-      path.forEach(segment => {
-        selectedSegments.add(`${segment.questionId}-${segment.answer}`);
-      });
-    });
-    
-    // Filtrer les réponses qui contiennent ces segments
+    if (!selectedPaths || selectedPaths.length === 0) {
+      return responses;
+    }
+
+    // Filtrer les réponses qui suivent au moins un des chemins sélectionnés
     return responses.filter(response => {
-      // Vérifier si cette réponse suit l'un des parcours sélectionnés
-      // Une réponse correspond si elle contient TOUS les segments d'UN des parcours sélectionnés
+      // Pour chaque chemin sélectionné
       return selectedPaths.some(path => {
-        // Tous les segments du parcours doivent être présents dans la réponse
+        // Vérifier si cette réponse suit ce chemin (toutes les étapes du chemin)
         return path.every(segment => {
-          return response.answers.some((answer: any) => 
-            answer.questionId === segment.questionId && 
-            answer.answer === segment.answer
+          // Chercher la réponse correspondante à cette question
+          const answer = response.answers.find((a: { questionId: string; answer: string }) => 
+            a.questionId === segment.questionId
           );
+          // Si la réponse existe et correspond à la valeur attendue
+          return answer && answer.answer === segment.answer;
         });
       });
     });

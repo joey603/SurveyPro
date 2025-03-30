@@ -472,6 +472,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     demographic: {},
     answers: {}
   });
+  const [isPathFiltered, setIsPathFiltered] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<Filters | undefined>(undefined);
 
   // Ajouter en début de composant
   console.log("RENDU DU COMPOSANT - État initial:", {
@@ -1312,13 +1314,19 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     console.log("Ce sondage n'est pas dynamique - l'onglet d'analyse des parcours ne sera pas pertinent");
   }
 
-  // Modifier la fonction handlePathFilterChange pour qu'elle synchronise avec les questions
+  // Mettre à jour handlePathFilterChange pour utiliser les réponses filtrées
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    setPathFilterActive(isFiltered);
+    console.log("Path filter changed:", isFiltered, "filtered responses:", filteredResps.length);
+    
+    // Mettre à jour l'état des réponses filtrées
+    setFilteredResponses(isFiltered ? filteredResps : responses);
+    
+    // Mettre à jour l'état de filtrage
+    setIsPathFiltered(isFiltered);
+    
+    // Réinitialiser les filtres avancés si nécessaire
     if (isFiltered) {
-      setFilteredPathResponses(filteredResps);
-    } else {
-      setFilteredPathResponses([]);
+      setAppliedFilters(undefined);
     }
   };
   
