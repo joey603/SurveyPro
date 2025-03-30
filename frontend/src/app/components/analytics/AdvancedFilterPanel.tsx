@@ -98,15 +98,19 @@ interface Filters {
 interface AdvancedFilterPanelProps {
   survey: Survey;
   responses: SurveyResponse[];
-  onApplyFilters: (filteredResponses: SurveyResponse[]) => void;
+  onApplyFilters: (filteredResponses: SurveyResponse[], appliedFilters?: Filters) => void;
   pathFilterActive?: boolean;
+  onResetFilters: () => void;
+  initialFilters?: Filters;
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   survey,
   responses,
   onApplyFilters,
-  pathFilterActive = false
+  pathFilterActive = false,
+  onResetFilters,
+  initialFilters
 }) => {
   // Ajouter cette ligne au début du composant pour éviter l'erreur
   const surveyWithQuestions = {
@@ -115,7 +119,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   };
 
   // États
-  const [filters, setFilters] = useState<Filters>({
+  const [filters, setFilters] = useState<Filters>(initialFilters || {
     demographic: {},
     answers: {}
   });
@@ -130,6 +134,13 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     educationLevels: [] as string[],
     cities: [] as string[]
   });
+
+  // IMPORTANT: Mettre à jour les filtres quand initialFilters change
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
 
   // Trouver les ID des questions qui ont des réponses dans les données filtrées
   const questionIdsWithResponses = useMemo(() => {
@@ -391,11 +402,14 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   };
 
   const handleClearFilters = () => {
+    // Appeler la fonction de réinitialisation du parent
+    onResetFilters();
+    
+    // Réinitialiser l'état local
     setFilters({
       demographic: {},
       answers: {}
     });
-    setAgeRange([0, 100]);
   };
 
   const handleApplyFilters = useCallback(() => {
@@ -542,9 +556,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     
     console.log("Filtered responses:", filteredResponses.length);
     
-    // Toujours appliquer les filtres, même si le tableau est vide
-    onApplyFilters(filteredResponses);
+    // Passer également les filtres actuels pour que SurveyAnalytics puisse les conserver
+    onApplyFilters(filteredResponses, filters);
 
+    // Ne pas modifier l'état des filtres ici!
+    
     if (filteredResponses.length === 0) {
       console.log("Aucune réponse ne correspond aux filtres, affichage d'un tableau vide");
     }

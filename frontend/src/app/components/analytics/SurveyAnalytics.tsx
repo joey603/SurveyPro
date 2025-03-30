@@ -464,6 +464,31 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const [showPrivateLink, setShowPrivateLink] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [filteredPathResponses, setFilteredPathResponses] = useState<SurveyResponse[]>([]);
+  const [currentFilters, setCurrentFilters] = useState<Filters>({
+    demographic: {},
+    answers: {}
+  });
+  const [persistentFilters, setPersistentFilters] = useState<Filters>({
+    demographic: {},
+    answers: {}
+  });
+
+  // Ajouter en début de composant
+  console.log("RENDU DU COMPOSANT - État initial:", {
+    responsesLength: responses.length,
+    filteredResponsesLength: filteredResponses.length,
+    filterState: filters
+  });
+
+  // Ajouter un useEffect pour suivre les changements d'état
+  useEffect(() => {
+    console.log("CHANGEMENT D'ÉTAT DE FILTRAGE:", filters);
+  }, [filters]);
+
+  // Ajouter un useEffect pour suivre les changements de filteredResponses
+  useEffect(() => {
+    console.log("CHANGEMENT DES RÉPONSES FILTRÉES:", filteredResponses.length);
+  }, [filteredResponses]);
 
   // Charger les réponses au montage du composant
   useEffect(() => {
@@ -1201,26 +1226,17 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return undefined;
   };
 
-  // Modifier la fonction handleAdvancedFilterApply pour mieux gérer les règles de filtrage
+  // Modifier la fonction handleAdvancedFilterApply pour qu'elle accepte un paramètre optionnel
   const handleAdvancedFilterApply = (filteredResps: SurveyResponse[], appliedFilters?: Filters) => {
-    console.log("Applying advanced filters:", appliedFilters);
-    
-    // Désactiver le filtre de parcours si on applique un filtre avancé
-    if (pathFilterActive) {
-      setPathFilterActive(false); 
-    }
-    
-    // Mettre à jour l'état des filtres si disponible
-    if (appliedFilters) {
-      setFilters(appliedFilters);
-    }
-    
-    // Mettre à jour les réponses filtrées, mais pas les réponses originales
     setFilteredResponses(filteredResps);
-    setFilteredPathResponses(filteredResps);
     
-    // Toujours comparer avec les réponses originales pour montrer le badge
-    console.log("Filtres avancés appliqués:", filteredResps.length, "réponses filtrées sur", responses.length, "originales");
+    // Sauvegarder les filtres appliqués s'ils sont fournis
+    if (appliedFilters) {
+      setPersistentFilters(appliedFilters);
+    }
+    
+    // IMPORTANT: Ne pas masquer le panneau de filtres ici
+    // setShowFilters(false); - Supprimer cette ligne ou la mettre en commentaire
   };
 
   // Ajouter ces nouvelles fonctions de gestionnaire
@@ -1345,28 +1361,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
   };
 
-  // Ajoutez une fonction pour réinitialiser les filtres
+  // Fonction pour réinitialiser les filtres
   const handleResetFilters = () => {
-    // Réinitialiser tous les filtres
-    if (pathFilterActive) {
-      const pathFilterContext = usePathFilter();
-      pathFilterContext.clearPathFilter();
-    }
-    
-    // IMPORTANT: Restaurer les réponses originales
     setFilteredResponses(responses);
-    
-    // Réinitialiser les états de filtre
-    setFilters({
+    setPersistentFilters({
       demographic: {},
       answers: {}
     });
-    
-    // Réinitialiser les autres états liés au filtrage
-    setPathFilterActive(false);
-    setFilteredPathResponses([]);
-    
-    console.log("Tous les filtres ont été réinitialisés - retour aux données d'origine:", responses.length, "réponses");
   };
 
   return (
@@ -1402,10 +1403,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             variant={showFilters ? "contained" : "outlined"}
             startIcon={showFilters ? <ClearIcon /> : <FilterListIcon />}
             onClick={() => {
-              if (showFilters) {
-                // Si on ferme le panneau, réinitialiser les filtres
-                handleResetFilters();
-              }
+              
               setShowFilters(!showFilters);
             }}
             sx={{
@@ -1417,14 +1415,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           >
             {showFilters ? "Hide Filters" : "Filters"}
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<ClearIcon />}
-            onClick={handleResetFilters}
-            sx={{ mr: 1 }}
-          >
-            Reset Filters
-          </Button>
+          
         </Box>
       </Box>
 
@@ -1485,15 +1476,19 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${filteredResponses.length}`} // Clé unique pour forcer le rafraîchissement
+                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${filteredResponses.length}`}
                   survey={{
                     ...survey,
                     questions: getQuestionsToDisplay(),
                     isDynamic: survey.isDynamic || false
                   }}
-                  responses={filteredResponses} // Toujours utiliser filteredResponses pour cohérence
-                  onApplyFilters={handleAdvancedFilterApply}
+                  responses={pathFilterActive ? filteredResponses : responses}
+                  onApplyFilters={(filteredResps, appliedFilters) => {
+                    handleAdvancedFilterApply(filteredResps, appliedFilters || persistentFilters);
+                  }}
                   pathFilterActive={pathFilterActive}
+                  onResetFilters={handleResetFilters}
+                  initialFilters={persistentFilters}
                 />
               </Grid>
             )}
