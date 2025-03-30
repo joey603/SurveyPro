@@ -1490,13 +1490,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     questions: getQuestionsToDisplay(),
                     isDynamic: survey.isDynamic || false
                   }}
-                  responses={pathFilterActive ? filteredResponses : responses}
+                  responses={isPathFiltered ? filteredResponses : responses}
                   onApplyFilters={(filteredResps, appliedFilters) => {
                     handleAdvancedFilterApply(filteredResps, appliedFilters || persistentFilters);
                   }}
-                  pathFilterActive={pathFilterActive}
+                  pathFilterActive={isPathFiltered}
                   onResetFilters={handleResetFilters}
-                  initialFilters={persistentFilters}
+                  initialFilters={appliedFilters}
+                  selectedPaths={selectedPaths}
                 />
               </Grid>
             )}

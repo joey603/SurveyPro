@@ -30,6 +30,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { calculateAge } from '@/utils/dateUtils';
+import { PathSegment } from './PathTreeVisualizer';
 
 // Types
 interface Question {
@@ -102,6 +103,7 @@ interface AdvancedFilterPanelProps {
   pathFilterActive?: boolean;
   onResetFilters: () => void;
   initialFilters?: Filters;
+  selectedPaths?: PathSegment[][];
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
@@ -110,7 +112,8 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   onApplyFilters,
   pathFilterActive = false,
   onResetFilters,
-  initialFilters
+  initialFilters,
+  selectedPaths = []
 }) => {
   // Ajouter cette ligne au début du composant pour éviter l'erreur
   const surveyWithQuestions = {
@@ -153,17 +156,33 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     return ids;
   }, [responses]);
 
+  // Obtenir tous les ID de questions qui sont dans les chemins sélectionnés
+  const selectedPathQuestionIds = useMemo(() => {
+    if (!selectedPaths || selectedPaths.length === 0) return new Set<string>();
+    
+    const questionIds = new Set<string>();
+    selectedPaths.forEach(path => {
+      path.forEach(segment => {
+        questionIds.add(segment.questionId);
+      });
+    });
+    return questionIds;
+  }, [selectedPaths]);
+
   // Filtrer les questions à afficher dans les filtres
   const questionsToShow = useMemo(() => {
-    if (pathFilterActive) {
-      // Si le filtre de parcours est activé, afficher uniquement les questions 
-      // qui ont des réponses dans les données filtrées
+    if (pathFilterActive && selectedPaths && selectedPaths.length > 0) {
+      // Afficher uniquement les questions qui font partie des chemins sélectionnés
+      return surveyWithQuestions.questions.filter(q => selectedPathQuestionIds.has(q.id));
+    } else if (pathFilterActive) {
+      // Si le filtre de parcours est activé mais aucun chemin n'est sélectionné,
+      // afficher uniquement les questions qui ont des réponses dans les données filtrées
       return surveyWithQuestions.questions.filter(q => questionIdsWithResponses.has(q.id));
     } else {
       // Sinon, afficher toutes les questions
       return surveyWithQuestions.questions;
     }
-  }, [surveyWithQuestions.questions, questionIdsWithResponses, pathFilterActive]);
+  }, [surveyWithQuestions.questions, questionIdsWithResponses, pathFilterActive, selectedPaths, selectedPathQuestionIds]);
 
   // Effet pour extraire les villes uniques des réponses
   React.useEffect(() => {
