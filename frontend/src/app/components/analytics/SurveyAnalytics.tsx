@@ -1238,6 +1238,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // Sauvegarder les filtres appliqués s'ils sont fournis
     if (appliedFilters) {
       setPersistentFilters(appliedFilters);
+      setAppliedFilters(appliedFilters); // Mettre à jour également appliedFilters
     }
     
     // IMPORTANT: Ne pas masquer le panneau de filtres ici
@@ -1379,6 +1380,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       demographic: {},
       answers: {}
     });
+    setAppliedFilters(undefined); // Réinitialiser également appliedFilters
   };
 
   return (

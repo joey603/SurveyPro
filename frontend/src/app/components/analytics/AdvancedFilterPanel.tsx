@@ -130,7 +130,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [tempRule, setTempRule] = useState<FilterRule>({ operator: 'equals', value: null });
   const [ageRange, setAgeRange] = useState<[number, number]>([0, 100]);
-  const [activeTab, setActiveTab] = useState(1);
+  const [activeTab, setActiveTab] = useState(0);
   const [cities, setCities] = useState<string[]>([]);
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     genders: [] as string[],
@@ -797,7 +797,8 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 display: 'flex', 
                 flexWrap: 'wrap', 
                 gap: 1,
-                mt: 2
+                mt: 2,
+                minHeight: '40px' // Ajout d'une hauteur minimale pour garantir la visibilité
               }}>
                 {filters.demographic.gender && (
                   <Chip
@@ -883,15 +884,6 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                       }
                     }}
                   />
-                )}
-                
-                {!filters.demographic.gender && 
-                 !filters.demographic.educationLevel && 
-                 !filters.demographic.city && 
-                 !filters.demographic.age && (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No active demographic filter.
-                  </Typography>
                 )}
               </Box>
             </Box>
