@@ -104,6 +104,8 @@ interface AdvancedFilterPanelProps {
   onResetFilters: () => void;
   initialFilters?: Filters;
   selectedPaths?: PathSegment[][];
+  activeTab: number;
+  onTabChange: (newValue: number) => void;
 }
 
 export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
@@ -113,7 +115,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   pathFilterActive = false,
   onResetFilters,
   initialFilters,
-  selectedPaths = []
+  selectedPaths = [],
+  activeTab,
+  onTabChange
 }) => {
   // Ajouter cette ligne au début du composant pour éviter l'erreur
   const surveyWithQuestions = {
@@ -130,7 +134,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [tempRule, setTempRule] = useState<FilterRule>({ operator: 'equals', value: null });
   const [ageRange, setAgeRange] = useState<[number, number]>([0, 100]);
-  const [activeTab, setActiveTab] = useState(0);
+  const [lastActiveTab, setLastActiveTab] = useState(0);
   const [cities, setCities] = useState<string[]>([]);
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     genders: [] as string[],
@@ -140,8 +144,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   // Ajouter un useEffect pour appliquer automatiquement les filtres quand ils changent
   useEffect(() => {
-    handleApplyFilters();
-  }, [filters]);
+    // Ne pas appliquer les filtres si le dialogue est ouvert
+    if (!answerFilterDialogOpen) {
+      handleApplyFilters();
+    }
+  }, [filters, answerFilterDialogOpen]);
 
   // IMPORTANT: Mettre à jour les filtres quand initialFilters change
   useEffect(() => {
@@ -176,18 +183,60 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   // Filtrer les questions à afficher dans les filtres
   const questionsToShow = useMemo(() => {
+    // D'abord, filtrer les réponses en fonction des filtres démographiques actifs
+    const demographicallyFilteredResponses = responses.filter(response => {
+      if (filters.demographic.gender && 
+          response.respondent?.demographic?.gender !== filters.demographic.gender) {
+        return false;
+      }
+      
+      if (filters.demographic.educationLevel && 
+          response.respondent?.demographic?.educationLevel !== filters.demographic.educationLevel) {
+        return false;
+      }
+      
+      if (filters.demographic.city && 
+          response.respondent?.demographic?.city !== filters.demographic.city) {
+        return false;
+      }
+      
+      if (filters.demographic.age && response.respondent?.demographic?.dateOfBirth) {
+        try {
+          const birthDate = new Date(response.respondent.demographic.dateOfBirth);
+          const age = calculateAge(birthDate);
+          if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
+            return false;
+          }
+        } catch (error) {
+          console.error("Error calculating age:", error);
+          return false;
+        }
+      }
+      
+      return true;
+    });
+
+    // Créer un Set des IDs de questions qui ont des réponses dans les données filtrées démographiquement
+    const demographicallyFilteredQuestionIds = new Set<string>();
+    demographicallyFilteredResponses.forEach(response => {
+      response.answers.forEach(answer => {
+        demographicallyFilteredQuestionIds.add(answer.questionId);
+      });
+    });
+
+    // Appliquer les filtres de chemin si nécessaire
     if (pathFilterActive && selectedPaths && selectedPaths.length > 0) {
-      // Afficher uniquement les questions qui font partie des chemins sélectionnés
-      return surveyWithQuestions.questions.filter(q => selectedPathQuestionIds.has(q.id));
+      return surveyWithQuestions.questions.filter(q => 
+        selectedPathQuestionIds.has(q.id) && demographicallyFilteredQuestionIds.has(q.id)
+      );
     } else if (pathFilterActive) {
-      // Si le filtre de parcours est activé mais aucun chemin n'est sélectionné,
-      // afficher uniquement les questions qui ont des réponses dans les données filtrées
-      return surveyWithQuestions.questions.filter(q => questionIdsWithResponses.has(q.id));
+      return surveyWithQuestions.questions.filter(q => 
+        questionIdsWithResponses.has(q.id) && demographicallyFilteredQuestionIds.has(q.id)
+      );
     } else {
-      // Sinon, afficher toutes les questions
-      return surveyWithQuestions.questions;
+      return surveyWithQuestions.questions.filter(q => demographicallyFilteredQuestionIds.has(q.id));
     }
-  }, [surveyWithQuestions.questions, questionIdsWithResponses, pathFilterActive, selectedPaths, selectedPathQuestionIds]);
+  }, [surveyWithQuestions.questions, questionIdsWithResponses, pathFilterActive, selectedPaths, selectedPathQuestionIds, filters.demographic, responses, calculateAge]);
 
   // Effet pour extraire les villes uniques des réponses
   React.useEffect(() => {
@@ -357,7 +406,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   // Gestionnaires d'événements
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
+    onTabChange(newValue);
   };
 
   const handleOpenAnswerFilterDialog = (questionId: string) => {
@@ -409,7 +458,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
       return newFilters;
     });
     
-    handleCloseAnswerFilterDialog();
+    // Fermer le dialogue sans changer l'onglet actif
+    setAnswerFilterDialogOpen(false);
+    setSelectedQuestionId(null);
+    setTempRule({ operator: 'equals', value: null });
   };
 
   const handleRemoveRule = (questionId: string, ruleIndex: number) => {
@@ -757,7 +809,6 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                       onChange={(_event, newValue) => {
                         const ageValue = newValue as [number, number];
                         setAgeRange(ageValue);
-                        // Toujours définir la valeur de l'âge, même si elle est [0, 100]
                         setFilters(prev => ({
                           ...prev,
                           demographic: { 
@@ -803,7 +854,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 flexWrap: 'wrap', 
                 gap: 1,
                 mt: 2,
-                minHeight: '40px' // Ajout d'une hauteur minimale pour garantir la visibilité
+                minHeight: '40px'
               }}>
                 {filters.demographic.gender && (
                   <Chip
@@ -929,19 +980,15 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               }}>
                 {Object.entries(filters.answers).map(([questionId, rules]) => {
                   const question = getQuestionsToDisplay().find(q => q.id === questionId);
-                  // Utiliser un Set pour suivre les règles déjà affichées et éviter les doublons
                   const displayedRules = new Set();
                   
                   return rules.map((rule, ruleIndex) => {
-                    // Créer une clé unique pour cette règle
                     const ruleKey = `${rule.operator}-${rule.value}-${rule.secondValue || ''}`;
                     
-                    // Si cette règle a déjà été affichée, ne pas la réafficher
                     if (displayedRules.has(ruleKey)) {
                       return null;
                     }
                     
-                    // Marquer cette règle comme affichée
                     displayedRules.add(ruleKey);
                     
                     return (
@@ -952,7 +999,6 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         }`}
                         onDelete={() => {
                           handleRemoveRule(questionId, ruleIndex);
-                          handleApplyFilters();
                         }}
                         sx={{
                           backgroundColor: 'rgba(102, 126, 234, 0.08)',
@@ -971,7 +1017,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         }}
                       />
                     );
-                  }).filter(Boolean); // Filtrer les éléments null
+                  }).filter(Boolean);
                 })}
               </Box>
             ) : (
@@ -999,25 +1045,17 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           >
             Reset 
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleApplyFilters}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              }
-            }}
-          >
-            Apply Filters
-          </Button>
         </Box>
       </Paper>
 
       {/* Dialogue pour ajouter un filtre de réponse */}
       <Dialog
         open={answerFilterDialogOpen}
-        onClose={handleCloseAnswerFilterDialog}
+        onClose={(event, reason) => {
+          if (reason !== 'backdropClick' && reason !== 'escapeKeyDown') {
+            handleCloseAnswerFilterDialog();
+          }
+        }}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -1032,7 +1070,13 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
           color: 'white'
         }}>
           Add Answer Filter
-          <IconButton onClick={handleCloseAnswerFilterDialog} sx={{ color: 'white' }}>
+          <IconButton 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }} 
+            sx={{ color: 'white' }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>

@@ -1503,6 +1503,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   onResetFilters={handleResetFilters}
                   initialFilters={appliedFilters}
                   selectedPaths={selectedPaths}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
                 />
               </Grid>
             )}
