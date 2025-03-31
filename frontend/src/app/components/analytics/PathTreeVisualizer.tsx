@@ -1163,6 +1163,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setMultipleTreeNodes([]);
       setMultipleTreeEdges([]);
       updateVisibleElements(false);
+      // Ne pas réinitialiser les filtres, juste mettre à jour l'affichage
       if (onFilterChange) {
         onFilterChange(false, responses);
       }
