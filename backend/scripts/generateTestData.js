@@ -406,7 +406,7 @@ const generateRandomAnswers = async (users, surveys) => {
           respondent: {
             userId: user._id,
             demographic: {
-              gender: Math.random() > 0.5 ? 'Homme' : 'Femme',
+              gender: Math.random() > 0.5 ? 'Male' : 'Female',
               dateOfBirth: birthDate,
               educationLevel: ['Baccalauréat', 'Master', 'Doctorat'][Math.floor(Math.random() * 3)],
               city: ['Paris', 'Lyon', 'Marseille', 'Bordeaux'][Math.floor(Math.random() * 4)]
@@ -447,7 +447,7 @@ const generateRandomAnswers = async (users, surveys) => {
               respondent: {
                 userId: user._id,
                 demographic: {
-                  gender: Math.random() > 0.5 ? 'Homme' : 'Femme',
+                  gender: Math.random() > 0.5 ? 'Male' : 'Female',
                   dateOfBirth: birthDate,
                   educationLevel: ['Baccalauréat', 'Master', 'Doctorat'][Math.floor(Math.random() * 3)],
                   city: ['Paris', 'Lyon', 'Marseille', 'Bordeaux'][Math.floor(Math.random() * 4)]
