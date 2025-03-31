@@ -1486,11 +1486,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   };
   
   const handlePathSelect = (path: PathSegment[]) => {
-    console.log("Path selected:", path);
-    
+    // Si le filtre est appliqué, ne rien faire
     if (filterApplied) {
-      setFilterApplied(false);
+      return;
     }
+
+    console.log("Path selected:", path);
     
     onPathSelect(path);
     
@@ -1530,9 +1531,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         );
         
         return {
-        ...node,
-        data: {
-          ...node.data,
+          ...node,
+          data: {
+            ...node.data,
             selectedPaths: newSelectedPaths,
             isSelected: isInAnyPath,
             highlightColor: questionColors.get(nodeQuestionId) || node.data.highlightColor,
@@ -2125,41 +2126,36 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   )
                 );
                 
-                    const pathColorIndex = selectedPathIndex !== -1 
-                      ? selectedPathIndex 
-                      : selectedPaths.length % HIGHLIGHT_COLORS.length;
+                const pathColorIndex = selectedPathIndex !== -1 
+                  ? selectedPathIndex 
+                  : selectedPaths.length % HIGHLIGHT_COLORS.length;
                     
-                    const pathColor = selectedPathIndex !== -1 
+                const pathColor = selectedPathIndex !== -1 
                   ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
-                      : 'rgba(102, 126, 234, 0.7)';
+                  : 'rgba(102, 126, 234, 0.7)';
                 
                 const backgroundColor = isSelected 
-                      ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
+                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
                   : 'background.paper';
-                
+
                 return (
-                <Box 
-                  key={index}
-                  sx={{
-                        p: 1.5,
-                        mb: 1.5,
-                    border: '1px solid',
-                        borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
-                        borderRadius: '12px',
-                      backgroundColor: backgroundColor,
-                    cursor: 'pointer',
-                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                    '&:hover': {
-                        backgroundColor: isSelected 
-                            ? `${HIGHLIGHT_COLORS[pathColorIndex % HIGHLIGHT_COLORS.length]}20`
-                            : 'rgba(102, 126, 234, 0.04)',
-                          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
-                          transform: 'scale(1.02)'
-                        },
-                        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        boxShadow: isSelected 
-                          ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
-                          : '0 2px 8px rgba(0, 0, 0, 0.02)'
+                  <Box
+                    key={index}
+                    sx={{
+                      p: 2,
+                      mb: 1,
+                      borderRadius: 2,
+                      backgroundColor,
+                      border: `1px solid ${pathColor}`,
+                      cursor: filterApplied ? 'default' : 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: filterApplied ? backgroundColor : `${pathColor}15`,
+                        transform: filterApplied ? 'none' : 'translateY(-1px)',
+                        boxShadow: filterApplied ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      },
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onClick={() => handlePathSelect(pathItem.path)}
                   >
