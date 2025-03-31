@@ -180,33 +180,67 @@ const pieOptions = {
 // Colors for charts
 const chartColors = {
   backgrounds: [
-    'rgba(102, 126, 234, 0.6)', // Bleu
-    'rgba(118, 75, 162, 0.6)', // Violet
-    'rgba(75, 192, 192, 0.6)', // Turquoise
-    'rgba(255, 159, 64, 0.6)', // Orange
-    'rgba(255, 99, 132, 0.6)', // Rose
-    'rgba(54, 162, 235, 0.6)', // Bleu clair
-    'rgba(153, 102, 255, 0.6)', // Violet clair
-    'rgba(255, 206, 86, 0.6)', // Jaune
-    'rgba(75, 192, 192, 0.6)', // Vert
-    'rgba(255, 99, 132, 0.6)', // Rouge
+    'rgba(102, 126, 234, 0.6)',
+    'rgba(118, 75, 162, 0.6)',
+    'rgba(75, 192, 192, 0.6)',
+    'rgba(255, 159, 64, 0.6)',
+    'rgba(255, 99, 132, 0.6)',
   ],
   borders: [
-    'rgba(102, 126, 234, 1)', // Bleu
-    'rgba(118, 75, 162, 1)', // Violet
-    'rgba(75, 192, 192, 1)', // Turquoise
-    'rgba(255, 159, 64, 1)', // Orange
-    'rgba(255, 99, 132, 1)', // Rose
-    'rgba(54, 162, 235, 1)', // Bleu clair
-    'rgba(153, 102, 255, 1)', // Violet clair
-    'rgba(255, 206, 86, 1)', // Jaune
-    'rgba(75, 192, 192, 1)', // Vert
-    'rgba(255, 99, 132, 1)', // Rouge
+    'rgba(102, 126, 234, 1)',
+    'rgba(118, 75, 162, 1)',
+    'rgba(75, 192, 192, 1)',
+    'rgba(255, 159, 64, 1)',
+    'rgba(255, 99, 132, 1)',
   ]
 };
 
 // Nombre d'éléments à afficher dans la vue tronquée
 const MAX_DISPLAYED_ITEMS = 5;
+
+// Fonction utilitaire pour générer des couleurs distinctes
+const generateDistinctColors = (count: number) => {
+  const colors = [];
+  
+  // Palette de couleurs de base
+  const baseColors = [
+    { h: 234, s: 60, l: 60 }, // Bleu (#667eea)
+    { h: 271, s: 60, l: 60 }, // Violet (#764ba2)
+    { h: 142, s: 60, l: 60 }, // Vert (#4caf50)
+    { h: 24, s: 60, l: 60 },  // Orange (#ff9800)
+    { h: 340, s: 60, l: 60 }, // Rose (#e91e63)
+    { h: 187, s: 60, l: 60 }, // Cyan (#00bcd4)
+    { h: 45, s: 60, l: 60 },  // Jaune (#ffc107)
+    { h: 326, s: 60, l: 60 }, // Magenta (#e91e63)
+    { h: 162, s: 60, l: 60 }, // Turquoise (#009688)
+    { h: 355, s: 60, l: 60 }, // Rouge (#f44336)
+  ];
+  
+  // Si nous avons besoin de plus de couleurs que la palette de base
+  if (count > baseColors.length) {
+    // Générer des couleurs supplémentaires en variant la teinte
+    for (let i = 0; i < count; i++) {
+      const hue = (i * 360 / count) % 360;
+      const saturation = 60 + (i % 10); // Légère variation de saturation
+      const lightness = 60 + (i % 10);  // Légère variation de luminosité
+      
+      colors.push({
+        backgroundColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 0.6)`,
+        borderColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 1)`
+      });
+    }
+  } else {
+    // Utiliser la palette de base
+    baseColors.slice(0, count).forEach(color => {
+      colors.push({
+        backgroundColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.6)`,
+        borderColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 1)`
+      });
+    });
+  }
+  
+  return colors;
+};
 
 export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   survey,
@@ -336,19 +370,22 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Sort ages for consistent color assignment
     const sortedAges = Object.keys(truncatedAges).sort((a, b) => parseInt(a) - parseInt(b));
     
+    // Générer des couleurs distinctes pour chaque âge
+    const colors = generateDistinctColors(sortedAges.length);
+    
     const datasets = sortedAges.map((age, index) => ({
       label: `${age} years`,
       data: [{
         x: parseInt(age),
         y: truncatedAges[age]
       }],
-      backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
-      borderColor: chartColors.borders[index % chartColors.borders.length],
+      backgroundColor: colors[index].backgroundColor,
+      borderColor: colors[index].borderColor,
       borderWidth: 2,
       pointRadius: fullSize ? 10 : 8,
       pointHoverRadius: fullSize ? 12 : 10,
-      hoverBackgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length].replace('0.6', '0.8'),
-      hoverBorderColor: chartColors.borders[index % chartColors.borders.length].replace('1)', '1.5)'),
+      hoverBackgroundColor: colors[index].backgroundColor.replace('0.6', '0.8'),
+      hoverBorderColor: colors[index].borderColor.replace('1)', '1.5)'),
       hoverBorderWidth: 3,
       fill: false
     }));
@@ -538,15 +575,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Appliquer la troncature si nécessaire
     const { data: truncatedCities, isTruncated, total, allData } = truncateData(stats.city);
     
+    // Générer des couleurs distinctes pour chaque ville
+    const colors = generateDistinctColors(Object.keys(fullSize ? stats.city : truncatedCities).length);
+    
     const chartData = {
       labels: Object.keys(fullSize ? stats.city : truncatedCities),
-      datasets: Object.entries(fullSize ? stats.city : truncatedCities).map(([city, count], index) => ({
-        label: city,
-        data: [count],
-        backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
-        borderColor: chartColors.borders[index % chartColors.borders.length],
-        borderWidth: 1
-      }))
+      datasets: [{
+        data: Object.values(fullSize ? stats.city : truncatedCities),
+        backgroundColor: colors.map(c => c.backgroundColor),
+        borderColor: colors.map(c => c.borderColor),
+        borderWidth: 1,
+        hoverBackgroundColor: colors.map(c => c.backgroundColor.replace('0.6', '0.8')),
+        hoverBorderColor: colors.map(c => c.borderColor.replace('1)', '1.5)')),
+        hoverBorderWidth: 3
+      }]
     };
     
     return (
@@ -850,16 +892,15 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     
     const chartData = {
       labels: Object.keys(fullSize ? stats.education : truncatedEducation),
-      datasets: Object.entries(fullSize ? stats.education : truncatedEducation).map(([education, count], index) => ({
-        label: education,
-        data: [count],
-        backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
-        borderColor: chartColors.borders[index % chartColors.borders.length],
+      datasets: [{
+        data: Object.values(fullSize ? stats.education : truncatedEducation),
+        backgroundColor: chartColors.backgrounds,
+        borderColor: chartColors.borders,
         borderWidth: 1,
-        hoverBackgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length].replace('0.6', '0.8'),
-        hoverBorderColor: chartColors.borders[index % chartColors.borders.length].replace('1)', '1.5)'),
+        hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
+        hoverBorderColor: chartColors.borders,
         hoverBorderWidth: 2,
-      }))
+      }]
     };
     
     return (
