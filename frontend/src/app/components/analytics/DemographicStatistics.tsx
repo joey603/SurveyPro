@@ -1386,14 +1386,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="h6" sx={{ 
+          <Box component="span" sx={{ 
             fontWeight: 'bold',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
           }}>
             {currentTitle}
-          </Typography>
+          </Box>
           <IconButton edge="end" color="inherit" onClick={handleCloseDialog} aria-label="close">
             <CloseIcon />
           </IconButton>
