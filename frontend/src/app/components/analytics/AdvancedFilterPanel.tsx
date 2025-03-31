@@ -138,6 +138,11 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     cities: [] as string[]
   });
 
+  // Ajouter un useEffect pour appliquer automatiquement les filtres quand ils changent
+  useEffect(() => {
+    handleApplyFilters();
+  }, [filters]);
+
   // IMPORTANT: Mettre à jour les filtres quand initialFilters change
   useEffect(() => {
     if (initialFilters) {
@@ -803,10 +808,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 {filters.demographic.gender && (
                   <Chip
                     label={`Gender: ${filters.demographic.gender === 'male' ? 'Male' : filters.demographic.gender === 'female' ? 'Female' : 'Other'}`}
-                    onDelete={() => setFilters(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, gender: undefined }
-                    }))}
+                    onDelete={() => {
+                      setFilters(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, gender: undefined }
+                      }));
+                    }}
                     sx={{
                       backgroundColor: 'rgba(102, 126, 234, 0.08)',
                       color: '#667eea',
@@ -829,10 +836,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                       filters.demographic.educationLevel === 'other' ? 'Other' :
                       filters.demographic.educationLevel
                     }`}
-                    onDelete={() => setFilters(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, educationLevel: undefined }
-                    }))}
+                    onDelete={() => {
+                      setFilters(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, educationLevel: undefined }
+                      }));
+                    }}
                     sx={{
                       backgroundColor: 'rgba(102, 126, 234, 0.08)',
                       color: '#667eea',
@@ -848,10 +857,12 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 {filters.demographic.city && (
                   <Chip
                     label={`City: ${filters.demographic.city}`}
-                    onDelete={() => setFilters(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, city: undefined }
-                    }))}
+                    onDelete={() => {
+                      setFilters(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, city: undefined }
+                      }));
+                    }}
                     sx={{
                       backgroundColor: 'rgba(102, 126, 234, 0.08)',
                       color: '#667eea',
@@ -939,7 +950,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         label={`${question?.text || 'Question'}: ${getOperatorLabel(rule.operator)} ${formatFilterValue(rule.value)}${
                           rule.secondValue ? ` - ${formatFilterValue(rule.secondValue)}` : ''
                         }`}
-                        onDelete={() => handleRemoveRule(questionId, ruleIndex)}
+                        onDelete={() => {
+                          handleRemoveRule(questionId, ruleIndex);
+                          handleApplyFilters();
+                        }}
                         sx={{
                           backgroundColor: 'rgba(102, 126, 234, 0.08)',
                           color: '#667eea',
