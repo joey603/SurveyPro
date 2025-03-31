@@ -32,7 +32,7 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions
+  CardActions,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -60,6 +60,7 @@ import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import axios from 'axios';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import LockIcon from '@mui/icons-material/Lock';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -98,6 +99,7 @@ interface Survey {
   nodes?: any[];
   edges?: any[];
   userId?: { username: string };
+  isPrivate?: boolean;
 }
 
 interface DemographicData {
@@ -246,9 +248,33 @@ const SurveyAnswerPage: React.FC = () => {
           throw new Error('Aucun token d\'authentification trouvé');
         }
 
+        // Vérifier d'abord s'il y a un ID de survey dans l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSurveyId = urlParams.get('surveyId');
+
         // Charger tous les sondages
         const allSurveys = await fetchAvailableSurveys(token);
         console.log('Sondages chargés:', allSurveys);
+        
+        if (sharedSurveyId) {
+          // Si on a un ID dans l'URL, chercher ce sondage spécifique
+          const sharedSurvey = allSurveys.find(
+            (survey: { _id: string }) => survey._id === sharedSurveyId
+          );
+          
+          if (sharedSurvey) {
+            // Si c'est un sondage privé ou public, l'afficher directement
+            setSelectedSurvey(sharedSurvey);
+            setSurveys([sharedSurvey]); // Afficher uniquement ce sondage dans la liste
+          } else {
+            setError('Sondage non trouvé');
+          }
+        } else {
+          // Si pas d'ID dans l'URL, afficher uniquement les sondages publics
+          const publicSurveys = allSurveys.filter(survey => !survey.isPrivate);
+          setSurveys(publicSurveys);
+        }
+
         // Charger les IDs des sondages déjà répondus
         const answeredIds = await fetchAnsweredSurveys();
         if (Array.isArray(answeredIds)) {
@@ -256,19 +282,6 @@ const SurveyAnswerPage: React.FC = () => {
           console.log('Sondages répondus:', answeredIds);
         }
 
-        setSurveys(allSurveys);
-
-        // Vérifier s'il y a un ID de survey dans l'URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sharedSurveyId = urlParams.get('surveyId');
-        if (sharedSurveyId) {
-          const sharedSurvey = allSurveys.find(
-            (survey: { _id: string }) => survey._id === sharedSurveyId
-          );
-          if (sharedSurvey) {
-            setSelectedSurvey(sharedSurvey);
-          }
-        }
       } catch (error: any) {
         console.error('Erreur lors du chargement des sondages:', error);
         setError(error.message || 'Échec du chargement des sondages');
@@ -302,6 +315,15 @@ const SurveyAnswerPage: React.FC = () => {
 
   const filteredSurveys = surveys
     .filter(survey => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedSurveyId = urlParams.get('surveyId');
+
+      // Si on accède via un lien, ne montrer que ce sondage spécifique
+      if (sharedSurveyId) {
+        return survey._id === sharedSurveyId;
+      }
+
+      // Sinon, appliquer les filtres normaux pour les sondages publics
       const matchesSearch = (survey.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (survey.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
@@ -1603,6 +1625,15 @@ const SurveyAnswerPage: React.FC = () => {
     return (
       <Box sx={{ p: 3 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
+          {selectedSurvey.demographicEnabled && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Demographic informations
+              </Typography>
+              {renderDemographicFields()}
+            </Box>
+          )}
+
           {orderedNodes.map((node) => {
             const isVisible = shouldShowQuestion(node.id);
             const isCritical = isCriticalQuestion(node.id);
@@ -1863,6 +1894,23 @@ const SurveyAnswerPage: React.FC = () => {
                         >
                           {survey.title}
                         </Typography>
+                        {survey.isPrivate && (
+                          <Chip
+                            icon={<LockIcon sx={{ fontSize: '0.5rem' }} />}
+                            label="Private"
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              backgroundColor: 'rgba(0, 198, 212, 0.1)',
+                              color: '#00C6D4',
+                              '& .MuiChip-icon': {
+                                color: '#00C6D4'
+                              },
+                              height: '24px',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
                         {survey.isDynamic && (
                           <Chip
                             icon={<AutoGraphIcon />}
@@ -1996,15 +2044,6 @@ const SurveyAnswerPage: React.FC = () => {
                         <Chip
                           size="small"
                           label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
-                          sx={{
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            color: '#667eea',
-                            height: '24px'
-                          }}
-                        />
-                        <Chip
-                          size="small"
-                          label={`${survey.isDynamic ? surveyResponses[survey._id] || 0 : 0} responses`}
                           sx={{
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',

@@ -8,6 +8,7 @@ interface DynamicSurvey {
   demographicEnabled: boolean;
   nodes: any[];
   edges: any[];
+  isPrivate: boolean;
 }
 
 export const dynamicSurveyService = {

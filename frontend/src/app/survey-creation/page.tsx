@@ -24,6 +24,7 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  InputAdornment,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -45,6 +46,10 @@ import { colors } from '../../theme/colors';
 import Lottie from "lottie-react";
 import validationAnimation from "@/assets/animation-check.json";
 import { useRouter } from 'next/navigation';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SendIcon from '@mui/icons-material/Send';
 
 type Question = {
   id: string;
@@ -60,6 +65,7 @@ type FormData = {
   title: string;
   description: string;
   demographicEnabled: boolean;
+  isPrivate: boolean;
   questions: Question[];
 };
 
@@ -90,6 +96,62 @@ const educationOptions = [
   'Other',
 ];
 
+const validateFormData = (data: FormData) => {
+  const errors: {
+    title?: boolean;
+    description?: boolean;
+    questions: {
+      [key: string]: boolean | {
+        text?: boolean;
+        options?: { [key: number]: boolean }
+      }
+    };
+  } = {
+    questions: {}
+  };
+
+  let hasErrors = false;
+
+  // Valider le titre
+  if (!data.title?.trim()) {
+    errors.title = true;
+    hasErrors = true;
+  }
+
+  // Valider les questions
+  data.questions.forEach((question, index) => {
+    // Valider le texte de la question
+    if (!question.text?.trim()) {
+      if (!errors.questions[index]) {
+        errors.questions[index] = {};
+      }
+      if (typeof errors.questions[index] === 'object') {
+        (errors.questions[index] as any).text = true;
+      }
+      hasErrors = true;
+    }
+
+    // Valider les options pour les questions à choix multiples ou dropdown
+    if ((question.type === 'multiple-choice' || question.type === 'dropdown') && question.options) {
+      const optionErrors: { [key: number]: boolean } = {};
+      question.options.forEach((option, optionIndex) => {
+        if (!option.trim()) {
+          optionErrors[optionIndex] = true;
+          hasErrors = true;
+        }
+      });
+
+      if (Object.keys(optionErrors).length > 0) {
+        if (typeof errors.questions[index] === 'object') {
+          (errors.questions[index] as any).options = optionErrors;
+        }
+      }
+    }
+  });
+
+  return hasErrors ? errors : null;
+};
+
 const SurveyCreationPage = () => {
   const { control, handleSubmit, setValue, getValues, reset, watch } =
     useForm<FormData>({
@@ -97,6 +159,7 @@ const SurveyCreationPage = () => {
         title: '',
         description: '',
         demographicEnabled: false,
+        isPrivate: false,
         questions: [],
       },
     });
@@ -126,6 +189,8 @@ const SurveyCreationPage = () => {
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
     open: boolean;
+    link?: string;
+    action?: () => void;
   }>({
     message: '',
     severity: 'info',
@@ -412,6 +477,7 @@ const SurveyCreationPage = () => {
       title: '',
       description: '',
       demographicEnabled: false,
+      isPrivate: false,
       questions: []
     });
     
@@ -575,79 +641,20 @@ const SurveyCreationPage = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitted(true);
-    setIsSubmitting(true);
-    try {
-      const errors: { 
-        title?: boolean;
-        description?: boolean;
-        questions: { 
-          [key: string]: boolean | { 
-            text?: boolean;
-            options?: { [key: number]: boolean } 
-          }
-        };
-      } = { 
-        questions: {} 
-      };
-      let hasErrors = false;
-
-      // Vérifier le titre
-      if (!data.title?.trim()) {
-        errors.title = true;
-        hasErrors = true;
-      }
-
-      // Vérification qu'il y a au moins une question
-      if (data.questions.length === 0) {
-        setNotification({
-          message: 'Please add at least one question to your survey',
-          severity: 'error',
-          open: true
-        });
-        return;
-      }
-
-      // Vérification des questions et de leurs options
-      data.questions.forEach((question, index) => {
-        const questionErrors: { text?: boolean; options?: { [key: number]: boolean } } = {};
-        
-        // Vérifier le texte de la question
-        if (!question.text?.trim()) {
-          questionErrors.text = true;
-          hasErrors = true;
-        }
-
-        // Vérifier les options pour les questions à choix multiples et dropdown
-        if ((question.type === 'multiple-choice' || question.type === 'dropdown') && question.options) {
-          const optionErrors: { [key: number]: boolean } = {};
-          
-          question.options.forEach((option, optionIndex) => {
-            if (!option.trim()) {
-              optionErrors[optionIndex] = true;
-              hasErrors = true;
-            }
-          });
-
-          if (Object.keys(optionErrors).length > 0) {
-            questionErrors.options = optionErrors;
-          }
-        }
-
-        if (Object.keys(questionErrors).length > 0) {
-          errors.questions[index] = questionErrors;
-        }
+    
+    // Validation des données
+    const errors = validateFormData(data);
+    if (errors) {
+      setValidationErrors(errors);
+      setNotification({
+        message: 'Please fill in all required fields',
+        severity: 'error',
+        open: true
       });
+      return; // Arrête l'exécution ici si il y a des erreurs
+    }
 
-      if (hasErrors) {
-        setValidationErrors(errors);
-        setNotification({
-          message: 'Please fill in all required fields and options',
-          severity: 'error',
-          open: true
-        });
-        return;
-      }
-
+    try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('No authentication token found');
@@ -657,20 +664,49 @@ const SurveyCreationPage = () => {
         title: data.title,
         description: data.description,
         demographicEnabled: data.demographicEnabled,
+        isPrivate: data.isPrivate,
         questions: data.questions
       };
 
-      const result = await createSurvey(surveyData, token);
-      console.log('Survey created successfully:', result);
-      
-      // Afficher l'animation et rediriger
-      setShowSuccess(true);
-      setTimeout(() => {
-        router.push('/survey-answer');
-      }, 1650);
-      
-      await cleanupUnusedMedia();
-      
+      setIsSubmitting(true);
+      try {
+        const result = await createSurvey(surveyData, token);
+        await cleanupUnusedMedia();
+        
+        if (data.isPrivate) {
+          const surveyLink = `${window.location.origin}/survey-answer?surveyId=${result._id}`;
+          
+          setNotification({
+            message: 'Your private survey has been created successfully!',
+            severity: 'success',
+            open: true,
+            link: surveyLink,
+            action: () => {
+              navigator.clipboard.writeText(surveyLink);
+              setNotification(prev => ({
+                ...prev,
+                message: 'Link copied to clipboard!',
+              }));
+            }
+          });
+        } else {
+          setNotification({
+            message: 'Your survey has been created successfully!',
+            severity: 'success',
+            open: true
+          });
+        }
+
+      } catch (error: any) {
+        setNotification({
+          message: error.message || 'Error creating survey',
+          severity: 'error',
+          open: true
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+
     } catch (error: any) {
       console.error('Error submitting survey:', error);
       setNotification({
@@ -678,20 +714,8 @@ const SurveyCreationPage = () => {
         severity: 'error',
         open: true
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (notification.open) {
-      const timer = setTimeout(() => {
-        setNotification(prev => ({ ...prev, open: false }));
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [notification.open]);
 
   const renderDemographicPreview = () => {
     return (
@@ -1151,6 +1175,40 @@ const SurveyCreationPage = () => {
                 </Tooltip>
               </Box>
 
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={watch('isPrivate')}
+                      onChange={(e) => {
+                        setValue('isPrivate', e.target.checked);
+                      }}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {watch('isPrivate') ? (
+                        <LockIcon sx={{ color: '#667eea' }} />
+                      ) : (
+                        <PublicIcon sx={{ color: '#667eea' }} />
+                      )}
+                      <Typography>
+                        {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Tooltip 
+                  title="Private surveys are only visible to you, while public surveys can be accessed by all users"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
+
               <Divider sx={{ my: 4 }} />
 
               {/* Section des questions */}
@@ -1555,30 +1613,24 @@ const SurveyCreationPage = () => {
                 </Button>
 
                 <Button
-                  type="submit"
+                  onClick={handleSubmit(onSubmit)}
                   variant="contained"
                   disabled={isSubmitting}
-                  startIcon={isSubmitting ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <CheckCircleIcon />
-                  )}
+                  startIcon={
+                    isSubmitting ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      <SendIcon />
+                    )
+                  }
                   sx={{
-                    background: colors.primary.gradient,
-                    color: 'white',
-                    boxShadow: 'none',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     '&:hover': {
-                      background: colors.primary.hover,
-                      boxShadow: 'none',
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                     },
-                    '&.Mui-disabled': {
-                      background: colors.primary.gradient,
-                      opacity: 0.7,
-                      color: 'white',
-                    }
                   }}
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Survey'}
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
                 </Button>
               </Box>
             </Box>
@@ -1669,30 +1721,117 @@ const SurveyCreationPage = () => {
 
       {/* Notification */}
       {notification.open && (
-        <Box 
-          component="div"
-          data-testid="notification-container"
-          sx={{
-            position: 'fixed',
-            top: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            minWidth: 300
+        <Dialog
+          open={notification.open}
+          onClose={() => {
+            setNotification(prev => ({ ...prev, open: false }));
+            // Démarrer l'animation et la redirection après la fermeture de la boîte de dialogue
+            setShowSuccess(true);
+            setTimeout(() => {
+              router.push('/survey-answer');
+            }, 2000);
+          }}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            }
           }}
         >
-          <Alert 
-            severity={notification.severity}
-            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-            sx={{ 
-              backgroundColor: colors.background.paper,
-              boxShadow: 3,
-              borderRadius: 2
-            }}
-          >
-            {notification.message}
-          </Alert>
-        </Box>
+          <DialogContent sx={{ mt: 2 }}>
+            <Alert 
+              severity={notification.severity}
+              sx={{ mb: notification.link ? 2 : 0 }}
+            >
+              {notification.message}
+            </Alert>
+            {notification.link && (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Here is the link to answer your private survey:
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    backgroundColor: '#f5f5f5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    value={notification.link}
+                    variant="outlined"
+                    size="small"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { backgroundColor: 'white' }
+                    }}
+                  />
+                  <Tooltip title="Copy link">
+                    <IconButton
+                      onClick={notification.action}
+                      sx={{
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Share this link only with people you want to invite to answer your survey.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  This link will also be displayed in your analytics dashboard.
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, open: false }));
+              }}
+              variant="outlined"
+              color="inherit"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                // Si c'est un message d'erreur, fermer simplement la notification
+                if (notification.severity === 'error') {
+                  setNotification(prev => ({ ...prev, open: false }));
+                  return;
+                }
+                
+                // Si c'est un succès, procéder à la redirection
+                setNotification(prev => ({ ...prev, open: false }));
+                setShowSuccess(true);
+                setTimeout(() => {
+                  router.push('/survey-answer');
+                }, 2000);
+              }}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                }
+              }}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       {showSuccess && (

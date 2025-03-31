@@ -328,7 +328,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           target: newConnection.target || oldEdge.target,
         };
         updatedEdges.push(newEdge);
-      } 
+      }
       return updatedEdges;
     });
   }, []);
@@ -441,19 +441,27 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     `}</style>
   );
 
-  const nodesWithCallbacks = nodes.map(node => ({
-    ...node,
-    data: {
-      ...node.data,
-      onChange: (newData: any) => handleNodeChange(node.id, newData),
-      onCreatePaths: createPathsFromNode,
-      isSelected: node.id === selectedNode
-    },
-    style: {
-      ...node.style,
-      border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
-    }
-  }));
+  const nodesWithCallbacks = nodes.map(node => {
+    // Trouver le nœud parent
+    const parentEdge = edges.find(edge => edge.target === node.id);
+    const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
+    const isChildOfCritical = parentNode?.data?.isCritical;
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        onChange: (newData: any) => handleNodeChange(node.id, newData),
+        onCreatePaths: createPathsFromNode,
+        isSelected: node.id === selectedNode
+      },
+      style: {
+        ...node.style,
+        border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
+        width: 450,
+      }
+    };
+  });
 
   const DeleteButton = () => {
     if (!selectedEdge && !selectedNode) return null;

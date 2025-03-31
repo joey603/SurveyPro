@@ -34,15 +34,28 @@ exports.createSurvey = async (req, res) => {
       title: req.body.title,
       description: req.body.description,
       demographicEnabled: req.body.demographicEnabled,
+      isPrivate: req.body.isPrivate || false,
       questions: processedQuestions,
       userId: req.user.id,
       createdAt: new Date()
     });
 
+    // Si le sondage est privé, générer et sauvegarder le lien
+    if (req.body.isPrivate) {
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      survey.privateLink = `${baseUrl}/survey-answer?surveyId=${survey._id}`;
+    }
+
     const savedSurvey = await survey.save();
     console.log('Saved survey:', JSON.stringify(savedSurvey, null, 2));
 
-    res.status(201).json(savedSurvey);
+    // Retourner le lien privé dans la réponse si le sondage est privé
+    const response = {
+      ...savedSurvey.toObject(),
+      privateLink: savedSurvey.isPrivate ? savedSurvey.privateLink : undefined
+    };
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Error in createSurvey:', error);
     res.status(500).json({
@@ -77,42 +90,12 @@ exports.uploadMedia = async (req, res) => {
 // Get all surveys created by the user
 exports.getSurveys = async (req, res) => {
   try {
-    // Récupérer les sondages créés par l'utilisateur
-    const ownedSurveys = await Survey.find({ userId: req.user.id })
-      .select('title description questions demographicEnabled createdAt')
-      .lean();
-
-    // Récupérer les sondages partagés avec l'utilisateur
-    const sharedSurveys = await SurveyShare.find({
-      sharedWith: req.user.id,
-      status: 'accepted'
-    })
-    .populate({
-      path: 'surveyId',
-      select: 'title description questions demographicEnabled createdAt'
-    })
-    .lean();
-
-    // Combiner et formater les résultats
-    const allSurveys = [
-      ...ownedSurveys.map(survey => ({
-        ...survey,
-        isOwner: true
-      })),
-      ...sharedSurveys.map(share => ({
-        ...share.surveyId,
-        isOwner: false,
-        sharedBy: share.sharedBy
-      }))
-    ];
-
-    res.status(200).json(allSurveys);
+    // Ne récupérer que les sondages de l'utilisateur actuel
+    const surveys = await Survey.find({ userId: req.user.id });
+    res.status(200).json(surveys);
   } catch (error) {
-    console.error("Error fetching surveys:", error);
-    res.status(500).json({ 
-      message: "Erreur lors de la récupération des sondages", 
-      error: error.message 
-    });
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -211,23 +194,28 @@ exports.getAllSurveysForAnswering = async (req, res) => {
   try {
     console.log('Début de la recherche des sondages');
     
-    // Ajout de plus de logs pour le debugging
-    const query = Survey.find({})
-      .select('_id title description questions demographicEnabled createdAt')
+    // Création du filtre pour la requête
+    const filter = {
+      $or: [
+        { isPrivate: false },
+        { userId: req.user.id }
+      ]
+    };
+    
+    console.log('Filtre de recherche:', filter);
+    
+    const surveys = await Survey.find(filter)
+      .select('_id title description questions demographicEnabled createdAt isPrivate')
       .sort({ createdAt: -1 });
     
-    console.log('Query MongoDB:', query.getFilter());
+    console.log('Nombre de sondages trouvés:', surveys.length);
     
-    const surveys = await query;
-    console.log('Résultat brut de MongoDB:', surveys);
-    console.log('Nombre de sondages trouvés:', surveys ? surveys.length : 0);
-    
-    if (!surveys || !surveys.length) {
+    if (!surveys || surveys.length === 0) {
       console.log('Aucun sondage trouvé');
       return res.status(404).json({ 
         message: "Aucun sondage disponible.",
         debug: {
-          query: query.getFilter(),
+          filter,
           modelName: Survey.modelName,
           collectionName: Survey.collection.name
         }

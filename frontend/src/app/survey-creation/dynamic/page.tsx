@@ -23,7 +23,10 @@ import {
   Slider,
   Rating,
   Alert,
-  CircularProgress
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Container
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -41,6 +44,11 @@ import { useRouter } from 'next/navigation';
 import { SurveyFlowRef } from './types/SurveyFlowTypes';
 import Lottie from "lottie-react";
 import validationAnimation from "@/assets/animation-check.json";
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { Zoom } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const educationOptions = [
   'High School',
@@ -65,6 +73,7 @@ interface FormData {
   title: string;
   description: string;
   demographicEnabled: boolean;
+  isPrivate: boolean;
 }
 
 interface PreviewAnswer {
@@ -81,6 +90,14 @@ const questionTypes = [
   { value: 'date', label: 'Date Picker' },
 ];
 
+interface NotificationState {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  link?: string;
+  action?: () => void;
+}
+
 export default function DynamicSurveyCreation() {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -94,6 +111,7 @@ export default function DynamicSurveyCreation() {
       title: '',
       description: '',
       demographicEnabled: false,
+      isPrivate: false,
     },
   });
 
@@ -107,11 +125,7 @@ export default function DynamicSurveyCreation() {
   const router = useRouter();
 
   // Ajouter l'état pour les notifications
-  const [notification, setNotification] = useState<{
-    show: boolean;
-    message: string;
-    type: 'error' | 'success' | 'info' | 'warning';
-  }>({
+  const [notification, setNotification] = useState<NotificationState>({
     show: false,
     message: '',
     type: 'info'
@@ -270,12 +284,11 @@ export default function DynamicSurveyCreation() {
         return;
       }
 
-      // Réorganiser le flow avant de soumettre
+      // Préparer les données du sondage
       flowRef.current.reorganizeFlow();
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const allNodes = flowRef.current.getNodes();
-      
       const cleanedNodes = allNodes.map(node => ({
         ...node,
         data: {
@@ -291,20 +304,44 @@ export default function DynamicSurveyCreation() {
         title: data.title.trim(),
         description: data.description?.trim() || '',
         demographicEnabled: data.demographicEnabled || false,
+        isPrivate: data.isPrivate || false,
         nodes: cleanedNodes,
         edges
       };
 
-      const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
-      console.log('Sondage créé avec succès:', response);
-
-      // Afficher l'animation de succès
-      setShowSuccess(true);
-
-      // Attendre que l'animation se termine (environ 2 secondes) puis rediriger
-      setTimeout(() => {
-        router.push('/survey-answer');
-      }, 2000);
+      // Si le sondage est privé, montrer d'abord la boîte de dialogue
+      if (data.isPrivate) {
+        try {
+          const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
+          const surveyLink = `${window.location.origin}/survey-answer?surveyId=${response._id}`;
+          
+          setNotification({
+            show: true,
+            message: 'Your private survey has been created successfully!',
+            type: 'success',
+            link: surveyLink,
+            action: () => {
+              setShowSuccess(true);
+              setTimeout(() => {
+                router.push('/survey-answer');
+              }, 2000);
+            }
+          });
+        } catch (error: any) {
+          setNotification({
+            show: true,
+            message: error.message || 'Error creating survey',
+            type: 'error'
+          });
+        }
+      } else {
+        // Pour les sondages publics, comportement inchangé
+        const response = await dynamicSurveyService.createDynamicSurvey(surveyData, token);
+        setShowSuccess(true);
+        setTimeout(() => {
+          router.push('/survey-answer');
+        }, 2000);
+      }
 
     } catch (error: any) {
       console.error('Erreur lors de la création du sondage:', error);
@@ -851,105 +888,250 @@ export default function DynamicSurveyCreation() {
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       {/* Notification */}
       {notification.show && (
-        <Alert 
-          severity={notification.type}
-          sx={{ 
-            position: 'fixed ', 
-            top: 20, 
-            right: '50%', 
-            zIndex: 9999 
+        <Dialog
+          open={notification.show}
+          onClose={() => {
+            setNotification(prev => ({ ...prev, show: false }));
           }}
-          onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+          maxWidth="sm"
+          fullWidth
         >
-          {notification.message}
-        </Alert>
-      )}
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-          Basic Information
-        </Typography>
-        
-        <Controller
-          name="title"
-          control={control}
-          defaultValue=""
-          rules={{ required: 'Title is required' }}
-          render={({ field, fieldState: { error } }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Survey Title"
-              error={!!error}
-              helperText={error?.message}
-              sx={{ mb: 2 }}
-            />
-          )}
-        />
-        
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Description"
+          <DialogContent>
+            <Alert 
+              severity={notification.type}
+              sx={{ mb: notification.link ? 2 : 0 }}
+            >
+              {notification.message}
+            </Alert>
+            {notification.link && (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Here is the link to answer your private survey:
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    backgroundColor: '#f5f5f5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    value={notification.link}
+                    variant="outlined"
+                    size="small"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { backgroundColor: 'white' }
+                    }}
+                  />
+                  <Tooltip title="Copy link">
+                    <IconButton
+                      onClick={() => {
+                        navigator.clipboard.writeText(notification.link!);
+                        setNotification(prev => ({
+                          ...prev,
+                          message: 'Link copied to clipboard!',
+                          type: 'success'
+                        }));
+                      }}
+                      sx={{
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Share this link only with people you want to invite to answer your survey.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  This link will also be displayed in your analytics dashboard.
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, show: false }));
+              }}
               variant="outlined"
-              multiline
-              rows={3}
-              sx={{ mb: 2 }}
-            />
-          )}
-        />
+              color="inherit"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                setNotification(prev => ({ ...prev, show: false }));
+                if (notification.action) {
+                  notification.action();
+                }
+              }}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                }
+              }}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      
+      {/* Paper principal contenant tous les éléments */}
+      <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
+        {/* Entête en anglais avec titre et sous-titre centrés */}
+        <Box 
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+            textAlign: 'center'
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Dynamic Survey Creation
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            Create surveys with conditional paths and customized questions
+          </Typography>
+        </Box>
         
-        <FormControlLabel
-          control={
-            <Switch
-              checked={watch('demographicEnabled')}
-              onChange={(e) => setValue('demographicEnabled', e.target.checked)}
-            />
-          }
-          label="Enable Demographic Questions"
-        />
-      </Paper>
-
-      <Paper sx={{ p: 3, mb: 3, height: '600px', position: 'relative' }}>
-        <SurveyFlow 
-          ref={flowRef}
-          onAddNode={() => {
-            if (flowRef.current) {
-              const nodes = flowRef.current.getNodes();
-              setPreviewNodes(nodes);
+        {/* Section des informations de base */}
+        <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+            Basic Information
+          </Typography>
+          
+          <Controller
+            name="title"
+            control={control}
+            defaultValue=""
+            rules={{ required: 'Title is required' }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Survey Title"
+                error={!!error}
+                helperText={error?.message}
+                sx={{ mb: 2 }}
+              />
+            )}
+          />
+          
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Description"
+                variant="outlined"
+                multiline
+                rows={3}
+                sx={{ mb: 2 }}
+              />
+            )}
+          />
+          
+          <FormControlLabel
+            control={
+              <Switch
+                checked={watch('demographicEnabled')}
+                onChange={(e) => setValue('demographicEnabled', e.target.checked)}
+              />
             }
-          }} 
-          onEdgesChange={handleEdgesChange}
-        />
-        
-        <Tooltip title="Add Question" placement="left">
-          <Fab 
-            color="primary" 
-            aria-label="add question"
-            sx={{
-              position: 'absolute',
-              bottom: 24,
-              right: 24,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              },
-            }}
-            onClick={() => {
-              if (flowRef.current) {
-                flowRef.current.addNewQuestion();
+            label="Enable Demographic Questions"
+          />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={watch('isPrivate')}
+                  onChange={(e) => {
+                    setValue('isPrivate', e.target.checked);
+                  }}
+                  color="primary"
+                />
               }
-            }}
-          >
-            <AddIcon />
-          </Fab>
-        </Tooltip>
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {watch('isPrivate') ? (
+                    <LockIcon sx={{ color: '#667eea' }} />
+                  ) : (
+                    <PublicIcon sx={{ color: '#667eea' }} />
+                  )}
+                  <Typography>
+                    {watch('isPrivate') ? 'Private Survey' : 'Public Survey'}
+                  </Typography>
+                </Box>
+              }
+            />
+            <Tooltip 
+              title="Private surveys are only visible to you, while public surveys can be accessed by all users"
+              placement="right"
+              TransitionComponent={Zoom}
+              arrow
+            >
+              <HelpOutlineIcon sx={{ color: '#667eea', fontSize: 20, cursor: 'help' }} />
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Flow section */}
+        <Box sx={{ p: 3, pt: 0, height: '600px', position: 'relative' }}>
+          <SurveyFlow 
+            ref={flowRef}
+            onAddNode={() => {
+              if (flowRef.current) {
+                const nodes = flowRef.current.getNodes();
+                setPreviewNodes(nodes);
+              }
+            }} 
+            onEdgesChange={handleEdgesChange}
+          />
+          
+          <Tooltip title="Add Question" placement="left">
+            <Fab 
+              color="primary" 
+              aria-label="add question"
+              sx={{
+                position: 'absolute',
+                bottom: 24,
+                right: 24,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
+              onClick={() => {
+                if (flowRef.current) {
+                  flowRef.current.addNewQuestion();
+                }
+              }}
+            >
+              <AddIcon />
+            </Fab>
+          </Tooltip>
+        </Box>
       </Paper>
 
+      {/* Boutons d'action en dehors du Paper principal */}
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
           onClick={handleResetSurvey}

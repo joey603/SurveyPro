@@ -182,34 +182,100 @@ export const submitSurveyAnswer = async (surveyId: string, data: any, token: str
   }
 };
 
-export const getSurveyAnswers = async (surveyId: string, token: string): Promise<any> => {
-  try {
-    const response = await axios.get(
-      `${API_URL}/survey-answers/${surveyId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    return response.data;
-  } catch (error: any) {
-    console.error('Error fetching survey answers:', error);
-    throw error.response?.data || error;
-  }
-};
+interface DynamicSurveyNode {
+  id: string;
+  type: string;
+  data: {
+    text?: string;
+    label?: string;
+    questionType?: string;
+    type?: string;
+    options?: string[];
+    [key: string]: any;
+  };
+  position?: {
+    x: number;
+    y: number;
+  };
+}
 
-export const fetchSurveys = async (token: string): Promise<any> => {
+interface DynamicSurvey {
+  _id: string;
+  title: string;
+  description?: string;
+  nodes?: DynamicSurveyNode[];
+  edges?: any[];
+  userId: string;
+  createdAt: string;
+  demographicEnabled?: boolean;
+  [key: string]: any;
+}
+
+export const fetchSurveys = async (token: string) => {
   try {
-    const response = await axios.get(`${API_URL}/surveys`, {
+    console.log('===== DÉBUT fetchSurveys =====');
+    
+    // Récupérer les sondages statiques de l'utilisateur
+    const response = await axios.get(`${BASE_URL}/api/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data;
-  } catch (error: any) {
-    console.error("Error fetching surveys:", error);
-    throw error.response?.data || error;
+    
+    // Récupérer les sondages dynamiques de l'utilisateur
+    const dynamicResponse = await axios.get(`${BASE_URL}/api/dynamic-surveys`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    // Récupérer les sondages partagés et acceptés
+    const sharedResponse = await axios.get(`${BASE_URL}/api/survey-shares/shared-with-me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    const surveys = response.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: false,
+      isOwner: true // Marquer comme appartenant à l'utilisateur
+    }));
+    
+    const dynamicSurveys = dynamicResponse.data.map((survey: any) => ({
+      ...survey,
+      isDynamic: true,
+      isOwner: true // Marquer comme appartenant à l'utilisateur
+    }));
+    
+    const sharedSurveys = sharedResponse.data;
+    
+    console.log(`Sondages récupérés: ${surveys.length} statiques, ${dynamicSurveys.length} dynamiques, ${sharedSurveys.length} partagés`);
+    
+    // Valider chaque sondage partagé pour le débogage
+    if (sharedSurveys.length > 0) {
+      console.log('Détails des sondages partagés:');
+      sharedSurveys.forEach((survey: any, index: number) => {
+        console.log(`Sondage partagé #${index+1}:`, {
+          id: survey._id,
+          title: survey.title || 'Sans titre',
+          isDynamic: survey.isDynamic,
+          shareId: survey.shareId,
+          isShared: survey.isShared,
+          status: survey.status
+        });
+      });
+    }
+    
+    // Combiner tous les types de sondages
+    const allSurveys = [...surveys, ...dynamicSurveys, ...sharedSurveys];
+    console.log(`Total de ${allSurveys.length} sondages récupérés`);
+    
+    console.log('===== FIN fetchSurveys =====');
+    return allSurveys;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des sondages:', error);
+    return [];
   }
 };
 
@@ -292,45 +358,62 @@ export const getSurveyById = async (id: string, token: string): Promise<any> => 
   }
 };
 
-export const fetchPendingShares = async (token: string): Promise<any> => {
+export const fetchPendingShares = async (token: string) => {
   try {
-    const response = await axios.get(`${API_URL}/survey-shares/pending`, {
+    console.log('===== DÉBUT fetchPendingShares =====');
+    
+    const response = await axios.get(`${BASE_URL}/api/survey-shares/pending`, {
       headers: {
         Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    const pendingShares = response.data;
+    console.log(`${pendingShares.length} partages en attente récupérés`);
+    
+    // Analyser les résultats pour les problèmes potentiels
+    if (pendingShares.length > 0) {
+      const dynamicShares = pendingShares.filter((s: any) => s.isDynamic);
+      const staticShares = pendingShares.filter((s: any) => !s.isDynamic);
+      
+      console.log(`- ${dynamicShares.length} sondages dynamiques en attente`);
+      console.log(`- ${staticShares.length} sondages statiques en attente`);
+      
+      if (dynamicShares.length > 0) {
+        console.log('Détails des sondages dynamiques en attente:', 
+          dynamicShares.map((s: any) => ({
+            id: s._id,
+            title: s.title,
+            nodes: s.nodes?.length || 0,
+            edges: s.edges?.length || 0
+          }))
+        );
+      }
+    }
+    
+    console.log('===== FIN fetchPendingShares =====');
+    return pendingShares;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des partages en attente:', error);
+    return [];
+  }
+};
+
+export const respondToSurveyShare = async (shareId: string, accept: boolean, token: string) => {
+  try {
+    const response = await axios({
+      method: 'POST',
+      url: `${BASE_URL}/api/survey-shares/respond`,
+      data: { shareId, accept },
+      headers: {
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
     return response.data;
-  } catch (error: any) {
-    console.error('Error fetching pending shares:', error);
-    throw error.response?.data || error;
-  }
-};
-
-export const respondToSurveyShare = async (shareId: string, accept: boolean, token: string): Promise<any> => {
-  try {
-    console.log('Envoi de la réponse au partage:', { shareId, accept });
-    
-    const response = await axios.post(
-      `${API_URL}/survey-shares/respond`,
-      { 
-        shareId: shareId,
-        accept 
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('Réponse reçue:', response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error('Erreur lors de la réponse au partage:', error);
-    console.error('Détails de l\'erreur:', error.response?.data);
-    throw error.response?.data || error;
+  } catch (error) {
+    console.error('Error responding to survey share:', error);
+    throw error;
   }
 };
 
@@ -353,5 +436,102 @@ export const fetchAnsweredSurveys = async (token: string) => {
   } catch (error) {
     console.error('Erreur lors de la récupération des sondages répondus:', error);
     return [];
+  }
+};
+
+export const getSurveyAnswers = async (surveyId: string, token: string, isDynamic = false) => {
+  try {
+    console.log(`Fetching ${isDynamic ? 'dynamic' : 'static'} survey answers for ${surveyId}`);
+    
+    const endpoint = isDynamic
+      ? `${BASE_URL}/api/dynamic-survey-answers/survey/${surveyId}`
+      : `${BASE_URL}/api/survey-answers/${surveyId}`;
+    
+    const response = await axios.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    const answers = response.data;
+    console.log(`Found ${answers.length} answers for survey ${surveyId}`);
+    
+    // Formater les réponses pour assurer la compatibilité
+    if (isDynamic) {
+      return answers.map((answer: any) => ({
+        _id: answer._id,
+        surveyId: answer.surveyId,
+        answers: (answer.answers || []).map((a: any) => ({
+          questionId: a.nodeId || a.questionId,
+          answer: a.answer || a.value
+        })),
+        submittedAt: answer.submittedAt,
+        respondent: answer.respondent
+      }));
+    }
+    
+    return answers;
+  } catch (error) {
+    console.error('Error fetching survey answers:', error);
+    return [];
+  }
+};
+
+// Nouvelle fonction pour vérifier si un sondage existe
+export const checkSurveyExists = async (surveyId: string, token: string) => {
+  try {
+    const response = await axios({
+      method: 'GET',
+      url: `${BASE_URL}/api/surveys/${surveyId}/exists`,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data.exists;
+  } catch (error) {
+    console.error('Error checking if survey exists:', error);
+    return false;
+  }
+};
+
+// Fonction de partage mise à jour
+export const shareSurvey = async (surveyId: string, recipientEmail: string, token: string) => {
+  try {
+    console.log('Tentative de partage avec:', { 
+      surveyId, 
+      recipientEmail 
+    });
+    
+    const response = await axios({
+      method: 'POST',
+      url: `${BASE_URL}/api/survey-shares/share`,
+      data: { surveyId, recipientEmail },
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Error sharing survey:', error);
+    
+    // Gérer spécifiquement l'erreur de destinataire non trouvé
+    if (error.response?.status === 404) {
+      if (error.response.data?.message === "Destinataire non trouvé" || 
+          error.response.data?.message === "Recipient not found") {
+        throw new Error(`L'utilisateur avec l'email ${recipientEmail} n'est pas inscrit sur la plateforme`);
+      } else if (error.response.data?.message === "Sondage non trouvé" || 
+                error.response.data?.message === "Survey not found") {
+        throw new Error("Ce sondage ne peut pas être partagé");
+      }
+    }
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    
+    throw error;
   }
 };

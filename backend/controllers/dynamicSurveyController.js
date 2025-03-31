@@ -6,7 +6,7 @@ exports.createDynamicSurvey = async (req, res) => {
   try {
     console.log('Données reçues:', JSON.stringify(req.body, null, 2));
     
-    const { title, description, demographicEnabled, nodes, edges } = req.body;
+    const { title, description, demographicEnabled, nodes, edges, isPrivate } = req.body;
 
     // Validation des données
     if (!title) {
@@ -55,6 +55,7 @@ exports.createDynamicSurvey = async (req, res) => {
       title,
       description,
       demographicEnabled: demographicEnabled || false,
+      isPrivate: isPrivate || false,
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.type,
@@ -75,10 +76,23 @@ exports.createDynamicSurvey = async (req, res) => {
       userId: req.user.id
     });
 
+    // Si le sondage est privé, générer et sauvegarder le lien
+    if (isPrivate) {
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      survey.privateLink = `${baseUrl}/survey-answer?surveyId=${survey._id}`;
+    }
+
     console.log('Survey à sauvegarder:', JSON.stringify(survey, null, 2));
 
     const savedSurvey = await survey.save();
-    res.status(201).json(savedSurvey);
+
+    // Retourner le lien privé dans la réponse si le sondage est privé
+    const response = {
+      ...savedSurvey.toObject(),
+      privateLink: savedSurvey.isPrivate ? savedSurvey.privateLink : undefined
+    };
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Erreur détaillée:', error);
     res.status(500).json({
@@ -91,9 +105,9 @@ exports.createDynamicSurvey = async (req, res) => {
 
 exports.getDynamicSurveys = async (req, res) => {
   try {
-    const surveys = await DynamicSurvey.find()
-      .select('title description demographicEnabled nodes edges createdAt userId')
-      .populate('userId', 'username')
+    // Ne récupérer que les sondages de l'utilisateur actuel
+    const surveys = await DynamicSurvey.find({ userId: req.user.id })
+      .select('title description demographicEnabled nodes edges createdAt userId isPrivate')
       .sort({ createdAt: -1 });
 
     res.status(200).json(surveys);
@@ -109,7 +123,7 @@ exports.getDynamicSurveys = async (req, res) => {
 exports.getDynamicSurveyById = async (req, res) => {
   try {
     const survey = await DynamicSurvey.findById(req.params.id)
-      .select('title description demographicEnabled nodes edges createdAt');
+      .select('title description demographicEnabled nodes edges createdAt isPrivate');
 
     if (!survey) {
       return res.status(404).json({ message: "Sondage non trouvé" });

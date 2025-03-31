@@ -10,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
+  register: (accessToken: string, refreshToken: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,11 +66,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [pathname]);
 
-  const login = (accessToken: string, refreshToken: string) => {
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
-    setIsAuthenticated(true);
-    router.push("/");
+  const login = async (accessToken: string, refreshToken: string) => {
+    try {
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      setAccessToken(accessToken);
+      setIsAuthenticated(true);
+      
+      // Décoder et définir les informations utilisateur
+      const decoded = jwtDecode(accessToken);
+      setUser(decoded);
+      
+      router.push("/");
+    } catch (error) {
+      console.error('Error in login:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -79,12 +91,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push("/login");
   };
 
+  const register = (accessToken: string, refreshToken: string) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    setIsAuthenticated(true);
+    router.push("/verify");
+  };
+
   if (isLoading) {
     return null;
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      login, 
+      logout, 
+      register,
+      accessToken,
+      user 
+    }}>
       {children}
     </AuthContext.Provider>
   );
