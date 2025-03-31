@@ -180,18 +180,28 @@ const pieOptions = {
 // Colors for charts
 const chartColors = {
   backgrounds: [
-    'rgba(102, 126, 234, 0.6)',
-    'rgba(118, 75, 162, 0.6)',
-    'rgba(75, 192, 192, 0.6)',
-    'rgba(255, 159, 64, 0.6)',
-    'rgba(255, 99, 132, 0.6)',
+    'rgba(102, 126, 234, 0.6)', // Bleu
+    'rgba(118, 75, 162, 0.6)', // Violet
+    'rgba(75, 192, 192, 0.6)', // Turquoise
+    'rgba(255, 159, 64, 0.6)', // Orange
+    'rgba(255, 99, 132, 0.6)', // Rose
+    'rgba(54, 162, 235, 0.6)', // Bleu clair
+    'rgba(153, 102, 255, 0.6)', // Violet clair
+    'rgba(255, 206, 86, 0.6)', // Jaune
+    'rgba(75, 192, 192, 0.6)', // Vert
+    'rgba(255, 99, 132, 0.6)', // Rouge
   ],
   borders: [
-    'rgba(102, 126, 234, 1)',
-    'rgba(118, 75, 162, 1)',
-    'rgba(75, 192, 192, 1)',
-    'rgba(255, 159, 64, 1)',
-    'rgba(255, 99, 132, 1)',
+    'rgba(102, 126, 234, 1)', // Bleu
+    'rgba(118, 75, 162, 1)', // Violet
+    'rgba(75, 192, 192, 1)', // Turquoise
+    'rgba(255, 159, 64, 1)', // Orange
+    'rgba(255, 99, 132, 1)', // Rose
+    'rgba(54, 162, 235, 1)', // Bleu clair
+    'rgba(153, 102, 255, 1)', // Violet clair
+    'rgba(255, 206, 86, 1)', // Jaune
+    'rgba(75, 192, 192, 1)', // Vert
+    'rgba(255, 99, 132, 1)', // Rouge
   ]
 };
 
@@ -530,12 +540,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     
     const chartData = {
       labels: Object.keys(fullSize ? stats.city : truncatedCities),
-      datasets: [{
-        data: Object.values(fullSize ? stats.city : truncatedCities),
-        backgroundColor: chartColors.backgrounds,
-        borderColor: chartColors.borders,
+      datasets: Object.entries(fullSize ? stats.city : truncatedCities).map(([city, count], index) => ({
+        label: city,
+        data: [count],
+        backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
+        borderColor: chartColors.borders[index % chartColors.borders.length],
         borderWidth: 1
-      }]
+      }))
     };
     
     return (
@@ -839,15 +850,16 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     
     const chartData = {
       labels: Object.keys(fullSize ? stats.education : truncatedEducation),
-      datasets: [{
-        data: Object.values(fullSize ? stats.education : truncatedEducation),
-        backgroundColor: chartColors.backgrounds,
-        borderColor: chartColors.borders,
+      datasets: Object.entries(fullSize ? stats.education : truncatedEducation).map(([education, count], index) => ({
+        label: education,
+        data: [count],
+        backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
+        borderColor: chartColors.borders[index % chartColors.borders.length],
         borderWidth: 1,
-        hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
-        hoverBorderColor: chartColors.borders,
+        hoverBackgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length].replace('0.6', '0.8'),
+        hoverBorderColor: chartColors.borders[index % chartColors.borders.length].replace('1)', '1.5)'),
         hoverBorderWidth: 2,
-      }]
+      }))
     };
     
     return (
