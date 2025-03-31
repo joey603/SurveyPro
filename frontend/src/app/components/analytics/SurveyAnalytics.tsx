@@ -1166,7 +1166,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         .filter(node => 
           node.type === 'questionNode' || 
           node.type === 'question' || 
-          (node.data && (node.data.questionType || node.data.type))
+          (node.data && (node.data.questionType || node.data.type || node.data.text || node.data.label))
         )
         .map(node => {
           // Extraire les données de question du nœud
@@ -1175,9 +1175,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             id: node.id,
             text: nodeData.text || nodeData.label || 'Question sans titre',
             type: mapNodeTypeToQuestionType(nodeData.questionType || nodeData.type || 'text'),
-            options: nodeData.options || []
+            options: nodeData.options || [],
+            isCritical: nodeData.isCritical || false,
+            questionNumber: nodeData.questionNumber || 0
           };
-        });
+        })
+        .sort((a, b) => a.questionNumber - b.questionNumber); // Trier par numéro de question
     }
     
     // Sinon, retourner les questions standards
