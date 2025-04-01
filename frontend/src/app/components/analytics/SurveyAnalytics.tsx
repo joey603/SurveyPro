@@ -1320,46 +1320,17 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Mettre à jour handlePathFilterChange pour utiliser les réponses filtrées
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    console.log('handlePathFilterChange called with:', { isFiltered, filteredRespsCount: filteredResps.length });
+    console.log("Path filter changed:", isFiltered, "filtered responses:", filteredResps.length);
     
-    setPathFilterActive(isFiltered);
-    setFilteredResponsesByPath(filteredResps);
+    // Mettre à jour l'état des réponses filtrées
+    setFilteredResponses(isFiltered ? filteredResps : responses);
+    
+    // Mettre à jour l'état de filtrage
     setIsPathFiltered(isFiltered);
     
-    // Si nous avons des filtres actifs, les appliquer aux réponses filtrées par chemin
-    if (filters.demographic && Object.keys(filters.demographic).length > 0) {
-      const demographicFiltered = filteredResps.filter(response => {
-        const respondent = response.respondent?.demographic;
-        if (!respondent) return false;
-
-        if (filters.demographic.gender && respondent.gender !== filters.demographic.gender) {
-          return false;
-        }
-
-        if (filters.demographic.educationLevel && respondent.educationLevel !== filters.demographic.educationLevel) {
-          return false;
-        }
-
-        if (filters.demographic.city && respondent.city !== filters.demographic.city) {
-          return false;
-        }
-
-        if (filters.demographic.age) {
-          const [minAge, maxAge] = filters.demographic.age;
-          const birthDate = respondent.dateOfBirth ? new Date(respondent.dateOfBirth) : null;
-          if (!birthDate) return false;
-          const age = new Date().getFullYear() - birthDate.getFullYear();
-          if (age < minAge || age > maxAge) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-      setFilteredResponses(demographicFiltered);
-    } else {
-      // Si pas de filtres démographiques, utiliser directement les réponses filtrées par chemin
-      setFilteredResponses(filteredResps);
+    // Réinitialiser les filtres avancés si nécessaire
+    if (isFiltered) {
+      setAppliedFilters(undefined);
     }
   };
   
