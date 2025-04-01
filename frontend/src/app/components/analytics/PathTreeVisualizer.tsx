@@ -41,7 +41,7 @@ export interface PathTreeVisualizerProps {
   onPathSelect: (path: PathSegment[]) => void;
   selectedPaths: PathSegment[][];
   onFilterChange?: (isFiltered: boolean, filteredResponses: any[]) => void;
-  onPathsLoad?: (paths: {name: string, path: PathSegment[], group: string}[]) => void;
+  onPathsLoad?: (paths: {name: string, path: PathSegment[], count: number, group: string}[]) => void;
 }
 
 // Ajoutez ce tableau de couleurs en haut du fichier, juste après les imports
@@ -591,7 +591,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
+  const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[], count: number, group: string}[]>([]);
   const [analysisGroups, setAnalysisGroups] = useState<{[key: string]: {name: string, paths: number[]}}>({}); 
   const [filterApplied, setFilterApplied] = useState(false);
   const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
@@ -616,8 +616,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  const assignAnalysisGroups = (paths: {name: string, path: PathSegment[]}[]): {name: string, path: PathSegment[], group: string}[] => {
-    const groupedPaths: {name: string, path: PathSegment[], group: string}[] = [];
+  const assignAnalysisGroups = (paths: {name: string, path: PathSegment[], count: number}[]): {name: string, path: PathSegment[], count: number, group: string}[] => {
+    const groupedPaths: {name: string, path: PathSegment[], count: number, group: string}[] = [];
     const groups: {[key: string]: {name: string, paths: number[]}} = {};
     
     const pathsByFirstQuestion: {[key: string]: number[]} = {};
@@ -650,6 +650,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           groupedPaths.push({
             name: paths[pathIndex].name,
             path: paths[pathIndex].path,
+            count: paths[pathIndex].count,
             group: groupId
           });
         }
@@ -725,7 +726,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     });
     
-    const completePaths: {name: string, path: PathSegment[]}[] = [];
+    const completePaths: {name: string, path: PathSegment[], count: number}[] = [];
     const pathSet = new Set<string>();
     
     const traversePath = (nodeId: string, currentPath: PathSegment[], depth: number = 0) => {
@@ -741,9 +742,21 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           // Vérifier si cette séquence de questions est unique
           if (!pathSet.has(pathKey)) {
             pathSet.add(pathKey);
+            
+            // Calculer le nombre total de répondants pour ce chemin
+            const totalRespondents = responses.filter(response => 
+              currentPath.every(segment => {
+                const answer = response.answers.find((a: { questionId: string; answer: string }) => 
+                  a.questionId === segment.questionId
+                );
+                return answer !== undefined;
+              })
+            ).length;
+            
             completePaths.push({
               name: `Path ${getAlphabeticName(completePaths.length)}`,
-              path: [...currentPath]
+              path: [...currentPath],
+              count: totalRespondents
             });
           }
         }
@@ -1060,10 +1073,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       setNodes(nodesWithSelection);
       setEdges(edgesWithSelection);
-      setAllPaths(paths);
+      setAllPaths(paths.map(path => ({
+        ...path,
+        count: getRespondentCountForPath(path.path, responses)
+      })));
       
       if (onPathsLoad) {
-        onPathsLoad(paths);
+        onPathsLoad(paths.map(path => ({
+          ...path,
+          count: getRespondentCountForPath(path.path, responses)
+        })));
       }
       
       setLoading(false);
@@ -1073,7 +1092,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   }, [survey, responses, selectedPaths]);
   
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     if (node.id === 'root') return;
@@ -1218,11 +1237,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
 
     return responses.filter(response => {
       return selectedPaths.some(path => {
+        // Vérifier si le répondant a répondu à toutes les questions du chemin
         return path.every(segment => {
           const answer = response.answers.find((a: { questionId: string; answer: string }) => 
             a.questionId === segment.questionId
           );
-          return answer && answer.answer === segment.answer;
+          return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
         });
       });
     });
@@ -1631,13 +1651,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     const pathNodes: Node[] = [];
     const pathEdges: Edge[] = [];
     
-    // Calculate first the exact number of respondents who followed this complete path
+    // Calculate the number of respondents who followed this sequence of questions
     const respondentsFollowingPath = responses.filter(response => 
       path.every(segment => {
         const answer = response.answers.find((a: { questionId: string; answer: string }) => 
           a.questionId === segment.questionId
         );
-        return answer && answer.answer === segment.answer;
+        return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
       })
     );
     
@@ -1709,14 +1729,14 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   // New function that counts respondents who followed exactly a specific path
   const getRespondentCountForPath = (path: PathSegment[], responses: any[]): number => {
-    return responses.filter(response => 
-      path.every(segment => {
+    return responses.filter(response => {
+      return path.every(segment => {
         const answer = response.answers.find((a: { questionId: string; answer: string }) => 
           a.questionId === segment.questionId
         );
-        return answer && answer.answer === segment.answer;
-      })
-    ).length;
+        return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
+      });
+    }).length;
   };
   
   const getRespondentCountForSegment = (segment: PathSegment, responses: any[]): number => {
@@ -1724,7 +1744,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       const answer = response.answers.find((a: { questionId: string; answer: string }) => 
         a.questionId === segment.questionId
       );
-      return answer && answer.answer === segment.answer;
+      return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
     }).length;
   };
   
@@ -1764,7 +1784,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }, 500);
   };
   
-  const handleFilteredPathClick = (pathIndex: number) => {
+  const handleFilteredPathClick = (pathIndex: number, event: React.MouseEvent) => {
+    // Empêcher la propagation de l'événement
+    event.stopPropagation();
+    
     console.log('=== Chemins filtrés ===');
     console.log('Index du chemin cliqué:', pathIndex);
     console.log('Chemin complet:', filteredPaths[pathIndex]);
@@ -1857,7 +1880,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                       }
                     }}
-                    onClick={() => handleFilteredPathClick(index)}
+                    onClick={(event) => handleFilteredPathClick(index, event)}
                   >
                     <Typography 
                       variant="subtitle2" 
