@@ -726,16 +726,26 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     });
     
     const completePaths: {name: string, path: PathSegment[]}[] = [];
+    const pathSet = new Set<string>();
     
     const traversePath = (nodeId: string, currentPath: PathSegment[], depth: number = 0) => {
       const node = nodeMap.get(nodeId);
       
       if (!node || !node.children || node.children.size === 0) {
         if (currentPath.length > 0) {
-          completePaths.push({
-            name: `Path ${getAlphabeticName(completePaths.length)}`,
-            path: [...currentPath]
-          });
+          // Créer une clé unique basée uniquement sur les IDs des questions
+          const pathKey = currentPath.map(segment => 
+            segment.questionId
+          ).join('|');
+          
+          // Vérifier si cette séquence de questions est unique
+          if (!pathSet.has(pathKey)) {
+            pathSet.add(pathKey);
+            completePaths.push({
+              name: `Path ${getAlphabeticName(completePaths.length)}`,
+              path: [...currentPath]
+            });
+          }
         }
         return;
       }
@@ -1015,6 +1025,20 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     if (survey && responses.length > 0) {
       setLoading(true);
       const { nodes, edges, paths } = processPathTree(survey, responses);
+      
+      console.log('=== Tous les chemins disponibles ===');
+      console.log('Nombre total de chemins:', paths.length);
+      paths.forEach((path, index) => {
+        console.log(`Chemin ${index + 1}:`, {
+          name: path.name,
+          length: path.path.length,
+          segments: path.path.map(segment => ({
+            question: segment.questionText,
+            answer: segment.answer
+          }))
+        });
+      });
+      console.log('===================================');
       
       const edgesWithSelection = edges.map(edge => ({
         ...edge,
@@ -1740,6 +1764,21 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }, 500);
   };
   
+  const handleFilteredPathClick = (pathIndex: number) => {
+    console.log('=== Chemins filtrés ===');
+    console.log('Index du chemin cliqué:', pathIndex);
+    console.log('Chemin complet:', filteredPaths[pathIndex]);
+    console.log('Nombre total de chemins filtrés:', filteredPaths.length);
+    console.log('=====================');
+    
+    if (reactFlowInstancesRef.current[pathIndex]) {
+      reactFlowInstancesRef.current[pathIndex].fitView({
+        padding: 0.2,
+        duration: 800
+      });
+    }
+  };
+  
   return (
     <Paper 
       sx={{ 
@@ -1780,24 +1819,25 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             flexBasis: 0,
             border: '1px solid rgba(102, 126, 234, 0.2)', 
             borderRadius: '12px',
-          position: 'relative',
-          minHeight: '500px',
+            position: 'relative',
+            minHeight: '500px',
             transition: 'flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
             overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
             background: 'rgba(252, 253, 255, 0.7)',
             backdropFilter: 'blur(8px)',
             boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
-      }}>
-        {loading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%' 
-          }}>
-            <CircularProgress />
-          </Box>
-        ) : responses.length > 0 ? (
+          }}
+        >
+          {loading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%' 
+            }}>
+              <CircularProgress />
+            </Box>
+          ) : responses.length > 0 ? (
             filterApplied && multipleTreeNodes.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
                 {multipleTreeNodes.map((pathNodes, index) => (
@@ -1809,8 +1849,15 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       height: '400px',
                       mb: 2,
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease-in-out',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }
                     }}
+                    onClick={() => handleFilteredPathClick(index)}
                   >
                     <Typography 
                       variant="subtitle2" 
@@ -1826,33 +1873,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       }}
                     >
                       <Box>Path {String.fromCharCode(65 + index)}</Box>
-                      <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
-                          px: 1, 
-                          py: 0.5, 
-                          borderRadius: 1,
-                          fontSize: '0.8rem'
-                        }}>
-                          {selectedPaths[index].length} steps
-                        </Box>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
-                          px: 1, 
-                          py: 0.5, 
-                          borderRadius: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
-                        }}>
-                          {getRespondentCountForPath(selectedPaths[index], responses)} respondents
-                        </Box>
-                      </Box>
                     </Typography>
-                    
                     <ReactFlow
                       key={`flow-${index}`}
                       nodes={pathNodes}
@@ -1869,7 +1890,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       zoomOnPinch={true}
                       panOnScroll={true}
                       nodesDraggable={false}
-                      elementsSelectable={true}
+                      elementsSelectable={false}
                     >
                       <Controls 
                         position="top-right" 
@@ -1886,116 +1907,49 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 ))}
               </Box>
             ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodeClick={onNodeClick}
-            nodeTypes={{ questionNode: QuestionNode }}
-            edgeTypes={{ default: LinkComponent }}
-            defaultViewport={defaultViewport}
-            minZoom={0.1}
-            maxZoom={2.5}
-            fitView
-            fitViewOptions={{ padding: 0.3 }}
-            onInit={setReactFlowInstance}
-            zoomOnScroll={false}
-            zoomOnPinch={true}
-            panOnScroll={true}
-            nodesDraggable={false}
-            elementsSelectable={!filterApplied}
-          >
-            <Controls 
-              position="top-right" 
-              showInteractive={true} 
-              fitViewOptions={{ padding: 0.3 }}
-            />
-            <MiniMap
-              nodeStrokeWidth={3}
-              nodeColor={(node) => {
-                    if (node.data.pathColor) {
-                      return node.data.pathColor;
-                    }
-                    
-                const isSelected = node.data.selectedPaths && node.data.selectedPaths.some((path: PathSegment[]) => 
-                  path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
-                );
-                    
-                    if (isSelected) {
-                      const pathIndex = node.data.selectedPaths.findIndex((path: PathSegment[]) => 
-                        path.some((segment: PathSegment) => segment.questionId === node.data.questionId)
-                      );
-                      return HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
-                    }
-                    
-                    return '#667eea';
-              }}
-              zoomable
-              pannable
-                  position="bottom-left"
-              style={{ background: 'rgba(255, 255, 255, 0.9)' }}
-            />
-            <Background 
-              color="#f0f4ff" 
-              gap={20} 
-              size={1.5}
-            />
-          </ReactFlow>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={onNodeClick}
+                nodeTypes={{ questionNode: QuestionNode }}
+                edgeTypes={{ default: LinkComponent }}
+                defaultViewport={defaultViewport}
+                minZoom={0.1}
+                maxZoom={2.5}
+                fitView
+                fitViewOptions={{ padding: 0.3 }}
+                onInit={setReactFlowInstance}
+                zoomOnScroll={false}
+                zoomOnPinch={true}
+                panOnScroll={true}
+                nodesDraggable={false}
+                elementsSelectable={!filterApplied}
+              >
+                <Controls 
+                  position="top-right" 
+                  showInteractive={true} 
+                  fitViewOptions={{ padding: 0.3 }}
+                />
+                <Background 
+                  color="#f0f4ff" 
+                  gap={20} 
+                  size={1.5}
+                />
+              </ReactFlow>
             )
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%' 
-          }}>
-            <Typography variant="body2">
-              No paths available
-            </Typography>
-          </Box>
-        )}
-      </Box>
-      
-        {/* Bouton pour afficher/masquer le panneau (visible lorsque le panneau est rétracté) */}
-        {!pathsPanelOpen && (
-          <Box 
-            onClick={togglePathsPanel}
-            sx={{
-              position: 'absolute',
-              right: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'white',
-              borderRadius: '8px 0 0 8px',
-              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-              alignItems: 'center',
-              padding: '10px 5px',
-              cursor: 'pointer',
-              zIndex: 10,
-              border: '1px solid rgba(102, 126, 234, 0.2)',
-              borderRight: 'none',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                background: 'rgba(102, 126, 234, 0.05)',
-              }
-            }}
-          >
-            <ChevronLeftIcon sx={{ color: '#667eea' }} />
-            <Box 
-              sx={{ 
-                writingMode: 'vertical-rl', 
-                transform: 'rotate(180deg)',
-                fontSize: '0.8rem',
-                fontWeight: 'bold',
-                color: '#1e3a8a',
-                mt: 1
-              }}
-            >
-              Complete Paths
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%' 
+            }}>
+              <Typography variant="body2">
+                No paths available
+              </Typography>
             </Box>
-          </Box>
-        )}
+          )}
+        </Box>
         
         <Box 
           sx={{ 
@@ -2036,30 +1990,30 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   gap: 1
                 }}>
                   <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
-            Complete Paths
-          </Typography>
-                
-                <Button
-                  size="small"
-                  onClick={togglePathsPanel}
-                  sx={{
-                    minWidth: 'auto',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    p: 0,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    '&:hover': {
-                      background: 'rgba(102, 126, 234, 0.1)',
-                    }
-                  }}
-                >
-                  <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
-                </Button>
-              </Box>
-          
+              Complete Paths
+            </Typography>
+                  
+                  <Button
+                    size="small"
+                    onClick={togglePathsPanel}
+                    sx={{
+                      minWidth: 'auto',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      p: 0,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      '&:hover': {
+                        background: 'rgba(102, 126, 234, 0.1)',
+                      }
+                    }}
+                  >
+                    <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
+                  </Button>
+                </Box>
+            
           {allPaths.length > 0 ? (
             <Box 
               ref={scrollContainerRef}
@@ -2225,6 +2179,34 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             </>
           )}
         </Box>
+        
+        {/* Bouton pour ouvrir le panneau quand il est fermé */}
+        {!pathsPanelOpen && (
+          <Button
+            onClick={togglePathsPanel}
+            sx={{
+              position: 'absolute',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              minWidth: 'auto',
+              width: '28px',
+              height: '80px',
+              borderRadius: '8px 0 0 8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              color: '#667eea',
+              '&:hover': {
+                backgroundColor: 'rgba(102, 126, 234, 0.2)',
+              },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 10
+            }}
+          >
+            <ChevronLeftIcon />
+          </Button>
+        )}
       </Box>
       <style>{styles}</style>
       <style>{hierarchyStyles}</style>
