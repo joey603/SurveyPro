@@ -430,9 +430,9 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             usePointStyle: true,
             pointStyle: 'circle',
             font: {
-              size: fullSize ? 14 : 12
-            }
-          },
+                    size: fullSize ? 14 : 12
+                  }
+                },
           onClick: () => {}
         },
         tooltip: {
@@ -440,23 +440,23 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             label: (context: any) => {
               const age = context.parsed.x;
               const count = context.parsed.y;
-              return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
-            }
-          },
-          titleFont: {
-            size: fullSize ? 16 : 14,
-            weight: 'bold' as const
-          },
-          bodyFont: {
-            size: fullSize ? 14 : 12
-          },
-          padding: fullSize ? 12 : 8,
-          boxPadding: 5,
-          backgroundColor: 'rgba(50, 50, 50, 0.9)',
-          borderColor: 'rgba(102, 126, 234, 0.6)',
-          borderWidth: 1,
-          caretSize: 8,
-          cornerRadius: 6,
+                    return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+                  }
+                },
+                titleFont: {
+                  size: fullSize ? 16 : 14,
+                  weight: 'bold' as const
+                },
+                bodyFont: {
+                  size: fullSize ? 14 : 12
+                },
+                padding: fullSize ? 12 : 8,
+                boxPadding: 5,
+                backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                borderColor: 'rgba(102, 126, 234, 0.6)',
+                borderWidth: 1,
+                caretSize: 8,
+                cornerRadius: 6,
         }
       },
       interaction: {
@@ -508,43 +508,43 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             color: 'rgba(102, 126, 234, 0.1)'
           }
         }
-      },
-      transitions: {
-        active: {
-          animation: {
-            duration: 400,
-            easing: 'easeOutQuart' as const
-          }
-        },
-        resize: {
-          animation: {
-            duration: 500,
-            easing: 'easeOutQuart' as const
-          }
-        },
-        show: {
-          animations: {
-            x: { from: 0 },
-            y: { from: 0 }
-          }
-        },
-        hide: {
-          animations: {
-            x: { to: 0 },
-            y: { to: 0 }
-          }
-        }
-      },
-      layout: {
-        padding: {
-          top: fullSize ? 30 : 20,
-          bottom: fullSize ? 30 : 20,
-          left: fullSize ? 20 : 10,
-          right: fullSize ? 20 : 10
-        },
-        autoPadding: true
-      }
-    }} 
+            },
+            transitions: {
+              active: {
+                animation: {
+                  duration: 400,
+                  easing: 'easeOutQuart' as const
+                }
+              },
+              resize: {
+                animation: {
+                  duration: 500,
+                  easing: 'easeOutQuart' as const
+                }
+              },
+              show: {
+                animations: {
+                  x: { from: 0 },
+                  y: { from: 0 }
+                }
+              },
+              hide: {
+                animations: {
+                  x: { to: 0 },
+                  y: { to: 0 }
+                }
+              }
+            },
+            layout: {
+              padding: {
+                top: fullSize ? 30 : 20,
+                bottom: fullSize ? 30 : 20,
+                left: fullSize ? 20 : 10,
+                right: fullSize ? 20 : 10
+              },
+              autoPadding: true
+            }
+          }} 
         />
         {isTruncated && !fullSize && (
           <Box sx={{ 

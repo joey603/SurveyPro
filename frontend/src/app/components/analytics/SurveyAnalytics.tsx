@@ -59,7 +59,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { QuestionDetailsDialog } from './QuestionDetailsDialog';
+import { QuestionDetailsDialog, QuestionDetails as DialogQuestionDetails } from './QuestionDetailsDialog';
 import { DemographicStatistics } from './DemographicStatistics';
 import { PathSegment } from './PathTreeVisualizer';
 import { AnalysisGroup } from './GroupsList';
@@ -419,6 +419,49 @@ interface QuestionDetails {
   answers: SurveyResponse[];
 }
 
+interface QuestionDetailsDialog {
+  questionId: string;
+  question: string;
+  answers: string[];
+  type: string;
+}
+
+interface QuestionDetailsSurvey {
+  questionId: string;
+  question: Question;
+  answers: SurveyResponse[];
+}
+
+interface QuestionDetailsDialogFormat {
+  questionId: string;
+  question: string;
+  answers: string[];
+  type: string;
+}
+
+interface QuestionDetailsSurveyFormat {
+  questionId: string;
+  question: Question;
+  answers: SurveyResponse[];
+}
+
+// Fonction de conversion
+const convertToDialogFormat = (details: QuestionDetailsSurveyFormat | null): DialogQuestionDetails | null => {
+  if (!details) return null;
+  
+  const answers = details.answers.map(response => {
+    const answer = response.answers.find(a => a.questionId === details.questionId);
+    return answer ? answer.answer : '';
+  }).filter(answer => answer !== '');
+
+  return {
+    questionId: details.questionId,
+    question: details.question.text,
+    type: details.question.type,
+    answers
+  };
+};
+
 // Assurez-vous d'avoir accès aux couleurs de mise en évidence
 // Si elles ne sont pas déjà importées depuis PathTreeVisualizer, ajoutez-les:
 const HIGHLIGHT_COLORS = [
@@ -452,7 +495,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   });
   const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetailsSurveyFormat | null>(null);
   const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPaths, setSelectedPaths] = useState<PathSegment[][]>([]);
@@ -1323,7 +1366,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     console.log("Path filter changed:", isFiltered, "filtered responses:", filteredResps.length);
     
     // Mettre à jour l'état des réponses filtrées
-    setFilteredResponses(isFiltered ? filteredResps : responses);
+    setFilteredResponsesByPath(filteredResps);
+    setPathFilterActive(isFiltered);
     
     // Mettre à jour l'état de filtrage
     setIsPathFiltered(isFiltered);
@@ -1336,7 +1380,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   
   // Déterminez quelles réponses afficher en fonction des filtres actifs
   const displayResponses = pathFilterActive 
-    ? filteredPathResponses 
+    ? filteredResponsesByPath 
     : (filteredResponses.length > 0 ? filteredResponses : responses);
 
   // Cette fonction va afficher les résultats de filtrage dans la console pour le débogage
@@ -1382,6 +1426,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     });
     setAppliedFilters(undefined); // Réinitialiser également appliedFilters
   };
+
+  // Remplacer l'utilisation directe de selectedQuestion par la version convertie
+  const dialogQuestion = convertToDialogFormat(selectedQuestion);
 
   return (
     <Box>
@@ -1489,13 +1536,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${filteredResponses.length}`}
+                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${displayResponses.length}`}
                   survey={{
                     ...survey,
                     questions: getQuestionsToDisplay(),
                     isDynamic: survey.isDynamic || false
                   }}
-                  responses={isPathFiltered ? filteredResponses : responses}
+                  responses={displayResponses}
                   onApplyFilters={(filteredResps, appliedFilters) => {
                     handleAdvancedFilterApply(filteredResps, appliedFilters || persistentFilters);
                   }}
@@ -1511,19 +1558,16 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
             {survey.isDynamic && (
               <Grid item xs={12}>
-              
-                  
-                  <Box sx={{ height: '600px' }}>
-                    <PathTreeVisualizer 
-                      survey={survey} 
-                      responses={filteredResponses} // Utiliser directement filteredResponses au lieu de la condition
-                      onPathSelect={handlePathSelection}
-                      selectedPaths={selectedPaths}
-                      onFilterChange={handlePathFilterChange}
-                      onPathsLoad={handlePathsLoad}
-                    />
-                  </Box>
-                
+                <Box sx={{ height: '600px' }}>
+                  <PathTreeVisualizer 
+                    survey={survey} 
+                    responses={displayResponses}
+                    onPathSelect={handlePathSelection}
+                    selectedPaths={selectedPaths}
+                    onFilterChange={handlePathFilterChange}
+                    onPathsLoad={handlePathsLoad}
+                  />
+                </Box>
               </Grid>
             )}
 
@@ -2145,9 +2189,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
         {/* Remplacer la boîte de dialogue existante par le nouveau composant */}
         <QuestionDetailsDialog
-          open={showResponseDetails}
-          onClose={() => setShowResponseDetails(false)}
-          question={selectedQuestion}
+          open={!!selectedQuestion}
+          onClose={() => setSelectedQuestion(null)}
+          question={dialogQuestion}
           chartTypes={chartTypes}
           setChartTypes={setChartTypes}
           renderChart={renderChart}

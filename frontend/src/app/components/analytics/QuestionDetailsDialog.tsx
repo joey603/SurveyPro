@@ -45,12 +45,15 @@ interface SurveyResponse {
       dateOfBirth?: string;
     };
   };
+  path?: string[];
+  pathCount?: number;
 }
 
-interface QuestionDetails {
+export interface QuestionDetails {
   questionId: string;
-  question: Question;
-  answers: SurveyResponse[];
+  question: string;
+  answers: string[];
+  type: string;
 }
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
@@ -94,7 +97,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         color: 'white'
       }}>
-        {question?.question?.text}
+        {question?.question}
         <IconButton onClick={onClose} sx={{ color: 'white' }}>
           <CloseIcon />
         </IconButton>
@@ -104,7 +107,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
         {question && (
           <Box>
             <Typography variant="subtitle1" gutterBottom>
-              Question type: {question.question.type}
+              Question type: {question.type}
             </Typography>
             
             <Box sx={{ 
@@ -125,7 +128,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                 justifyContent: 'center',
                 alignItems: 'center'
               }}>
-                {renderChart(question.questionId, chartTypes[question.questionId] || getAvailableChartTypes(question.question.type)[0])}
+                {renderChart(question.questionId, chartTypes[question.questionId] || getAvailableChartTypes(question.type)[0])}
               </Box>
             </Box>
             
@@ -139,7 +142,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                 pt: 1
               }}
             >
-              {getAvailableChartTypes(question.question.type).map((type) => (
+              {getAvailableChartTypes(question.type).map((type) => (
                 <Button
                   key={type}
                   onClick={() => setChartTypes(prev => ({ ...prev, [question.questionId]: type }))}
@@ -167,24 +170,18 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
             </Typography>
             
             <Box sx={{ maxHeight: 300, overflowY: 'auto', mt: 2 }}>
-              {question.answers.map((response, index) => {
-                const answer = response.answers.find(a => a.questionId === question.questionId);
-                return (
-                  <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" fontWeight="medium">
-                        Response #{index + 1}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(response.submittedAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body1" sx={{ mt: 1 }}>
-                      {answer?.answer || 'No response'}
+              {question.answers.map((answer, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" fontWeight="medium">
+                      Response #{index + 1}
                     </Typography>
-                  </Paper>
-                );
-              })}
+                  </Box>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    {answer || 'No response'}
+                  </Typography>
+                </Paper>
+              ))}
             </Box>
           </Box>
         )}

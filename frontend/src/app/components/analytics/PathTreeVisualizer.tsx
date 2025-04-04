@@ -41,7 +41,7 @@ export interface PathTreeVisualizerProps {
   onPathSelect: (path: PathSegment[]) => void;
   selectedPaths: PathSegment[][];
   onFilterChange?: (isFiltered: boolean, filteredResponses: any[]) => void;
-  onPathsLoad?: (paths: {name: string, path: PathSegment[], count: number, group: string}[]) => void;
+  onPathsLoad?: (paths: {name: string, path: PathSegment[], group: string}[]) => void;
 }
 
 // Ajoutez ce tableau de couleurs en haut du fichier, juste après les imports
@@ -591,7 +591,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[], count: number, group: string}[]>([]);
+  const [allPaths, setAllPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
   const [analysisGroups, setAnalysisGroups] = useState<{[key: string]: {name: string, paths: number[]}}>({}); 
   const [filterApplied, setFilterApplied] = useState(false);
   const [filteredPaths, setFilteredPaths] = useState<{name: string, path: PathSegment[], group: string}[]>([]);
@@ -616,8 +616,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   };
   
-  const assignAnalysisGroups = (paths: {name: string, path: PathSegment[], count: number}[]): {name: string, path: PathSegment[], count: number, group: string}[] => {
-    const groupedPaths: {name: string, path: PathSegment[], count: number, group: string}[] = [];
+  const assignAnalysisGroups = (paths: {name: string, path: PathSegment[]}[]): {name: string, path: PathSegment[], group: string}[] => {
+    const groupedPaths: {name: string, path: PathSegment[], group: string}[] = [];
     const groups: {[key: string]: {name: string, paths: number[]}} = {};
     
     const pathsByFirstQuestion: {[key: string]: number[]} = {};
@@ -650,7 +650,6 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           groupedPaths.push({
             name: paths[pathIndex].name,
             path: paths[pathIndex].path,
-            count: paths[pathIndex].count,
             group: groupId
           });
         }
@@ -726,7 +725,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       }
     });
     
-    const completePaths: {name: string, path: PathSegment[], count: number}[] = [];
+    const completePaths: {name: string, path: PathSegment[]}[] = [];
     const pathSet = new Set<string>();
     
     const traversePath = (nodeId: string, currentPath: PathSegment[], depth: number = 0) => {
@@ -742,22 +741,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           // Vérifier si cette séquence de questions est unique
           if (!pathSet.has(pathKey)) {
             pathSet.add(pathKey);
-            
-            // Calculer le nombre total de répondants pour ce chemin
-            const totalRespondents = responses.filter(response => 
-              currentPath.every(segment => {
-                const answer = response.answers.find((a: { questionId: string; answer: string }) => 
-                  a.questionId === segment.questionId
-                );
-                return answer !== undefined;
-              })
-            ).length;
-            
-            completePaths.push({
-              name: `Path ${getAlphabeticName(completePaths.length)}`,
-              path: [...currentPath],
-              count: totalRespondents
-            });
+          completePaths.push({
+            name: `Path ${getAlphabeticName(completePaths.length)}`,
+            path: [...currentPath]
+          });
           }
         }
         return;
@@ -1073,16 +1060,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       setNodes(nodesWithSelection);
       setEdges(edgesWithSelection);
-      setAllPaths(paths.map(path => ({
-        ...path,
-        count: getRespondentCountForPath(path.path, responses)
-      })));
+      setAllPaths(paths);
       
       if (onPathsLoad) {
-        onPathsLoad(paths.map(path => ({
-          ...path,
-          count: getRespondentCountForPath(path.path, responses)
-        })));
+        onPathsLoad(paths);
       }
       
       setLoading(false);
@@ -1092,7 +1073,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }
   }, [survey, responses, selectedPaths]);
   
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     if (node.id === 'root') return;
@@ -1235,17 +1216,86 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       return responses;
     }
 
-    return responses.filter(response => {
-      return selectedPaths.some(path => {
-        // Vérifier si le répondant a répondu à toutes les questions du chemin
-        return path.every(segment => {
-          const answer = response.answers.find((a: { questionId: string; answer: string }) => 
-            a.questionId === segment.questionId
-          );
-          return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
-        });
+    // Extraire tous les IDs de questions uniques des chemins sélectionnés
+    const selectedQuestionIds = new Set<string>();
+    selectedPaths.forEach(path => {
+      path.forEach(segment => {
+        selectedQuestionIds.add(segment.questionId);
       });
     });
+
+    // Filtrer les réponses pour ne garder que celles qui :
+    // 1. Ont répondu à toutes les questions du chemin
+    // 2. N'ont répondu qu'aux questions du chemin
+    // 3. Ont les questions dans le bon ordre (sans vérifier les réponses spécifiques)
+    const filteredResponses = responses.filter(response => {
+      // Vérifier que toutes les questions du chemin sont présentes
+      const hasAllSelectedQuestions = Array.from(selectedQuestionIds).every(qId =>
+        response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
+      );
+
+      // Vérifier qu'il n'y a pas d'autres questions
+      const hasOnlySelectedQuestions = response.answers.every((answer: { questionId: string }) =>
+        selectedQuestionIds.has(answer.questionId)
+      );
+
+      // Vérifier que les questions sont dans le bon ordre
+      const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
+      const hasCorrectOrder = selectedPaths.some(path => {
+        const pathQuestionIds = path.map(segment => segment.questionId);
+        let currentPathIndex = 0;
+        let lastFoundIndex = -1;
+        
+        for (let i = 0; i < responseQuestionIds.length; i++) {
+          if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
+            // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
+            if (lastFoundIndex !== -1) {
+              const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+              if (questionsBetween.some((qId: string) => !pathQuestionIds.includes(qId))) {
+                return false; // Il y a des questions non autorisées entre les questions du chemin
+              }
+            }
+            
+            lastFoundIndex = i;
+            currentPathIndex++;
+            if (currentPathIndex === pathQuestionIds.length) {
+              return true; // Toutes les questions du chemin ont été trouvées dans l'ordre
+            }
+          }
+        }
+        return false;
+      });
+
+      const isValid = hasAllSelectedQuestions && hasOnlySelectedQuestions && hasCorrectOrder;
+
+      // Log détaillé pour le débogage
+      if (isValid) {
+        console.log("=== Réponse valide trouvée ===");
+        console.log("ID de la réponse:", response._id);
+        console.log("Questions répondues:", response.answers.map((a: { questionId: string; answer: string }) => ({
+          questionId: a.questionId,
+          answer: a.answer
+        })));
+        console.log("Questions attendues:", Array.from(selectedQuestionIds));
+        console.log("============================");
+      }
+
+      return isValid;
+    });
+
+    console.log("=== Résumé du filtrage ===");
+    console.log("Nombre total de réponses:", responses.length);
+    console.log("Nombre de réponses filtrées:", filteredResponses.length);
+    console.log("Questions sélectionnées:", Array.from(selectedQuestionIds));
+    console.log("Chemins sélectionnés:", selectedPaths.map(path => 
+      path.map(segment => ({
+        questionId: segment.questionId,
+        answer: segment.answer
+      }))
+    ));
+    console.log("============================");
+
+    return filteredResponses;
   };
   
   const updateVisibleElements = (filtered: boolean) => {
@@ -1643,26 +1693,46 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   };
   
   const createSinglePathTree = (survey: any, responses: any[], path: PathSegment[], pathIndex: number) => {
-    const questionIdsInPath = new Set<string>();
-    path.forEach(segment => {
-      questionIdsInPath.add(segment.questionId);
-    });
-    
+    // Créer un nœud pour chaque segment du chemin
     const pathNodes: Node[] = [];
     const pathEdges: Edge[] = [];
     
-    // Calculate the number of respondents who followed this sequence of questions
-    const respondentsFollowingPath = responses.filter(response => 
-      path.every(segment => {
-        const answer = response.answers.find((a: { questionId: string; answer: string }) => 
-          a.questionId === segment.questionId
-        );
-        return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
-      })
-    );
+    // Utiliser directement les réponses filtrées par getFilteredResponses
+    const filteredResponses = getFilteredResponses();
     
-    // Total number of respondents for this specific path
-    const totalRespondentsForPath = respondentsFollowingPath.length;
+    // Compter les réponses qui correspondent exactement à ce chemin spécifique
+    const pathQuestionIds = path.map(segment => segment.questionId);
+    const responsesForThisPath = filteredResponses.filter(response => {
+      // Vérifier que les questions sont dans le bon ordre
+      const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
+      let currentPathIndex = 0;
+      let lastFoundIndex = -1;
+      
+      for (let i = 0; i < responseQuestionIds.length; i++) {
+        if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
+          // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
+          if (lastFoundIndex !== -1) {
+            const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+            if (questionsBetween.some((qId: string) => !pathQuestionIds.includes(qId))) {
+              return false; // Il y a des questions non autorisées entre les questions du chemin
+            }
+          }
+          
+          lastFoundIndex = i;
+          currentPathIndex++;
+          if (currentPathIndex === pathQuestionIds.length) {
+            return true; // Toutes les questions du chemin ont été trouvées dans l'ordre
+          }
+        }
+      }
+      return false;
+    });
+    
+    const totalRespondentsForPath = responsesForThisPath.length;
+    
+    // Log pour afficher le nombre de répondants dans le chemin unique
+    console.log(`Single Path Tree - Path ${pathIndex + 1}: ${totalRespondentsForPath} répondants`);
+    console.log(`Path details: ${path.map(segment => `${segment.questionId} (${segment.answer})`).join(' → ')}`);
     
     // Path color - Use the pathIndex to select the color from HIGHLIGHT_COLORS
     const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
@@ -1727,24 +1797,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     return { nodes: pathNodes, edges: pathEdges };
   };
   
-  // New function that counts respondents who followed exactly a specific path
-  const getRespondentCountForPath = (path: PathSegment[], responses: any[]): number => {
-    return responses.filter(response => {
-      return path.every(segment => {
-        const answer = response.answers.find((a: { questionId: string; answer: string }) => 
-          a.questionId === segment.questionId
-        );
-        return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
-      });
-    }).length;
-  };
-  
   const getRespondentCountForSegment = (segment: PathSegment, responses: any[]): number => {
     return responses.filter(response => {
       const answer = response.answers.find((a: { questionId: string; answer: string }) => 
         a.questionId === segment.questionId
       );
-      return answer !== undefined; // On vérifie seulement si la question a été répondue, pas la réponse exacte
+      return answer && answer.answer === segment.answer;
     }).length;
   };
   
@@ -1784,10 +1842,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     }, 500);
   };
   
-  const handleFilteredPathClick = (pathIndex: number, event: React.MouseEvent) => {
-    // Empêcher la propagation de l'événement
-    event.stopPropagation();
-    
+  const handleFilteredPathClick = (pathIndex: number) => {
     console.log('=== Chemins filtrés ===');
     console.log('Index du chemin cliqué:', pathIndex);
     console.log('Chemin complet:', filteredPaths[pathIndex]);
@@ -1800,6 +1855,60 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         duration: 800
       });
     }
+  };
+  
+  // New function that counts respondents who followed exactly a specific path
+  const getRespondentCountForPath = (path: PathSegment[], responses: any[]): number => {
+    // Extraire les IDs de questions du chemin
+    const questionIds = path.map(segment => segment.questionId);
+    
+    // Filtrer les réponses pour ne garder que celles qui :
+    // 1. Ont répondu à toutes les questions du chemin
+    // 2. N'ont répondu qu'aux questions du chemin
+    // 3. Ont les questions dans le bon ordre
+    const filteredResponses = responses.filter(response => {
+      // Vérifier que toutes les questions du chemin sont présentes
+      const hasAllSelectedQuestions = questionIds.every(qId =>
+        response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
+      );
+
+      // Vérifier qu'il n'y a pas d'autres questions
+      const hasOnlySelectedQuestions = response.answers.every((answer: { questionId: string }) =>
+        questionIds.includes(answer.questionId)
+      );
+
+      // Vérifier que les questions sont dans le bon ordre
+      const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
+      let currentIndex = 0;
+      let lastFoundIndex = -1;
+      
+      for (let i = 0; i < responseQuestionIds.length; i++) {
+        if (responseQuestionIds[i] === questionIds[currentIndex]) {
+          // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
+          if (lastFoundIndex !== -1) {
+            const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+            if (questionsBetween.some((qId: string) => !questionIds.includes(qId))) {
+              return false; // Il y a des questions non autorisées entre les questions du chemin
+            }
+          }
+          
+          lastFoundIndex = i;
+          currentIndex++;
+          if (currentIndex === questionIds.length) {
+            return true; // Toutes les questions du chemin ont été trouvées dans l'ordre
+          }
+        }
+      }
+      return false;
+    });
+
+    // Log détaillé pour le débogage
+    console.log("=== Nombre de répondants pour le chemin ===");
+    console.log("Questions du chemin:", questionIds);
+    console.log("Nombre de réponses filtrées:", filteredResponses.length);
+    console.log("============================");
+    
+    return filteredResponses.length;
   };
   
   return (
@@ -1842,8 +1951,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             flexBasis: 0,
             border: '1px solid rgba(102, 126, 234, 0.2)', 
             borderRadius: '12px',
-            position: 'relative',
-            minHeight: '500px',
+          position: 'relative',
+          minHeight: '500px',
             transition: 'flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
             overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
             background: 'rgba(252, 253, 255, 0.7)',
@@ -1851,16 +1960,16 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.03)'
           }}
         >
-          {loading ? (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%' 
-            }}>
-              <CircularProgress />
-            </Box>
-          ) : responses.length > 0 ? (
+        {loading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
+          }}>
+            <CircularProgress />
+          </Box>
+        ) : responses.length > 0 ? (
             filterApplied && multipleTreeNodes.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
                 {multipleTreeNodes.map((pathNodes, index) => (
@@ -1880,7 +1989,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                       }
                     }}
-                    onClick={(event) => handleFilteredPathClick(index, event)}
+                    onClick={() => handleFilteredPathClick(index)}
                   >
                     <Typography 
                       variant="subtitle2" 
@@ -1930,50 +2039,50 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 ))}
               </Box>
             ) : (
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodeClick={onNodeClick}
-                nodeTypes={{ questionNode: QuestionNode }}
-                edgeTypes={{ default: LinkComponent }}
-                defaultViewport={defaultViewport}
-                minZoom={0.1}
-                maxZoom={2.5}
-                fitView
-                fitViewOptions={{ padding: 0.3 }}
-                onInit={setReactFlowInstance}
-                zoomOnScroll={false}
-                zoomOnPinch={true}
-                panOnScroll={true}
-                nodesDraggable={false}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodeClick={onNodeClick}
+            nodeTypes={{ questionNode: QuestionNode }}
+            edgeTypes={{ default: LinkComponent }}
+            defaultViewport={defaultViewport}
+              minZoom={0.1}
+              maxZoom={2.5}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            onInit={setReactFlowInstance}
+            zoomOnScroll={false}
+            zoomOnPinch={true}
+            panOnScroll={true}
+            nodesDraggable={false}
                 elementsSelectable={!filterApplied}
-              >
-                <Controls 
-                  position="top-right" 
-                  showInteractive={true} 
-                  fitViewOptions={{ padding: 0.3 }}
-                />
-                <Background 
-                  color="#f0f4ff" 
-                  gap={20} 
-                  size={1.5}
-                />
-              </ReactFlow>
+          >
+            <Controls 
+              position="top-right" 
+              showInteractive={true} 
+              fitViewOptions={{ padding: 0.3 }}
+            />
+            <Background 
+              color="#f0f4ff" 
+              gap={20} 
+              size={1.5}
+            />
+          </ReactFlow>
             )
-          ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%' 
-            }}>
-              <Typography variant="body2">
-                No paths available
-              </Typography>
-            </Box>
-          )}
-        </Box>
-        
+        ) : (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
+          }}>
+            <Typography variant="body2">
+              No paths available
+            </Typography>
+          </Box>
+        )}
+      </Box>
+      
         <Box 
           sx={{ 
             flex: pathsPanelOpen ? 0.7 : 0,
@@ -2013,30 +2122,30 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   gap: 1
                 }}>
                   <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
-              Complete Paths
-            </Typography>
-                  
-                  <Button
-                    size="small"
-                    onClick={togglePathsPanel}
-                    sx={{
-                      minWidth: 'auto',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      p: 0,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      '&:hover': {
-                        background: 'rgba(102, 126, 234, 0.1)',
-                      }
-                    }}
-                  >
-                    <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
-                  </Button>
-                </Box>
-            
+            Complete Paths
+          </Typography>
+                
+                <Button
+                  size="small"
+                  onClick={togglePathsPanel}
+                  sx={{
+                    minWidth: 'auto',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    p: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    '&:hover': {
+                      background: 'rgba(102, 126, 234, 0.1)',
+                    }
+                  }}
+                >
+                  <ChevronRightIcon fontSize="small" sx={{ color: '#667eea' }} />
+                </Button>
+              </Box>
+          
           {allPaths.length > 0 ? (
             <Box 
               ref={scrollContainerRef}
