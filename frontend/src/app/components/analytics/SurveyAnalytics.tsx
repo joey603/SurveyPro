@@ -591,7 +591,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   // si le sondage est dynamique
   useEffect(() => {
     if (survey.isDynamic) {
-      setActiveTab(2); // L'index de l'onglet qui contient l'arborescence
+      setActiveTab(1); // Utiliser l'index 1 pour les sondages dynamiques (Answer Filters)
     }
   }, [survey]);
 
