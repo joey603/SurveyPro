@@ -1411,14 +1411,28 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     
     // Mettre à jour l'état des réponses filtrées
     setFilteredResponsesByPath(filteredResps);
-    setPathFilterActive(isFiltered);
     
-    // Mettre à jour l'état de filtrage
+    // S'assurer que l'état de filtrage est correctement mis à jour
+    setPathFilterActive(isFiltered);
     setIsPathFiltered(isFiltered);
     
-    // Réinitialiser les filtres avancés si nécessaire
+    // Si le filtre est activé, nous devons mettre à jour les réponses affichées
     if (isFiltered) {
+      // Réinitialiser les filtres avancés si nécessaire
       setAppliedFilters(undefined);
+      
+      // Assurons-nous que les filtres par chemin prennent priorité
+      setFilteredResponses(filteredResps);
+    } else {
+      // Si le filtre est désactivé, revenir aux réponses d'origine ou aux réponses avec filtres avancés
+      if (appliedFilters && Object.keys(appliedFilters.demographic).length > 0 || 
+          appliedFilters && Object.keys(appliedFilters.answers).length > 0) {
+        // Réappliquer les filtres avancés si nécessaire
+        handleAdvancedFilterApply(filteredResponses, appliedFilters);
+      } else {
+        // Sinon, revenir aux réponses d'origine
+        setFilteredResponses(responses);
+      }
     }
   };
   

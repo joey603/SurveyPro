@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
-import { Paper, Typography, Box, CircularProgress, Button } from '@mui/material';
+import { Paper, Typography, Box, CircularProgress, Button, IconButton, List, ListItem, ListItemText, Tooltip } from '@mui/material';
 import * as d3 from 'd3';
 import ReactFlow, { 
   Background, 
@@ -18,7 +18,33 @@ import ReactFlow, {
   getBezierPath,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { FilterAltOff as FilterAltOffIcon, Clear as ClearIcon, Splitscreen as SplitscreenIcon, ChevronRight as ChevronRightIcon, ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
+import { 
+  FilterAltOff as FilterAltOffIcon, 
+  Clear as ClearIcon, 
+  Splitscreen as SplitscreenIcon, 
+  ChevronRight as ChevronRightIcon, 
+  ChevronLeft as ChevronLeftIcon 
+} from '@mui/icons-material';
+import FilterListIcon from '@mui/icons-material/FilterList';
+
+// Ajout du type SurveyResponse au début du fichier, juste après les imports
+interface SurveyResponse {
+  _id: string;
+  surveyId: string;
+  answers: {
+    questionId: string;
+    answer: string;
+  }[];
+  submittedAt: string;
+  respondent?: {
+    demographic?: {
+      gender?: string;
+      educationLevel?: string;
+      city?: string;
+      dateOfBirth?: string;
+    };
+  };
+}
 
 export interface PathSegment {
   questionId: string;
@@ -1149,6 +1175,48 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       console.log(`%cAffichage de ${exactPathResponses.length} réponses exactes dans l'arbre filtré`, 
                  'color: green; font-weight: bold');
 
+      // Mettre à jour filteredPaths avec les chemins sélectionnés mais en gardant les noms d'origine
+      const filteredPathsWithCounts = selectedPaths.map((path, index) => {
+        // Trouver ce chemin dans allPaths pour récupérer son nom original
+        const originalPath = allPaths.find(originalPath => 
+          originalPath.path.length === path.length &&
+          originalPath.path.every((segment, i) => 
+            segment.questionId === path[i].questionId && 
+            segment.answer === path[i].answer
+          )
+        );
+        
+        // Compter combien de réponses correspondent exactement à ce chemin
+        const pathQuestionIds = path.map(segment => segment.questionId);
+        
+        const exactMatchesForPath = exactPathResponses.filter(response => {
+          // Vérifier l'ordre des questions pour ce chemin
+          const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
+          let currentPathIndex = 0;
+          let lastFoundIndex = -1;
+          
+          for (let i = 0; i < responseQuestionIds.length; i++) {
+            if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
+              lastFoundIndex = i;
+              currentPathIndex++;
+              if (currentPathIndex === pathQuestionIds.length) break;
+            }
+          }
+          
+          return currentPathIndex === pathQuestionIds.length;
+        });
+        
+        // Retourner le chemin avec son nom original si disponible
+        return {
+          name: originalPath ? originalPath.name : `Path ${index + 1} (${exactMatchesForPath.length} responses)`,
+          path: path,
+          group: 'filtered'
+        };
+      });
+      
+      // Mettre à jour la liste des chemins filtrés pour l'affichage dans le panneau
+      setFilteredPaths(filteredPathsWithCounts);
+      
       if (selectedPaths.length > 0) {
         const multipleNodes: Node[][] = [];
         const multipleEdges: Edge[][] = [];
@@ -1265,9 +1333,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       responses.forEach(response => {
         // 1. Vérifier que toutes les questions du chemin sont présentes
         const hasAllPathQuestions = pathQuestionIds.every(qId =>
-          response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
-        );
-        
+        response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
+      );
+
         if (!hasAllPathQuestions) {
           missingQuestionsCount++;
           return;
@@ -1284,7 +1352,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
         
         // 3. Vérifier l'ordre des questions
-        const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
+      const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
         let currentPathIndex = 0;
         let lastFoundIndex = -1;
         let orderCorrect = true;
@@ -2218,7 +2286,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   gap: 1
                 }}>
                   <SplitscreenIcon fontSize="small" sx={{ color: '#667eea' }} />
-            Complete Paths
+                  {filterApplied ? 'Filtered Paths' : 'Complete Paths'}
           </Typography>
                 
                 <Button
