@@ -1143,23 +1143,24 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     setFilterApplied(newFilterState);
     
     if (newFilterState) {
-      const filtered = allPaths.filter(pathItem => 
-        selectedPaths.some(selectedPath => 
-          selectedPath.length === pathItem.path.length && 
-          selectedPath.every((segment, i) => 
-            segment.questionId === pathItem.path[i].questionId && 
-            segment.answer === pathItem.path[i].answer
-          )
-        )
-      );
-      setFilteredPaths(filtered);
+      // Obtenir d'abord les réponses qui correspondent exactement aux chemins sélectionnés
+      const exactPathResponses = getFilteredResponses();
       
+      console.log(`%cAffichage de ${exactPathResponses.length} réponses exactes dans l'arbre filtré`, 
+                 'color: green; font-weight: bold');
+
       if (selectedPaths.length > 0) {
         const multipleNodes: Node[][] = [];
         const multipleEdges: Edge[][] = [];
         
         selectedPaths.forEach((path, pathIndex) => {
-          const { nodes: pathNodes, edges: pathEdges } = createSinglePathTree(survey, responses, path, pathIndex);
+          // MODIFICATION : Créer un arbre filtré qui ne montre que les réponses exactes
+          const { nodes: pathNodes, edges: pathEdges } = createSinglePathTree(
+            survey, 
+            exactPathResponses, // Utiliser seulement les réponses filtrées exactes
+            path, 
+            pathIndex
+          );
           multipleNodes.push(pathNodes);
           multipleEdges.push(pathEdges);
         });
@@ -1177,16 +1178,15 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }, 500);
       }
       
-      updateVisibleElements(true);
+      updateVisibleElements(true, exactPathResponses);
       if (onFilterChange) {
-        const filteredResponses = getFilteredResponses();
-        onFilterChange(true, filteredResponses);
+        onFilterChange(true, exactPathResponses);
       }
     } else {
       setFilteredPaths([]);
       setMultipleTreeNodes([]);
       setMultipleTreeEdges([]);
-      updateVisibleElements(false);
+      updateVisibleElements(false, responses);
       if (onFilterChange) {
         onFilterChange(false, responses);
       }
@@ -1382,7 +1382,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     return filteredResponses;
   };
   
-  const updateVisibleElements = (filtered: boolean) => {
+  const updateVisibleElements = (filtered: boolean, responsesToUse: SurveyResponse[] = responses) => {
     if (!filtered) {
       const { nodes: originalNodes, edges: originalEdges } = processPathTree(survey, responses);
       
@@ -1424,6 +1424,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setNodes(reorganizedNodes);
       setEdges(edgesWithData);
     } else {
+      // On utilise les réponses filtrées pour générer un nouvel arbre
+      const { nodes: exactPathNodes, edges: exactPathEdges } = processPathTree(survey, responsesToUse);
+      
       const questionIdsInSelectedPaths = new Set<string>();
       
       selectedPaths.forEach(path => {
@@ -1432,11 +1435,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         });
       });
       
-      const filteredNodes = nodes.filter(node => 
+      // Filtrer les nœuds pour ne garder que ceux qui sont dans les chemins sélectionnés
+      const filteredNodes = exactPathNodes.filter(node => 
         questionIdsInSelectedPaths.has(node.data.questionId)
       );
       
-      const filteredEdges = edges.filter(edge => {
+      // Filtrer les arêtes pour ne garder que celles qui relient des nœuds dans les chemins sélectionnés
+      const filteredEdges = exactPathEdges.filter(edge => {
         const sourceId = edge.source.includes('-') ? edge.source.split('-').slice(-1)[0] : edge.source;
         const targetId = edge.target.includes('-') ? edge.target.split('-').slice(-1)[0] : edge.target;
         
@@ -1777,108 +1782,115 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   };
   
   const createSinglePathTree = (survey: any, responses: any[], path: PathSegment[], pathIndex: number) => {
-    // Créer un nœud pour chaque segment du chemin
-    const pathNodes: Node[] = [];
-    const pathEdges: Edge[] = [];
+    if (!path || path.length === 0) return { nodes: [], edges: [] };
     
-    // Utiliser directement les réponses filtrées par getFilteredResponses
-    const filteredResponses = getFilteredResponses();
-    
-    // Compter les réponses qui correspondent exactement à ce chemin spécifique
+    // Filtrer d'abord les réponses pour ne garder que celles qui correspondent exactement à ce chemin
     const pathQuestionIds = path.map(segment => segment.questionId);
-    const responsesForThisPath = filteredResponses.filter(response => {
-      // Vérifier que les questions sont dans le bon ordre
+    
+    const exactPathResponses = responses.filter(response => {
+      // 1. Vérifier que toutes les questions du chemin sont présentes
+      const hasAllPathQuestions = pathQuestionIds.every(qId =>
+        response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
+      );
+      
+      if (!hasAllPathQuestions) return false;
+      
+      // 2. Vérifier qu'il n'y a pas d'autres questions que celles du chemin
+      const hasOnlyPathQuestions = response.answers.every((answer: { questionId: string }) =>
+        pathQuestionIds.includes(answer.questionId)
+      );
+      
+      if (!hasOnlyPathQuestions) return false;
+      
+      // 3. Vérifier l'ordre des questions
       const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
       let currentPathIndex = 0;
       let lastFoundIndex = -1;
       
       for (let i = 0; i < responseQuestionIds.length; i++) {
         if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
-          // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
           if (lastFoundIndex !== -1) {
             const questionsBetween: Array<string> = responseQuestionIds.slice(lastFoundIndex + 1, i);
             if (questionsBetween.some((qId: string) => !pathQuestionIds.includes(qId))) {
-              return false; // Il y a des questions non autorisées entre les questions du chemin
+              return false;
             }
           }
           
           lastFoundIndex = i;
           currentPathIndex++;
+          
           if (currentPathIndex === pathQuestionIds.length) {
-            return true; // Toutes les questions du chemin ont été trouvées dans l'ordre
+            break;
           }
         }
       }
-      return false;
+      
+      return currentPathIndex === pathQuestionIds.length;
     });
     
-    const totalRespondentsForPath = responsesForThisPath.length;
+    console.log(`Chemin ${pathIndex + 1}: ${exactPathResponses.length}/${responses.length} réponses correspondent exactement`);
     
-    // Log pour afficher le nombre de répondants dans le chemin unique
-    console.log(`Single Path Tree - Path ${pathIndex + 1}: ${totalRespondentsForPath} répondants`);
-    console.log(`Path details: ${path.map(segment => `${segment.questionId} (${segment.answer})`).join(' → ')}`);
+    // Construire l'arbre avec seulement les réponses exactes
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
     
-    // Path color - Use the pathIndex to select the color from HIGHLIGHT_COLORS
-    const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+    const questionNodes: { [key: string]: Node } = {};
     
     path.forEach((segment, index) => {
-      const nodeId = `path-${pathIndex}-${segment.questionId}`;
-      const questionNode = {
+      const nodeId = `path${pathIndex}-${segment.questionId}`;
+      
+      // Compter combien de réponses correspondent à cette question dans le chemin
+      const responseCount = exactPathResponses.filter(response => 
+        response.answers.some((answer: { questionId: string; answer: string }) => 
+          answer.questionId === segment.questionId && answer.answer === segment.answer
+        )
+      ).length;
+      
+      const node: Node = {
         id: nodeId,
         type: 'questionNode',
-        position: { 
-          x: index * 300, 
-          y: 0 // Mettre tous les nœuds sur la même ligne pour plus de clarté
-        },
+        position: { x: index * 300, y: 0 },
         data: {
           questionId: segment.questionId,
           text: segment.questionText,
           answer: segment.answer,
-          count: totalRespondentsForPath,
-          highlightLevel: 3,
-          isSelected: true,
-          selectedPaths: [path],
-          pathColor: pathColor,
-          primaryPathIndex: pathIndex,
-          secondaryPathIndices: [],
-          isFilteredTree: true // Indiquer qu'il s'agit d'un nœud dans un arbre filtré
+          count: responseCount,
+          totalCount: exactPathResponses.length,
+          pathIndex: pathIndex,
+          highlightColor: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length]
         },
-        style: {
-          width: 240,
-          height: 170,
-          backgroundColor: `${pathColor}10`,
-          borderColor: pathColor,
-          borderWidth: 2,
-          transition: 'all 0.3s ease'
-        }
+        style: { width: 240, height: 160 }
       };
-      pathNodes.push(questionNode);
+      
+      questionNodes[segment.questionId] = node;
+      nodes.push(node);
       
       if (index > 0) {
-        const sourceId = `path-${pathIndex}-${path[index-1].questionId}`;
-        const targetId = nodeId;
+        const prevSegment = path[index - 1];
+        const sourceId = `path${pathIndex}-${prevSegment.questionId}`;
         
-        const edgeId = `edge-${pathIndex}-${index}`;
-        pathEdges.push({
-          id: edgeId,
+        const edge: Edge = {
+          id: `path${pathIndex}-edge-${prevSegment.questionId}-${segment.questionId}`,
           source: sourceId,
-          target: targetId,
-          type: 'default',
-          animated: false,
+          target: nodeId,
+          type: 'smoothstep',
+          animated: true,
           style: { 
-            stroke: pathColor,
+            stroke: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length],
             strokeWidth: 3
           },
           data: {
-            selectedPaths: [path],
-            pathColor: pathColor,
-            isSelected: true
+            text: segment.answer,
+            count: responseCount,
+            highlightColor: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length]
           }
-        });
+        };
+        
+        edges.push(edge);
       }
     });
     
-    return { nodes: pathNodes, edges: pathEdges };
+    return { nodes, edges };
   };
   
   const getRespondentCountForSegment = (segment: PathSegment, responses: any[]): number => {
