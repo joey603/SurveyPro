@@ -1299,12 +1299,26 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       p => JSON.stringify(p) === JSON.stringify(path)
     );
     
+    // Log détaillé du chemin sélectionné
+    console.log("=== Détails du chemin sélectionné ===");
+    console.log("Chemin:", path.map(segment => ({
+      questionId: segment.questionId,
+      questionText: segment.questionText,
+      answer: segment.answer
+    })));
+    console.log("Action:", pathIndex >= 0 ? "Suppression du chemin" : "Ajout du chemin");
+    console.log("=================================");
+    
     if (pathIndex >= 0) {
       // Si déjà sélectionné, le supprimer
-      setSelectedPaths(selectedPaths.filter((_, i) => i !== pathIndex));
+      const newSelectedPaths = selectedPaths.filter((_, i) => i !== pathIndex);
+      setSelectedPaths(newSelectedPaths);
+      console.log("Chemins restants après suppression:", newSelectedPaths.length);
     } else {
       // Sinon, l'ajouter
-      setSelectedPaths([...selectedPaths, path]);
+      const newSelectedPaths = [...selectedPaths, path];
+      setSelectedPaths(newSelectedPaths);
+      console.log("Nombre total de chemins sélectionnés:", newSelectedPaths.length);
     }
   };
 
@@ -1363,7 +1377,37 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Mettre à jour handlePathFilterChange pour utiliser les réponses filtrées
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    console.log("Path filter changed:", isFiltered, "filtered responses:", filteredResps.length);
+    console.log("=== Changement de filtre de parcours ===");
+    console.log("Filtre activé:", isFiltered);
+    console.log("Nombre de réponses filtrées:", filteredResps.length);
+    console.log("Nombre de chemins sélectionnés:", selectedPaths.length);
+    
+    // Log détaillé des chemins sélectionnés
+    if (selectedPaths.length > 0) {
+      console.log("Chemins sélectionnés:");
+      selectedPaths.forEach((path, index) => {
+        console.log(`  Chemin ${index + 1}:`, path.map(segment => ({
+          question: segment.questionText,
+          réponse: segment.answer
+        })));
+      });
+    }
+    
+    // Log des réponses filtrées (limité pour éviter de surcharger la console)
+    if (filteredResps.length > 0) {
+      console.log("Exemple de réponses filtrées (max 3):");
+      filteredResps.slice(0, 3).forEach((resp, index) => {
+        console.log(`  Réponse ${index + 1} (ID: ${resp._id}):`, resp.answers.map(a => ({
+          questionId: a.questionId,
+          answer: a.answer
+        })));
+      });
+      
+      if (filteredResps.length > 3) {
+        console.log(`  ... et ${filteredResps.length - 3} autres réponses`);
+      }
+    }
+    console.log("==================================");
     
     // Mettre à jour l'état des réponses filtrées
     setFilteredResponsesByPath(filteredResps);

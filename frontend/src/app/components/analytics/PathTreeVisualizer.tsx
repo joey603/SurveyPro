@@ -1213,87 +1213,171 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   const getFilteredResponses = () => {
     if (!selectedPaths || selectedPaths.length === 0) {
+      console.log("Aucun chemin sélectionné, retournant toutes les réponses");
       return responses;
     }
 
-    // Extraire tous les IDs de questions uniques des chemins sélectionnés
-    const selectedQuestionIds = new Set<string>();
-    selectedPaths.forEach(path => {
-      path.forEach(segment => {
-        selectedQuestionIds.add(segment.questionId);
-      });
+    console.log("=== DÉTAILS DU FILTRAGE DE PARCOURS ===");
+    console.log("Nombre total de réponses à filtrer:", responses.length);
+    console.log(`%c${selectedPaths.length > 1 ? 'MULTI-CHEMINS: ' + selectedPaths.length + ' chemins sélectionnés!' : 'UN SEUL CHEMIN sélectionné'}`, 
+      `font-weight: bold; color: ${selectedPaths.length > 1 ? 'red' : 'blue'}; font-size: 14px;`);
+
+    // NOUVELLE APPROCHE: Traiter chaque chemin indépendamment
+    console.log("%cNOUVELLE LOGIQUE: Chaque chemin est traité indépendamment", "font-weight: bold; color: green;");
+    console.log("Chemins sélectionnés:");
+    selectedPaths.forEach((path, idx) => {
+      console.log(`  %cChemin ${idx+1}:`, 'font-weight: bold; color: blue;', path.map(segment => ({
+        question: segment.questionText,
+        réponse: segment.answer
+      })));
     });
 
-    // Filtrer les réponses pour ne garder que celles qui :
-    // 1. Ont répondu à toutes les questions du chemin
-    // 2. N'ont répondu qu'aux questions du chemin
-    // 3. Ont les questions dans le bon ordre (sans vérifier les réponses spécifiques)
-    const filteredResponses = responses.filter(response => {
-      // Vérifier que toutes les questions du chemin sont présentes
-      const hasAllSelectedQuestions = Array.from(selectedQuestionIds).every(qId =>
-        response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
-      );
+    // Si plusieurs chemins sont sélectionnés, expliquons la logique de filtrage
+    if (selectedPaths.length > 1) {
+      console.log("%cNOUVELLE LOGIQUE DE FILTRAGE MULTI-CHEMINS:", "font-weight: bold; color: green;");
+      console.log("- Chaque chemin est traité INDÉPENDAMMENT");
+      console.log("- Une réponse est valide si elle correspond à AU MOINS UN des chemins sélectionnés");
+      console.log("- Pour chaque chemin: les réponses doivent contenir UNIQUEMENT les questions du chemin et dans le BON ORDRE");
+    }
 
-      // Vérifier qu'il n'y a pas d'autres questions
-      const hasOnlySelectedQuestions = response.answers.every((answer: { questionId: string }) =>
-        selectedQuestionIds.has(answer.questionId)
-      );
+    // Variables pour les statistiques
+    let totalValidResponses = 0;
+    const matchesByPath: number[] = new Array(selectedPaths.length).fill(0);
+    const responseIdsByPath: { [key: number]: Set<string> } = {};
+    
+    // Ensemble pour déduplication des IDs de réponse
+    const validResponseIds = new Set<string>();
 
-      // Vérifier que les questions sont dans le bon ordre
-      const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
-      const hasCorrectOrder = selectedPaths.some(path => {
-        const pathQuestionIds = path.map(segment => segment.questionId);
+    // Traiter chaque chemin indépendamment
+    selectedPaths.forEach((path, pathIndex) => {
+      // Extraire les IDs de questions pour ce chemin uniquement
+      const pathQuestionIds = path.map(segment => segment.questionId);
+      responseIdsByPath[pathIndex] = new Set<string>();
+      
+      console.log(`Analyse du chemin ${pathIndex + 1} (${pathQuestionIds.length} questions):`);
+      
+      let validForThisPath = 0;
+      let missingQuestionsCount = 0;
+      let extraQuestionsCount = 0;
+      let wrongOrderCount = 0;
+      
+      // Évaluer chaque réponse par rapport à ce chemin spécifique
+      responses.forEach(response => {
+        // 1. Vérifier que toutes les questions du chemin sont présentes
+        const hasAllPathQuestions = pathQuestionIds.every(qId =>
+          response.answers.some((answer: { questionId: string }) => answer.questionId === qId)
+        );
+        
+        if (!hasAllPathQuestions) {
+          missingQuestionsCount++;
+          return;
+        }
+        
+        // 2. Vérifier qu'il n'y a pas d'autres questions que celles du chemin
+        const hasOnlyPathQuestions = response.answers.every((answer: { questionId: string }) =>
+          pathQuestionIds.includes(answer.questionId)
+        );
+        
+        if (!hasOnlyPathQuestions) {
+          extraQuestionsCount++;
+          return;
+        }
+        
+        // 3. Vérifier l'ordre des questions
+        const responseQuestionIds = response.answers.map((a: { questionId: string }) => a.questionId);
         let currentPathIndex = 0;
         let lastFoundIndex = -1;
+        let orderCorrect = true;
         
         for (let i = 0; i < responseQuestionIds.length; i++) {
           if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
-            // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
+            // Vérifier l'ordre correct
             if (lastFoundIndex !== -1) {
-              const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+              const questionsBetween: Array<string> = responseQuestionIds.slice(lastFoundIndex + 1, i);
               if (questionsBetween.some((qId: string) => !pathQuestionIds.includes(qId))) {
-                return false; // Il y a des questions non autorisées entre les questions du chemin
+                orderCorrect = false;
+                break;
               }
             }
             
             lastFoundIndex = i;
             currentPathIndex++;
+            
             if (currentPathIndex === pathQuestionIds.length) {
-              return true; // Toutes les questions du chemin ont été trouvées dans l'ordre
+              break; // Toutes les questions du chemin ont été trouvées dans l'ordre
             }
           }
         }
-        return false;
+        
+        if (!orderCorrect || currentPathIndex !== pathQuestionIds.length) {
+          wrongOrderCount++;
+          return;
+        }
+        
+        // Cette réponse est valide pour ce chemin
+        validForThisPath++;
+        matchesByPath[pathIndex]++;
+        responseIdsByPath[pathIndex].add(response._id);
+        validResponseIds.add(response._id); // Ajouter à l'ensemble global
       });
+      
+      console.log(`  Chemin ${pathIndex + 1}: ${validForThisPath} réponses valides`);
+      console.log(`    - Rejetées: ${missingQuestionsCount} (questions manquantes), ${extraQuestionsCount} (questions supplémentaires), ${wrongOrderCount} (ordre incorrect)`);
+    });
+    
+    // Construire l'ensemble final des réponses valides (union de tous les chemins)
+    const filteredResponses = responses.filter(response => validResponseIds.has(response._id));
+    totalValidResponses = validResponseIds.size;
 
-      const isValid = hasAllSelectedQuestions && hasOnlySelectedQuestions && hasCorrectOrder;
-
-      // Log détaillé pour le débogage
-      if (isValid) {
-        console.log("=== Réponse valide trouvée ===");
-        console.log("ID de la réponse:", response._id);
-        console.log("Questions répondues:", response.answers.map((a: { questionId: string; answer: string }) => ({
+    // Afficher les résultats du filtrage
+    console.log("=== RÉSULTATS DU FILTRAGE ===");
+    console.log(`Réponses valides trouvées: ${totalValidResponses}`);
+    console.log(`Réponses rejetées: ${responses.length - totalValidResponses}`);
+    
+    // Afficher la distribution des correspondances par chemin
+    if (selectedPaths.length > 1) {
+      console.log("%cDISTRIBUTION DES CORRESPONDANCES PAR CHEMIN:", "font-weight: bold; color: purple;");
+      selectedPaths.forEach((path, idx) => {
+        const percentage = totalValidResponses > 0 ? Math.round((matchesByPath[idx] / totalValidResponses) * 100) : 0;
+        console.log(`  Chemin ${idx+1}: ${matchesByPath[idx]} réponses (${percentage}% du total)`);
+        
+        // Trouver les réponses qui correspondent à plusieurs chemins
+        if (selectedPaths.length > 1 && idx < selectedPaths.length - 1) {
+          for (let j = idx + 1; j < selectedPaths.length; j++) {
+            const intersection = new Set<string>();
+            responseIdsByPath[idx].forEach(id => {
+              if (responseIdsByPath[j].has(id)) {
+                intersection.add(id);
+              }
+            });
+            
+            if (intersection.size > 0) {
+              console.log(`    Commun avec Chemin ${j+1}: ${intersection.size} réponses`);
+            }
+          }
+        }
+      });
+    }
+    
+    // Afficher quelques exemples de réponses valides
+    if (filteredResponses.length > 0) {
+      console.log("Exemples de réponses valides (max 2):");
+      filteredResponses.slice(0, 2).forEach((response, idx) => {
+        console.log(`  Exemple ${idx+1}:`, response.answers.map((a: { questionId: string; answer: string }) => ({
           questionId: a.questionId,
           answer: a.answer
         })));
-        console.log("Questions attendues:", Array.from(selectedQuestionIds));
-        console.log("============================");
-      }
-
-      return isValid;
-    });
-
-    console.log("=== Résumé du filtrage ===");
-    console.log("Nombre total de réponses:", responses.length);
-    console.log("Nombre de réponses filtrées:", filteredResponses.length);
-    console.log("Questions sélectionnées:", Array.from(selectedQuestionIds));
-    console.log("Chemins sélectionnés:", selectedPaths.map(path => 
-      path.map(segment => ({
-        questionId: segment.questionId,
-        answer: segment.answer
-      }))
-    ));
-    console.log("============================");
+        
+        // Indiquer à quels chemins cette réponse correspond
+        const matchingPaths = selectedPaths.map((_, pathIdx) => 
+          responseIdsByPath[pathIdx].has(response._id) ? pathIdx + 1 : null
+        ).filter(p => p !== null);
+        
+        console.log(`    Correspond aux chemins: ${matchingPaths.join(', ')}`);
+      });
+    }
+    
+    console.log("=====================================");
 
     return filteredResponses;
   };
@@ -1712,7 +1796,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         if (responseQuestionIds[i] === pathQuestionIds[currentPathIndex]) {
           // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
           if (lastFoundIndex !== -1) {
-            const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+            const questionsBetween: Array<string> = responseQuestionIds.slice(lastFoundIndex + 1, i);
             if (questionsBetween.some((qId: string) => !pathQuestionIds.includes(qId))) {
               return false; // Il y a des questions non autorisées entre les questions du chemin
             }
@@ -1886,7 +1970,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         if (responseQuestionIds[i] === questionIds[currentIndex]) {
           // Vérifier qu'il n'y a pas d'autres questions entre la dernière trouvée et celle-ci
           if (lastFoundIndex !== -1) {
-            const questionsBetween = responseQuestionIds.slice(lastFoundIndex + 1, i);
+            const questionsBetween: Array<string> = responseQuestionIds.slice(lastFoundIndex + 1, i);
             if (questionsBetween.some((qId: string) => !questionIds.includes(qId))) {
               return false; // Il y a des questions non autorisées entre les questions du chemin
             }
