@@ -33,6 +33,7 @@ import {
   Code as CodeIcon,
   ContentCopy as ContentCopyIcon,
   Check as CheckIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 import {
@@ -1517,6 +1518,22 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         </Typography>
         
         <Box>
+          {isPrivateSurvey && (
+            <Button
+              variant={showPrivateLink ? "contained" : "outlined"}
+              startIcon={showPrivateLink ? <LinkIcon /> : <LinkIcon />}
+              onClick={() => setShowPrivateLink(!showPrivateLink)}
+              sx={{
+                mr: 1,
+                ...(showPrivateLink ? {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                } : {})
+              }}
+            >
+              {showPrivateLink ? "Hide Link" : "Show Link"}
+            </Button>
+          )}
+          
           <Button
             variant={showFilters ? "contained" : "outlined"}
             startIcon={showFilters ? <ClearIcon /> : <FilterListIcon />}
@@ -1525,7 +1542,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               setShowFilters(!showFilters);
             }}
             sx={{
-              mr: 1,
               ...(showFilters ? {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               } : {})
@@ -1533,7 +1549,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           >
             {showFilters ? "Hide Filters" : "Filters"}
           </Button>
-          
         </Box>
       </Box>
 
