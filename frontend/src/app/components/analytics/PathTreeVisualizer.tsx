@@ -207,8 +207,23 @@ const QuestionNode: React.FC<QuestionNodeProps> = ({ data }) => {
           textShadow: '0 1px 3px rgba(0,0,0,0.2)'
         }}
       >
-        {data.count}
+        {data.totalCount || data.count}
+      </div>
+      
+      {/* Indication que c'est le total de répondants */}
+      {isFilteredTree && (
+        <div style={{
+          fontSize: '11px',
+          color: '#667eea',
+          fontWeight: '500',
+          marginTop: '5px',
+          textAlign: 'center',
+          opacity: 0.9,
+          letterSpacing: '0.3px'
+        }}>
+          répondants
         </div>
+      )}
       
       {/* Handles pour les connexions - différentes selon le type d'arbre */}
       {isFilteredTree ? (
@@ -2022,15 +2037,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     const questionNodes: { [key: string]: Node } = {};
     
+    // Nombre total de répondants pour ce chemin complet
+    const totalPathRespondents = exactPathResponses.length;
+    
     path.forEach((segment, index) => {
       const nodeId = `path${pathIndex}-${segment.questionId}`;
-      
-      // Compter combien de réponses correspondent à cette question dans le chemin
-      const responseCount = exactPathResponses.filter(response => 
-        response.answers.some((answer: { questionId: string; answer: string }) => 
-          answer.questionId === segment.questionId && answer.answer === segment.answer
-        )
-      ).length;
       
       const node: Node = {
         id: nodeId,
@@ -2040,10 +2051,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           questionId: segment.questionId,
           text: segment.questionText,
           answer: segment.answer,
-          count: responseCount,
-          totalCount: exactPathResponses.length,
+          // Utiliser le même nombre (nombre total de personnes ayant suivi le chemin complet) pour tous les nœuds
+          count: totalPathRespondents,
+          totalCount: totalPathRespondents,
           pathIndex: pathIndex,
-          highlightColor: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length]
+          highlightColor: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length],
+          isFilteredTree: true
         },
         style: { width: 240, height: 160 }
       };
@@ -2067,7 +2080,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           },
           data: {
             text: segment.answer,
-            count: responseCount,
+            count: totalPathRespondents,
             highlightColor: HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length]
           }
         };
