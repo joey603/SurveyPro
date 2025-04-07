@@ -886,13 +886,73 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       });
     });
     
-    let xPos = 0;
-    let yPos = 0;
-    const xGap = 450;
-    const yGap = 250;
+    // Nouvelles variables pour la disposition verticale
+    const xGap = 450; // Espacement horizontal entre les nœuds frères
+    const yGap = 250; // Espacement vertical entre les niveaux
+    const BASE_X = 400; // Position X de départ pour le premier nœud
     const usedPositions = new Set<string>();
     const processedNodes = new Set<string>();
+    const nodeLevels = new Map<string, number>(); // Pour suivre le niveau de chaque nœud
+    const nodeChildren = new Map<string, string[]>(); // Pour suivre les enfants de chaque nœud
     
+    // Calculer les niveaux des nœuds (profondeur dans l'arbre)
+    const calculateNodeLevels = (nodeId: string, level: number = 0) => {
+      if (nodeLevels.has(nodeId) && nodeLevels.get(nodeId)! >= level) {
+        return;
+      }
+      
+      nodeLevels.set(nodeId, level);
+      
+      const children = questionMap.get(nodeId)?.children || [];
+      children.forEach((childId: string) => {
+        calculateNodeLevels(childId, level + 1);
+      });
+    };
+    
+    // Identifier les nœuds racine (sans parents)
+    const childIds = new Set<string>();
+    questionMap.forEach((question, id) => {
+      if (question.children) {
+        question.children.forEach((childId: string) => {
+          childIds.add(childId);
+        });
+      }
+    });
+    
+    const rootNodes = Array.from(questionMap.keys()).filter(id => !childIds.has(id));
+    
+    // Calculer les niveaux pour tous les nœuds
+    rootNodes.forEach(rootId => {
+      calculateNodeLevels(rootId);
+    });
+    
+    // Fonction pour déterminer si un nœud doit être ramifié (critique)
+    const shouldBranchNode = (nodeId: string) => {
+      const question = questionMap.get(nodeId);
+      return question && (question.isCritical || question.type === 'yes-no' || question.type === 'dropdown');
+    };
+    
+    // Fonction pour calculer la largeur d'une branche (pour l'espacement)
+    const calculateBranchWidth = (nodeId: string, processed = new Set<string>()): number => {
+      if (processed.has(nodeId)) return 0;
+      processed.add(nodeId);
+      
+      const childrenIds = nodeChildren.get(nodeId) || [];
+      if (childrenIds.length === 0) return 1;
+      
+      // Un nœud est critique s'il a plusieurs enfants
+      if (childrenIds.length > 1) {
+        // Pour les nœuds critiques, calculer la somme des largeurs des enfants
+        return childrenIds.reduce((sum, childId) => {
+          return sum + calculateBranchWidth(childId, new Set(processed));
+        }, 0);
+      }
+      
+      // Pour les nœuds non critiques, utiliser seulement l'enfant direct
+      return calculateBranchWidth(childrenIds[0], processed);
+    };
+    
+    // Fonction pour positionner un nœud et ses enfants
     const positionQuestion = (questionId: string, x: number, y: number) => {
       if (processedNodes.has(questionId)) return;
       processedNodes.add(questionId);
@@ -900,12 +960,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       const question = questionMap.get(questionId);
       if (!question) return;
       
+      // Créer le nœud dans ReactFlow
       const questionNode: Node = {
         id: questionId,
-            type: 'questionNode',
-            data: {
+        type: 'questionNode',
+        data: {
           questionId: questionId,
-              text: question.text,
+          text: question.text,
           count: question.count || 0,
           isSelected: false,
           isRoot: false,
@@ -921,9 +982,10 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       };
       
+      // Éviter les chevauchements
       let posKey = `${x},${y}`;
       while (usedPositions.has(posKey)) {
-        x += xGap;
+        x += 50; // petit décalage en cas de collision
         posKey = `${x},${y}`;
       }
       usedPositions.add(posKey);
@@ -931,18 +993,26 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       flowNodes.push(questionNode);
       
+      // Traiter les enfants
       if (question.children && question.children.length > 0) {
-        if (question.isCritical) {
-          let childX = x + xGap;
+        if (shouldBranchNode(questionId)) {
+          // Pour les nœuds critiques, répartir les enfants à gauche et à droite
+          const totalChildren = question.children.length;
+          const childrenWidths = question.children.map((childId: string) => 
+            calculateBranchWidth(childId)
+          );
           
-          question.children.forEach((childId: string) => {
-            let childPosKey = `${childX},${y + yGap}`;
-            while (usedPositions.has(childPosKey)) {
-              childX += xGap;
-              childPosKey = `${childX},${y + yGap}`;
-            }
+          const totalWidth = childrenWidths.reduce((sum: number, width: number) => sum + width, 0) * xGap;
+          const startX = x - (totalWidth / 2) + (xGap / 2);
+          
+          let currentX = startX;
+          
+          question.children.forEach((childId: string, index: number) => {
+            const childWidth = childrenWidths[index];
+            const childX = currentX + (childWidth * xGap) / 2;
+            const childY = y + yGap;
             
-            positionQuestion(childId, childX, y + yGap);
+            positionQuestion(childId, childX, childY);
             
             flowEdges.push({
               id: `e-${questionId}-${childId}`,
@@ -957,8 +1027,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                 selectedPaths: selectedPaths
               }
             });
+            
+            currentX += childWidth * xGap;
           });
         } else {
+          // Pour les nœuds non critiques, placer l'enfant directement en-dessous
           const childId = question.children[0];
           positionQuestion(childId, x, y + yGap);
           
@@ -980,6 +1053,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     };
     
     if (!survey.isDynamic) {
+      // Pour les sondages non dynamiques, garder la disposition linéaire verticale
       questionsArray.forEach((question, index) => {
         const questionNode: Node = {
           id: question.id,
@@ -993,7 +1067,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             selectedPaths: selectedPaths,
             pathColor: question.pathColor
           },
-          position: { x: 400, y: index * yGap },
+          position: { x: BASE_X, y: index * yGap },
           style: {
             width: 240,
             height: 160
@@ -1020,23 +1094,18 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         }
       });
     } else {
-      const childNodes = new Set<string>();
-      survey.edges.forEach((edge: any) => {
-        childNodes.add(edge.target);
+      // Pour les sondages dynamiques, utiliser la nouvelle disposition en arbre
+      const rootX = window.innerWidth / 2;
+      rootNodes.forEach((nodeId, index) => {
+        const rootX = BASE_X + index * xGap * 2; // Répartir les racines horizontalement
+        positionQuestion(nodeId, rootX, 50);
       });
       
-      const startingNodes = [...questionMap.keys()].filter(id => !childNodes.has(id));
-      
-      let startX = 0;
-      startingNodes.forEach(nodeId => {
-        positionQuestion(nodeId, startX, 0);
-        startX += xGap * 2;
-      });
-      
-      if (startingNodes.length === 0 && questionsArray.length > 0) {
+      // Si aucun nœud racine n'a été trouvé, utiliser une approche de secours
+      if (rootNodes.length === 0 && questionsArray.length > 0) {
         questionsArray.forEach((question, index) => {
           if (!processedNodes.has(question.id)) {
-            positionQuestion(question.id, index * xGap, 0);
+            positionQuestion(question.id, BASE_X + index * xGap, 50);
           }
         });
       }
@@ -1551,21 +1620,52 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     const nodes = JSON.parse(JSON.stringify(filteredNodes));
     
-    const xGap = 350;
-    const yGap = 200;
-    const siblingGap = 300;
+    const xGap = 450; // Espacement horizontal entre les nœuds frères
+    const yGap = 250; // Espacement vertical entre les niveaux
+    const BASE_X = 400; // Position X de base
     
+    // Collecter les informations sur les nœuds
     const nodeLevels = new Map<string, number>();
     const nodeChildren = new Map<string, string[]>();
+    const nodeParent = new Map<string, string>();
+    const isCritical = new Map<string, boolean>();
     
+    // Identifier les relations parent-enfant à partir des edges
     edges.forEach(edge => {
-      if (!nodeChildren.has(edge.source)) {
-        nodeChildren.set(edge.source, []);
+      const sourceId = edge.source;
+      const targetId = edge.target;
+      
+      if (!nodeChildren.has(sourceId)) {
+        nodeChildren.set(sourceId, []);
       }
-      nodeChildren.get(edge.source)?.push(edge.target);
+      nodeChildren.get(sourceId)?.push(targetId);
+      nodeParent.set(targetId, sourceId);
+      
+      // Identifier les nœuds critiques (ceux avec plusieurs enfants)
+      const children = nodeChildren.get(sourceId) || [];
+      if (children.length > 1) {
+        isCritical.set(sourceId, true);
+      }
     });
     
-    const determineNodeLevel = (nodeId: string, level: number = 0) => {
+    // Identifier aussi les nœuds critiques basés sur leur type
+    nodes.forEach((node: Node) => {
+      const nodeData = node.data || {};
+      if (nodeData.isCritical || nodeData.type === 'yes-no' || nodeData.type === 'dropdown') {
+        isCritical.set(node.id, true);
+      }
+    });
+    
+    // Identifier les nœuds racine (sans parent)
+    const rootNodes: string[] = [];
+    nodes.forEach((node: Node) => {
+      if (!nodeParent.has(node.id)) {
+        rootNodes.push(node.id);
+      }
+    });
+    
+    // Calculer le niveau de chaque nœud
+    const calculateNodeLevel = (nodeId: string, level: number = 0) => {
       if (nodeLevels.has(nodeId) && nodeLevels.get(nodeId)! >= level) {
         return;
       }
@@ -1574,82 +1674,100 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       const children = nodeChildren.get(nodeId) || [];
       children.forEach(childId => {
-        determineNodeLevel(childId, level + 1);
+        calculateNodeLevel(childId, level + 1);
       });
     };
     
-    const nodeIds = new Set(nodes.map((node: Node) => node.id));
-    const childIds = new Set<string>();
-    
-    edges.forEach(edge => {
-      if (nodeIds.has(edge.target)) {
-        childIds.add(edge.target);
-      }
+    // Pour chaque nœud racine, calculer les niveaux
+    rootNodes.forEach(rootId => {
+      calculateNodeLevel(rootId);
     });
     
-    const rootNodes = nodes.filter((node: Node) => !childIds.has(node.id));
-    
-    rootNodes.forEach((root: Node) => {
-      determineNodeLevel(root.id);
-    });
-    
-    const nodesByLevel = new Map<number, Node[]>();
-    nodes.forEach((node: Node) => {
-      const level = nodeLevels.get(node.id) || 0;
-      if (!nodesByLevel.has(level)) {
-        nodesByLevel.set(level, []);
-      }
-      nodesByLevel.get(level)?.push(node);
-    });
-    
-    let maxWidth = 0;
-    
-    nodesByLevel.forEach((levelNodes, level) => {
-      const levelWidth = levelNodes.length * xGap;
-      maxWidth = Math.max(maxWidth, levelWidth);
+    // Fonction pour calculer la largeur d'une branche
+    const calculateBranchWidth = (nodeId: string, processed = new Set<string>()): number => {
+      if (processed.has(nodeId)) return 0;
+      processed.add(nodeId);
       
-      levelNodes.forEach((node: Node, index) => {
-        const x = (index * xGap) - (levelWidth / 2) + (xGap / 2);
-        const y = level * yGap + 50;
-        
-        const offsetX = node.id.includes('-') ? parseInt(node.id.split('-')[0]) * 30 : 0;
-        
-        node.position = { 
-          x: x + offsetX, 
-          y 
-        };
-      });
-    });
-    
-    nodes.forEach((node: Node) => {
-      const children = nodeChildren.get(node.id) || [];
-      if (children.length > 0) {
-        const childNodes = nodes.filter((n: Node) => children.includes(n.id));
-        
-        if (childNodes.length > 0) {
-          const childrenCenterX = childNodes.reduce((sum: number, child: Node) => sum + child.position.x, 0) / childNodes.length;
-          const parentX = node.position.x;
-          
-          if (Math.abs(childrenCenterX - parentX) > 10) {
-            const offset = parentX - childrenCenterX;
-            childNodes.forEach((child: Node) => {
-              child.position.x += offset;
-            });
-          }
-          
-          if (childNodes.length > 1) {
-            const totalWidth = (childNodes.length - 1) * siblingGap;
-            const startX = parentX - totalWidth / 2;
-            
-            childNodes.sort((a: Node, b: Node) => a.position.x - b.position.x);
-            childNodes.forEach((child: Node, index: number) => {
-              child.position.x = startX + index * siblingGap;
-            });
-          }
-        }
+      const childrenIds = nodeChildren.get(nodeId) || [];
+      if (childrenIds.length === 0) return 1;
+      
+      // Un nœud est critique s'il a plusieurs enfants
+      if (childrenIds.length > 1) {
+        // Pour les nœuds critiques, calculer la somme des largeurs des enfants
+        return childrenIds.reduce((sum, childId) => {
+          return sum + calculateBranchWidth(childId, new Set(processed));
+        }, 0);
       }
+      
+      // Pour les nœuds non critiques, utiliser seulement l'enfant direct
+      return calculateBranchWidth(childrenIds[0], processed);
+    };
+    
+    // Fonction récursive pour positionner les nœuds
+    const positionNodes = (nodeId: string, x: number, y: number, levelWidths: Map<number, number>) => {
+      const node = nodes.find((n: Node) => n.id === nodeId);
+      if (!node) return;
+      
+      // Définir la position du nœud actuel
+      node.position = { x, y };
+      
+      const childIds = nodeChildren.get(nodeId) || [];
+      if (childIds.length === 0) return;
+      
+      const level = nodeLevels.get(nodeId) || 0;
+      const nextLevel = level + 1;
+      
+      // Fonction locale pour déterminer si un nœud doit être ramifié
+      const shouldBranchNodeHere = (id: string) => {
+        // Vérifier si le nœud est critique (a plusieurs enfants)
+        const children = nodeChildren.get(id) || [];
+        if (children.length > 1) return true;
+        
+        // Vérifier si le nœud est du type qui doit être ramifié
+        const node = nodes.find((n: Node) => n.id === id);
+        if (!node) return false;
+        
+        const nodeData = node.data || {};
+        return nodeData.isCritical || 
+               nodeData.type === 'yes-no' || 
+               nodeData.type === 'dropdown';
+      };
+      
+      if (shouldBranchNodeHere(nodeId)) {
+        // Pour les nœuds critiques, répartir les enfants horizontalement
+        const childrenWidths = childIds.map(childId => 
+          calculateBranchWidth(childId)
+        );
+        
+        const totalWidth = childrenWidths.reduce((sum, width) => sum + width, 0) * xGap;
+        const startX = x - (totalWidth / 2) + (xGap / 2);
+        
+        let currentX = startX;
+        
+        childIds.forEach((childId, index) => {
+          const childWidth = childrenWidths[index];
+          const childX = currentX + (childWidth * xGap) / 2;
+          const childY = y + yGap;
+          
+          positionNodes(childId, childX, childY, levelWidths);
+          
+          currentX += childWidth * xGap;
+        });
+      } else {
+        // Pour les nœuds non critiques, placer l'enfant directement en-dessous
+        const childId = childIds[0];
+        positionNodes(childId, x, y + yGap, levelWidths);
+      }
+    };
+    
+    // Placer chaque nœud racine avec un espacement horizontal
+    const levelWidths = new Map<number, number>();
+    rootNodes.forEach((rootId, index) => {
+      const rootX = BASE_X + index * xGap * 2;
+      positionNodes(rootId, rootX, 50, levelWidths);
     });
     
+    // Vérifier et corriger les chevauchements
     const nodeBoundaries = new Map<string, {left: number, right: number, top: number, bottom: number}>();
     
     nodes.forEach((node: Node) => {
