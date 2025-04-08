@@ -169,17 +169,19 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
 
-    // Ajuster la vue après un court délai
-    setTimeout(() => {
-      if (reactFlowInstance) {
+    // Vérifier si c'est une création initiale ou une modification d'options existantes
+    // Si les nœuds n'existaient pas avant, ajuster la vue
+    const existingPathNodes = nodes.some(node => node.id.startsWith(`${sourceId}_`));
+    if (!existingPathNodes && reactFlowInstance) {
+      setTimeout(() => {
         reactFlowInstance.fitView({
           padding: 0.4,
           duration: 800,
           minZoom: 0.1,
           maxZoom: 1,
         });
-      }
-    }, 100);
+      }, 100);
+    }
 
   }, [nodes, handleNodeChange, reactFlowInstance]);
 
