@@ -176,19 +176,67 @@ const AnalyticsPage: React.FC = () => {
   const handleDeleteSurvey = async (surveyId: string) => {
     try {
       const token = localStorage.getItem('accessToken') || '';
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${surveyId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      
+      // Trouver le sondage à supprimer
+      const surveyToDelete = surveys.find(s => s._id === surveyId);
+      
+      if (!surveyToDelete) {
+        throw new Error('Sondage introuvable');
+      }
+      
+      // Déterminer si c'est un sondage dynamique
+      const isDynamic = Boolean(surveyToDelete.isDynamic);
+      
+      // Pour debug: afficher l'API_URL configurée
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
+      
+      console.log('Suppression du sondage:', { 
+        id: surveyId, 
+        isDynamic, 
+        titre: surveyToDelete.title,
+        apiBaseUrl
       });
+      
+      // Utiliser le service approprié selon le type de sondage
+      if (isDynamic) {
+        // Importer dynamiquement le service adéquat
+        const { dynamicSurveyService } = await import('@/utils/dynamicSurveyService');
+        await dynamicSurveyService.deleteDynamicSurvey(surveyId, token);
+      } else {
+        // S'assurer que l'URL contient '/api' 
+        let apiEndpoint = `${apiBaseUrl}/surveys/${surveyId}`;
+        
+        // Vérifier si l'URL contient déjà "/api"
+        if (!apiEndpoint.includes('/api/')) {
+          // Remplacer l'URL pour assurer la présence de "/api/"
+          apiEndpoint = `http://localhost:5041/api/surveys/${surveyId}`;
+        }
+        
+        console.log('Utilisation de l\'API endpoint:', apiEndpoint);
+        
+        const response = await fetch(apiEndpoint, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        // Vérifier si la réponse est OK (statut 200-299)
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erreur serveur: ${response.status} ${response.statusText}. Détails: ${errorText}`);
+        }
+      }
+      
+      // Mettre à jour l'interface utilisateur
       setSurveys(surveys.filter(s => s._id !== surveyId));
       setSnackbarMessage('Survey deleted successfully');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
     } catch (error) {
       console.error('Error deleting survey:', error);
-      setSnackbarMessage('Failed to delete survey');
+      setSnackbarMessage(`Failed to delete survey: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setSnackbarSeverity('error');
       setOpenSnackbar(true);
     }
