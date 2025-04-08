@@ -1336,34 +1336,6 @@ const SurveyCreationPage = () => {
                                     border: snapshot.isDragging ? '2px solid #667eea' : 'none',
                                   }}
                                 >
-                                  {/* Poignée de glissement */}
-                                  <Box 
-                                    {...provided.dragHandleProps}
-                                    sx={{
-                                      width: '100%',
-                                      height: '24px',
-                                      display: 'flex',
-                                      justifyContent: 'center',
-                                      alignItems: 'center',
-                                      cursor: 'grab',
-                                      mb: 1,
-                                      backgroundColor: '#f5f5f5',
-                                      borderRadius: '4px',
-                                      '&:hover': {
-                                        backgroundColor: '#e0e0e0'
-                                      }
-                                    }}
-                                  >
-                                    <svg width="40" height="8" viewBox="0 0 40 8">
-                                      <g fill="#667eea">
-                                        <circle cx="4" cy="4" r="2" />
-                                        <circle cx="14" cy="4" r="2" />
-                                        <circle cx="24" cy="4" r="2" />
-                                        <circle cx="34" cy="4" r="2" />
-                                      </g>
-                                    </svg>
-                                  </Box>
-                                  
                                   <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                                     <Controller
                                       name={`questions.${index}.type`}
@@ -1656,8 +1628,9 @@ const SurveyCreationPage = () => {
                                     </Box>
                                   )}
 
-                                  {/* Delete Question Button */}
-                                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                                  {/* Actions en bas de la question */}
+                                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    {/* Delete Question Button */}
                                     <Button
                                       onClick={() => handleDeleteQuestion(index)}
                                       startIcon={<DeleteIcon />}
@@ -1667,6 +1640,33 @@ const SurveyCreationPage = () => {
                                     >
                                       Delete Question
                                     </Button>
+                                    
+                                    {/* Poignée de glissement */}
+                                    <Box 
+                                      {...provided.dragHandleProps}
+                                      sx={{
+                                        width: '100px',
+                                        height: '24px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        cursor: 'grab',
+                                        backgroundColor: '#f5f5f5',
+                                        borderRadius: '4px',
+                                        '&:hover': {
+                                          backgroundColor: '#e0e0e0'
+                                        }
+                                      }}
+                                    >
+                                      <svg width="40" height="8" viewBox="0 0 40 8">
+                                        <g fill="#667eea">
+                                          <circle cx="4" cy="4" r="2" />
+                                          <circle cx="14" cy="4" r="2" />
+                                          <circle cx="24" cy="4" r="2" />
+                                          <circle cx="34" cy="4" r="2" />
+                                        </g>
+                                      </svg>
+                                    </Box>
                                   </Box>
                                 </Paper>
                               </div>
