@@ -1054,7 +1054,7 @@ export default function DynamicSurveyCreation() {
     const controllerDiv = document.createElement('div');
     controllerDiv.className = 'tutorial-controller';
     controllerDiv.style.position = 'fixed';
-    controllerDiv.style.bottom = '20px';
+    controllerDiv.style.bottom = '60px';
     controllerDiv.style.left = '50%';
     controllerDiv.style.transform = 'translateX(-50%)';
     controllerDiv.style.backgroundColor = 'white';
@@ -1188,68 +1188,68 @@ export default function DynamicSurveyCreation() {
     const steps = [
       {
         element: '[data-intro="header"]',
-        intro: "Bienvenue dans la création de sondage dynamique ! Cet outil vous permet de créer des sondages avec des chemins conditionnels basés sur les réponses des utilisateurs.",
+        intro: "Welcome to dynamic survey creation! This tool allows you to create surveys with conditional paths based on user responses.",
         position: 'bottom'
       },
       {
         element: '[data-intro="basic-info"]',
-        intro: "Commencez par remplir les informations de base de votre sondage : titre et description.",
+        intro: "Start by filling in the basic information for your survey: title and description.",
         position: 'bottom'
       },
       {
         element: '[data-intro="demographic"]',
-        intro: "Activez cette option pour collecter des informations démographiques auprès des participants, comme l'âge, le genre et la localisation.",
+        intro: "Enable this option to collect demographic information from participants, such as age, gender, and location.",
         position: 'right'
       },
       {
         element: '[data-intro="privacy"]',
-        intro: "Choisissez si votre sondage est public ou privé. Les sondages privés sont accessibles uniquement via un lien direct.",
+        intro: "Choose whether your survey is public or private. Private surveys are accessible only via direct link.",
         position: 'right'
       },
       {
         element: '[data-intro="flow-canvas"]',
-        intro: "Voici votre canvas de création de flux. Ici, vous pouvez créer et connecter des questions dans un style d'organigramme.",
+        intro: "This is your flow creation canvas. Here, you can create and connect questions in a flowchart style.",
         position: 'top'
       },
       {
         element: '.react-flow__node:first-child',
-        intro: "Chaque boîte représente une question dans votre sondage. Cliquez sur une question pour la sélectionner.",
+        intro: "Each box represents a question in your survey. Click on a question to select it.",
         position: 'right'
       },
       {
         element: '.react-flow__node:first-child [data-intro="edit-question"]',
-        intro: "Cliquez sur l'icône d'édition pour modifier le contenu, le type et les options d'une question.",
+        intro: "Click on the edit icon to modify the content, type, and options of a question.",
         position: 'right'
       },
       {
         // Nous utiliserons un sélecteur spécial pour cette étape, qui sera remplacé dynamiquement
         element: '#critical-question-placeholder',
-        intro: "Marquez une question comme 'Critique' pour créer différents chemins basés sur la réponse. C'est utile pour les branchements conditionnels.",
+        intro: "Mark a question as 'Critical' to create different paths based on the answer. This is useful for conditional branching.",
         position: 'bottom'
       },
       {
         element: '[data-intro="add-question"]',
-        intro: "Cliquez sur ce bouton pour ajouter une nouvelle question à votre sondage.",
+        intro: "Click this button to add a new question to your survey.",
         position: 'left'
       },
       {
         element: '#reorganize-flow-placeholder',
-        intro: "Utilisez le bouton 'Reorganize Flow' en haut à gauche du canvas pour organiser automatiquement votre flux de sondage. Cela aide à mieux visualiser les connexions entre vos questions.",
+        intro: "Use the 'Reorganize Flow' button in the top left of the canvas to automatically organize your survey flow. This helps to better visualize connections between your questions.",
         position: 'right'
       },
       {
         element: '[data-intro="reset"]',
-        intro: "Le bouton Reset vous permet de recommencer à zéro, en supprimant toutes les questions. Attention, cette action ne peut pas être annulée !",
+        intro: "The Reset button allows you to start over by removing all questions. Warning: this action cannot be undone!",
         position: 'top'
       },
       {
         element: '[data-intro="preview"]',
-        intro: "Prévisualisez votre sondage pour voir comment il apparaîtra aux participants, y compris les chemins conditionnels.",
+        intro: "Preview your survey to see how it will appear to participants, including conditional paths.",
         position: 'top'
       },
       {
         element: '[data-intro="submit"]',
-        intro: "Lorsque vous avez terminé la conception de votre sondage, cliquez sur Soumettre pour le publier.",
+        intro: "When you've finished designing your survey, click Submit to publish it.",
         position: 'top'
       }
     ];
@@ -1600,21 +1600,6 @@ export default function DynamicSurveyCreation() {
             <Typography variant="h6" sx={{ color: '#1a237e' }}>
               Basic Information
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<SchoolIcon />}
-              onClick={startTutorial}
-              sx={{
-                color: '#667eea',
-                borderColor: '#667eea',
-                '&:hover': {
-                  borderColor: '#764ba2',
-                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                },
-              }}
-            >
-              Tutorial
-            </Button>
           </Box>
           
           <Controller
@@ -1740,7 +1725,7 @@ export default function DynamicSurveyCreation() {
       </Paper>
 
       {/* Boutons d'action en dehors du Paper principal */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 10 }}>
         <Button
           onClick={handleResetSurvey}
           variant="contained"
@@ -1927,6 +1912,27 @@ export default function DynamicSurveyCreation() {
           />
         </Box>
       )}
+
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Lancer le tutoriel">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 } 

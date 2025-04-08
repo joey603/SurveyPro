@@ -33,6 +33,8 @@ import {
   Card,
   CardContent,
   CardActions,
+  Tooltip,
+  Fab,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
@@ -61,6 +63,9 @@ import axios from 'axios';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import LockIcon from '@mui/icons-material/Lock';
+import SchoolIcon from '@mui/icons-material/School';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -1705,6 +1710,308 @@ const SurveyAnswerPage: React.FC = () => {
     );
   };
 
+  // Ajouter la fonction startTutorial
+  const startTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    
+    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
+    const forceTooltipDisplay = () => {
+      setTimeout(() => {
+        // Trouver l'élément actuellement ciblé
+        const currentStep = intro._currentStep;
+        const currentStepData = intro._options.steps[currentStep];
+        
+        if (currentStepData && currentStepData.element) {
+          let targetElement: Element | null = null;
+          
+          // Obtenir l'élément ciblé
+          if (typeof currentStepData.element === 'string') {
+            if (currentStepData.element === 'body') {
+              targetElement = document.body;
+            } else {
+              targetElement = document.querySelector(currentStepData.element);
+            }
+          } else {
+            targetElement = currentStepData.element;
+          }
+          
+          // Faire défiler vers l'élément si trouvé
+          if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const isInViewport = (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isInViewport) {
+              // Calculer la position de défilement optimale
+              const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
+              
+              // Défilement en douceur
+              window.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+              });
+            }
+          }
+          
+          // Forcer l'affichage des tooltips
+          const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
+          tooltips.forEach(tooltip => {
+            if (tooltip) {
+              tooltip.style.opacity = '1';
+              tooltip.style.visibility = 'visible';
+              tooltip.style.display = 'block';
+            }
+          });
+          
+          // Forcer également l'affichage des messages
+          const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
+          tooltipTexts.forEach(text => {
+            if (text) {
+              text.style.visibility = 'visible';
+              text.style.opacity = '1';
+              text.style.display = 'block';
+            }
+          });
+        }
+      }, 100);
+    };
+    
+    // Ajouter un contrôleur personnalisé pour le tutoriel
+    const controllerDiv = document.createElement('div');
+    controllerDiv.className = 'tutorial-controller';
+    controllerDiv.style.position = 'fixed';
+    controllerDiv.style.bottom = '20px';
+    controllerDiv.style.left = '50%';
+    controllerDiv.style.transform = 'translateX(-50%)';
+    controllerDiv.style.backgroundColor = 'white';
+    controllerDiv.style.padding = '10px 15px';
+    controllerDiv.style.borderRadius = '50px';
+    controllerDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
+    controllerDiv.style.zIndex = '999999';
+    controllerDiv.style.display = 'flex';
+    controllerDiv.style.justifyContent = 'center';
+    controllerDiv.style.gap = '10px';
+    
+    // Créer les boutons
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.style.padding = '8px 16px';
+    prevButton.style.border = 'none';
+    prevButton.style.borderRadius = '4px';
+    prevButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    prevButton.style.color = 'white';
+    prevButton.style.cursor = 'pointer';
+    prevButton.style.fontWeight = 'bold';
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.style.padding = '8px 16px';
+    nextButton.style.border = 'none';
+    nextButton.style.borderRadius = '4px';
+    nextButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    nextButton.style.color = 'white';
+    nextButton.style.cursor = 'pointer';
+    nextButton.style.fontWeight = 'bold';
+    
+    const exitButton = document.createElement('button');
+    exitButton.textContent = 'Exit';
+    exitButton.style.padding = '8px 16px';
+    exitButton.style.border = 'none';
+    exitButton.style.borderRadius = '4px';
+    exitButton.style.background = '#f44336';
+    exitButton.style.color = 'white';
+    exitButton.style.cursor = 'pointer';
+    exitButton.style.fontWeight = 'bold';
+    
+    // Ajout des écouteurs d'événements
+    prevButton.addEventListener('click', () => {
+      try {
+        intro.previousStep();
+        forceTooltipDisplay();
+      } catch (e) {
+        console.error('Erreur previous:', e);
+      }
+    });
+    
+    nextButton.addEventListener('click', () => {
+      try {
+        const currentStep = intro._currentStep;
+        if (currentStep < intro._options.steps.length - 1) {
+          intro.nextStep();
+          forceTooltipDisplay();
+        } else {
+          intro.exit(true);
+          document.body.removeChild(controllerDiv);
+        }
+      } catch (e) {
+        console.error('Erreur next:', e);
+      }
+    });
+    
+    exitButton.addEventListener('click', () => {
+      try {
+        intro.exit(true);
+        document.body.removeChild(controllerDiv);
+      } catch (e) {
+        console.error('Erreur exit:', e);
+      }
+    });
+    
+    // Ajouter les boutons au contrôleur
+    controllerDiv.appendChild(prevButton);
+    controllerDiv.appendChild(nextButton);
+    controllerDiv.appendChild(exitButton);
+    
+    // Ajouter des styles plus simples pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltipbuttons {
+        display: none !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Configuration du tutoriel avec les étapes
+    const steps = [
+      {
+        element: 'body',
+        intro: "Welcome to the survey answering section! This tutorial will guide you through the available features.",
+        position: 'top'
+      },
+      {
+        element: '#survey-search-input',
+        intro: "Use this search bar to quickly find surveys by title or description.",
+        position: 'bottom'
+      },
+      {
+        element: '#date-filter-chip',
+        intro: "Filter surveys by creation date by clicking on this filter.",
+        position: 'bottom'
+      },
+      {
+        element: '#sort-filter-chip',
+        intro: "Sort surveys by creation date or by popularity.",
+        position: 'bottom'
+      },
+      {
+        element: '#type-filter-chip',
+        intro: "Filter by survey type: all, dynamic (with conditional paths) or static (linear).",
+        position: 'bottom'
+      },
+      {
+        element: '[data-testid^="survey-card-"]:first-of-type',
+        intro: "This is a survey card. Each card shows the title, a description, and information such as the number of questions.",
+        position: 'right'
+      },
+      {
+        element: '[data-testid^="survey-title-"]:first-of-type',
+        intro: "The survey title is displayed here, with badges indicating if it is private or dynamic.",
+        position: 'bottom'
+      },
+      {
+        element: 'button[id^="share-button-"]',
+        intro: "Share a survey with others via various social networks or by copying the link.",
+        position: 'top'
+      },
+      {
+        element: 'button[id^="answer-button-"]',
+        intro: "Click here to answer the survey. If you have already answered it, the button will be disabled.",
+        position: 'top'
+      },
+      {
+        element: 'body',
+        intro: "Once you click on 'Answer Survey', you can answer the questions and submit your responses. Congratulations, you now know how to use the survey answering page!",
+        position: 'top'
+      }
+    ];
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 100,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      steps: steps as any
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+      if (document.body.contains(controllerDiv)) {
+        document.body.removeChild(controllerDiv);
+      }
+    });
+    
+    // Forcer l'affichage des tooltips après chaque changement
+    intro.onafterchange(function() {
+      forceTooltipDisplay();
+      if (intro._currentStep === 0) {
+        prevButton.style.opacity = '0.5';
+      } else {
+        prevButton.style.opacity = '1';
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+    
+    // Ajouter le contrôleur au document
+    document.body.appendChild(controllerDiv);
+    
+    // Forcer l'affichage initial
+    forceTooltipDisplay();
+  };
+
   if (!selectedSurvey) {
     return (
       <Box sx={{
@@ -2175,6 +2482,27 @@ const SurveyAnswerPage: React.FC = () => {
             </MenuItem>
           ))}
         </Menu>
+
+        {/* Bouton tutorial flottant */}
+        <Tooltip title="Lancer le tutoriel">
+          <Fab
+            size="small"
+            onClick={startTutorial}
+            sx={{
+              position: 'fixed',
+              bottom: 20,
+              left: 20,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              },
+              zIndex: 1000
+            }}
+          >
+            <SchoolIcon />
+          </Fab>
+        </Tooltip>
       </Box>
     );
   }
@@ -2230,6 +2558,27 @@ const SurveyAnswerPage: React.FC = () => {
           renderSurveyForm()
         )}
       </Paper>
+
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Lancer le tutoriel">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 };

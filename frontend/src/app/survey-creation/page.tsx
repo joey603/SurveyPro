@@ -25,6 +25,7 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
+  Fab,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -1593,21 +1594,6 @@ const SurveyCreationPage = () => {
                     <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
                   </Tooltip>
                 </Box>
-                <Button
-                  variant="outlined"
-                  startIcon={<SchoolIcon />}
-                  onClick={startTutorial}
-                  sx={{
-                    color: '#667eea',
-                    borderColor: '#667eea',
-                    '&:hover': {
-                      borderColor: '#764ba2',
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    },
-                  }}
-                >
-                  Tutorial
-                </Button>
               </Box>
 
               <Controller
@@ -2416,6 +2402,26 @@ const SurveyCreationPage = () => {
           Questions: {fields.length}
         </Typography>
       </Box>
+      
+      {/* Floating Tutorial Button */}
+      <Tooltip title="Lancer le tutoriel">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 };
