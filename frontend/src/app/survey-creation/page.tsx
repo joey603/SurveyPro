@@ -50,6 +50,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
+// @ts-ignore
 import {
   DndContext,
   closestCenter,
@@ -59,6 +60,7 @@ import {
   useSensors,
   DragEndEvent
 } from '@dnd-kit/core';
+// @ts-ignore
 import {
   arrayMove,
   SortableContext,
@@ -66,7 +68,11 @@ import {
   useSortable,
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
+// @ts-ignore
 import { CSS } from '@dnd-kit/utilities';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
+import SchoolIcon from '@mui/icons-material/School';
 
 type Question = {
   id: string;
@@ -1115,6 +1121,348 @@ const SurveyCreationPage = () => {
     }
   };
 
+  const startTutorial = () => {
+    // S'assurer qu'au moins une question existe pour le tutoriel
+    if (fields.length === 0) {
+      handleAddQuestion();
+      setTimeout(() => {
+        runSimpleTutorial();
+      }, 500);
+    } else {
+      runSimpleTutorial();
+    }
+  };
+
+  const runSimpleTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    
+    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
+    const forceTooltipDisplay = () => {
+      setTimeout(() => {
+        // Trouver l'élément actuellement ciblé
+        const currentStep = intro._currentStep;
+        const currentStepData = intro._options.steps[currentStep];
+        
+        if (currentStepData && currentStepData.element) {
+          let targetElement: Element | null = null;
+          
+          // Obtenir l'élément ciblé
+          if (typeof currentStepData.element === 'string') {
+            if (currentStepData.element === 'body') {
+              targetElement = document.body;
+            } else {
+              targetElement = document.querySelector(currentStepData.element);
+            }
+          } else {
+            targetElement = currentStepData.element;
+          }
+          
+          // Faire défiler vers l'élément si trouvé
+          if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const isInViewport = (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isInViewport) {
+              // Calculer la position de défilement optimale
+              const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
+              
+              // Défilement en douceur
+              window.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }
+        
+        // Forcer l'affichage des tooltips
+        const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
+        tooltips.forEach(tooltip => {
+          if (tooltip) {
+            tooltip.style.opacity = '1';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.display = 'block';
+          }
+        });
+        
+        // Forcer également l'affichage des messages
+        const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
+        tooltipTexts.forEach(text => {
+          if (text) {
+            text.style.visibility = 'visible';
+            text.style.opacity = '1';
+            text.style.display = 'block';
+          }
+        });
+      }, 100);
+    };
+    
+    // Ajouter un contrôleur personnalisé pour le tutoriel
+    const controllerDiv = document.createElement('div');
+    controllerDiv.className = 'tutorial-controller';
+    controllerDiv.style.position = 'fixed';
+    controllerDiv.style.bottom = '20px';
+    controllerDiv.style.left = '50%';
+    controllerDiv.style.transform = 'translateX(-50%)';
+    controllerDiv.style.backgroundColor = 'white';
+    controllerDiv.style.padding = '10px 15px';
+    controllerDiv.style.borderRadius = '50px';
+    controllerDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
+    controllerDiv.style.zIndex = '999999';
+    controllerDiv.style.display = 'flex';
+    controllerDiv.style.justifyContent = 'center';
+    controllerDiv.style.gap = '10px';
+    
+    // Créer les boutons
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Précédent';
+    prevButton.style.padding = '8px 16px';
+    prevButton.style.border = 'none';
+    prevButton.style.borderRadius = '4px';
+    prevButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    prevButton.style.color = 'white';
+    prevButton.style.cursor = 'pointer';
+    prevButton.style.fontWeight = 'bold';
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Suivant';
+    nextButton.style.padding = '8px 16px';
+    nextButton.style.border = 'none';
+    nextButton.style.borderRadius = '4px';
+    nextButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    nextButton.style.color = 'white';
+    nextButton.style.cursor = 'pointer';
+    nextButton.style.fontWeight = 'bold';
+    
+    const exitButton = document.createElement('button');
+    exitButton.textContent = 'Quitter';
+    exitButton.style.padding = '8px 16px';
+    exitButton.style.border = 'none';
+    exitButton.style.borderRadius = '4px';
+    exitButton.style.background = '#f44336';
+    exitButton.style.color = 'white';
+    exitButton.style.cursor = 'pointer';
+    exitButton.style.fontWeight = 'bold';
+    
+    // Ajout des écouteurs d'événements
+    prevButton.addEventListener('click', () => {
+      try {
+        intro.previousStep();
+        forceTooltipDisplay();
+      } catch (e) {
+        console.error('Erreur previous:', e);
+      }
+    });
+    
+    nextButton.addEventListener('click', () => {
+      try {
+        const currentStep = intro._currentStep;
+        if (currentStep < intro._options.steps.length - 1) {
+          intro.nextStep();
+          forceTooltipDisplay();
+        } else {
+          intro.exit(true);
+          document.body.removeChild(controllerDiv);
+        }
+      } catch (e) {
+        console.error('Erreur next:', e);
+      }
+    });
+    
+    exitButton.addEventListener('click', () => {
+      try {
+        intro.exit(true);
+        document.body.removeChild(controllerDiv);
+      } catch (e) {
+        console.error('Erreur exit:', e);
+      }
+    });
+    
+    // Ajouter les boutons au contrôleur
+    controllerDiv.appendChild(prevButton);
+    controllerDiv.appendChild(nextButton);
+    controllerDiv.appendChild(exitButton);
+    
+    // Ajouter des styles plus simples pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltipbuttons {
+        display: none !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Configuration du tutoriel avec construction dynamique des étapes
+    const buildSteps = () => {
+      // Définir les types de position valides pour introJs
+      type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | 'auto';
+      
+      // Créer les étapes avec les positions typées
+      const steps = [
+        {
+          element: '[data-intro="title"]',
+          intro: "Bienvenue dans le créateur de sondage! Ce tutoriel vous guidera à travers les fonctionnalités essentielles.",
+          position: 'bottom'
+        },
+        {
+          element: '[data-intro="basic-info"]',
+          intro: "Commencez par remplir les informations de base de votre sondage, comme le titre et la description.",
+          position: 'bottom'
+        },
+        {
+          element: '[data-intro="demographic"]',
+          intro: "Activez cette option pour collecter des informations démographiques comme l'âge, le genre, et la ville de vos participants.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="privacy"]',
+          intro: "Choisissez si votre sondage est public (visible par tous) ou privé (accessible uniquement via un lien).",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="add-question"]',
+          intro: "Cliquez ici pour ajouter de nouvelles questions à votre sondage.",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="question-type"]',
+          intro: "Sélectionnez le type de question parmi de nombreuses options: choix multiples, texte libre, étoiles, etc.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="media-upload"]',
+          intro: "Ajoutez des images ou des vidéos à vos questions pour les rendre plus engageantes.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="reset"]',
+          intro: "Le bouton Reset permet de réinitialiser complètement votre sondage. Attention : cette action supprime toutes vos questions et informations saisies!",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="preview"]',
+          intro: "La fonction Preview vous permet de visualiser votre sondage tel qu'il apparaîtra aux participants. Vous pouvez naviguer entre les questions pour vérifier leur apparence.",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="submit"]',
+          intro: "Une fois satisfait de votre sondage, cliquez ici pour le soumettre et le partager avec les participants.",
+          position: 'top'
+        },
+        {
+          element: 'body',
+          intro: "Félicitations! Vous savez maintenant comment créer un sondage personnalisé. N'hésitez pas à explorer d'autres fonctionnalités et à créer des sondages attractifs!",
+          position: 'bottom'
+        }
+      ];
+      
+      // Vérifier si les éléments existent avant d'ajouter les étapes correspondantes
+      if (document.querySelector('.SortableQuestionItem')) {
+        steps.splice(7, 0, {
+          element: '.SortableQuestionItem',
+          intro: "Vous pouvez réorganiser vos questions en les faisant glisser avec la poignée située en bas à droite de chaque question.",
+          position: 'bottom'
+        });
+      }
+      
+      if (document.querySelector('.SortableQuestionItem button[color="error"]')) {
+        steps.splice(8, 0, {
+          element: '.SortableQuestionItem button[color="error"]',
+          intro: "Supprimez une question en cliquant sur ce bouton. Les médias associés seront également supprimés.",
+          position: 'bottom'
+        });
+      }
+      
+      // Conversion explicite pour contourner l'erreur de type
+      return steps as any;
+    };
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true, // Activer le défilement automatique
+      scrollPadding: 100, // Ajouter un peu d'espace autour de l'élément
+      steps: buildSteps()
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+      if (document.body.contains(controllerDiv)) {
+        document.body.removeChild(controllerDiv);
+      }
+    });
+    
+    // Forcer l'affichage des tooltips après chaque changement
+    intro.onafterchange(function(targetElement) {
+      forceTooltipDisplay();
+      if (intro._currentStep === 0) {
+        prevButton.style.opacity = '0.5';
+      } else {
+        prevButton.style.opacity = '1';
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+    
+    // Ajouter le contrôleur au document
+    document.body.appendChild(controllerDiv);
+    
+    // Forcer l'affichage initial
+    forceTooltipDisplay();
+  };
+
   return (
     <Box
       component="main"
@@ -1128,23 +1476,66 @@ const SurveyCreationPage = () => {
         padding: { xs: 2, sm: 4 },
       }}
     >
+      <style jsx global>{`
+        .customTooltip {
+          max-width: 400px !important;
+          min-width: 250px !important;
+          z-index: 10000 !important;
+        }
+        .customHighlight {
+          z-index: 9999 !important;
+          position: relative !important;
+        }
+        .introjs-tooltip {
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .introjs-helperLayer {
+          background-color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .introjs-tooltip-title {
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .introjs-button {
+          text-shadow: none !important;
+          padding: 6px 15px !important;
+          font-size: 14px !important;
+          border-radius: 4px !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+          margin: 5px !important;
+        }
+        .introjs-prevbutton, .introjs-nextbutton {
+          transition: all 0.2s !important;
+        }
+        .introjs-prevbutton:hover, .introjs-nextbutton:hover {
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        }
+      `}</style>
+
       <Paper
         component="article"
         data-testid="survey-creation-container"
         elevation={3}
         sx={{
           borderRadius: 3,
-          overflow: 'hidden',
+          overflow: 'visible', // Changer de 'hidden' à 'visible' pour permettre aux tooltips de déborder
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
           maxWidth: '1000px',
           mb: 4,
+          position: 'relative', // Ajouter une position relative pour le contexte de z-index
         }}
       >
         {/* Header avec gradient */}
         <Box
           component="header"
           data-testid="survey-creation-header"
+          data-intro="title"
           sx={{
             background: colors.primary.gradient,
             py: 4,
@@ -1179,18 +1570,35 @@ const SurveyCreationPage = () => {
               data-testid="survey-basic-info"
               sx={{ mb: 4 }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                  Basic Information
-                </Typography>
-                <Tooltip 
-                  title="Cette section contient les informations générales de votre sondage"
-                  placement="right"
-                  TransitionComponent={Zoom}
-                  arrow
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                    Basic Information
+                  </Typography>
+                  <Tooltip 
+                    title="Cette section contient les informations générales de votre sondage"
+                    placement="right"
+                    TransitionComponent={Zoom}
+                    arrow
+                  >
+                    <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                  </Tooltip>
+                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<SchoolIcon />}
+                  onClick={startTutorial}
+                  sx={{
+                    color: '#667eea',
+                    borderColor: '#667eea',
+                    '&:hover': {
+                      borderColor: '#764ba2',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    },
+                  }}
                 >
-                  <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
-                </Tooltip>
+                  Tutoriel
+                </Button>
               </Box>
 
               <Controller
@@ -1215,6 +1623,7 @@ const SurveyCreationPage = () => {
                         }));
                       }
                     }}
+                    data-intro="basic-info"
                     InputProps={{
                       sx: {
                         '& .MuiOutlinedInput-root': {
@@ -1251,7 +1660,7 @@ const SurveyCreationPage = () => {
                 )}
               />
 
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }} data-intro="demographic">
                 <FormControlLabel
                   control={
                     <Switch
@@ -1274,7 +1683,7 @@ const SurveyCreationPage = () => {
                 </Tooltip>
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }} data-intro="privacy">
                 <FormControlLabel
                   control={
                     <Switch
@@ -1365,6 +1774,7 @@ const SurveyCreationPage = () => {
                                     {...typeField}
                                     onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
                                     sx={{ minWidth: 200 }}
+                                    data-intro={index === 0 ? "question-type" : null}
                                   >
                                     {questionTypes.map((type) => (
                                       <MenuItem key={type.value} value={type.value}>
@@ -1533,7 +1943,7 @@ const SurveyCreationPage = () => {
 
                             {/* Media Upload Section */}
                             {field.type !== 'color-picker' && (
-                              <Box sx={{ mt: 2 }}>
+                              <Box sx={{ mt: 2 }} data-intro={index === 0 ? "media-upload" : null}>
                                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                                   <Button
                                     component="label"
@@ -1670,6 +2080,7 @@ const SurveyCreationPage = () => {
                     onClick={handleAddQuestion}
                     variant="outlined"
                     startIcon={<AddIcon />}
+                    data-intro="add-question"
                     sx={{
                       mb: 4,
                       color: '#667eea',
@@ -1701,6 +2112,7 @@ const SurveyCreationPage = () => {
                   onClick={() => handleResetSurvey(null)}
                   variant="contained"
                   startIcon={<DeleteIcon />}
+                  data-intro="reset"
                   sx={{
                     background: colors.action.error.gradient,
                     color: 'white',
@@ -1718,6 +2130,7 @@ const SurveyCreationPage = () => {
                   onClick={() => setShowPreview(true)}
                   variant="contained"
                   startIcon={<VisibilityIcon />}
+                  data-intro="preview"
                   sx={{
                     background: colors.action.info.gradient,
                     color: 'white',
@@ -1735,6 +2148,7 @@ const SurveyCreationPage = () => {
                   onClick={handleSubmit(onSubmit)}
                   variant="contained"
                   disabled={isSubmitting}
+                  data-intro="submit"
                   startIcon={
                     isSubmitting ? (
                       <CircularProgress size={20} color="inherit" />
