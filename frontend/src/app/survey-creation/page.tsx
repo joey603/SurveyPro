@@ -50,7 +50,23 @@ import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type Question = {
   id: string;
@@ -153,18 +169,63 @@ const validateFormData = (data: FormData) => {
   return hasErrors ? errors : null;
 };
 
-// Ajout d'un style global pour le placeholder
-const placeholderStyle = `
-  [data-rbd-placeholder-context-id] {
-    height: 8px !important;
-    background-color: #667eea !important;
-    border-radius: 4px !important;
-    margin: 8px 0 !important;
-    width: 100% !important;
-    opacity: 0.5 !important;
-    transition: all 0.2s ease !important;
-  }
-`;
+const SortableQuestionItem = ({ 
+  children, 
+  id 
+}: { 
+  children: React.ReactNode, 
+  id: string 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.8 : 1,
+    position: 'relative' as const,
+    marginBottom: '16px',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children}
+      <div
+        {...listeners}
+        style={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
+          width: '100px',
+          height: '24px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'grab',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px',
+          zIndex: 5,
+        }}
+      >
+        <svg width="40" height="8" viewBox="0 0 40 8">
+          <g fill="#667eea">
+            <circle cx="4" cy="4" r="2" />
+            <circle cx="14" cy="4" r="2" />
+            <circle cx="24" cy="4" r="2" />
+            <circle cx="34" cy="4" r="2" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 const SurveyCreationPage = () => {
   const { control, handleSubmit, setValue, getValues, reset, watch } =
@@ -1030,47 +1091,29 @@ const SurveyCreationPage = () => {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleDragEnd = (result: any) => {
-    // Si on drop en dehors d'une zone de drop ou à la même position, ne rien faire
-    if (!result.destination || result.destination.index === result.source.index) {
-      return;
-    }
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    // Utiliser move de useFieldArray pour déplacer la question
-    const from = result.source.index;
-    const to = result.destination.index;
-    
-    // Déplacer la question
-    move(from, to);
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  // Ajouter un état pour suivre l'élément en cours de glissement
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Fonction appelée au début du glissement
-  const handleDragStart = () => {
-    setIsDragging(true);
-  };
-
-  // Fonction appelée lorsque le glissement est annulé
-  const handleDragUpdate = (update: any) => {
-    // Vous pouvez ajouter de la logique ici si nécessaire
-  };
-
-  // Style dynamique pour le placeholder
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    if (isDragging) {
-      styleElement.textContent = placeholderStyle;
-      document.head.appendChild(styleElement);
-    }
-
-    return () => {
-      if (styleElement.parentNode) {
-        document.head.removeChild(styleElement);
+    if (over && active.id !== over.id) {
+      const oldIndex = fields.findIndex(item => item.id === active.id);
+      const newIndex = fields.findIndex(item => item.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        move(oldIndex, newIndex);
       }
-    };
-  }, [isDragging]);
+    }
+  };
 
   return (
     <Box
@@ -1288,90 +1331,116 @@ const SurveyCreationPage = () => {
                 </Box>
 
                 {/* Liste des questions */}
-                <DragDropContext 
-                  onDragEnd={(result) => {
-                    setIsDragging(false);
-                    handleDragEnd(result);
-                  }}
-                  onDragStart={handleDragStart}
-                  onDragUpdate={handleDragUpdate}
-                >
-                  <Droppable
-                    droppableId="questions"
-                    direction="vertical"
+                <Box sx={{ mb: 4 }}>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                   >
-                    {(provided, droppableSnapshot) => (
-                      <div 
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        style={{
-                          minHeight: '100px',
-                          padding: '8px 0'
-                        }}
-                      >
-                        {fields.map((field, index) => (
-                          <Draggable 
-                            key={field.id} 
-                            draggableId={field.id} 
-                            index={index}
+                    <SortableContext
+                      items={fields.map(field => field.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {fields.map((field, index) => (
+                        <SortableQuestionItem key={field.id} id={field.id}>
+                          <Paper
+                            component="article"
+                            data-testid={`question-card-${index}`}
+                            elevation={1}
+                            sx={{ 
+                              p: 3, 
+                              borderRadius: 2,
+                              position: 'relative',
+                              pb: 5, // Espace supplémentaire pour la poignée de glissement
+                            }}
                           >
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                  marginBottom: '16px'
-                                }}
-                              >
-                                <Paper
-                                  component="article"
-                                  data-testid={`question-card-${index}`}
-                                  elevation={1}
-                                  sx={{ 
-                                    p: 3, 
-                                    borderRadius: 2,
-                                    backgroundColor: snapshot.isDragging ? '#f0f4ff' : 'white',
-                                    boxShadow: snapshot.isDragging ? '0 5px 20px rgba(0,0,0,0.2)' : 1,
-                                    border: snapshot.isDragging ? '2px solid #667eea' : 'none',
-                                  }}
-                                >
-                                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                                    <Controller
-                                      name={`questions.${index}.type`}
-                                      control={control}
-                                      render={({ field: typeField }) => (
-                                        <TextField
-                                          select
-                                          label="Question Type"
-                                          {...typeField}
-                                          onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-                                          sx={{ minWidth: 200 }}
-                                        >
-                                          {questionTypes.map((type) => (
-                                            <MenuItem key={type.value} value={type.value}>
-                                              {type.label}
-                                            </MenuItem>
-                                          ))}
-                                        </TextField>
-                                      )}
-                                    />
+                            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                              <Controller
+                                name={`questions.${index}.type`}
+                                control={control}
+                                render={({ field: typeField }) => (
+                                  <TextField
+                                    select
+                                    label="Question Type"
+                                    {...typeField}
+                                    onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+                                    sx={{ minWidth: 200 }}
+                                  >
+                                    {questionTypes.map((type) => (
+                                      <MenuItem key={type.value} value={type.value}>
+                                        {type.label}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                )}
+                              />
 
+                              <Controller
+                                name={`questions.${index}.text`}
+                                control={control}
+                                render={({ field: textField }) => (
+                                  <TextField
+                                    {...textField}
+                                    label="Question Text"
+                                    fullWidth
+                                    variant="outlined"
+                                    error={getQuestionError(index)}
+                                    helperText={getQuestionError(index) ? "Question text is required" : ""}
+                                    onChange={(e) => {
+                                      textField.onChange(e);
+                                      const newValue = e.target.value.trim();
+                                      const currentQuestion = validationErrors.questions[index];
+                                      
+                                      setValidationErrors(prev => ({
+                                        ...prev,
+                                        questions: {
+                                          ...prev.questions,
+                                          [index]: {
+                                            ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                            text: !newValue
+                                          }
+                                        }
+                                      }));
+                                    }}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                        },
+                                        '&:hover fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                        },
+                                      },
+                                    }}
+                                  />
+                                )}
+                              />
+                            </Box>
+
+                            {/* Options pour les questions à choix multiples */}
+                            {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
+                              <Box sx={{ ml: 2, mb: 2 }}>
+                                {field.options?.map((option, optionIndex) => (
+                                  <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
                                     <Controller
-                                      name={`questions.${index}.text`}
+                                      name={`questions.${index}.options.${optionIndex}`}
                                       control={control}
-                                      render={({ field: textField }) => (
+                                      defaultValue={option}
+                                      render={({ field: optionField }) => (
                                         <TextField
-                                          {...textField}
-                                          label="Question Text"
+                                          {...optionField}
+                                          label={`Option ${optionIndex + 1}`}
                                           fullWidth
                                           variant="outlined"
-                                          error={getQuestionError(index)}
-                                          helperText={getQuestionError(index) ? "Question text is required" : ""}
+                                          size="small"
+                                          error={getOptionError(index, optionIndex)}
+                                          helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
                                           onChange={(e) => {
-                                            textField.onChange(e);
+                                            optionField.onChange(e);
                                             const newValue = e.target.value.trim();
-                                            const currentQuestion = validationErrors.questions[index];
                                             
                                             setValidationErrors(prev => ({
                                               ...prev,
@@ -1379,7 +1448,10 @@ const SurveyCreationPage = () => {
                                                 ...prev.questions,
                                                 [index]: {
                                                   ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                                  text: !newValue
+                                                  options: {
+                                                    ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
+                                                    [optionIndex]: !newValue
+                                                  }
                                                 }
                                               }
                                             }));
@@ -1387,315 +1459,230 @@ const SurveyCreationPage = () => {
                                           sx={{
                                             '& .MuiOutlinedInput-root': {
                                               '& fieldset': {
-                                                borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
                                               },
                                               '&:hover fieldset': {
-                                                borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
                                               },
                                               '&.Mui-focused fieldset': {
-                                                borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
                                               },
                                             },
                                           }}
                                         />
                                       )}
                                     />
-                                  </Box>
+                                    <IconButton
+                                      onClick={() => {
+                                        const values = getValues();
+                                        const currentQuestionValues = values.questions[index];
+                                        const newOptions = [...(currentQuestionValues.options ?? [])];
+                                        newOptions.splice(optionIndex, 1);
+                                        
+                                        // Préserver l'état de validation actuel
+                                        const currentValidationState = validationErrors.questions[index];
+                                        const currentOptions = typeof currentValidationState === 'object' && 
+                                          currentValidationState.options ? { ...currentValidationState.options } : {};
+                                        
+                                        // Supprimer l'erreur de l'option supprimée et réindexer
+                                        const newValidationOptions: { [key: number]: boolean } = {};
+                                        Object.entries(currentOptions).forEach(([key, value]) => {
+                                          const keyNum = parseInt(key);
+                                          if (keyNum < optionIndex) {
+                                            newValidationOptions[keyNum] = value;
+                                          } else if (keyNum > optionIndex) {
+                                            newValidationOptions[keyNum - 1] = value;
+                                          }
+                                        });
 
-                                  {/* Options pour les questions à choix multiples */}
-                                  {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
-                                    <Box sx={{ ml: 2, mb: 2 }}>
-                                      {field.options?.map((option, optionIndex) => (
-                                        <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                                          <Controller
-                                            name={`questions.${index}.options.${optionIndex}`}
-                                            control={control}
-                                            defaultValue={option}
-                                            render={({ field: optionField }) => (
-                                              <TextField
-                                                {...optionField}
-                                                label={`Option ${optionIndex + 1}`}
-                                                fullWidth
-                                                variant="outlined"
-                                                size="small"
-                                                error={getOptionError(index, optionIndex)}
-                                                helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
-                                                onChange={(e) => {
-                                                  optionField.onChange(e);
-                                                  const newValue = e.target.value.trim();
-                                                  
-                                                  setValidationErrors(prev => ({
-                                                    ...prev,
-                                                    questions: {
-                                                      ...prev.questions,
-                                                      [index]: {
-                                                        ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                                        options: {
-                                                          ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
-                                                          [optionIndex]: !newValue
-                                                        }
-                                                      }
-                                                    }
-                                                  }));
-                                                }}
-                                                sx={{
-                                                  '& .MuiOutlinedInput-root': {
-                                                    '& fieldset': {
-                                                      borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
-                                                    },
-                                                    '&:hover fieldset': {
-                                                      borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                                    },
-                                                    '&.Mui-focused fieldset': {
-                                                      borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                                    },
-                                                  },
-                                                }}
-                                              />
-                                            )}
-                                          />
-                                          <IconButton
-                                            onClick={() => {
-                                              const values = getValues();
-                                              const currentQuestionValues = values.questions[index];
-                                              const newOptions = [...(currentQuestionValues.options ?? [])];
-                                              newOptions.splice(optionIndex, 1);
-                                              
-                                              // Préserver l'état de validation actuel
-                                              const currentValidationState = validationErrors.questions[index];
-                                              const currentOptions = typeof currentValidationState === 'object' && 
-                                                currentValidationState.options ? { ...currentValidationState.options } : {};
-                                              
-                                              // Supprimer l'erreur de l'option supprimée et réindexer
-                                              const newValidationOptions: { [key: number]: boolean } = {};
-                                              Object.entries(currentOptions).forEach(([key, value]) => {
-                                                const keyNum = parseInt(key);
-                                                if (keyNum < optionIndex) {
-                                                  newValidationOptions[keyNum] = value;
-                                                } else if (keyNum > optionIndex) {
-                                                  newValidationOptions[keyNum - 1] = value;
-                                                }
-                                              });
-
-                                              // Mettre à jour l'état de validation
-                                              setValidationErrors(prev => ({
-                                                ...prev,
-                                                questions: {
-                                                  ...prev.questions,
-                                                  [index]: {
-                                                    ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                                    options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
-                                                  }
-                                                }
-                                              }));
-
-                                              // Mettre à jour la question en préservant toutes les valeurs
-                                              update(index, {
-                                                ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
-                                                options: newOptions,
-                                              });
-                                            }}
-                                            color="error"
-                                            size="small"
-                                          >
-                                            <DeleteIcon />
-                                          </IconButton>
-                                        </Box>
-                                      ))}
-                                      <Button
-                                        onClick={() => handleAddOption(index)}
-                                        startIcon={<AddIcon />}
-                                        size="small"
-                                        sx={{ mt: 1 }}
-                                      >
-                                        Add Option
-                                      </Button>
-                                    </Box>
-                                  )}
-
-                                  {/* Media Upload Section */}
-                                  {field.type !== 'color-picker' && (
-                                    <Box sx={{ mt: 2 }}>
-                                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                                        <Button
-                                          component="label"
-                                          variant="outlined"
-                                          disabled={isUploading[field.id]}
-                                          startIcon={isUploading[field.id] ? (
-                                            <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                                          ) : (
-                                            <PhotoCameraIcon />
-                                          )}
-                                          sx={{
-                                            color: '#667eea',
-                                            borderColor: '#667eea',
-                                            '&:hover': {
-                                              borderColor: '#764ba2',
-                                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                            },
-                                            minWidth: '150px',
-                                          }}
-                                        >
-                                          {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
-                                          <input
-                                            type="file"
-                                            hidden
-                                            accept="image/*,video/*"
-                                            onChange={(e) => {
-                                              if (e.target.files?.[0]) {
-                                                const file = e.target.files[0];
-                                                handleFileUpload(file, field.id);
-                                              }
-                                            }}
-                                          />
-                                        </Button>
-                                        <Typography variant="body2" color="text.secondary">
-                                          or
-                                        </Typography>
-                                        <TextField
-                                          value={field.media ? '' : field.mediaUrl || ''}
-                                          onChange={(e) => {
-                                            const url = e.target.value;
-                                            if (url === '' || isValidMediaURL(url)) {
-                                              handleMediaChange(index, url, field);
+                                        // Mettre à jour l'état de validation
+                                        setValidationErrors(prev => ({
+                                          ...prev,
+                                          questions: {
+                                            ...prev.questions,
+                                            [index]: {
+                                              ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                              options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
                                             }
-                                          }}
-                                          placeholder="Enter media URL"
-                                          size="small"
-                                          fullWidth
-                                          sx={{
-                                            maxWidth: '400px',
-                                            '& .MuiOutlinedInput-root': {
-                                              '&:hover fieldset': {
-                                                borderColor: '#667eea',
-                                              },
-                                              '&.Mui-focused fieldset': {
-                                                borderColor: '#667eea',
-                                              },
-                                            },
-                                          }}
-                                        />
-                                      </Box>
-                                      {(field.media || field.mediaUrl) && (
-                                        <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                                          {isUploading[field.id] || loadingMedia[field.id] ? (
-                                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
-                                              <CircularProgress size={40} sx={{ color: '#667eea' }} />
-                                            </Box>
-                                          ) : isImageFile(field.media || '') ? (
-                                            <img 
-                                              src={field.media || ''}
-                                              alt="Question media"
-                                              style={{ 
-                                                width: '100%', 
-                                                height: 'auto',
-                                                borderRadius: '8px',
-                                                objectFit: 'contain'
-                                              }}
-                                              onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                              onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                              onError={() => {
-                                                setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                                setNotification({
-                                                  message: 'Error loading image. Please check the URL.',
-                                                  severity: 'error',
-                                                  open: true
-                                                });
-                                              }}
-                                            />
-                                          ) : (
-                                            <ReactPlayer
-                                              url={field.media}
-                                              controls
-                                              width="100%"
-                                              height="auto"
-                                              style={{ borderRadius: '8px' }}
-                                              onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                              onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                              onError={(e) => {
-                                                setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                                console.error('Error loading media:', e);
-                                                setNotification({
-                                                  message: 'Error loading media. Please check the URL.',
-                                                  severity: 'error',
-                                                  open: true
-                                                });
-                                              }}
-                                            />
-                                          )}
-                                        </Box>
-                                      )}
-                                    </Box>
-                                  )}
+                                          }
+                                        }));
 
-                                  {/* Actions en bas de la question */}
-                                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    {/* Delete Question Button */}
-                                    <Button
-                                      onClick={() => handleDeleteQuestion(index)}
-                                      startIcon={<DeleteIcon />}
+                                        // Mettre à jour la question en préservant toutes les valeurs
+                                        update(index, {
+                                          ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
+                                          options: newOptions,
+                                        });
+                                      }}
                                       color="error"
-                                      variant="outlined"
                                       size="small"
                                     >
-                                      Delete Question
-                                    </Button>
-                                    
-                                    {/* Poignée de glissement */}
-                                    <Box 
-                                      {...provided.dragHandleProps}
-                                      sx={{
-                                        width: '100px',
-                                        height: '24px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        cursor: 'grab',
-                                        backgroundColor: '#f5f5f5',
-                                        borderRadius: '4px',
-                                        '&:hover': {
-                                          backgroundColor: '#e0e0e0'
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Box>
+                                ))}
+                                <Button
+                                  onClick={() => handleAddOption(index)}
+                                  startIcon={<AddIcon />}
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                >
+                                  Add Option
+                                </Button>
+                              </Box>
+                            )}
+
+                            {/* Media Upload Section */}
+                            {field.type !== 'color-picker' && (
+                              <Box sx={{ mt: 2 }}>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                  <Button
+                                    component="label"
+                                    variant="outlined"
+                                    disabled={isUploading[field.id]}
+                                    startIcon={isUploading[field.id] ? (
+                                      <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                                    ) : (
+                                      <PhotoCameraIcon />
+                                    )}
+                                    sx={{
+                                      color: '#667eea',
+                                      borderColor: '#667eea',
+                                      '&:hover': {
+                                        borderColor: '#764ba2',
+                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                      },
+                                      minWidth: '150px',
+                                    }}
+                                  >
+                                    {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
+                                    <input
+                                      type="file"
+                                      hidden
+                                      accept="image/*,video/*"
+                                      onChange={(e) => {
+                                        if (e.target.files?.[0]) {
+                                          const file = e.target.files[0];
+                                          handleFileUpload(file, field.id);
                                         }
                                       }}
-                                    >
-                                      <svg width="40" height="8" viewBox="0 0 40 8">
-                                        <g fill="#667eea">
-                                          <circle cx="4" cy="4" r="2" />
-                                          <circle cx="14" cy="4" r="2" />
-                                          <circle cx="24" cy="4" r="2" />
-                                          <circle cx="34" cy="4" r="2" />
-                                        </g>
-                                      </svg>
-                                    </Box>
+                                    />
+                                  </Button>
+                                  <Typography variant="body2" color="text.secondary">
+                                    or
+                                  </Typography>
+                                  <TextField
+                                    value={field.media ? '' : field.mediaUrl || ''}
+                                    onChange={(e) => {
+                                      const url = e.target.value;
+                                      if (url === '' || isValidMediaURL(url)) {
+                                        handleMediaChange(index, url, field);
+                                      }
+                                    }}
+                                    placeholder="Enter media URL"
+                                    size="small"
+                                    fullWidth
+                                    sx={{
+                                      maxWidth: '400px',
+                                      '& .MuiOutlinedInput-root': {
+                                        '&:hover fieldset': {
+                                          borderColor: '#667eea',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: '#667eea',
+                                        },
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                                {(field.media || field.mediaUrl) && (
+                                  <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                                    {isUploading[field.id] || loadingMedia[field.id] ? (
+                                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+                                        <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                                      </Box>
+                                    ) : isImageFile(field.media || '') ? (
+                                      <img 
+                                        src={field.media || ''}
+                                        alt="Question media"
+                                        style={{ 
+                                          width: '100%', 
+                                          height: 'auto',
+                                          borderRadius: '8px',
+                                          objectFit: 'contain'
+                                        }}
+                                        onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                        onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                        onError={() => {
+                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                          setNotification({
+                                            message: 'Error loading image. Please check the URL.',
+                                            severity: 'error',
+                                            open: true
+                                          });
+                                        }}
+                                      />
+                                    ) : (
+                                      <ReactPlayer
+                                        url={field.media}
+                                        controls
+                                        width="100%"
+                                        height="auto"
+                                        style={{ borderRadius: '8px' }}
+                                        onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                        onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                        onError={(e) => {
+                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                          console.error('Error loading media:', e);
+                                          setNotification({
+                                            message: 'Error loading media. Please check the URL.',
+                                            severity: 'error',
+                                            open: true
+                                          });
+                                        }}
+                                      />
+                                    )}
                                   </Box>
-                                </Paper>
-                              </div>
+                                )}
+                              </Box>
                             )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
 
-                {/* Bouton Add Question */}
-                <Button
-                  onClick={handleAddQuestion}
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  sx={{
-                    mb: 4,
-                    color: '#667eea',
-                    borderColor: '#667eea',
-                    '&:hover': {
-                      borderColor: '#764ba2',
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    },
-                  }}
-                >
-                  Add Question
-                </Button>
+                            {/* Actions en bas de la question */}
+                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                              {/* Delete Question Button */}
+                              <Button
+                                onClick={() => handleDeleteQuestion(index)}
+                                startIcon={<DeleteIcon />}
+                                color="error"
+                                variant="outlined"
+                                size="small"
+                              >
+                                Delete Question
+                              </Button>
+                            </Box>
+                          </Paper>
+                        </SortableQuestionItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+
+                  {/* Bouton Add Question */}
+                  <Button
+                    onClick={handleAddQuestion}
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    sx={{
+                      mb: 4,
+                      color: '#667eea',
+                      borderColor: '#667eea',
+                      '&:hover': {
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                      },
+                    }}
+                  >
+                    Add Question
+                  </Button>
+                </Box>
               </Box>
 
               <Divider sx={{ my: 4 }} />
