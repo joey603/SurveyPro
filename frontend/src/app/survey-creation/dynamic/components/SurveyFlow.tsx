@@ -710,14 +710,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     }
   }, [nodes, edges, reactFlowInstance]);
 
-  // Ajouter le bouton de réorganisation
+  // Ajouter un attribut data-intro au bouton de réorganisation
   const ReorganizeButton = () => (
     <div
+      data-intro="reorganize-flow-button"
+      id="reorganize-flow-button"
+      className="reorganize-flow-button"
       style={{
         position: 'absolute',
         top: '20px',
         left: '20px',
-        zIndex: 1000,
+        zIndex: 2000,
         backgroundColor: '#667eea',
         color: 'white',
         padding: '8px 16px',

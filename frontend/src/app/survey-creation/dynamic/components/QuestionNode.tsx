@@ -346,7 +346,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Typography variant="subtitle1" fontWeight="bold">
             Question {data.questionNumber} 
           </Typography>
-          <IconButton size="small" onClick={() => setIsEditing(!isEditing)}>
+          <IconButton size="small" onClick={() => setIsEditing(!isEditing)} data-intro="edit-question">
             <EditIcon />
           </IconButton>
         </Box>
@@ -362,6 +362,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               }
               label="Critical Question (creates different paths)"
               sx={{ mb: 2 }}
+              data-intro="critical-question"
             />
 
             <Box
