@@ -321,16 +321,17 @@ exports.respondToShare = async (req, res) => {
     const { shareId, accept } = req.body;
     const userId = req.user.id;
 
+    // Rechercher le partage par ID et utilisateur receveur, peu importe son statut (pending ou accepted)
     const share = await SurveyShare.findOne({
       _id: shareId,
       sharedWith: userId,
-      status: 'pending'
+      status: { $in: ['pending', 'accepted'] }
     });
 
     if (!share) {
       return res.status(404).json({ 
         message: 'Share not found',
-        details: 'No pending share found for this user'
+        details: 'No share found for this user'
       });
     }
 
@@ -338,17 +339,23 @@ exports.respondToShare = async (req, res) => {
       // Si accepté, mettre à jour le statut
       share.status = 'accepted';
       await share.save();
+      
+      res.status(200).json({
+        message: 'Share accepted successfully',
+        status: 'accepted',
+        surveyId: share.surveyId
+      });
     } else {
-      // Si refusé, supprimer le partage
-      await SurveyShare.deleteOne({ _id: shareId });
+      // Si refusé, mettre à jour le statut au lieu de supprimer le partage
+      share.status = 'rejected';
+      await share.save();
+      
+      res.status(200).json({
+        message: 'Share rejected successfully',
+        status: 'rejected',
+        surveyId: share.surveyId
+      });
     }
-
-    res.status(200).json({
-      message: accept ? 'Share accepted successfully' : 'Share rejected and removed',
-      status: accept ? 'accepted' : 'rejected',
-      surveyId: share.surveyId
-    });
-
   } catch (error) {
     console.error('Erreur lors de la mise à jour du partage:', error);
     res.status(500).json({ 

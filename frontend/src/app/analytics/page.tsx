@@ -47,6 +47,8 @@ interface Survey {
   edges?: any[];
   isPrivate?: boolean;
   privateLink?: string;
+  isShared?: boolean;
+  shareId?: string;
 }
 
 // Interface spécifique pour les sondages partagés
@@ -248,17 +250,27 @@ const AnalyticsPage: React.FC = () => {
       const token = localStorage.getItem('accessToken') || '';
       console.log('Rejecting share:', shareId);
       
+      // Trouver le partage concerné pour déterminer son statut
+      const concernedSurvey = surveys.find(s => s.shareId === shareId);
+      const isPending = concernedSurvey?.status === 'pending';
+      
       await respondToSurveyShare(shareId, false, token);
       
-      setSnackbarMessage('Share invitation rejected');
+      // Message différent selon que c'était un partage en attente ou déjà accepté
+      if (isPending) {
+        setSnackbarMessage('Share invitation rejected');
+      } else {
+        setSnackbarMessage('Shared survey removed from your dashboard');
+      }
+      
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
       
       // Déclencher un rechargement des données
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
-      console.error('Error rejecting share:', error);
-      setSnackbarMessage('Error rejecting invitation');
+      console.error('Error rejecting/removing share:', error);
+      setSnackbarMessage('Error processing your request');
       setSnackbarSeverity('error');
       setOpenSnackbar(true);
     }

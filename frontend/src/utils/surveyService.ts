@@ -417,6 +417,28 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
   }
 };
 
+// Nouvelle fonction pour supprimer explicitement un partage de sondage
+export const deleteSurveyShare = async (shareId: string, token: string) => {
+  try {
+    console.log('Attempting to explicitly delete survey share:', shareId);
+    
+    const response = await axios({
+      method: 'DELETE',
+      url: `${BASE_URL}/api/survey-shares/${shareId}`,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Share deletion response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting survey share:', error);
+    throw error;
+  }
+};
+
 export const fetchAnsweredSurveys = async (token: string) => {
   try {
     // Récupérer les réponses aux sondages classiques
