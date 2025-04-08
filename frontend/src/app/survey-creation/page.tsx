@@ -1137,6 +1137,10 @@ const SurveyCreationPage = () => {
     // Créer une nouvelle instance et la rendre accessible globalement
     const intro = introJs();
     (window as any).introInstance = intro;
+    (window as any).surveyCreationFunctions = {
+      showPreview: () => setShowPreview(true),
+      hidePreview: () => setShowPreview(false)
+    };
     
     // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
     const forceTooltipDisplay = () => {
@@ -1222,7 +1226,7 @@ const SurveyCreationPage = () => {
     
     // Créer les boutons
     const prevButton = document.createElement('button');
-    prevButton.textContent = 'Précédent';
+    prevButton.textContent = 'Previous';
     prevButton.style.padding = '8px 16px';
     prevButton.style.border = 'none';
     prevButton.style.borderRadius = '4px';
@@ -1232,7 +1236,7 @@ const SurveyCreationPage = () => {
     prevButton.style.fontWeight = 'bold';
 
     const nextButton = document.createElement('button');
-    nextButton.textContent = 'Suivant';
+    nextButton.textContent = 'Next';
     nextButton.style.padding = '8px 16px';
     nextButton.style.border = 'none';
     nextButton.style.borderRadius = '4px';
@@ -1242,7 +1246,7 @@ const SurveyCreationPage = () => {
     nextButton.style.fontWeight = 'bold';
     
     const exitButton = document.createElement('button');
-    exitButton.textContent = 'Quitter';
+    exitButton.textContent = 'Exit';
     exitButton.style.padding = '8px 16px';
     exitButton.style.border = 'none';
     exitButton.style.borderRadius = '4px';
@@ -1347,57 +1351,57 @@ const SurveyCreationPage = () => {
       const steps = [
         {
           element: '[data-intro="title"]',
-          intro: "Bienvenue dans le créateur de sondage! Ce tutoriel vous guidera à travers les fonctionnalités essentielles.",
+          intro: "Welcome to the survey creator! This tutorial will guide you through the essential features.",
           position: 'bottom'
         },
         {
           element: '[data-intro="basic-info"]',
-          intro: "Commencez par remplir les informations de base de votre sondage, comme le titre et la description.",
+          intro: "Start by filling in the basic information of your survey, such as the title and description.",
           position: 'bottom'
         },
         {
           element: '[data-intro="demographic"]',
-          intro: "Activez cette option pour collecter des informations démographiques comme l'âge, le genre, et la ville de vos participants.",
+          intro: "Enable this option to collect demographic information such as age, gender, and city from your participants.",
           position: 'right'
         },
         {
           element: '[data-intro="privacy"]',
-          intro: "Choisissez si votre sondage est public (visible par tous) ou privé (accessible uniquement via un lien).",
+          intro: "Choose whether your survey is public (visible to everyone) or private (accessible only via a link).",
           position: 'right'
         },
         {
           element: '[data-intro="add-question"]',
-          intro: "Cliquez ici pour ajouter de nouvelles questions à votre sondage.",
+          intro: "Click here to add new questions to your survey.",
           position: 'top'
         },
         {
           element: '[data-intro="question-type"]',
-          intro: "Sélectionnez le type de question parmi de nombreuses options: choix multiples, texte libre, étoiles, etc.",
+          intro: "Select the question type from many options: multiple choice, free text, stars, etc.",
           position: 'right'
         },
         {
           element: '[data-intro="media-upload"]',
-          intro: "Ajoutez des images ou des vidéos à vos questions pour les rendre plus engageantes.",
+          intro: "Add images or videos to your questions to make them more engaging.",
           position: 'right'
         },
         {
           element: '[data-intro="reset"]',
-          intro: "Le bouton Reset permet de réinitialiser complètement votre sondage. Attention : cette action supprime toutes vos questions et informations saisies!",
+          intro: "The Reset button allows you to completely reset your survey. Warning: this action deletes all your questions and entered information!",
           position: 'top'
         },
         {
           element: '[data-intro="preview"]',
-          intro: "La fonction Preview vous permet de visualiser votre sondage tel qu'il apparaîtra aux participants. Vous pouvez naviguer entre les questions pour vérifier leur apparence.",
+          intro: "The Preview function is essential for visualizing your survey. Click this button after the tutorial to see how your survey will appear to participants. You can navigate between questions and check the formatting.",
           position: 'top'
         },
         {
           element: '[data-intro="submit"]',
-          intro: "Une fois satisfait de votre sondage, cliquez ici pour le soumettre et le partager avec les participants.",
+          intro: "Once you're satisfied with your survey, click here to submit it and share it with participants.",
           position: 'top'
         },
         {
           element: 'body',
-          intro: "Félicitations! Vous savez maintenant comment créer un sondage personnalisé. N'hésitez pas à explorer d'autres fonctionnalités et à créer des sondages attractifs!",
+          intro: "Congratulations! You now know how to create a custom survey. Don't hesitate to try the Preview function to see how your survey will appear before submitting it!",
           position: 'bottom'
         }
       ];
@@ -1406,7 +1410,7 @@ const SurveyCreationPage = () => {
       if (document.querySelector('.SortableQuestionItem')) {
         steps.splice(7, 0, {
           element: '.SortableQuestionItem',
-          intro: "Vous pouvez réorganiser vos questions en les faisant glisser avec la poignée située en bas à droite de chaque question.",
+          intro: "You can reorder your questions by dragging them using the handle located at the bottom right of each question.",
           position: 'bottom'
         });
       }
@@ -1414,7 +1418,7 @@ const SurveyCreationPage = () => {
       if (document.querySelector('.SortableQuestionItem button[color="error"]')) {
         steps.splice(8, 0, {
           element: '.SortableQuestionItem button[color="error"]',
-          intro: "Supprimez une question en cliquant sur ce bouton. Les médias associés seront également supprimés.",
+          intro: "Delete a question by clicking this button. Associated media will also be deleted.",
           position: 'bottom'
         });
       }
@@ -1428,8 +1432,10 @@ const SurveyCreationPage = () => {
       showBullets: true,
       showProgress: true,
       tooltipPosition: 'auto',
-      scrollToElement: true, // Activer le défilement automatique
-      scrollPadding: 100, // Ajouter un peu d'espace autour de l'élément
+      scrollToElement: true,
+      scrollPadding: 100,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
       steps: buildSteps()
     });
     
@@ -1441,6 +1447,9 @@ const SurveyCreationPage = () => {
       if (document.body.contains(controllerDiv)) {
         document.body.removeChild(controllerDiv);
       }
+      
+      // S'assurer que la prévisualisation est fermée si le tutoriel est quitté
+      setShowPreview(false);
     });
     
     // Forcer l'affichage des tooltips après chaque changement
@@ -1597,7 +1606,7 @@ const SurveyCreationPage = () => {
                     },
                   }}
                 >
-                  Tutoriel
+                  Tutorial
                 </Button>
               </Box>
 
