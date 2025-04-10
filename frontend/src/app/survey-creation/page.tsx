@@ -772,11 +772,11 @@ const SurveyCreationPage = () => {
             }
           });
         } else {
-          setNotification({
-            message: 'Your survey has been created successfully!',
-            severity: 'success',
-            open: true
-          });
+          // Pour les sondages publics, rediriger directement sans afficher de boîte de dialogue
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.push('/survey-answer');
+          }, 2000);
         }
 
       } catch (error: any) {

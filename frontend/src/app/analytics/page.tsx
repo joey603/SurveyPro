@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, Paper, Snackbar, Alert, IconButton, Grid } from '@mui/material';
+import { Box, Typography, Paper, Snackbar, Alert, IconButton, Grid, Fab, Tooltip } from '@mui/material';
 import { getSurveyAnswers, fetchSurveys, fetchPendingShares } from '@/utils/surveyService';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchAndFilter from '../components/analytics/SearchAndFilter';
@@ -12,6 +12,9 @@ import ShareIcon from '@mui/icons-material/Share';
 import ShareDialog from '../components/analytics/ShareDialog';
 import ExportIcon from '@mui/icons-material/IosShare';
 import { shareSurvey, respondToSurveyShare } from '@/utils/surveyShareService';
+import SchoolIcon from '@mui/icons-material/School';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
 
 interface Question {
   id: string;
@@ -416,6 +419,340 @@ const AnalyticsPage: React.FC = () => {
     });
   }, [filteredSurveys, sortBy, surveyResponses]);
 
+  // Fonction pour démarrer le tutoriel
+  const startTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    
+    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
+    const forceTooltipDisplay = () => {
+      setTimeout(() => {
+        // Trouver l'élément actuellement ciblé
+        const currentStep = intro._currentStep;
+        const currentStepData = intro._options.steps[currentStep];
+        
+        if (currentStepData && currentStepData.element) {
+          let targetElement: Element | null = null;
+          
+          // Obtenir l'élément ciblé
+          if (typeof currentStepData.element === 'string') {
+            if (currentStepData.element === 'body') {
+              targetElement = document.body;
+            } else {
+              targetElement = document.querySelector(currentStepData.element);
+            }
+          } else {
+            targetElement = currentStepData.element;
+          }
+          
+          // Faire défiler vers l'élément si trouvé
+          if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            
+            // Vérifier si l'élément est dans la zone visible
+            const isInViewport = (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isInViewport) {
+              // Calculer la position de défilement optimale pour centrer l'élément
+              const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
+              
+              // Défilement en douceur
+              window.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+              });
+            }
+          }
+          
+          // Forcer l'affichage des tooltips et les rendre plus visibles
+          const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
+          tooltips.forEach(tooltip => {
+            if (tooltip) {
+              tooltip.style.opacity = '1';
+              tooltip.style.visibility = 'visible';
+              tooltip.style.display = 'block';
+              tooltip.style.zIndex = '999999';
+              
+              // S'assurer que le tooltip est bien positionné
+              const tooltipRect = tooltip.getBoundingClientRect();
+              if (tooltipRect.left < 0) {
+                tooltip.style.left = '10px';
+              }
+              if (tooltipRect.right > window.innerWidth) {
+                tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
+              }
+              if (tooltipRect.top < 0) {
+                tooltip.style.top = '10px';
+              }
+              if (tooltipRect.bottom > window.innerHeight) {
+                tooltip.style.top = (window.innerHeight - tooltipRect.height - 10) + 'px';
+              }
+            }
+          });
+          
+          // Forcer également l'affichage des messages
+          const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
+          tooltipTexts.forEach(text => {
+            if (text) {
+              text.style.visibility = 'visible';
+              text.style.opacity = '1';
+              text.style.display = 'block';
+            }
+          });
+          
+          // S'assurer que les couches d'aide et d'overlay sont bien visibles
+          const helperLayers = document.querySelectorAll('.introjs-helperLayer, .introjs-overlay') as NodeListOf<HTMLElement>;
+          helperLayers.forEach(layer => {
+            if (layer) {
+              layer.style.opacity = layer.classList.contains('introjs-overlay') ? '0.7' : '1';
+              layer.style.visibility = 'visible';
+            }
+          });
+        }
+      }, 100);
+    };
+    
+    // Ajouter un contrôleur personnalisé pour le tutoriel
+    const controllerDiv = document.createElement('div');
+    controllerDiv.className = 'tutorial-controller';
+    controllerDiv.style.position = 'fixed';
+    controllerDiv.style.bottom = '60px';
+    controllerDiv.style.left = '50%';
+    controllerDiv.style.transform = 'translateX(-50%)';
+    controllerDiv.style.backgroundColor = 'white';
+    controllerDiv.style.padding = '10px 15px';
+    controllerDiv.style.borderRadius = '50px';
+    controllerDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
+    controllerDiv.style.zIndex = '999999';
+    controllerDiv.style.display = 'flex';
+    controllerDiv.style.justifyContent = 'center';
+    controllerDiv.style.gap = '10px';
+    
+    // Créer les boutons
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.style.padding = '8px 16px';
+    prevButton.style.border = 'none';
+    prevButton.style.borderRadius = '4px';
+    prevButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    prevButton.style.color = 'white';
+    prevButton.style.cursor = 'pointer';
+    prevButton.style.fontWeight = 'bold';
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.style.padding = '8px 16px';
+    nextButton.style.border = 'none';
+    nextButton.style.borderRadius = '4px';
+    nextButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    nextButton.style.color = 'white';
+    nextButton.style.cursor = 'pointer';
+    nextButton.style.fontWeight = 'bold';
+    
+    const exitButton = document.createElement('button');
+    exitButton.textContent = 'Exit';
+    exitButton.style.padding = '8px 16px';
+    exitButton.style.border = 'none';
+    exitButton.style.borderRadius = '4px';
+    exitButton.style.background = '#f44336';
+    exitButton.style.color = 'white';
+    exitButton.style.cursor = 'pointer';
+    exitButton.style.fontWeight = 'bold';
+    
+    // Ajout des écouteurs d'événements
+    prevButton.addEventListener('click', () => {
+      try {
+        intro.previousStep();
+        forceTooltipDisplay();
+      } catch (e) {
+        console.error('Error previous:', e);
+      }
+    });
+    
+    nextButton.addEventListener('click', () => {
+      try {
+        const currentStep = intro._currentStep;
+        if (currentStep < intro._options.steps.length - 1) {
+          intro.nextStep();
+          forceTooltipDisplay();
+        } else {
+          intro.exit(true);
+          document.body.removeChild(controllerDiv);
+        }
+      } catch (e) {
+        console.error('Error next:', e);
+      }
+    });
+    
+    exitButton.addEventListener('click', () => {
+      try {
+        intro.exit(true);
+        document.body.removeChild(controllerDiv);
+      } catch (e) {
+        console.error('Error exit:', e);
+      }
+    });
+    
+    // Ajouter les boutons au contrôleur
+    controllerDiv.appendChild(prevButton);
+    controllerDiv.appendChild(nextButton);
+    controllerDiv.appendChild(exitButton);
+    
+    // Ajouter des styles plus simples pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltipbuttons {
+        display: none !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Créer les étapes du tutoriel
+    const steps = [
+      {
+        element: 'body',
+        intro: "Welcome to the Analytics Dashboard! This tutorial will guide you through the features available for analyzing your surveys.",
+        position: 'top'
+      },
+      {
+        element: 'input[placeholder*="Search"]',
+        intro: "Use this search bar to quickly find surveys by their title.",
+        position: 'bottom'
+      },
+      {
+        element: '.MuiChip-root:nth-child(1)',
+        intro: "Filter surveys by creation date by clicking on this filter.",
+        position: 'bottom'
+      },
+      {
+        element: '.MuiChip-root:nth-child(2)',
+        intro: "Sort surveys by creation date or by popularity.",
+        position: 'bottom'
+      },
+      {
+        element: '.MuiChip-root:nth-child(3)',
+        intro: "Filter by privacy: show all surveys, only private surveys, or only public surveys.",
+        position: 'bottom'
+      },
+      {
+        element: '.MuiChip-root:nth-child(4)',
+        intro: "Show only pending survey share invitations.",
+        position: 'bottom'
+      },
+      {
+        element: '.MuiGrid-container > .MuiGrid-item:first-child',
+        intro: "Each card represents one of your surveys. You can see basic information like the number of responses and when it was created.",
+        position: 'right'
+      },
+      {
+        element: '.MuiGrid-container > .MuiGrid-item:first-child button:first-of-type',
+        intro: "Use this button to delete a survey that you no longer need. This action cannot be undone.",
+        position: 'top'
+      },
+      {
+        element: '.MuiGrid-container > .MuiGrid-item:first-child button:last-of-type',
+        intro: "Click here to view detailed analytics for a survey, including response data, charts, and demographic information.",
+        position: 'top'
+      },
+      {
+        element: 'body',
+        intro: "Now you know how to use the Analytics Dashboard! Click on 'View Analytics' for any survey to explore detailed response data and visualizations.",
+        position: 'top'
+      }
+    ];
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 100,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      steps: steps as any
+    });
+    
+    // Fonction onafterchange modifiée pour gérer le positionnement
+    intro.onafterchange(function() {
+      forceTooltipDisplay();
+      
+      // Récupérer l'étape actuelle
+      const currentStep = intro._currentStep;
+      
+      // Ajuster les boutons de navigation
+      if (currentStep === 0) {
+        prevButton.style.opacity = '0.5';
+      } else {
+        prevButton.style.opacity = '1';
+      }
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+      if (document.body.contains(controllerDiv)) {
+        document.body.removeChild(controllerDiv);
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+    
+    // Ajouter le contrôleur au document
+    document.body.appendChild(controllerDiv);
+    
+    // Forcer l'affichage initial
+    forceTooltipDisplay();
+  };
+
   return (
     <Box 
       component="section"
@@ -579,6 +916,27 @@ const AnalyticsPage: React.FC = () => {
         </Paper>
       )}
 
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Lancer le tutoriel">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
+      
       <Snackbar 
         open={openSnackbar} 
         autoHideDuration={6000} 
