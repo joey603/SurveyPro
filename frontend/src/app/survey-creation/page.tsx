@@ -759,8 +759,8 @@ const SurveyCreationPage = () => {
           const surveyLink = `${window.location.origin}/survey-answer?surveyId=${result._id}`;
           
           setNotification({
-            message: 'Your private survey has been created successfully!',
-            severity: 'success',
+            message: '',
+            severity: 'info',
             open: true,
             link: surveyLink,
             action: () => {
@@ -2236,14 +2236,8 @@ const SurveyCreationPage = () => {
           }}
         >
           <DialogContent sx={{ mt: 2 }}>
-            <Alert 
-              severity={notification.severity}
-              sx={{ mb: notification.link ? 2 : 0 }}
-            >
-              {notification.message}
-            </Alert>
-            {notification.link && (
-              <Box sx={{ mt: 3, mb: 2 }}>
+            {notification.link ? (
+              <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
                   Here is the link to answer your private survey:
                 </Typography>
@@ -2288,18 +2282,15 @@ const SurveyCreationPage = () => {
                   This link will also be displayed in your analytics dashboard.
                 </Typography>
               </Box>
+            ) : (
+              <Alert 
+                severity={notification.severity}
+              >
+                {notification.message}
+              </Alert>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Button 
-              onClick={() => {
-                setNotification(prev => ({ ...prev, open: false }));
-              }}
-              variant="outlined"
-              color="inherit"
-            >
-              Cancel
-            </Button>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'center' }}>
             <Button 
               onClick={() => {
                 // Si c'est un message d'erreur, fermer simplement la notification
@@ -2320,7 +2311,8 @@ const SurveyCreationPage = () => {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                }
+                },
+                minWidth: '120px'
               }}
             >
               OK
