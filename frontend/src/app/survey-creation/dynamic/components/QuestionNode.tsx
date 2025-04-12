@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import {
   Box,
@@ -40,6 +40,7 @@ interface QuestionNodeData {
   isCritical: boolean;
   questionNumber: number;
   selectedDate?: Date | null;
+  isEditing?: boolean;
   onChange?: (data: Partial<QuestionNodeData>) => void;
   onCreatePaths?: (nodeId: string, options: string[]) => void;
 }
@@ -76,6 +77,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [mediaTracker, setMediaTracker] = useState<Record<string, string>>({});
+  
+  // Use a ref to track previous editing state
+  const prevEditingRef = useRef(false);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -328,7 +332,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
   const updateNodeData = (newData: typeof questionData) => {
     setQuestionData(newData);
-    // Propager les changements au nœud parent
+    // Propagate changes to parent node
     if (data.onChange) {
       data.onChange({
         ...data,
@@ -336,6 +340,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       });
     }
   };
+
+  // Notify parent when editing state changes - only when it actually changes
+  useEffect(() => {
+    // Only notify parent when the editing state actually changes
+    if (isEditing !== prevEditingRef.current && data.onChange) {
+      prevEditingRef.current = isEditing;
+      
+      // Create an object with all the data properties that are expected by the interface
+      const nodeUpdate: Partial<QuestionNodeData> = {};
+      
+      // Set a custom property on the node that SurveyFlow can check
+      const customData = {
+        _editingState: isEditing
+      };
+      
+      // Use type assertion to add our custom property
+      data.onChange(Object.assign(nodeUpdate, customData) as Partial<QuestionNodeData>);
+    }
+  }, [isEditing, data]);
 
   return (
     <div style={{ position: 'relative' }}>

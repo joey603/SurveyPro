@@ -71,13 +71,52 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   });
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
-    setNodes(prevNodes => 
-      prevNodes.map(node => 
+    setNodes(prevNodes => {
+      // Filter out non-standard properties (like _editingState) to avoid recursive updates
+      const filteredData = { ...newData };
+      // Remove custom props that shouldn't be stored in the node data
+      if ('_editingState' in filteredData) {
+        delete filteredData._editingState;
+      }
+      
+      // Apply the changes to the node with nodeId
+      const updatedNodes = prevNodes.map(node => 
         node.id === nodeId 
-          ? { ...node, data: { ...node.data, ...newData } }
+          ? { ...node, data: { ...node.data, ...filteredData } }
           : node
-      )
-    );
+      );
+
+      // If the isEditing state changed, adjust positions
+      const editedNode = updatedNodes.find(n => n.id === nodeId);
+      if (editedNode && '_editingState' in newData) {
+        const isEditing = newData._editingState;
+        const EDITING_HEIGHT_INCREASE = 400; // Vertical space to add when editing
+        
+        // Function to check if a node is below another node
+        const isNodeBelow = (node1: Node, node2: Node) => {
+          return node1.position.y > node2.position.y;
+        };
+        
+        // If editing, move nodes below this one down
+        // If closing edit, move them back up
+        return updatedNodes.map(node => {
+          if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
+            return {
+              ...node,
+              position: {
+                ...node.position,
+                y: isEditing 
+                  ? node.position.y + EDITING_HEIGHT_INCREASE 
+                  : node.position.y - EDITING_HEIGHT_INCREASE
+              }
+            };
+          }
+          return node;
+        });
+      }
+      
+      return updatedNodes;
+    });
   }, []);
 
   const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
