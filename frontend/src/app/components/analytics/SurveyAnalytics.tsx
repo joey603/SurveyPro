@@ -1671,6 +1671,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         position: 'relative',
                         overflow: 'hidden'
                       }}
+                      className="question-card"
                     >
                       <Box
                         sx={{
@@ -1777,12 +1778,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }} className="general-statistics-paper">
                     <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
                       General Statistics
                     </Typography>
                     
-                    <Box sx={{ mb: 3 }}>
+                    <Box sx={{ mb: 3 }} className="general-statistics-section">
                       <Typography variant="body2" color="text.secondary">
                         Total responses: <strong>{filteredResponses.length}</strong>
                       </Typography>

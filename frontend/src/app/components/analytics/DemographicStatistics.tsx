@@ -1190,7 +1190,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   };
 
   return (
-    <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }}>
+    <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }} className="demographic-statistics-section">
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 

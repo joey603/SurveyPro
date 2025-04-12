@@ -706,6 +706,35 @@ const AnalyticsPage: React.FC = () => {
       }
     ];
     
+    // Ajouter l'étape de visualisation de parcours uniquement si le sondage est dynamique
+    if (selectedSurvey && selectedSurvey.isDynamic) {
+      // Insérer après l'étape des onglets (index 2 ou 3 selon si le sondage est privé)
+      const insertIndex = selectedSurvey.isPrivate ? 3 : 2;
+      steps.splice(insertIndex, 0, {
+        element: '.react-flow',
+        intro: "Cette visualisation interactive vous montre tous les parcours possibles dans votre sondage dynamique. Cliquez sur un nœud pour voir le chemin complet que les répondants ont suivi, et utilisez les contrôles pour zoomer et explorer les différents parcours.",
+        position: 'top'
+      });
+      
+      // Ajouter l'étape pour les chemins complets après la visualisation principale
+      steps.splice(insertIndex + 1, 0, {
+        element: '.complete-paths-panel',
+        intro: "La fonction 'Complete Path' vous permet de voir exactement combien de répondants ont suivi un parcours spécifique dans son intégralité. Sélectionnez un ou plusieurs nœuds dans l'arbre pour afficher ces parcours complets, avec des statistiques précises sur chaque chemin emprunté.",
+        position: 'left'
+      });
+    }
+    
+    // Ajouter l'étape pour les statistiques démographiques si le sondage a cette option
+    if (selectedSurvey && selectedSurvey.demographicEnabled) {
+      // Déterminer l'index d'insertion - après les autres étapes spécifiques
+      const demographicInsertIndex = steps.length - 1; // Avant la dernière étape (conclusion)
+      steps.splice(demographicInsertIndex, 0, {
+        element: '.demographic-statistics-section',
+        intro: "Cette section affiche des statistiques démographiques détaillées sur vos répondants. Vous y trouverez des graphiques sur la répartition par genre, âge, niveau d'éducation et ville. Cliquez sur chaque graphique pour une vue détaillée et des statistiques complètes.",
+        position: 'top'
+      });
+    }
+    
     // Configuration du tutoriel
     intro.setOptions({
       showBullets: true,
@@ -994,18 +1023,28 @@ const AnalyticsPage: React.FC = () => {
         position: 'top'
       },
       {
+        element: 'button[title="Partager"], svg[data-testid="ShareIcon"]',
+        intro: "Ce bouton vous permet de partager votre sondage avec d'autres utilisateurs par email. Ils pourront voir les résultats et les analyses sans pouvoir modifier le sondage.",
+        position: 'bottom'
+      },
+      {
         element: 'button[aria-label="Filters"]',
         intro: "Utilisez ce bouton pour afficher ou masquer les options de filtrage avancées pour votre analyse.",
         position: 'bottom'
       },
       {
-        element: '.analytics-tabs',
-        intro: "Ces onglets vous permettent de basculer entre différentes vues d'analyse.",
+        element: '.question-card',
+        intro: "Cette section présente l'ensemble des questions de votre sondage. Chaque carte contient le texte de la question, le type de question, et un résumé des réponses reçues. Vous pouvez voir le nombre total de réponses et la réponse la plus fréquente pour chaque question.",
         position: 'top'
       },
       {
         element: 'button[aria-label="Show details"]',
         intro: "Cliquez sur ce bouton pour voir les détails spécifiques de chaque question du sondage.",
+        position: 'top'
+      },
+      {
+        element: '.general-statistics-paper',
+        intro: "Cette section présente les statistiques générales de votre sondage. Vous pouvez y voir le nombre total de réponses, la date de la première et dernière réponse, ainsi que la moyenne quotidienne de réponses. Ces informations vous donnent une vue d'ensemble sur l'engagement des participants au fil du temps.",
         position: 'top'
       },
       {
@@ -1044,6 +1083,17 @@ const AnalyticsPage: React.FC = () => {
         element: '.complete-paths-panel',
         intro: "La fonction 'Complete Path' vous permet de voir exactement combien de répondants ont suivi un parcours spécifique dans son intégralité. Sélectionnez un ou plusieurs nœuds dans l'arbre pour afficher ces parcours complets, avec des statistiques précises sur chaque chemin emprunté.",
         position: 'left'
+      });
+    }
+    
+    // Ajouter l'étape pour les statistiques démographiques si le sondage a cette option
+    if (selectedSurvey && selectedSurvey.demographicEnabled) {
+      // Déterminer l'index d'insertion - après les autres étapes spécifiques
+      const demographicInsertIndex = steps.length - 1; // Avant la dernière étape (conclusion)
+      steps.splice(demographicInsertIndex, 0, {
+        element: '.demographic-statistics-section',
+        intro: "Cette section affiche des statistiques démographiques détaillées sur vos répondants. Vous y trouverez des graphiques sur la répartition par genre, âge, niveau d'éducation et ville. Cliquez sur chaque graphique pour une vue détaillée et des statistiques complètes.",
+        position: 'top'
       });
     }
     
