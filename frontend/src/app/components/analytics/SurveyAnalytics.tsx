@@ -1523,6 +1523,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               variant={showPrivateLink ? "contained" : "outlined"}
               startIcon={showPrivateLink ? <LinkIcon /> : <LinkIcon />}
               onClick={() => setShowPrivateLink(!showPrivateLink)}
+              aria-label={showPrivateLink ? "Hide Link" : "Show Link"}
               sx={{
                 mr: 1,
                 ...(showPrivateLink ? {
@@ -1541,6 +1542,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               
               setShowFilters(!showFilters);
             }}
+            aria-label="Filters"
             sx={{
               ...(showFilters ? {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1747,6 +1749,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             startIcon={<BarChartIcon />}
                             onClick={() => handleQuestionClick(question.id)}
                             disabled={stats.total === 0}
+                            aria-label="Show details"
                             sx={{
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
@@ -2209,6 +2212,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             variant="contained"
                             startIcon={<TableViewIcon />}
                             onClick={exportToCSV}
+                            aria-label="Export to CSV"
                             sx={{ 
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
@@ -2222,6 +2226,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             variant="contained"
                             startIcon={<CodeIcon />}
                             onClick={exportToJSON}
+                            aria-label="Export to JSON"
                                 sx={{
                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {

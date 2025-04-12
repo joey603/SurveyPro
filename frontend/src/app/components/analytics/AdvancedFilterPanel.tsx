@@ -725,6 +725,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
         <Tabs 
           value={activeTab} 
           onChange={handleTabChange}
+          className="analytics-tabs"
           sx={{ 
             mb: 3,
             '& .MuiTabs-indicator': {

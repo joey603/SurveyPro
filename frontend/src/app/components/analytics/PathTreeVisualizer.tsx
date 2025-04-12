@@ -2404,6 +2404,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             visibility: pathsPanelOpen ? 'visible' : 'hidden',
             pointerEvents: pathsPanelOpen ? 'auto' : 'none'
           }}
+          className="complete-paths-panel"
         >
           {pathsPanelOpen && (
             <>

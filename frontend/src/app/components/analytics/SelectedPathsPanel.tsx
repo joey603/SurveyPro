@@ -40,7 +40,7 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
   };
   
   return (
-    <Box sx={{ mt: 4, width: '100%' }}>
+    <Box sx={{ mt: 4, width: '100%' }} className="selected-paths-panel">
       <Typography variant="h6" gutterBottom>
         Response Path Analysis
       </Typography>
