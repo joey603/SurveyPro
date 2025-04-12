@@ -2208,6 +2208,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   return (
     <Paper 
+      elevation={2}
       sx={{ 
         width: '100%', 
         height: '100%', 
@@ -2218,8 +2219,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(220, 230, 250, 0.2) 1px, transparent 0)',
         backgroundSize: '25px 25px',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        borderRadius: '16px',
-        border: '1px solid rgba(102, 126, 234, 0.15)'
+        borderRadius: '2px',
+        border: '1px solid rgba(102, 126, 234, 0.15)',
+        mb: 4
       }}
     >
       <Typography variant="h6" component="h2" gutterBottom sx={{ 

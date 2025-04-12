@@ -199,8 +199,13 @@ const chartColors = {
 const MAX_DISPLAYED_ITEMS = 5;
 
 // Fonction utilitaire pour générer des couleurs distinctes
-const generateDistinctColors = (count: number) => {
-  const colors = [];
+interface ColorItem {
+  backgroundColor: string;
+  borderColor: string;
+}
+
+const generateDistinctColors = (count: number): ColorItem[] => {
+  const colors: ColorItem[] = [];
   
   // Palette de couleurs de base
   const baseColors = [
