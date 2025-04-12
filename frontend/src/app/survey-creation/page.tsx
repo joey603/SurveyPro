@@ -1513,21 +1513,22 @@ const SurveyCreationPage = () => {
           component="header"
           data-testid="survey-creation-header"
           data-intro="title"
-          sx={{
-            background: colors.primary.gradient,
-            py: 4,
-            px: 4,
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
             color: 'white',
-            textAlign: 'center',
+            textAlign: 'center'
           }}
         >
           <Typography 
-            component="h1"
-            data-testid="survey-creation-title"
-            variant="h4" 
-            fontWeight="bold"
+            variant="h6" 
+            sx={{ fontWeight: 'bold' }}
           >
-            Create New Survey
+            Standard Survey Creation
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            Create linear surveys with customized questions 
           </Typography>
         </Box>
 

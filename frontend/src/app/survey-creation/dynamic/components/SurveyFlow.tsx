@@ -720,7 +720,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         position: 'absolute',
         top: '20px',
         left: '20px',
-        zIndex: 2000,
+        zIndex: 5,
         backgroundColor: '#667eea',
         color: 'white',
         padding: '8px 16px',

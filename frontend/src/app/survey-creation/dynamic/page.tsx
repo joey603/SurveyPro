@@ -52,6 +52,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import InfoIcon from '@mui/icons-material/Info';
 
 const educationOptions = [
   'High School',
@@ -320,8 +321,8 @@ export default function DynamicSurveyCreation() {
           
           setNotification({
             show: true,
-            message: 'Your private survey has been created successfully!',
-            type: 'success',
+            message: '',
+            type: 'info',
             link: surveyLink,
             action: () => {
               setShowSuccess(true);
@@ -1267,14 +1268,8 @@ export default function DynamicSurveyCreation() {
           fullWidth
         >
           <DialogContent>
-            <Alert 
-              severity={notification.type}
-              sx={{ mb: notification.link ? 2 : 0 }}
-            >
-              {notification.message}
-            </Alert>
-            {notification.link && (
-              <Box sx={{ mt: 3, mb: 2 }}>
+            {notification.link ? (
+              <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
                   Here is the link to answer your private survey:
                 </Typography>
@@ -1326,18 +1321,15 @@ export default function DynamicSurveyCreation() {
                   This link will also be displayed in your analytics dashboard.
                 </Typography>
               </Box>
+            ) : (
+              <Alert 
+                severity={notification.type}
+              >
+                {notification.message}
+              </Alert>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Button 
-              onClick={() => {
-                setNotification(prev => ({ ...prev, show: false }));
-              }}
-              variant="outlined"
-              color="inherit"
-            >
-              Cancel
-            </Button>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'center' }}>
             <Button 
               onClick={() => {
                 setNotification(prev => ({ ...prev, show: false }));
@@ -1350,7 +1342,8 @@ export default function DynamicSurveyCreation() {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                }
+                },
+                minWidth: '120px'
               }}
             >
               OK
@@ -1425,9 +1418,19 @@ export default function DynamicSurveyCreation() {
         {/* Section des informations de base */}
         <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
-            <Typography variant="h6" sx={{ color: '#1a237e' }}>
-              Basic Information
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                Basic Information
+              </Typography>
+              <Tooltip 
+                title="This section contains the general information of your survey"
+                placement="right"
+                TransitionComponent={Zoom}
+                arrow
+              >
+                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+              </Tooltip>
+            </Box>
           </Box>
           
           <Controller
@@ -1471,7 +1474,19 @@ export default function DynamicSurveyCreation() {
                 onChange={(e) => setValue('demographicEnabled', e.target.checked)}
               />
             }
-            label="Enable Demographic Questions"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography>Enable Demographic Questions</Typography>
+                <Tooltip 
+                  title="Enable this option to collect demographic information (age, gender, education, city)"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
+            }
             data-intro="demographic"
           />
 
@@ -1512,43 +1527,59 @@ export default function DynamicSurveyCreation() {
 
         {/* Flow section */}
         <Box 
-          sx={{ p: 3, pt: 0, height: '600px', position: 'relative' }}
+          sx={{ p: 3, height: '620px', position: 'relative' }}
           data-intro="flow-canvas"
         >
-          <SurveyFlow 
-            ref={flowRef}
-            onAddNode={() => {
-              if (flowRef.current) {
-                const nodes = flowRef.current.getNodes();
-                setPreviewNodes(nodes);
-              }
-            }} 
-            onEdgesChange={handleEdgesChange}
-          />
-          
-          <Tooltip title="Add Question" placement="left">
-            <Fab 
-              color="primary" 
-              aria-label="add question"
-              data-intro="add-question"
-              sx={{
-                position: 'absolute',
-                bottom: 24,
-                right: 24,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                },
-              }}
-              onClick={() => {
-                if (flowRef.current) {
-                  flowRef.current.addNewQuestion();
-                }
-              }}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ color: '#1a237e' }}>
+              Survey Flow
+            </Typography>
+            <Tooltip 
+              title="Create conditional branching by connecting questions based on answers"
+              placement="right"
+              TransitionComponent={Zoom}
+              arrow
             >
-              <AddIcon />
-            </Fab>
-          </Tooltip>
+              <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+            </Tooltip>
+          </Box>
+          
+          <Box sx={{ height: 'calc(100% - 40px)', position: 'relative' }}>
+            <SurveyFlow 
+              ref={flowRef}
+              onAddNode={() => {
+                if (flowRef.current) {
+                  const nodes = flowRef.current.getNodes();
+                  setPreviewNodes(nodes);
+                }
+              }} 
+              onEdgesChange={handleEdgesChange}
+            />
+            
+            <Tooltip title="Add Question" placement="left">
+              <Fab 
+                color="primary" 
+                aria-label="add question"
+                data-intro="add-question"
+                sx={{
+                  position: 'absolute',
+                  bottom: 24,
+                  right: 24,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                }}
+                onClick={() => {
+                  if (flowRef.current) {
+                    flowRef.current.addNewQuestion();
+                  }
+                }}
+              >
+                <AddIcon />
+              </Fab>
+            </Tooltip>
+          </Box>
         </Box>
       </Paper>
 
@@ -1742,7 +1773,7 @@ export default function DynamicSurveyCreation() {
       )}
 
       {/* Bouton tutorial flottant */}
-      <Tooltip title="Lancer le tutoriel">
+      <Tooltip title="Start tutorial">
         <Fab
           size="small"
           onClick={startTutorial}
