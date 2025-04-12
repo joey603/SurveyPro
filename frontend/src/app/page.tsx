@@ -249,7 +249,7 @@ const Home = () => {
                       fontSize: { xs: '2.5rem', md: '3.5rem' },
                     }}
                   >
-                    SurveyPro
+                    SurveyFlow
                   </Typography>
                   <Typography
                     variant="h5"
