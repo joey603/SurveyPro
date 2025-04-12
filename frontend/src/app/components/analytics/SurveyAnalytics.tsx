@@ -2234,6 +2234,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                           }
                         }}
+                        className="export-json-button"
                       >
                         Export to JSON
                           </Button>

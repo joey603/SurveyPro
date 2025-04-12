@@ -707,17 +707,16 @@ const AnalyticsPage: React.FC = () => {
     ];
     
     // Ajouter l'étape de visualisation de parcours uniquement si le sondage est dynamique
-    if (selectedSurvey && selectedSurvey.isDynamic) {
-      // Insérer après l'étape des onglets (index 2 ou 3 selon si le sondage est privé)
-      const insertIndex = selectedSurvey.isPrivate ? 3 : 2;
-      steps.splice(insertIndex, 0, {
+    if (selectedSurvey && selectedSurvey.isDynamic && (surveyResponses[selectedSurvey._id]?.length > 0)) {
+      // Insérer après l'étape des filtres
+      steps.splice(3, 0, {
         element: '.react-flow',
         intro: "Cette visualisation interactive vous montre tous les parcours possibles dans votre sondage dynamique. Cliquez sur un nœud pour voir le chemin complet que les répondants ont suivi, et utilisez les contrôles pour zoomer et explorer les différents parcours.",
         position: 'top'
       });
       
       // Ajouter l'étape pour les chemins complets après la visualisation principale
-      steps.splice(insertIndex + 1, 0, {
+      steps.splice(4, 0, {
         element: '.complete-paths-panel',
         intro: "La fonction 'Complete Path' vous permet de voir exactement combien de répondants ont suivi un parcours spécifique dans son intégralité. Sélectionnez un ou plusieurs nœuds dans l'arbre pour afficher ces parcours complets, avec des statistiques précises sur chaque chemin emprunté.",
         position: 'left'
@@ -725,7 +724,7 @@ const AnalyticsPage: React.FC = () => {
     }
     
     // Ajouter l'étape pour les statistiques démographiques si le sondage a cette option
-    if (selectedSurvey && selectedSurvey.demographicEnabled) {
+    if (selectedSurvey && selectedSurvey.demographicEnabled && (surveyResponses[selectedSurvey._id]?.length > 0)) {
       // Déterminer l'index d'insertion - après les autres étapes spécifiques
       const demographicInsertIndex = steps.length - 1; // Avant la dernière étape (conclusion)
       steps.splice(demographicInsertIndex, 0, {
@@ -1019,42 +1018,37 @@ const AnalyticsPage: React.FC = () => {
     const steps = [
       {
         element: 'body',
-        intro: "Bienvenue dans la vue détaillée de l'analyse de votre sondage. Ce tutoriel vous guidera à travers les fonctionnalités disponibles pour analyser les réponses.",
+        intro: "Welcome to the detailed view of your survey analytics. This tutorial will guide you through the features available to analyze responses.",
         position: 'top'
       },
       {
         element: 'button[title="Partager"], svg[data-testid="ShareIcon"]',
-        intro: "Ce bouton vous permet de partager votre sondage avec d'autres utilisateurs par email. Ils pourront voir les résultats et les analyses sans pouvoir modifier le sondage.",
+        intro: "This button allows you to share your survey with other users via email. They'll be able to view results and analytics without modifying the survey.",
         position: 'bottom'
       },
       {
         element: 'button[aria-label="Filters"]',
-        intro: "Utilisez ce bouton pour afficher ou masquer les options de filtrage avancées pour votre analyse.",
+        intro: "Use this button to display or hide advanced filtering options for your analysis.",
         position: 'bottom'
       },
       {
         element: '.question-card',
-        intro: "Cette section présente l'ensemble des questions de votre sondage. Chaque carte contient le texte de la question, le type de question, et un résumé des réponses reçues. Vous pouvez voir le nombre total de réponses et la réponse la plus fréquente pour chaque question.",
+        intro: "This section presents all the questions in your survey. Each card contains the question text, question type, and a summary of received responses. You can see the total number of responses and the most frequent answer for each question.",
         position: 'top'
       },
       {
         element: 'button[aria-label="Show details"]',
-        intro: "Cliquez sur ce bouton pour voir les détails spécifiques de chaque question du sondage.",
+        intro: "Click this button to see specific details for each survey question.",
         position: 'top'
       },
       {
         element: '.general-statistics-paper',
-        intro: "Cette section présente les statistiques générales de votre sondage. Vous pouvez y voir le nombre total de réponses, la date de la première et dernière réponse, ainsi que la moyenne quotidienne de réponses. Ces informations vous donnent une vue d'ensemble sur l'engagement des participants au fil du temps.",
-        position: 'top'
-      },
-      {
-        element: 'button[aria-label="Export to CSV"], button[aria-label="Export to JSON"]',
-        intro: "Ces boutons vous permettent d'exporter vos données d'analyse dans différents formats pour une utilisation ultérieure.",
+        intro: "This section presents general statistics about your survey. You can see the total number of responses, the dates of the first and last responses, and the average daily responses. This information gives you an overview of participant engagement over time.",
         position: 'top'
       },
       {
         element: 'body',
-        intro: "Vous avez maintenant toutes les informations nécessaires pour analyser en détail les réponses à votre sondage!",
+        intro: "You now have all the information you need to analyze your survey responses in detail!",
         position: 'top'
       }
     ];
@@ -1063,36 +1057,52 @@ const AnalyticsPage: React.FC = () => {
     if (selectedSurvey && selectedSurvey.isPrivate) {
       steps.splice(1, 0, {
         element: 'button[aria-label="Show Link"], button[aria-label="Hide Link"]',
-        intro: "Ce bouton vous permet d'afficher ou de masquer le lien privé de votre sondage que vous pouvez partager.",
+        intro: "This button allows you to display or hide the private link of your survey that you can share.",
         position: 'bottom'
       });
     }
     
-    // Ajouter l'étape de visualisation de parcours uniquement si le sondage est dynamique
-    if (selectedSurvey && selectedSurvey.isDynamic) {
-      // Insérer après l'étape des onglets (index 2 ou 3 selon si le sondage est privé)
-      const insertIndex = selectedSurvey.isPrivate ? 3 : 2;
-      steps.splice(insertIndex, 0, {
+    // Ajouter l'étape de visualisation de parcours uniquement si le sondage est dynamique ET qu'il y a des réponses
+    if (selectedSurvey && selectedSurvey.isDynamic && (surveyResponses[selectedSurvey._id]?.length > 0)) {
+      // Insérer après l'étape des filtres
+      steps.splice(3, 0, {
         element: '.react-flow',
-        intro: "Cette visualisation interactive vous montre tous les parcours possibles dans votre sondage dynamique. Cliquez sur un nœud pour voir le chemin complet que les répondants ont suivi, et utilisez les contrôles pour zoomer et explorer les différents parcours.",
+        intro: "This interactive visualization shows you all possible paths in your dynamic survey. Click on a node to see the complete path that respondents followed, and use the controls to zoom and explore different paths.",
         position: 'top'
       });
       
       // Ajouter l'étape pour les chemins complets après la visualisation principale
-      steps.splice(insertIndex + 1, 0, {
+      steps.splice(4, 0, {
         element: '.complete-paths-panel',
-        intro: "La fonction 'Complete Path' vous permet de voir exactement combien de répondants ont suivi un parcours spécifique dans son intégralité. Sélectionnez un ou plusieurs nœuds dans l'arbre pour afficher ces parcours complets, avec des statistiques précises sur chaque chemin emprunté.",
+        intro: "The 'Complete Path' feature allows you to see exactly how many respondents followed a specific path in its entirety. Select one or more nodes in the tree to display these complete paths, with precise statistics on each route taken.",
         position: 'left'
       });
     }
     
-    // Ajouter l'étape pour les statistiques démographiques si le sondage a cette option
-    if (selectedSurvey && selectedSurvey.demographicEnabled) {
-      // Déterminer l'index d'insertion - après les autres étapes spécifiques
-      const demographicInsertIndex = steps.length - 1; // Avant la dernière étape (conclusion)
+    // Ajouter les étapes d'exportation uniquement s'il y a des réponses
+    if (selectedSurvey && surveyResponses[selectedSurvey._id]?.length > 0) {
+      // Insérer avant l'étape de conclusion (dernier élément)
+      steps.splice(steps.length - 1, 0, 
+        {
+          element: 'button[aria-label="Export to CSV"]',
+          intro: "This button allows you to export your analytics data in CSV format, ideal for analysis in spreadsheets like Excel or Google Sheets.",
+          position: 'top'
+        },
+        {
+          element: 'button[aria-label="Export to JSON"], .export-json-button',
+          intro: "This button allows you to export your analytics data in JSON format, perfect for integration with other applications or for more advanced data processing.",
+          position: 'top'
+        }
+      );
+    }
+    
+    // Ajouter l'étape pour les statistiques démographiques si le sondage a cette option ET qu'il y a des réponses
+    if (selectedSurvey && selectedSurvey.demographicEnabled && (surveyResponses[selectedSurvey._id]?.length > 0)) {
+      // Déterminer l'index d'insertion - avant la dernière étape (conclusion)
+      const demographicInsertIndex = steps.length - 1;
       steps.splice(demographicInsertIndex, 0, {
         element: '.demographic-statistics-section',
-        intro: "Cette section affiche des statistiques démographiques détaillées sur vos répondants. Vous y trouverez des graphiques sur la répartition par genre, âge, niveau d'éducation et ville. Cliquez sur chaque graphique pour une vue détaillée et des statistiques complètes.",
+        intro: "This section displays detailed demographic statistics about your respondents. You'll find charts on the distribution by gender, age, education level, and city. Click on each chart for a detailed view and complete statistics.",
         position: 'top'
       });
     }
