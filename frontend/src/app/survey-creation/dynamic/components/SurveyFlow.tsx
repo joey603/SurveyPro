@@ -321,6 +321,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, [edges, nodes]);
 
   const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
+    // Check for potential cycle with the new connection
+    const hasCycle = (sourceId: string, targetId: string, visited = new Set<string>()): boolean => {
+      if (sourceId === targetId) return true;
+      if (visited.has(targetId)) return false;
+      
+      visited.add(targetId);
+      
+      // Check existing connections
+      const connectedEdges = edges.filter(edge => edge.source === targetId);
+      return connectedEdges.some(edge => hasCycle(sourceId, edge.target, new Set(visited)));
+    };
+
+    // If the new connection would create a cycle, prevent it
+    if (newConnection.source && newConnection.target && 
+        hasCycle(newConnection.source, newConnection.target)) {
+      setNotification({
+        show: true,
+        message: 'Cannot create a loop in the flow',
+        type: 'error'
+      });
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
+      return; // Keep original edges unchanged
+    }
+
     setEdges((els) => {
       const updatedEdges = els.filter((edge) => edge.id !== oldEdge.id);
       if (newConnection) {
@@ -333,7 +362,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       return updatedEdges;
     });
-  }, []);
+  }, [edges]);
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.stopPropagation();
