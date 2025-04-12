@@ -2363,7 +2363,8 @@ const SurveyCreationPage = () => {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         display: 'flex',
         alignItems: 'center',
-        gap: 1
+        gap: 1,
+        zIndex: 9999
       }}>
         <Typography variant="body2">
           Questions: {fields.length}
