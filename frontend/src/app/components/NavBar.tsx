@@ -307,7 +307,7 @@ const NavBar = () => {
                 },
               }}
             >
-              SurveyPro
+              SurveyFlow
             </Box>
           </Link>
 
