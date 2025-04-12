@@ -1553,7 +1553,7 @@ const SurveyCreationPage = () => {
                     Basic Information
                   </Typography>
                   <Tooltip 
-                    title="Cette section contient les informations générales de votre sondage"
+                    title="This section contains the general information of your survey"
                     placement="right"
                     TransitionComponent={Zoom}
                     arrow
@@ -1636,7 +1636,7 @@ const SurveyCreationPage = () => {
                   label="Enable Demographic Questions"
                 />
                 <Tooltip 
-                  title="Activez cette option pour collecter des informations démographiques (âge, genre, éducation, ville)"
+                  title="Enable this option to collect demographic information (age, gender, education, city)"
                   placement="right"
                   TransitionComponent={Zoom}
                   arrow
@@ -1692,7 +1692,7 @@ const SurveyCreationPage = () => {
                     Survey Questions
                   </Typography>
                   <Tooltip 
-                    title="Ajoutez autant de questions que nécessaire. Chaque question peut avoir un type différent et inclure des médias"
+                    title="Add as many questions as needed. Each question can have a different type and include media"
                     placement="right"
                     TransitionComponent={Zoom}
                     arrow
@@ -2372,7 +2372,7 @@ const SurveyCreationPage = () => {
       </Box>
       
       {/* Floating Tutorial Button */}
-      <Tooltip title="Lancer le tutoriel">
+      <Tooltip title="Start tutorial">
         <Fab
           size="small"
           onClick={startTutorial}
