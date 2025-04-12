@@ -97,21 +97,21 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const verticalSpacing = 300; // Augmenté à 300px
-    const horizontalSpacing = 800; // Augmenté à 800px pour un espacement beaucoup plus large
+    const verticalSpacing = 300; // Augmented to 300px
+    const horizontalSpacing = 800; // Increased to 800px for a much wider spacing
 
-    // Calculer la largeur totale et la position de départ
+    // Calculate the total width and starting position
     const totalWidth = (options.length - 1) * horizontalSpacing;
     const startX = sourceNode.position.x - (totalWidth / 2);
 
     options.forEach((option, index) => {
-      // Normaliser l'option pour l'ID du nœud
+      // Normalize the option for the node ID
       const normalizedOption = option.trim().toLowerCase().replace(/\s+/g, '_');
       const newNodeId = `${sourceId}_${normalizedOption}`;
       
-      // Calculer la position X absolue pour chaque nœud
+      // Calculate the absolute X position for each node
       const xPosition = options.length === 1 
-        ? sourceNode.position.x // Si un seul nœud, le centrer
+        ? sourceNode.position.x // If there's only one node, center it
         : startX + (index * horizontalSpacing);
 
       const newNode: Node = {
@@ -134,7 +134,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           y: sourceNode.position.y + verticalSpacing,
         },
         style: {
-          width: 350, // Largeur fixe pour tous les nœuds
+          width: 350, // Fixed width for all nodes
         }
       };
       newNodes.push(newNode);
@@ -165,12 +165,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newEdges.push(newEdge);
     });
 
-    // Ajuster la vue après l'ajout des nouveaux nœuds
+    // Adjust the view after adding new nodes
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
 
-    // Vérifier si c'est une création initiale ou une modification d'options existantes
-    // Si les nœuds n'existaient pas avant, ajuster la vue
+    // Check if this is an initial creation or modifying existing options
+    // If nodes didn't exist before, adjust the view
     const existingPathNodes = nodes.some(node => node.id.startsWith(`${sourceId}_`));
     if (!existingPathNodes && reactFlowInstance) {
       setTimeout(() => {
@@ -197,27 +197,27 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onConnect = useCallback(
     (params: Connection) => {
-      // Vérifier s'il y a une boucle potentielle
+      // Check for potential cycle
       const hasCycle = (sourceId: string, targetId: string, visited = new Set<string>()): boolean => {
         if (sourceId === targetId) return true;
         if (visited.has(targetId)) return false;
         
         visited.add(targetId);
         
-        // Vérifier les connexions existantes
+        // Check existing connections
         const connectedEdges = edges.filter(edge => edge.source === targetId);
         return connectedEdges.some(edge => hasCycle(sourceId, edge.target, new Set(visited)));
       };
 
-      // Vérifier si la nouvelle connexion créerait une boucle
+      // Check if the new connection would create a cycle
       if (hasCycle(params.source!, params.target!)) {
         setNotification({
           show: true,
-          message: 'Impossible de créer une boucle dans le flow',
+          message: 'Cannot create a loop in the flow',
           type: 'error'
         });
         
-        // Masquer la notification après 3 secondes
+        // Hide notification after 3 seconds
         setTimeout(() => {
           setNotification(prev => ({ ...prev, show: false }));
         }, 3000);
@@ -225,16 +225,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         return edges;
       }
 
-      // Vérifier si le nœud source existe déjà dans une connexion
+      // Check if the source node already exists in a connection
       const sourceNode = nodes.find(n => n.id === params.source);
       if (!sourceNode?.data.isCritical) {
         const existingConnection = edges.find(edge => edge.source === params.source);
         if (existingConnection) {
-          return edges; // Ne pas ajouter de nouvelle connexion
+          return edges; // Don't add new connection
         }
       }
 
-      // Ajouter la nouvelle connexion si aucune boucle n'est détectée
+      // Add new connection if no cycle is detected
       return setEdges((eds) => addEdge(params, eds));
     },
     [edges, nodes]
@@ -247,11 +247,11 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
-    // Empêcher la suppression de la question 1
+    // Prevent deleting question 1
     if (nodeId === '1') {
       setNotification({
         show: true,
-        message: 'La première question ne peut pas être supprimée',
+        message: 'The first question cannot be deleted',
         type: 'warning'
       });
       setTimeout(() => {
@@ -261,7 +261,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     }
 
     if (window.confirm('Are you sure you want to delete this question?')) {
-      // Trouver le nœud à supprimer
+      // Find the node to delete
       const nodeToDelete = nodes.find(node => node.id === nodeId);
       
       if (nodeToDelete?.data?.media) {
@@ -276,10 +276,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             return;
           }
 
-          // Supprimer le média de Cloudinary
+          // Delete media from Cloudinary
           await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
         } catch (error) {
-          console.error('Erreur lors de la suppression du média:', error);
+          console.error('Error deleting media:', error);
           setNotification({
             show: true,
             message: 'Error while deleting media',
@@ -288,7 +288,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
       }
 
-      // Supprimer le nœud et ses connexions
+      // Delete node and its connections
       setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
       setEdges(prevEdges => prevEdges.filter(edge => 
         edge.source !== nodeId && edge.target !== nodeId
@@ -301,7 +301,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         type: 'success'
       });
 
-      // Masquer la notification après 3 secondes
+      // Hide notification after 3 seconds
       setTimeout(() => {
         setNotification(prev => ({ ...prev, show: false }));
       }, 3000);
@@ -309,12 +309,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, [nodes]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
-    // Vérifier si l'edge est connectée à une question critique
+    // Check if the edge is connected to a critical question
     const edge = edges.find(e => e.id === edgeId);
     if (edge) {
       const sourceNode = nodes.find(node => node.id === edge.source);
       if (sourceNode?.data?.isCritical) {
-        return; // Ne pas supprimer les edges des questions critiques
+        return; // Don't delete edges from critical questions
       }
     }
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
@@ -337,7 +337,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.stopPropagation();
-    // Vérifier si l'edge est connectée à une question critique
+    // Check if the edge is connected to a critical question
     const sourceNode = nodes.find(node => node.id === edge.source);
     if (sourceNode?.data?.isCritical) return;
     
@@ -444,7 +444,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   );
 
   const nodesWithCallbacks = nodes.map(node => {
-    // Trouver le nœud parent
+    // Find the parent node
     const parentEdge = edges.find(edge => edge.target === node.id);
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
@@ -468,7 +468,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const DeleteButton = () => {
     if (!selectedEdge && !selectedNode) return null;
     
-    // Empêcher l'affichage du bouton de suppression pour la question 1
+    // Prevent showing the delete button for question 1
     if (selectedNode === '1') return null;
 
     return (
@@ -527,7 +527,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const START_Y = 50;
     const IMAGE_HEIGHT = 200;
     const BASE_NODE_HEIGHT = 100;
-    const EXTRA_SPACING_FOR_IMAGE = 50; // Espacement supplémentaire pour les parents avec image
+    const EXTRA_SPACING_FOR_IMAGE = 50; // Additional spacing for parents with images
     
     const containerWidth = 1200;
     const CENTER_X = containerWidth / 2;
@@ -535,15 +535,15 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
     const nodeHeights = new Map<string, number>();
-    const parentIds = new Map<string, string>(); // Pour tracker les relations parent-enfant
+    const parentIds = new Map<string, string>(); // To track parent-child relationships
     
-    // Calculer la hauteur de chaque nœud
+    // Calculate the height of each node
     const calculateNodeHeight = (node: Node): number => {
       const hasMedia = node.data.mediaUrl && node.data.mediaUrl.length > 0;
       return hasMedia ? BASE_NODE_HEIGHT + IMAGE_HEIGHT : BASE_NODE_HEIGHT;
     };
     
-    // Calculer l'espacement vertical nécessaire entre deux niveaux
+    // Calculate the vertical spacing needed between two levels
     const calculateVerticalSpacing = (currentLevel: number, nodeId: string): number => {
       const currentLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel);
       const nextLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel + 1);
@@ -555,7 +555,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
       );
 
-      // Vérifier si le parent a une image
+      // Check if the parent has an image
       const parentId = parentIds.get(nodeId);
       const parentNode = parentId ? nodes.find(n => n.id === parentId) : null;
       const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
@@ -596,7 +596,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         nodeHeights.set(node.id, calculateNodeHeight(node));
       });
 
-      // Construire les relations parent-enfant
+      // Build parent-child relationships
       edges.forEach(edge => {
         parentIds.set(edge.target, edge.source);
       });
@@ -638,7 +638,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       processNode('1', 0, 0);
     };
     
-    // Fonction pour obtenir tous les nœuds dans l'ordre de parcours
+    // Function to get all nodes in traversal order
     const getOrderedNodes = () => {
       const orderedNodes: string[] = [];
       const visited = new Set<string>();
@@ -648,7 +648,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         visited.add(nodeId);
         orderedNodes.push(nodeId);
 
-        // Trier les edges pour garantir un ordre cohérent
+        // Sort edges for consistent order
         const childEdges = edges
           .filter(edge => edge.source === nodeId)
           .sort((a, b) => {
@@ -662,14 +662,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         });
       };
 
-      traverse('1'); // Commencer par le nœud racine
+      traverse('1'); // Start from root node
       return orderedNodes;
     };
 
     calculateLayout();
     const orderedNodeIds = getOrderedNodes();
 
-    // Mettre à jour les numéros de questions
+    // Update question numbers
     setNodes(prevNodes => {
       const nodeMap = new Map(prevNodes.map(node => [node.id, node]));
       return orderedNodeIds.map((nodeId, index) => {
@@ -691,13 +691,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           },
           data: {
             ...node.data,
-            questionNumber: index + 1 // Mettre à jour le numéro de question
+            questionNumber: index + 1 // Update question number
           }
         };
       }).filter((node): node is Node => node !== null);
     });
 
-    // Ajuster le zoom et la position de la vue
+    // Adjust zoom and view position
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({
@@ -710,7 +710,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     }
   }, [nodes, edges, reactFlowInstance]);
 
-  // Ajouter un attribut data-intro au bouton de réorganisation
+  // Add data-intro attribute to reorganize button
   const ReorganizeButton = () => (
     <div
       data-intro="reorganize-flow-button"
@@ -761,7 +761,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const newNodeId = (nodes.length + 1).toString();
       const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
 
-      // Vérifier si la question sélectionnée a déjà une connexion
+      // Check if the selected question already has a connection
       if (selectedNode) {
         const existingConnection = edges.find(edge => edge.source === selectedNode);
         if (existingConnection && !selectedNodeData?.data.isCritical) {
@@ -779,7 +779,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
       }
 
-      // Si la question sélectionnée est critique, ne pas créer de connexion
+      // If the selected question is critical, don't create a connection
       if (selectedNodeData?.data.isCritical) {
         setNotification({
           show: true,
@@ -821,7 +821,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
       setNodes(prevNodes => [...prevNodes, newNode]);
 
-      // Créer une connexion uniquement si une question non critique est sélectionnée
+      // Create a connection only if a non-critical question is selected
       if (selectedNode && !selectedNodeData?.data.isCritical) {
         const newEdge: Edge = {
           id: `e${selectedNode}-${newNodeId}`,

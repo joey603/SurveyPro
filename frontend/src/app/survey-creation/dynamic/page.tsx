@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PreviewIcon from '@mui/icons-material/Preview';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SendIcon from '@mui/icons-material/Send';
 import AddIcon from '@mui/icons-material/Add';
 import SurveyFlow from './components/SurveyFlow';
@@ -1584,7 +1584,7 @@ export default function DynamicSurveyCreation() {
       </Paper>
 
       {/* Boutons d'action en dehors du Paper principal */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 10 }}>
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 3 }}>
         <Button
           onClick={handleResetSurvey}
           variant="contained"
@@ -1604,13 +1604,16 @@ export default function DynamicSurveyCreation() {
         <Button
           onClick={handleOpenPreview}
           variant="contained"
-          startIcon={<PreviewIcon />}
+          startIcon={<VisibilityIcon />}
           disabled={isSubmitting}
           data-intro="preview"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+            color: 'white',
+            boxShadow: 'none',
             '&:hover': {
-              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+              boxShadow: 'none',
             },
           }}
         >
@@ -1691,6 +1694,7 @@ export default function DynamicSurveyCreation() {
             onClick={handlePrevious}
             disabled={questionHistory.length <= 1}
             variant="outlined"
+            color="primary"
           >
             Previous
           </Button>
@@ -1702,11 +1706,16 @@ export default function DynamicSurveyCreation() {
                !previewAnswers[previewNodes[currentPreviewIndex]?.id])
             }
             variant="outlined"
+            color="primary"
           >
             Next
           </Button>
-          <Button onClick={handleClosePreview} variant="contained">
-            Close Preview
+          <Button 
+            onClick={handleClosePreview} 
+            variant="contained"
+            color="secondary"
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
