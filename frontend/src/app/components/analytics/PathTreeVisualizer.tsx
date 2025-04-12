@@ -602,7 +602,7 @@ const panelTransitionStyles = `
   .panel-slide-enter-active {
     transform: translateX(0);
     opacity: 1;
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.4s ease-in-out;
   }
   
   .panel-slide-exit {
@@ -613,11 +613,11 @@ const panelTransitionStyles = `
   .panel-slide-exit-active {
     transform: translateX(100%);
     opacity: 0;
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.4s ease-in-out;
   }
   
   .react-flow-container {
-    transition: flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: flex 0.4s ease-in-out;
   }
 `;
 
@@ -2134,7 +2134,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         console.log("Recentrage après fermeture du panneau");
         reactFlowInstance.fitView({ padding: 0.1 });
       }
-    }, 500);
+    }, 400);
   };
   
   const handleFilteredPathClick = (pathIndex: number) => {
@@ -2248,9 +2248,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             flexBasis: 0,
             border: '1px solid rgba(102, 126, 234, 0.2)', 
             borderRadius: '12px',
-          position: 'relative',
-          minHeight: '500px',
-            transition: 'flex 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            position: 'relative',
+            minHeight: '500px',
+            transition: 'all 0.4s ease-in-out, flex 0.4s ease-in-out, flex-grow 0.4s ease-in-out',
             overflowY: filterApplied && multipleTreeNodes.length > 0 ? 'auto' : 'hidden',
             background: 'rgba(252, 253, 255, 0.7)',
             backdropFilter: 'blur(8px)',
@@ -2398,9 +2398,11 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             background: pathsPanelOpen ? 'rgba(252, 253, 255, 0.7)' : 'transparent',
             backdropFilter: pathsPanelOpen ? 'blur(8px)' : 'none',
             opacity: pathsPanelOpen ? 1 : 0,
-            transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: pathsPanelOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'all 0.4s ease-in-out, width 0.4s ease-in-out, min-width 0.4s ease-in-out, max-width 0.4s ease-in-out, transform 0.4s ease-in-out',
             position: 'relative',
-            visibility: pathsPanelOpen ? 'visible' : 'hidden'
+            visibility: pathsPanelOpen ? 'visible' : 'hidden',
+            pointerEvents: pathsPanelOpen ? 'auto' : 'none'
           }}
         >
           {pathsPanelOpen && (
