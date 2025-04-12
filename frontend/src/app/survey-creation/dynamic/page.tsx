@@ -930,213 +930,7 @@ export default function DynamicSurveyCreation() {
       hidePreview: () => setShowPreview(false)
     };
     
-    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
-    const forceTooltipDisplay = () => {
-      setTimeout(() => {
-        // Trouver l'élément actuellement ciblé
-        const currentStep = intro._currentStep;
-        const currentStepData = intro._options.steps[currentStep];
-        
-        if (currentStepData && currentStepData.element) {
-          let targetElement: Element | null = null;
-          let elementSelector = '';
-          
-          // Obtenir l'élément ciblé et son sélecteur
-          if (typeof currentStepData.element === 'string') {
-            elementSelector = currentStepData.element;
-            if (currentStepData.element === 'body') {
-              targetElement = document.body;
-            } else {
-              targetElement = document.querySelector(currentStepData.element);
-            }
-          } else {
-            targetElement = currentStepData.element;
-          }
-          
-          // Faire défiler vers l'élément si trouvé
-          if (targetElement) {
-            const rect = targetElement.getBoundingClientRect();
-            
-            // Vérifier si l'élément est dans la zone visible
-            const isInViewport = (
-              rect.top >= 0 &&
-              rect.left >= 0 &&
-              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-            );
-            
-            if (!isInViewport) {
-              // Calculer la position de défilement optimale pour centrer l'élément
-              let scrollTop;
-              
-              // Logique spéciale pour les éléments dans le ReactFlow
-              if (typeof elementSelector === 'string' && 
-                 (elementSelector.includes('.react-flow__node') || 
-                  elementSelector.includes('data-intro="edit-question"') ||
-                  elementSelector.includes('data-intro="critical-question"') ||
-                  elementSelector.includes('data-intro="reorganize-flow-button"'))) {
-                // Pour les éléments dans le ReactFlow, utiliser une meilleure gestion du scroll
-                const flowCanvas = document.querySelector('[data-intro="flow-canvas"]');
-                if (flowCanvas) {
-                  const flowCanvasRect = flowCanvas.getBoundingClientRect();
-                  scrollTop = window.pageYOffset + flowCanvasRect.top - 50;
-                } else {
-                  scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
-                }
-              } else {
-                // Calcul standard pour les autres éléments
-                scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
-              }
-              
-              // Défilement en douceur
-              window.scrollTo({
-                top: scrollTop,
-                behavior: 'smooth'
-              });
-            }
-            
-            // Zoom sur le nœud pour ReactFlow si nécessaire
-            if (typeof elementSelector === 'string' && elementSelector.includes('.react-flow__node') && flowRef.current) {
-              // S'assurer que le flow est bien organisé et visible
-              flowRef.current.reorganizeFlow();
-            }
-          }
-        }
-        
-        // Forcer l'affichage des tooltips et les rendre plus visibles
-        const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
-        tooltips.forEach(tooltip => {
-          if (tooltip) {
-            tooltip.style.opacity = '1';
-            tooltip.style.visibility = 'visible';
-            tooltip.style.display = 'block';
-            tooltip.style.zIndex = '999999';
-            
-            // S'assurer que le tooltip est bien positionné
-            const tooltipRect = tooltip.getBoundingClientRect();
-            if (tooltipRect.left < 0) {
-              tooltip.style.left = '10px';
-            }
-            if (tooltipRect.right > window.innerWidth) {
-              tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
-            }
-            if (tooltipRect.top < 0) {
-              tooltip.style.top = '10px';
-            }
-            if (tooltipRect.bottom > window.innerHeight) {
-              tooltip.style.top = (window.innerHeight - tooltipRect.height - 10) + 'px';
-            }
-          }
-        });
-        
-        // Forcer également l'affichage des messages
-        const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
-        tooltipTexts.forEach(text => {
-          if (text) {
-            text.style.visibility = 'visible';
-            text.style.opacity = '1';
-            text.style.display = 'block';
-          }
-        });
-        
-        // S'assurer que les couches d'aide et d'overlay sont bien visibles
-        const helperLayers = document.querySelectorAll('.introjs-helperLayer, .introjs-overlay') as NodeListOf<HTMLElement>;
-        helperLayers.forEach(layer => {
-          if (layer) {
-            layer.style.opacity = layer.classList.contains('introjs-overlay') ? '0.7' : '1';
-            layer.style.visibility = 'visible';
-          }
-        });
-      }, 100);
-    };
-    
-    // Ajouter un contrôleur personnalisé pour le tutoriel
-    const controllerDiv = document.createElement('div');
-    controllerDiv.className = 'tutorial-controller';
-    controllerDiv.style.position = 'fixed';
-    controllerDiv.style.bottom = '60px';
-    controllerDiv.style.left = '50%';
-    controllerDiv.style.transform = 'translateX(-50%)';
-    controllerDiv.style.backgroundColor = 'white';
-    controllerDiv.style.padding = '10px 15px';
-    controllerDiv.style.borderRadius = '50px';
-    controllerDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
-    controllerDiv.style.zIndex = '999999';
-    controllerDiv.style.display = 'flex';
-    controllerDiv.style.justifyContent = 'center';
-    controllerDiv.style.gap = '10px';
-    
-    // Créer les boutons
-    const prevButton = document.createElement('button');
-    prevButton.textContent = 'Previous';
-    prevButton.style.padding = '8px 16px';
-    prevButton.style.border = 'none';
-    prevButton.style.borderRadius = '4px';
-    prevButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    prevButton.style.color = 'white';
-    prevButton.style.cursor = 'pointer';
-    prevButton.style.fontWeight = 'bold';
-
-    const nextButton = document.createElement('button');
-    nextButton.textContent = 'Next';
-    nextButton.style.padding = '8px 16px';
-    nextButton.style.border = 'none';
-    nextButton.style.borderRadius = '4px';
-    nextButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    nextButton.style.color = 'white';
-    nextButton.style.cursor = 'pointer';
-    nextButton.style.fontWeight = 'bold';
-    
-    const exitButton = document.createElement('button');
-    exitButton.textContent = 'Exit';
-    exitButton.style.padding = '8px 16px';
-    exitButton.style.border = 'none';
-    exitButton.style.borderRadius = '4px';
-    exitButton.style.background = '#f44336';
-    exitButton.style.color = 'white';
-    exitButton.style.cursor = 'pointer';
-    exitButton.style.fontWeight = 'bold';
-    
-    // Ajout des écouteurs d'événements
-    prevButton.addEventListener('click', () => {
-      try {
-        intro.previousStep();
-        forceTooltipDisplay();
-      } catch (e) {
-        console.error('Erreur previous:', e);
-      }
-    });
-    
-    nextButton.addEventListener('click', () => {
-      try {
-        const currentStep = intro._currentStep;
-        if (currentStep < intro._options.steps.length - 1) {
-          intro.nextStep();
-          forceTooltipDisplay();
-        } else {
-          intro.exit(true);
-          document.body.removeChild(controllerDiv);
-        }
-      } catch (e) {
-        console.error('Erreur next:', e);
-      }
-    });
-    
-    exitButton.addEventListener('click', () => {
-      try {
-        intro.exit(true);
-        document.body.removeChild(controllerDiv);
-      } catch (e) {
-        console.error('Erreur exit:', e);
-      }
-    });
-    
-    // Ajouter les boutons au contrôleur
-    controllerDiv.appendChild(prevButton);
-    controllerDiv.appendChild(nextButton);
-    controllerDiv.appendChild(exitButton);
-    
-    // Ajouter des styles plus simples pour le tutoriel
+    // Ajouter des styles pour le tutoriel
     const styleEl = document.createElement('style');
     styleEl.innerHTML = `
       .introjs-tooltip {
@@ -1149,9 +943,6 @@ export default function DynamicSurveyCreation() {
       }
       .introjs-helperLayer {
         z-index: 99997 !important;
-      }
-      .introjs-tooltipbuttons {
-        display: none !important;
       }
       .introjs-tooltip {
         min-width: 250px !important;
@@ -1181,10 +972,52 @@ export default function DynamicSurveyCreation() {
       .introjs-fixParent {
         z-index: auto !important;
       }
+      /* Personnalisation des boutons */
+      .introjs-tooltipbuttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 10px !important;
+        border-top: 1px solid #eee !important;
+      }
+      .introjs-button {
+        text-shadow: none !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        margin: 5px !important;
+        transition: all 0.2s !important;
+      }
+      .introjs-prevbutton, .introjs-nextbutton {
+        flex: 1 !important;
+        text-align: center !important;
+      }
+      .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 0.9 !important;
+      }
+      .introjs-skipbutton {
+        background: #f44336 !important;
+        color: white !important;
+      }
+      .introjs-disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+      }
+      .intro-tuto-button {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+      }
     `;
     document.head.appendChild(styleEl);
     
-    // Configuration du tutoriel avec construction dynamique des étapes
+    // Définition des étapes du tutoriel
     const steps = [
       {
         element: '[data-intro="header"]',
@@ -1263,22 +1096,26 @@ export default function DynamicSurveyCreation() {
       scrollPadding: 100,
       exitOnEsc: false,
       exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
       steps: steps as any // Cast to any to avoid TypeScript errors
     });
     
-    // Fonction onafterchange modifiée pour gérer le positionnement des éléments spéciaux
+    // Mise à jour de la barre de progression après chaque changement
     intro.onafterchange(function(targetElement) {
-      forceTooltipDisplay();
-      
       // Récupérer l'étape actuelle
       const currentStep = intro._currentStep;
       const totalSteps = intro._options.steps.length;
       
-      // Ajuster les boutons de navigation
-      if (currentStep === 0) {
-        prevButton.style.opacity = '0.5';
-      } else {
-        prevButton.style.opacity = '1';
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
       }
       
       // Vérifier si nous sommes à l'étape concernant la question critique
@@ -1404,9 +1241,6 @@ export default function DynamicSurveyCreation() {
       if (document.head.contains(styleEl)) {
         document.head.removeChild(styleEl);
       }
-      if (document.body.contains(controllerDiv)) {
-        document.body.removeChild(controllerDiv);
-      }
       // Supprimer les placeholders
       if (document.body.contains(criticalPlaceholder)) {
         document.body.removeChild(criticalPlaceholder);
@@ -1418,12 +1252,6 @@ export default function DynamicSurveyCreation() {
     
     // Démarrer le tutoriel
     intro.start();
-    
-    // Ajouter le contrôleur au document
-    document.body.appendChild(controllerDiv);
-    
-    // Forcer l'affichage initial
-    forceTooltipDisplay();
   };
 
   return (
