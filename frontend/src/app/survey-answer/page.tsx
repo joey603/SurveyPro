@@ -1716,71 +1716,92 @@ const SurveyAnswerPage: React.FC = () => {
     const intro = introJs();
     (window as any).introInstance = intro;
     
-    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
-    const forceTooltipDisplay = () => {
-      setTimeout(() => {
-        // Trouver l'élément actuellement ciblé
-        const currentStep = intro._currentStep;
-        const currentStepData = intro._options.steps[currentStep];
-        
-        if (currentStepData && currentStepData.element) {
-          let targetElement: Element | null = null;
-          
-          // Obtenir l'élément ciblé
-          if (typeof currentStepData.element === 'string') {
-            if (currentStepData.element === 'body') {
-              targetElement = document.body;
-            } else {
-              targetElement = document.querySelector(currentStepData.element);
-            }
-          } else {
-            targetElement = currentStepData.element;
-          }
-          
-          // Faire défiler vers l'élément si trouvé
-          if (targetElement) {
-            const rect = targetElement.getBoundingClientRect();
-            const isInViewport = (
-              rect.top >= 0 &&
-              rect.left >= 0 &&
-              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-            );
-            
-            if (!isInViewport) {
-              // Calculer la position de défilement optimale
-              const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
-              
-              // Défilement en douceur
-              window.scrollTo({
-                top: scrollTop,
-                behavior: 'smooth'
-              });
-            }
-          }
-          
-          // Forcer l'affichage des tooltips
-          const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
-          tooltips.forEach(tooltip => {
-            if (tooltip) {
-              tooltip.style.opacity = '1';
-              tooltip.style.visibility = 'visible';
-              tooltip.style.display = 'block';
-            }
-          });
-          
-          // Forcer également l'affichage des messages
-          const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
-          tooltipTexts.forEach(text => {
-            if (text) {
-              text.style.visibility = 'visible';
-              text.style.opacity = '1';
-              text.style.display = 'block';
-            }
-          });
-        }
-      }, 100);
-    };
+    // Ajouter des styles pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+      /* Personnalisation des boutons */
+      .introjs-tooltipbuttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 10px !important;
+        border-top: 1px solid #eee !important;
+      }
+      .introjs-button {
+        text-shadow: none !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        margin: 5px !important;
+        transition: all 0.2s !important;
+      }
+      .introjs-prevbutton, .introjs-nextbutton {
+        flex: 1 !important;
+        text-align: center !important;
+      }
+      .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 0.9 !important;
+      }
+      .introjs-skipbutton {
+        background: #f44336 !important;
+        color: white !important;
+      }
+      .introjs-disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+      }
+      .intro-tuto-button {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(styleEl);
     
     // Ajouter un contrôleur personnalisé pour le tutoriel
     const controllerDiv = document.createElement('div');
@@ -1833,7 +1854,6 @@ const SurveyAnswerPage: React.FC = () => {
     prevButton.addEventListener('click', () => {
       try {
         intro.previousStep();
-        forceTooltipDisplay();
       } catch (e) {
         console.error('Erreur previous:', e);
       }
@@ -1844,7 +1864,6 @@ const SurveyAnswerPage: React.FC = () => {
         const currentStep = intro._currentStep;
         if (currentStep < intro._options.steps.length - 1) {
           intro.nextStep();
-          forceTooltipDisplay();
         } else {
           intro.exit(true);
           document.body.removeChild(controllerDiv);
@@ -1867,54 +1886,6 @@ const SurveyAnswerPage: React.FC = () => {
     controllerDiv.appendChild(prevButton);
     controllerDiv.appendChild(nextButton);
     controllerDiv.appendChild(exitButton);
-    
-    // Ajouter des styles plus simples pour le tutoriel
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `
-      .introjs-tooltip {
-        opacity: 1 !important;
-        visibility: visible !important;
-        z-index: 99998 !important;
-        display: block !important;
-        animation: none !important;
-        transition: none !important;
-      }
-      .introjs-helperLayer {
-        z-index: 99997 !important;
-      }
-      .introjs-tooltipbuttons {
-        display: none !important;
-      }
-      .introjs-tooltip {
-        min-width: 250px !important;
-        max-width: 400px !important;
-        background: white !important;
-        color: #333 !important;
-        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
-        border-radius: 5px !important;
-        font-family: sans-serif !important;
-      }
-      .introjs-tooltiptext {
-        padding: 15px !important;
-        text-align: center !important;
-        font-size: 16px !important;
-        line-height: 1.5 !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        display: block !important;
-      }
-      .introjs-overlay {
-        opacity: 0.7 !important;
-      }
-      /* Forces les tooltips à s'afficher */
-      .introjs-showElement {
-        z-index: 99999 !important;
-      }
-      .introjs-fixParent {
-        z-index: auto !important;
-      }
-    `;
-    document.head.appendChild(styleEl);
     
     // Configuration du tutoriel avec les étapes
     const steps = [
@@ -1976,9 +1947,15 @@ const SurveyAnswerPage: React.FC = () => {
       showProgress: true,
       tooltipPosition: 'auto',
       scrollToElement: true,
-      scrollPadding: 100,
+      scrollPadding: 280,
       exitOnEsc: false,
       exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
       steps: steps as any
     });
     
@@ -1987,29 +1964,24 @@ const SurveyAnswerPage: React.FC = () => {
       if (document.head.contains(styleEl)) {
         document.head.removeChild(styleEl);
       }
-      if (document.body.contains(controllerDiv)) {
-        document.body.removeChild(controllerDiv);
-      }
     });
     
-    // Forcer l'affichage des tooltips après chaque changement
-    intro.onafterchange(function() {
-      forceTooltipDisplay();
-      if (intro._currentStep === 0) {
-        prevButton.style.opacity = '0.5';
-      } else {
-        prevButton.style.opacity = '1';
+    // Mise à jour de la barre de progression après chaque changement
+    intro.onafterchange(function(targetElement) {
+      // Récupérer l'étape actuelle
+      const currentStep = intro._currentStep;
+      const totalSteps = intro._options.steps.length;
+      
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
       }
     });
     
     // Démarrer le tutoriel
     intro.start();
-    
-    // Ajouter le contrôleur au document
-    document.body.appendChild(controllerDiv);
-    
-    // Forcer l'affichage initial
-    forceTooltipDisplay();
   };
 
   if (!selectedSurvey) {
