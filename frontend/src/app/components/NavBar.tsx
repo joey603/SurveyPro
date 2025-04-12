@@ -215,99 +215,47 @@ const NavBar = () => {
 
   // Ajouter ce composant pour le bouton Analytics avec dropdown
   const AnalyticsButton = () => {
-    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-    const menuOpen = Boolean(menuAnchorEl);
     const pathname = usePathname();
 
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-      setMenuAnchorEl(event.currentTarget);
-    };
-
-    const handleClose = () => {
-      setMenuAnchorEl(null);
-    };
-
     return (
-      <div>
-        <Button
-          id="analytics-button"
-          aria-controls={menuOpen ? 'analytics-menu' : undefined}
-          aria-haspopup="true"
-          aria-expanded={menuOpen ? 'true' : undefined}
-          onClick={handleClick}
-          endIcon={<KeyboardArrowDownIcon />}
-          sx={{
-            color: '#64748b',
-            mx: 1,
-            py: 1.5,
-            px: 2.5,
-            borderRadius: '12px',
-            textTransform: 'none',
-            fontSize: '0.95rem',
-            fontWeight: 500,
-            '&:hover': {
-              color: '#667eea',
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+      <Button
+        component={Link}
+        href="/analytics"
+        sx={{
+          color: pathname === '/analytics' ? '#667eea' : '#64748b',
+          mx: 1,
+          py: 1.5,
+          px: 2.5,
+          borderRadius: '12px',
+          textTransform: 'none',
+          fontSize: '0.95rem',
+          fontWeight: pathname === '/analytics' ? 600 : 500,
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+          transition: NAVBAR_STYLES.transitions.default,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(102, 126, 234, 0.1)',
+            transform: 'translateY(100%)',
+            transition: NAVBAR_STYLES.transitions.default,
+          },
+          '&:hover': {
+            color: '#667eea',
+            transform: 'translateY(-2px)',
+            '&::before': {
+              transform: 'translateY(0)',
             },
-          }}
-        >
-          Analytics
-        </Button>
-        <Menu
-          id="analytics-menu"
-          anchorEl={menuAnchorEl}
-          open={menuOpen}
-          onClose={handleClose}
-          MenuListProps={{
-            'aria-labelledby': 'analytics-button',
-          }}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'left',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'left',
-          }}
-          sx={{
-            '& .MuiPaper-root': {
-              borderRadius: '12px',
-              marginTop: '8px',
-              minWidth: '200px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-            },
-          }}
-        >
-          <MenuItem 
-            component={Link} 
-            href="/results"
-            onClick={handleClose}
-            sx={{
-              py: 1.5,
-              px: 2.5,
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              },
-            }}
-          >
-            Results
-          </MenuItem>
-          <MenuItem 
-            component={Link} 
-            href="/analytics"
-            onClick={handleClose}
-            sx={{
-              py: 1.5,
-              px: 2.5,
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              },
-            }}
-          >
-            Advanced Analytics
-          </MenuItem>
-        </Menu>
-      </div>
+          },
+        }}
+      >
+        Advanced Analytics
+      </Button>
     );
   };
 
@@ -550,35 +498,6 @@ const NavBar = () => {
                       }
                     }}
                   />
-                </ListItem>
-                <ListItem disablePadding>
-                  <Button
-                    component={Link}
-                    href="/results"
-                    fullWidth
-                    sx={{
-                      py: 2,
-                      px: 3,
-                      pl: 6,
-                      justifyContent: 'flex-start',
-                      color: pathname === '/results' ? '#667eea' : '#64748b',
-                      backgroundColor: pathname === '/results' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
-                      transition: NAVBAR_STYLES.transitions.default,
-                      '&:hover': {
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        transform: 'translateX(8px)',
-                      },
-                    }}
-                  >
-                    <ListItemText 
-                      primary="Results"
-                      primaryTypographyProps={{
-                        sx: {
-                          fontWeight: pathname === '/results' ? 600 : 500,
-                        }
-                      }}
-                    />
-                  </Button>
                 </ListItem>
                 <ListItem disablePadding>
                   <Button
