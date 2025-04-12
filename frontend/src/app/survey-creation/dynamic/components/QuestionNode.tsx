@@ -390,6 +390,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
             <Box
               onClick={handleTypeClick}
+              data-intro="question-type-selector"
               sx={{
                 p: 1,
                 border: '1px solid rgba(0, 0, 0, 0.23)',
@@ -469,6 +470,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   variant="outlined"
                   size="small"
                   disabled={isUploading}
+                  data-intro="add-media"
                 >
                   {isUploading ? 'Uploading...' : 'Add Media'}
                 </Button>

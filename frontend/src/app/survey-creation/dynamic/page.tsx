@@ -931,6 +931,29 @@ export default function DynamicSurveyCreation() {
       hidePreview: () => setShowPreview(false)
     };
     
+    // S'assurer que le mode édition est fermé au début
+    const isEditing = !!document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+    if (isEditing) {
+      const editButton = document.querySelector('.react-flow__node:first-child [data-intro="edit-question"]');
+      if (editButton) {
+        (editButton as HTMLElement).click();
+        // Donner le temps à React de mettre à jour le DOM après la fermeture du mode édition
+        setTimeout(() => {
+          setupAndStartTutorial();
+        }, 300);
+        return;
+      }
+    }
+    
+    // Si nous ne sommes pas en mode édition, démarrer directement le tutoriel
+    setupAndStartTutorial();
+  };
+
+  // Fonction pour configurer et démarrer le tutoriel
+  const setupAndStartTutorial = () => {
+    const intro = (window as any).introInstance;
+    if (!intro) return;
+    
     // Ajouter des styles pour le tutoriel
     const styleEl = document.createElement('style');
     styleEl.innerHTML = `
@@ -1062,6 +1085,24 @@ export default function DynamicSurveyCreation() {
         position: 'bottom'
       },
       {
+        // New step to explain question type selection
+        element: '#question-type-selector-placeholder',
+        intro: "Select the type of question you want to use. Each type (text, multiple choice, etc.) provides different answer options for your survey participants.",
+        position: 'bottom'
+      },
+      {
+        // New step to explain media addition
+        element: '#add-media-placeholder',
+        intro: "Enhance your questions by adding images or videos. Click this button to upload media files that will be displayed with your question.",
+        position: 'bottom'
+      },
+      {
+        // New step to explain connection points and links
+        element: '.react-flow__node:first-child',
+        intro: "Notice the small dots at the top and bottom of each question card. These are connection points. The top point receives incoming connections, while the bottom point creates outgoing connections. Drag from one point to another to create links between questions. You can also click and drag questions to reposition them on the canvas.",
+        position: 'top',
+      },
+      {
         element: '[data-intro="add-question"]',
         intro: "Click this button to add a new question to your survey.",
         position: 'left'
@@ -1122,45 +1163,152 @@ export default function DynamicSurveyCreation() {
       // Vérifier si nous sommes à l'étape concernant la question critique
       const currentStepData = intro._options.steps[currentStep];
       if (currentStepData && typeof currentStepData.element === 'string') {
+        // Gestion initiale du mode édition - l'ouvrir si ce n'est pas déjà fait
+        const shouldOpenEditor = 
+          currentStepData.element.includes('critical-question-placeholder') ||
+          currentStepData.element.includes('question-type-selector-placeholder') ||
+          currentStepData.element.includes('add-media-placeholder');
+          
+        if (shouldOpenEditor) {
+          const editButton = document.querySelector('.react-flow__node:first-child [data-intro="edit-question"]');
+          const isAlreadyEditing = !!document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+          
+          // N'ouvrir l'éditeur que s'il n'est pas déjà ouvert
+          if (!isAlreadyEditing && editButton) {
+            (editButton as HTMLElement).click();
+            
+            // Attendre que le formulaire s'ouvre pour les prochaines étapes
+            setTimeout(() => {
+              intro.refresh();
+            }, 300);
+          }
+        }
+        
         // Gestion de l'étape pour la question critique
         if (currentStepData.element.includes('critical-question-placeholder')) {
-          // Forcer l'ouverture du formulaire d'édition
-          const editButton = document.querySelector('.react-flow__node:first-child [data-intro="edit-question"]');
-          
-          // Attendre la fin de toute animation précédente
           setTimeout(() => {
-            if (editButton) {
-              (editButton as HTMLElement).click();
+            // Trouver la case à cocher Critical Question
+            const criticalCheckbox = document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+            
+            if (criticalCheckbox) {
+              // Positionner le placeholder juste au-dessus de la case à cocher pour un meilleur ciblage
+              const rect = criticalCheckbox.getBoundingClientRect();
+              criticalPlaceholder.style.position = 'absolute';
+              criticalPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              criticalPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              criticalPlaceholder.style.width = rect.width + 'px';
+              criticalPlaceholder.style.height = rect.height + 'px';
+              criticalPlaceholder.style.zIndex = '9999';
+              
+              // Forcer intro.js à rafraîchir sa position
+              intro.refresh();
+              
+              // Mettre en évidence visuellement la case à cocher
+              (criticalCheckbox as HTMLElement).style.transition = 'all 0.3s';
+              (criticalCheckbox as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Réinitialiser après quelques secondes
+              setTimeout(() => {
+                (criticalCheckbox as HTMLElement).style.boxShadow = '';
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour le sélecteur de type de question
+        if (currentStepData.element.includes('question-type-selector-placeholder')) {
+          setTimeout(() => {
+            const typeSelector = document.querySelector('.react-flow__node:first-child [data-intro="question-type-selector"]');
+            
+            if (typeSelector) {
+              // Positionner le placeholder juste au-dessus du sélecteur pour un meilleur ciblage
+              const rect = typeSelector.getBoundingClientRect();
+              questionTypePlaceholder.style.position = 'absolute';
+              questionTypePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              questionTypePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              questionTypePlaceholder.style.width = rect.width + 'px';
+              questionTypePlaceholder.style.height = rect.height + 'px';
+              questionTypePlaceholder.style.zIndex = '9999';
+              
+              // Forcer intro.js à rafraîchir sa position
+              intro.refresh();
+              
+              // Mettre en évidence visuellement le sélecteur de type
+              (typeSelector as HTMLElement).style.transition = 'all 0.3s';
+              (typeSelector as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Réinitialiser après quelques secondes
+              setTimeout(() => {
+                (typeSelector as HTMLElement).style.boxShadow = '';
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour l'ajout de média
+        if (currentStepData.element.includes('add-media-placeholder')) {
+          setTimeout(() => {
+            const addMediaButton = document.querySelector('.react-flow__node:first-child [data-intro="add-media"]');
+            
+            if (addMediaButton) {
+              // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
+              const rect = addMediaButton.getBoundingClientRect();
+              addMediaPlaceholder.style.position = 'absolute';
+              addMediaPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              addMediaPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              addMediaPlaceholder.style.width = rect.width + 'px';
+              addMediaPlaceholder.style.height = rect.height + 'px';
+              addMediaPlaceholder.style.zIndex = '9999';
+              
+              // Forcer intro.js à rafraîchir sa position
+              intro.refresh();
+              
+              // Mettre en évidence visuellement le bouton d'ajout de média
+              (addMediaButton as HTMLElement).style.transition = 'all 0.3s';
+              (addMediaButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Réinitialiser après quelques secondes
+              setTimeout(() => {
+                (addMediaButton as HTMLElement).style.boxShadow = '';
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour les points de connexion
+        if (currentStepData.element === '.react-flow__node:first-child' && 
+            currentStepData.intro && 
+            currentStepData.intro.includes('connection points')) {
+          setTimeout(() => {
+            // Sélectionner spécifiquement les points de connexion en haut et en bas
+            const topHandle = document.querySelector('.react-flow__node:first-child .react-flow__handle-top');
+            const bottomHandle = document.querySelector('.react-flow__node:first-child .react-flow__handle-bottom');
+            
+            // Mettre en évidence les points de connexion
+            if (topHandle) {
+              (topHandle as HTMLElement).style.transition = 'all 0.3s';
+              (topHandle as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              (topHandle as HTMLElement).style.transform = 'scale(1.5)';
             }
             
-            // Attendre que le formulaire s'ouvre
+            if (bottomHandle) {
+              (bottomHandle as HTMLElement).style.transition = 'all 0.3s';
+              (bottomHandle as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              (bottomHandle as HTMLElement).style.transform = 'scale(1.5)';
+            }
+            
+            // Réinitialiser après quelques secondes
             setTimeout(() => {
-              // Trouver la case à cocher Critical Question
-              const criticalCheckbox = document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
-              
-              if (criticalCheckbox) {
-                // Positionner le placeholder juste au-dessus de la case à cocher pour un meilleur ciblage
-                const rect = criticalCheckbox.getBoundingClientRect();
-                criticalPlaceholder.style.position = 'absolute';
-                criticalPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
-                criticalPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
-                criticalPlaceholder.style.width = rect.width + 'px';
-                criticalPlaceholder.style.height = rect.height + 'px';
-                criticalPlaceholder.style.zIndex = '9999';
-                
-                // Forcer intro.js à rafraîchir sa position
-                intro.refresh();
-                
-                // Mettre en évidence visuellement la case à cocher
-                (criticalCheckbox as HTMLElement).style.transition = 'all 0.3s';
-                (criticalCheckbox as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
-                
-                // Réinitialiser après quelques secondes
-                setTimeout(() => {
-                  (criticalCheckbox as HTMLElement).style.boxShadow = '';
-                }, 2000);
+              if (topHandle) {
+                (topHandle as HTMLElement).style.boxShadow = '';
+                (topHandle as HTMLElement).style.transform = '';
               }
-            }, 300);
+              
+              if (bottomHandle) {
+                (bottomHandle as HTMLElement).style.boxShadow = '';
+                (bottomHandle as HTMLElement).style.transform = '';
+              }
+            }, 3000);
           }, 100);
         }
         
@@ -1237,6 +1385,24 @@ export default function DynamicSurveyCreation() {
     reorganizePlaceholder.style.opacity = '0';
     document.body.appendChild(reorganizePlaceholder);
     
+    // Créer un placeholder pour le sélecteur de type de question
+    const questionTypePlaceholder = document.createElement('div');
+    questionTypePlaceholder.id = 'question-type-selector-placeholder';
+    questionTypePlaceholder.style.position = 'absolute';
+    questionTypePlaceholder.style.width = '1px';
+    questionTypePlaceholder.style.height = '1px';
+    questionTypePlaceholder.style.opacity = '0';
+    document.body.appendChild(questionTypePlaceholder);
+    
+    // Créer un placeholder pour le bouton d'ajout de média
+    const addMediaPlaceholder = document.createElement('div');
+    addMediaPlaceholder.id = 'add-media-placeholder';
+    addMediaPlaceholder.style.position = 'absolute';
+    addMediaPlaceholder.style.width = '1px';
+    addMediaPlaceholder.style.height = '1px';
+    addMediaPlaceholder.style.opacity = '0';
+    document.body.appendChild(addMediaPlaceholder);
+    
     // Nettoyer à la sortie
     intro.onexit(function() {
       if (document.head.contains(styleEl)) {
@@ -1248,6 +1414,12 @@ export default function DynamicSurveyCreation() {
       }
       if (document.body.contains(reorganizePlaceholder)) {
         document.body.removeChild(reorganizePlaceholder);
+      }
+      if (document.body.contains(questionTypePlaceholder)) {
+        document.body.removeChild(questionTypePlaceholder);
+      }
+      if (document.body.contains(addMediaPlaceholder)) {
+        document.body.removeChild(addMediaPlaceholder);
       }
     });
     
