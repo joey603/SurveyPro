@@ -10,7 +10,6 @@ import { useAuth } from '@/utils/AuthContext';
 import { SurveyAnalytics } from '../components/analytics/SurveyAnalytics';
 import ShareIcon from '@mui/icons-material/Share';
 import ShareDialog from '../components/analytics/ShareDialog';
-import ExportIcon from '@mui/icons-material/IosShare';
 import { shareSurvey, respondToSurveyShare } from '@/utils/surveyShareService';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
@@ -184,7 +183,7 @@ const AnalyticsPage: React.FC = () => {
       const surveyToDelete = surveys.find(s => s._id === surveyId);
       
       if (!surveyToDelete) {
-        throw new Error('Sondage introuvable');
+        throw new Error('Survey not found');
       }
       
       // Déterminer si c'est un sondage dynamique
@@ -228,7 +227,7 @@ const AnalyticsPage: React.FC = () => {
         // Vérifier si la réponse est OK (statut 200-299)
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Erreur serveur: ${response.status} ${response.statusText}. Détails: ${errorText}`);
+          throw new Error(`Server error: ${response.status} ${response.statusText}. Details: ${errorText}`);
         }
       }
       
@@ -328,15 +327,15 @@ const AnalyticsPage: React.FC = () => {
   };
 
   const filteredSurveys = useMemo(() => {
-    console.log('===== DÉBUT filteredSurveys =====');
-    console.log('Tous les sondages avant filtrage:', surveys.length);
+    console.log('===== START filteredSurveys =====');
+    console.log('All surveys before filtering:', surveys.length);
     
     // Filtrage des sondages invalides
     const validSurveys = surveys.filter(s => s && s._id);
     
     // Récupérer l'ID de l'utilisateur actuel
     const currentUserId = String(user?.id || '');
-    console.log('ID utilisateur actuel:', currentUserId);
+    console.log('Current user ID:', currentUserId);
     
     // Première étape: filtrer les sondages qui appartiennent à l'utilisateur ou qui sont partagés avec lui
     const userSurveys = validSurveys.filter(survey => {
@@ -352,14 +351,14 @@ const AnalyticsPage: React.FC = () => {
       return isOwner;
     });
     
-    console.log('Sondages de l\'utilisateur ou partagés:', userSurveys.length);
+    console.log('Surveys of the user or shared:', userSurveys.length);
     
     // Analyse des différents types de sondages
     const dynamicSurveys = userSurveys.filter(s => s.isDynamic);
     const sharedSurveys = userSurveys.filter(s => s.isShared);
     const pendingSurveys = userSurveys.filter(s => s.isShared && s.status === 'pending');
     
-    console.log('Analyse des sondages:', {
+    console.log('Analysis of surveys:', {
       total: userSurveys.length,
       dynamiques: dynamicSurveys.length,
       partagés: sharedSurveys.length,
@@ -397,14 +396,14 @@ const AnalyticsPage: React.FC = () => {
       return true;
     });
     
-    console.log('Résultats du filtrage:', {
+      console.log('Results of filtering:', {
       total: filtered.length,
       dynamiques: filtered.filter(s => s.isDynamic).length,
       partagés: filtered.filter(s => s.isShared).length,
       enAttente: filtered.filter(s => s.isShared && s.status === 'pending').length
     });
     
-    console.log('===== FIN filteredSurveys =====');
+    console.log('===== END filteredSurveys =====');
     return filtered;
   }, [surveys, searchQuery, dateRange, showPendingOnly, user?.id, privacyFilter]);
 
@@ -748,14 +747,14 @@ const AnalyticsPage: React.FC = () => {
       // Insérer après l'étape des filtres
       steps.splice(3, 0, {
         element: '.react-flow',
-        intro: "Cette visualisation interactive vous montre tous les parcours possibles dans votre sondage dynamique. Cliquez sur un nœud pour voir le chemin complet que les répondants ont suivi, et utilisez les contrôles pour zoomer et explorer les différents parcours.",
+        intro: "This interactive visualization shows all possible paths in your dynamic survey. Click on a node to see the complete path that respondents followed, and use the controls to zoom in and explore different paths.",
         position: 'top'
       });
       
       // Ajouter l'étape pour les chemins complets après la visualisation principale
       steps.splice(4, 0, {
         element: '.complete-paths-panel',
-        intro: "La fonction 'Complete Path' vous permet de voir exactement combien de répondants ont suivi un parcours spécifique dans son intégralité. Sélectionnez un ou plusieurs nœuds dans l'arbre pour afficher ces parcours complets, avec des statistiques précises sur chaque chemin emprunté.",
+        intro: "The 'Complete Path' function allows you to see exactly how many respondents followed a specific path in its entirety. Select one or more nodes in the tree to display these complete paths, with precise statistics on each path taken.",
         position: 'left'
       });
     }
@@ -766,7 +765,7 @@ const AnalyticsPage: React.FC = () => {
       const demographicInsertIndex = steps.length - 1; // Avant la dernière étape (conclusion)
       steps.splice(demographicInsertIndex, 0, {
         element: '.demographic-statistics-section',
-        intro: "Cette section affiche des statistiques démographiques détaillées sur vos répondants. Vous y trouverez des graphiques sur la répartition par genre, âge, niveau d'éducation et ville. Cliquez sur chaque graphique pour une vue détaillée et des statistiques complètes.",
+        intro: "This section displays detailed demographic statistics on your respondents. You will find graphs on the distribution by gender, age, education level, and city. Click on each graph for detailed views and complete statistics.",
         position: 'top'
       });
     }
@@ -1372,7 +1371,7 @@ const AnalyticsPage: React.FC = () => {
       )}
 
       {/* Bouton tutorial flottant */}
-      <Tooltip title="Lancer le tutoriel">
+      <Tooltip title="Start tutorial">
         <Fab
           size="small"
           onClick={selectedSurvey ? startAnalyticsTutorial : startTutorial}
