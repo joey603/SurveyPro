@@ -886,10 +886,11 @@ const SurveyAnswerPage: React.FC = () => {
                 validateField('demographic.gender', e.target.value);
               }}
               row
+              className="gender-options"
             >
-              <FormControlLabel value="male" control={<Radio />} label="Male" />
-              <FormControlLabel value="female" control={<Radio />} label="Female" />
-              <FormControlLabel value="other" control={<Radio />} label="Other" />
+              <FormControlLabel value="male" control={<Radio id="gender-male" />} label="Male" />
+              <FormControlLabel value="female" control={<Radio id="gender-female" />} label="Female" />
+              <FormControlLabel value="other" control={<Radio id="gender-other" />} label="Other" />
             </RadioGroup>
             {formErrors['demographic.gender'] && (
               <Typography color="error" variant="caption">
@@ -904,7 +905,17 @@ const SurveyAnswerPage: React.FC = () => {
         name="demographic.dateOfBirth"
         control={control}
         render={({ field }) => (
-          <Box sx={{ mb: 3, width: '100%' }}>
+          <Box 
+            sx={{ 
+              mb: 3, 
+              width: '100%', 
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="dob-field-container"
+          >
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Date of Birth"
@@ -916,6 +927,8 @@ const SurveyAnswerPage: React.FC = () => {
                 renderInput={(params: TextFieldProps) => (
                   <TextField
                     {...params}
+                    id="date-of-birth-field"
+                    className="dob-field"
                     fullWidth
                     error={!!formErrors['demographic.dateOfBirth']}
                     helperText={formErrors['demographic.dateOfBirth']}
@@ -932,14 +945,26 @@ const SurveyAnswerPage: React.FC = () => {
         control={control}
         defaultValue=""
         render={({ field }) => (
-          <Box sx={{ mb: 3 }}>
+          <Box 
+            sx={{ 
+              mb: 3,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="education-field-container"
+          >
             <FormControl 
               fullWidth
               error={!!formErrors['demographic.educationLevel']}
             >
-              <InputLabel>Education Level</InputLabel>
+              <InputLabel id="education-level-label">Education Level</InputLabel>
               <Select
                 {...field}
+                labelId="education-level-label"
+                id="education-level-field"
+                className="education-field"
                 label="Education Level"
                 onChange={(e) => {
                   field.onChange(e);
@@ -967,35 +992,46 @@ const SurveyAnswerPage: React.FC = () => {
         control={control}
         defaultValue=""
         render={({ field }) => (
-          <FormControl 
-            fullWidth
-            error={!!formErrors['demographic.city']}
+          <Box 
+            sx={{ 
+              mb: 3,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="city-field-container"
           >
-            <InputLabel>City</InputLabel>
-            <Select
-              {...field}
-              label="City"
-              disabled={isLoadingCities}
-              onChange={(e) => {
-                field.onChange(e);
-                validateField('demographic.city', e.target.value);
-              }}
+            <FormControl 
+              fullWidth
+              error={!!formErrors['demographic.city']}
             >
-              <MenuItem value="" disabled>
-                {isLoadingCities ? 'Loading cities...' : 'Select your city'}
-              </MenuItem>
-              {cities.map((city) => (
-                <MenuItem key={city} value={city}>
-                  {city}
+              <InputLabel>City</InputLabel>
+              <Select
+                {...field}
+                label="City"
+                disabled={isLoadingCities}
+                onChange={(e) => {
+                  field.onChange(e);
+                  validateField('demographic.city', e.target.value);
+                }}
+              >
+                <MenuItem value="" disabled>
+                  {isLoadingCities ? 'Loading cities...' : 'Select your city'}
                 </MenuItem>
-              ))}
-            </Select>
-            {formErrors['demographic.city'] && (
-              <FormHelperText error>
-                {formErrors['demographic.city']}
-              </FormHelperText>
-            )}
-          </FormControl>
+                {cities.map((city) => (
+                  <MenuItem key={city} value={city}>
+                    {city}
+                  </MenuItem>
+                ))}
+              </Select>
+              {formErrors['demographic.city'] && (
+                <FormHelperText error>
+                  {formErrors['demographic.city']}
+                </FormHelperText>
+              )}
+            </FormControl>
+          </Box>
         )}
       />
     </Box>
@@ -1036,7 +1072,7 @@ const SurveyAnswerPage: React.FC = () => {
       const timer = setTimeout(() => {
         setNotification(prev => ({ ...prev, open: false }));
       }, 5000); // Disparaît après 5 secondes
-
+      
       return () => clearTimeout(timer);
     }
   }, [notification.open]);
@@ -1181,7 +1217,7 @@ const SurveyAnswerPage: React.FC = () => {
       <Box sx={{ p: 4, backgroundColor: 'white' }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {selectedSurvey.demographicEnabled && (
-            <Box sx={{ mb: 4 }}>
+            <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
               </Typography>
@@ -1189,14 +1225,17 @@ const SurveyAnswerPage: React.FC = () => {
             </Box>
           )}
 
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ mb: 4 }} id="survey-questions-section">
             <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
               Survey questions
             </Typography>
-            {selectedSurvey.questions.map((question: Question) => (
+            {selectedSurvey.questions.map((question: Question, index: number) => (
               <Paper
                 key={question.id}
                 elevation={1}
+                className="survey-question-paper"
+                data-testid={`question-${question.id}`}
+                id={`survey-question-${index}`}
                 sx={{
                   p: 3,
                   mb: 3,
@@ -1631,7 +1670,7 @@ const SurveyAnswerPage: React.FC = () => {
       <Box sx={{ p: 3 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {selectedSurvey.demographicEnabled && (
-            <Box sx={{ mb: 4 }}>
+            <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
               </Typography>
@@ -1639,34 +1678,43 @@ const SurveyAnswerPage: React.FC = () => {
             </Box>
           )}
 
-          {orderedNodes.map((node) => {
-            const isVisible = shouldShowQuestion(node.id);
-            const isCritical = isCriticalQuestion(node.id);
+          <Box id="survey-questions-section" sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Survey questions
+            </Typography>
+            
+            {orderedNodes.map((node, index) => {
+              const isVisible = shouldShowQuestion(node.id);
+              const isCritical = isCriticalQuestion(node.id);
 
-            if (!isVisible) return null;
+              if (!isVisible) return null;
 
-            return (
-              <Paper
-                key={node.id}
-                elevation={1}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: 2,
-                  border: '1px solid rgba(0, 0, 0, 0.1)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>
-                  {node.data.text || node.data.label || 'Question without text'}
-                </Typography>
+              return (
+                <Paper
+                  key={node.id}
+                  elevation={1}
+                  className="survey-question-paper"
+                  data-testid={`question-${node.id}`}
+                  id={`survey-question-${index}`}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    {node.data.text || node.data.label || 'Question without text'}
+                  </Typography>
 
-                <Box sx={{ mt: 2 }}>
-                  {renderQuestionInput(node)}
-                </Box>
-              </Paper>
-            );
-          })}
+                  <Box sx={{ mt: 2 }}>
+                    {renderQuestionInput(node)}
+                  </Box>
+                </Paper>
+              );
+            })}
+          </Box>
 
           {submitError && (
             <Typography color="error" sx={{ mt: 2, mb: 2 }}>
@@ -1887,8 +1935,57 @@ const SurveyAnswerPage: React.FC = () => {
     controllerDiv.appendChild(nextButton);
     controllerDiv.appendChild(exitButton);
     
-    // Configuration du tutoriel avec les étapes
-    const steps = [
+    // Déterminer les étapes du tutoriel en fonction de la page actuelle
+    const steps = selectedSurvey 
+      ? getSurveyAnswerTutorialSteps() 
+      : getSurveyListTutorialSteps();
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 280,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
+      steps: steps as any
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+    });
+    
+    // Mise à jour de la barre de progression après chaque changement
+    intro.onafterchange(function(targetElement) {
+      // Récupérer l'étape actuelle
+      const currentStep = intro._currentStep;
+      const totalSteps = intro._options.steps.length;
+      
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+  };
+
+  // Fonction pour obtenir les étapes du tutoriel de la liste des sondages
+  const getSurveyListTutorialSteps = () => {
+    return [
       {
         element: 'body',
         intro: "Welcome to the survey answering section! This tutorial will guide you through the available features.",
@@ -1940,48 +2037,99 @@ const SurveyAnswerPage: React.FC = () => {
         position: 'top'
       }
     ];
-    
-    // Configuration du tutoriel
-    intro.setOptions({
-      showBullets: true,
-      showProgress: true,
-      tooltipPosition: 'auto',
-      scrollToElement: true,
-      scrollPadding: 280,
-      exitOnEsc: false,
-      exitOnOverlayClick: false,
-      showButtons: true,
-      showStepNumbers: true,
-      prevLabel: 'Previous',
-      nextLabel: 'Next',
-      skipLabel: '×',
-      doneLabel: 'Done',
-      steps: steps as any
-    });
-    
-    // Nettoyer à la sortie
-    intro.onexit(function() {
-      if (document.head.contains(styleEl)) {
-        document.head.removeChild(styleEl);
+  };
+
+  // Fonction pour obtenir les étapes du tutoriel de réponse à un sondage
+  const getSurveyAnswerTutorialSteps = () => {
+    const steps = [
+      {
+        element: 'body',
+        intro: "Welcome to the survey answering page! This tutorial will guide you through completing a survey.",
+        position: 'top'
+      },
+      {
+        element: '#back-button',
+        intro: "Click this button to return to the list of surveys at any time.",
+        position: 'right'
       }
-    });
-    
-    // Mise à jour de la barre de progression après chaque changement
-    intro.onafterchange(function(targetElement) {
-      // Récupérer l'étape actuelle
-      const currentStep = intro._currentStep;
-      const totalSteps = intro._options.steps.length;
+    ];
+
+    // Ajouter des étapes pour les informations démographiques si activées
+    if (selectedSurvey?.demographicEnabled) {
+      // Introduction générale à la section démographique
+      steps.push({
+        element: '#demographic-section',
+        intro: "The demographic section collects basic information about you. This helps the survey creator analyze responses based on demographics.",
+        position: 'bottom'
+      });
       
-      // Mettre à jour la barre de progression
-      const progressBar = document.querySelector('.introjs-progress');
-      if (progressBar) {
-        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
-        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+      // Explications détaillées pour chaque champ démographique
+      steps.push({
+        element: '.gender-options',
+        intro: "Gender field: Select your gender from the options (Male, Female, or Other). This information is used to analyze trends across different gender groups.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#dob-field-container',
+        intro: "Date of Birth field: Select your birth date. Age demographics help researchers understand how responses vary between different age groups.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#education-field-container',
+        intro: "Education Level: Select your highest level of education from options like High School, Bachelor's, Master's, or Ph.D. This helps identify response patterns based on educational background.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#city-field-container',
+        intro: "City field: Select your city from the dropdown. Location data enables geographic analysis and helps identify regional trends in survey responses.",
+        position: 'bottom'
+      });
+    }
+
+    // Vérifier s'il s'agit d'un sondage dynamique
+    if (selectedSurvey?.isDynamic) {
+      const hasCriticalQuestion = selectedSurvey.edges?.some(edge => edge.label);
+      
+      steps.push({
+        element: '#survey-questions-section',
+        intro: "This is a dynamic survey that adapts based on your answers. Different questions may appear depending on how you respond.",
+        position: 'top'
+      });
+
+      if (hasCriticalQuestion) {
+        steps.push({
+          element: '.survey-question-paper:first-of-type',
+          intro: "Critical questions (like Yes/No or dropdown questions) will determine which subsequent questions you'll see. Your experience will be personalized based on your answers.",
+          position: 'left'
+        });
       }
+
+      steps.push({
+        element: 'form',
+        intro: "Answer each question fully before moving to the next. You can't return to previous questions in a dynamic survey after submission.",
+        position: 'bottom'
+      });
+    } else {
+      // Pour les sondages statiques
+      steps.push({
+        element: '#survey-questions-section',
+        intro: "This is a standard survey with a fixed set of questions. Answer each question to the best of your ability.",
+        position: 'bottom'
+      });
+
+    }
+
+    // Finir avec le bouton de soumission
+    steps.push({
+      element: 'button[type="submit"]',
+      intro: "When you've answered all questions, click the Submit button to record your responses.",
+      position: 'top'
     });
-    
-    // Démarrer le tutoriel
-    intro.start();
+
+    return steps;
   };
 
   if (!selectedSurvey) {
@@ -2505,6 +2653,8 @@ const SurveyAnswerPage: React.FC = () => {
           position: 'relative'
         }}>
           <IconButton
+            id="back-button"
+            data-testid="back-to-surveys-button"
             onClick={() => setSelectedSurvey(null)}
             sx={{
               position: 'absolute',
