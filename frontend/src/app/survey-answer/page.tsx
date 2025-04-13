@@ -35,11 +35,13 @@ import {
   CardActions,
   Tooltip,
   Fab,
+  Popover,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ClearIcon from '@mui/icons-material/Clear';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -500,6 +502,11 @@ const SurveyAnswerPage: React.FC = () => {
 
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Token non trouvé');
+
+      // Sauvegarder les données démographiques dans le localStorage si elles existent
+      if (selectedSurvey.demographicEnabled && data.demographic) {
+        localStorage.setItem('lastDemographicData', JSON.stringify(data.demographic));
+      }
 
       // Pour les sondages dynamiques, filtrer uniquement les réponses visibles
       if (selectedSurvey.isDynamic && selectedSurvey.nodes) {
@@ -1081,6 +1088,26 @@ const SurveyAnswerPage: React.FC = () => {
     console.log("État actuel des sondages répondus:", answeredSurveys);
   }, [answeredSurveys]);
 
+  // Charger les données démographiques sauvegardées lors du premier rendu
+  useEffect(() => {
+    // D'abord essayer de charger depuis le backend
+    fetchLastDemographicData();
+    
+    // Ensuite, vérifier si des données sont présentes dans le localStorage
+    const savedDemographicData = localStorage.getItem('lastDemographicData');
+    if (savedDemographicData) {
+      try {
+        const data = JSON.parse(savedDemographicData);
+        setValue('demographic.gender', data.gender || '');
+        setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+        setValue('demographic.educationLevel', data.educationLevel || '');
+        setValue('demographic.city', data.city || '');
+      } catch (error) {
+        console.error('Erreur lors du chargement des données démographiques:', error);
+      }
+    }
+  }, [setValue]);
+
   const fetchSurveyResponses = async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -1186,7 +1213,7 @@ const SurveyAnswerPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5041/api/survey-answers/last-demographic', {
+      const response = await fetch(`${BASE_URL}/survey-answers/last-demographic`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         }
@@ -1194,17 +1221,34 @@ const SurveyAnswerPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setLastDemographicData(data);
+        console.log('Données démographiques récupérées du backend:', data);
+        
         // Mettre à jour les valeurs du formulaire avec les données récupérées
         if (data) {
+          // Sauvegarder également dans le localStorage pour une utilisation future
+          localStorage.setItem('lastDemographicData', JSON.stringify(data));
+          
+          // Mettre à jour l'état local
+          setLastDemographicData(data);
+          
+          // Mettre à jour le formulaire
           setValue('demographic.gender', data.gender || '');
           setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
           setValue('demographic.educationLevel', data.educationLevel || '');
           setValue('demographic.city', data.city || '');
+          
+          return true;
         }
+      } else if (response.status === 404) {
+        console.log('Aucune donnée démographique trouvée dans le backend');
+        return false;
+      } else {
+        console.error('Erreur lors de la récupération des données démographiques:', await response.text());
+        return false;
       }
     } catch (error) {
-      console.error('Error fetching last demographic data:', error);
+      console.error('Erreur lors de la récupération des données démographiques:', error);
+      return false;
     }
   };
 
@@ -1220,6 +1264,17 @@ const SurveyAnswerPage: React.FC = () => {
             <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
+                {lastDemographicData && (
+                  <Tooltip title="Données démographiques chargées automatiquement">
+                    <Chip 
+                      icon={<AutorenewIcon />} 
+                      label="Auto" 
+                      size="small" 
+                      color="primary" 
+                      sx={{ ml: 2 }} 
+                    />
+                  </Tooltip>
+                )}
               </Typography>
               {renderDemographicFields()}
             </Box>
@@ -1381,289 +1436,7 @@ const SurveyAnswerPage: React.FC = () => {
 
     // Fonction pour vérifier si c'est une question critique
     const isCriticalQuestion = (nodeId: string): boolean => {
-      return selectedSurvey.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
-    };
-
-    // Obtenir les nœuds ordonnés
-    const orderedNodes = getOrderedNodes();
-
-    // Modifier la fonction de rendu des questions pour les sondages dynamiques
-    const renderQuestionInput = (node: any) => {
-      // Ajouter le rendu du média avant le rendu de l'input
-      const renderNodeMedia = () => {
-        const mediaUrl = node.data?.mediaUrl || node.data?.media;
-        if (!mediaUrl) return null;
-
-        // Déterminer le type de média basé sur l'extension du fichier
-        const isVideo = mediaUrl.match(/\.(mp4|mov|webm)$/i);
-        const isImage = mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-
-        if (isVideo) {
-          return (
-            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
-              <ReactPlayer
-                url={mediaUrl}
-                controls
-                width="100%"
-                height="auto"
-                style={{ borderRadius: '8px' }}
-                config={{
-                  file: {
-                    attributes: {
-                      controlsList: 'nodownload',
-                      onContextMenu: (e: React.MouseEvent) => e.preventDefault()
-                    }
-                  }
-                }}
-                onError={(e) => console.error('Erreur de chargement vidéo:', e)}
-                onReady={() => console.log('Vidéo prête à être lue')}
-              />
-            </Box>
-          );
-        }
-
-        if (isImage) {
-          return (
-            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
-              <Box
-                component="img"
-                src={mediaUrl}
-                alt="Question media"
-                sx={{
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                  maxHeight: '400px',
-                  backgroundColor: 'background.paper',
-                  boxShadow: 1
-                }}
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  console.error('Erreur de chargement image:', e);
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-                onLoad={() => console.log('Image chargée avec succès')}
-              />
-            </Box>
-          );
-        }
-
-        return null;
-      };
-
-      return (
-        <Box sx={{ width: '100%' }}>
-          {renderNodeMedia()}
-          {/* Reste du code existant pour le rendu des inputs */}
-          {(() => {
-            const effectiveType = node.data?.questionType || node.data?.type;
-            switch (effectiveType?.toLowerCase()) {
-              case 'yes-no':
-              case 'yesno':
-              case 'boolean':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <RadioGroup
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          handleDynamicAnswerChange(node.id, value);
-                        }}
-                      >
-                        <FormControlLabel value="Yes" control={<Radio />} label="Oui" />
-                        <FormControlLabel value="No" control={<Radio />} label="Non" />
-                      </RadioGroup>
-                    )}
-                  />
-                );
-
-              case 'multiple-choice':
-              case 'multiplechoice':
-              case 'choice':
-              case 'radio':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <RadioGroup
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          handleDynamicAnswerChange(node.id, value);
-                        }}
-                      >
-                        {(node.data?.options || []).map((option: string) => (
-                          <FormControlLabel
-                            key={option}
-                            value={option}
-                            control={<Radio />}
-                            label={option}
-                          />
-                        ))}
-                      </RadioGroup>
-                    )}
-                  />
-                );
-
-              case 'text':
-              case 'textarea':
-              case 'string':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleDynamicAnswerChange(node.id, e.target.value);
-                        }}
-                      />
-                    )}
-                  />
-                );
-
-              case 'rating':
-              case 'stars':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={0}
-                    render={({ field }) => (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Rating
-                          {...field}
-                          onChange={(_, value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                        <Typography>
-                          {field.value ? `${field.value} étoiles` : 'Aucune note'}
-                        </Typography>
-                      </Box>
-                    )}
-                  />
-                );
-
-              case 'slider':
-              case 'range':
-              case 'number':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={0}
-                    render={({ field }) => (
-                      <Box sx={{ width: '100%', px: 2 }}>
-                        <Slider
-                          {...field}
-                          min={0}
-                          max={10}
-                          marks
-                          valueLabelDisplay="auto"
-                          onChange={(_, value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                      </Box>
-                    )}
-                  />
-                );
-
-              case 'date':
-              case 'datetime':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={null}
-                    render={({ field }) => (
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DatePicker
-                          {...field}
-                          renderInput={(params) => <TextField {...params} fullWidth />}
-                          onChange={(value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                      </LocalizationProvider>
-                    )}
-                  />
-                );
-
-              case 'dropdown':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <FormControl fullWidth>
-                        <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
-                        <Select
-                          {...field}
-                          label={node.data.text || 'Sélectionnez une option'}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        >
-                          {(node.data?.options || []).map((option: string) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                );
-
-              default:
-                console.warn(`Type de question non supporté: ${effectiveType}`, node);
-                // Si aucun type n'est spécifié, on utilise un champ texte par défaut
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleDynamicAnswerChange(node.id, e.target.value);
-                        }}
-                        placeholder="Votre réponse..."
-                      />
-                    )}
-                  />
-                );
-            }
-          })()}
-        </Box>
-      );
+      return selectedSurvey?.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
     };
 
     return (
@@ -1673,6 +1446,17 @@ const SurveyAnswerPage: React.FC = () => {
             <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
+                {lastDemographicData && (
+                  <Tooltip title="Données démographiques chargées automatiquement">
+                    <Chip 
+                      icon={<AutorenewIcon />} 
+                      label="Auto" 
+                      size="small" 
+                      color="primary" 
+                      sx={{ ml: 2 }} 
+                    />
+                  </Tooltip>
+                )}
               </Typography>
               {renderDemographicFields()}
             </Box>
@@ -1683,7 +1467,7 @@ const SurveyAnswerPage: React.FC = () => {
               Survey questions
             </Typography>
             
-            {orderedNodes.map((node, index) => {
+            {getOrderedNodes().map((node, index) => {
               const isVisible = shouldShowQuestion(node.id);
               const isCritical = isCriticalQuestion(node.id);
 
