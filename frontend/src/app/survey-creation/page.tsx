@@ -267,6 +267,14 @@ const SurveyCreationPage = () => {
 
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
 
+  // Ajout d'un state pour la boîte de dialogue de confirmation
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   const [notification, setNotification] = useState<{
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
@@ -496,75 +504,84 @@ const SurveyCreationPage = () => {
       event.preventDefault();
     }
     
-    // Récupérer tous les médias des questions
-    const currentMedia = fields
-      .map(field => field.media)
-      .filter(media => media && media.trim() !== '');
-      
-    if (currentMedia.length > 0) {
-      console.log('Current media to mark for deletion:', currentMedia);
-      
-      // Marquer tous les médias pour suppression et attendre la mise à jour du state
-      const newTracker = {
-        ...mediaTracker,
-        ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
-      };
-      
-      // Mettre à jour le state et attendre que ce soit fait
-      setMediaTracker(newTracker);
-      
-      // Attendre que le state soit mis à jour
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      try {
-        // Nettoyer les médias avec le nouveau tracker
-        for (const media of currentMedia) {
-          if (!media) continue;
-          const parts = media.split('/');
-          const filename = parts[parts.length - 1];
-          const publicId = `uploads/${filename.split('.')[0]}`;
-          
-          const token = localStorage.getItem('accessToken');
-          if (!token) {
-            throw new Error('No authentication token found');
+    // Utiliser la boîte de dialogue de confirmation
+    setConfirmDialog({
+      open: true,
+      title: 'Reset Survey',
+      message: 'Are you sure you want to reset the survey? All progress will be lost.',
+      onConfirm: async () => {
+        try {
+          // Récupérer tous les médias des questions
+          const currentMedia = fields
+            .map(field => field.media)
+            .filter(media => media && media.trim() !== '');
+            
+          if (currentMedia.length > 0) {
+            console.log('Current media to mark for deletion:', currentMedia);
+            
+            // Marquer tous les médias pour suppression et attendre la mise à jour du state
+            const newTracker = {
+              ...mediaTracker,
+              ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
+            };
+            
+            // Mettre à jour le state et attendre que ce soit fait
+            setMediaTracker(newTracker);
+            
+            // Attendre que le state soit mis à jour
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            try {
+              // Nettoyer les médias avec le nouveau tracker
+              for (const media of currentMedia) {
+                if (!media) continue;
+                const parts = media.split('/');
+                const filename = parts[parts.length - 1];
+                const publicId = `uploads/${filename.split('.')[0]}`;
+                
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                  throw new Error('No authentication token found');
+                }
+
+                const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({ publicId }),
+                });
+
+                if (!response.ok) {
+                  throw new Error(`Failed to delete media: ${publicId}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error deleting media:', error);
+            }
           }
 
-          const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ publicId }),
+          // Réinitialiser le formulaire
+          reset({
+            title: '',
+            description: '',
+            demographicEnabled: false,
+            isPrivate: false,
+            questions: []
           });
-
-          if (!response.ok) {
-            throw new Error(`Failed to delete media: ${publicId}`);
-          }
+          
+          // Réinitialiser le tracker de médias
+          setMediaTracker({});
+        } catch (error) {
+          console.error('Error during reset:', error);
         }
-      } catch (error) {
-        console.error('Error deleting media:', error);
-        setNotification({
-          message: 'Error deleting media files',
-          severity: 'error',
-          open: true
-        });
+        // Fermer la boîte de dialogue de confirmation
+        setConfirmDialog(prev => ({ ...prev, open: false }));
       }
-    }
-
-    // Réinitialiser le formulaire
-    reset({
-      title: '',
-      description: '',
-      demographicEnabled: false,
-      isPrivate: false,
-      questions: []
     });
-    
-    // Réinitialiser le tracker de médias
-    setMediaTracker({});
   };
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
@@ -2344,6 +2361,44 @@ const SurveyCreationPage = () => {
           />
         </Box>
       )}
+
+      {/* Dialog de confirmation pour le reset */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title" sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          py: 2
+        }}>
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            {confirmDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmDialog.onConfirm}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Box sx={{ 
         position: 'fixed', 

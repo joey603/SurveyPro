@@ -299,52 +299,51 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this question?')) {
-      // Find the node to delete
-      const nodeToDelete = nodes.find(node => node.id === nodeId);
-      
-      if (nodeToDelete?.data?.media) {
-        try {
-          const token = localStorage.getItem('accessToken');
-          if (!token) {
-            setNotification({
-              show: true,
-              message: 'Authentication token not found',
-              type: 'error'
-            });
-            return;
-          }
-
-          // Delete media from Cloudinary
-          await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
-        } catch (error) {
-          console.error('Error deleting media:', error);
+    // Supprimer directement sans confirmation
+    // Find the node to delete
+    const nodeToDelete = nodes.find(node => node.id === nodeId);
+    
+    if (nodeToDelete?.data?.media) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
           setNotification({
             show: true,
-            message: 'Error while deleting media',
+            message: 'Authentication token not found',
             type: 'error'
           });
+          return;
         }
+
+        // Delete media from Cloudinary
+        await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
+      } catch (error) {
+        console.error('Error deleting media:', error);
+        setNotification({
+          show: true,
+          message: 'Error while deleting media',
+          type: 'error'
+        });
       }
-
-      // Delete node and its connections
-      setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
-      setEdges(prevEdges => prevEdges.filter(edge => 
-        edge.source !== nodeId && edge.target !== nodeId
-      ));
-      setSelectedNode(null);
-
-      setNotification({
-        show: true,
-        message: 'Question deleted successfully',
-        type: 'success'
-      });
-
-      // Hide notification after 3 seconds
-      setTimeout(() => {
-        setNotification(prev => ({ ...prev, show: false }));
-      }, 3000);
     }
+
+    // Delete node and its connections
+    setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
+    setEdges(prevEdges => prevEdges.filter(edge => 
+      edge.source !== nodeId && edge.target !== nodeId
+    ));
+    setSelectedNode(null);
+
+    setNotification({
+      show: true,
+      message: 'Question deleted successfully',
+      type: 'success'
+    });
+
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
   }, [nodes]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {

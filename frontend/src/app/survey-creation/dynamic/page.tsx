@@ -165,11 +165,7 @@ export default function DynamicSurveyCreation() {
         try {
           const token = localStorage.getItem('accessToken');
           if (!token) {
-            setNotification({
-              show: true,
-              message: 'Authentication token not found',
-              type: 'error'
-            });
+            console.error('Authentication token not found');
             return;
           }
 
@@ -182,31 +178,15 @@ export default function DynamicSurveyCreation() {
                   await dynamicSurveyService.deleteMedia(node.data.media, token);
                 } catch (error) {
                   console.error('Error deleting media:', error);
-                  setNotification({
-                    show: true,
-                    message: `Error deleting media for question ${node.data.questionNumber}`,
-                    type: 'warning'
-                  });
                 }
               }
             }
 
             reset();
             flowRef.current.resetFlow();
-            
-            setNotification({
-              show: true,
-              message: 'Survey reset successfully',
-              type: 'success'
-            });
           }
         } catch (error) {
           console.error('Error during reset:', error);
-          setNotification({ 
-            show: true,
-            message: 'Error resetting survey',
-            type: 'error'
-          });
         }
         setConfirmDialog(prev => ({ ...prev, open: false }));
       }
@@ -224,11 +204,7 @@ export default function DynamicSurveyCreation() {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          setNotification({
-            show: true,
-            message: 'Token d\'authentification non trouvé',
-            type: 'error'
-          });
+          console.error('Token d\'authentification non trouvé');
           return;
         }
 
@@ -236,24 +212,12 @@ export default function DynamicSurveyCreation() {
         await dynamicSurveyService.deleteMedia(node.data.media, token);
       } catch (error) {
         console.error('Erreur lors de la suppression du média:', error);
-        setNotification({
-          show: true,
-          message: 'Erreur lors de la suppression du média, mais la question sera supprimée',
-          type: 'warning'
-        });
       }
     }
 
     // Supprimer le nœud de la question
     const updatedNodes = nodes.filter((_, i) => i !== index);
     flowRef.current.setNodes(updatedNodes);
-
-    // Afficher une notification de succès
-    setNotification({
-      show: true,
-      message: 'Question supprimée avec succès',
-      type: 'success'
-    });
   };
 
   const onSubmit = async (data: FormData) => {
@@ -1175,7 +1139,7 @@ export default function DynamicSurveyCreation() {
           
           // N'ouvrir l'éditeur que s'il n'est pas déjà ouvert
           if (!isAlreadyEditing && editButton) {
-            (editButton as HTMLElement).click();
+              (editButton as HTMLElement).click();
             
             // Attendre que le formulaire s'ouvre pour les prochaines étapes
             setTimeout(() => {
@@ -1186,32 +1150,32 @@ export default function DynamicSurveyCreation() {
         
         // Gestion de l'étape pour la question critique
         if (currentStepData.element.includes('critical-question-placeholder')) {
-          setTimeout(() => {
-            // Trouver la case à cocher Critical Question
-            const criticalCheckbox = document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
-            
-            if (criticalCheckbox) {
-              // Positionner le placeholder juste au-dessus de la case à cocher pour un meilleur ciblage
-              const rect = criticalCheckbox.getBoundingClientRect();
-              criticalPlaceholder.style.position = 'absolute';
-              criticalPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
-              criticalPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
-              criticalPlaceholder.style.width = rect.width + 'px';
-              criticalPlaceholder.style.height = rect.height + 'px';
-              criticalPlaceholder.style.zIndex = '9999';
+            setTimeout(() => {
+              // Trouver la case à cocher Critical Question
+              const criticalCheckbox = document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
               
-              // Forcer intro.js à rafraîchir sa position
-              intro.refresh();
-              
-              // Mettre en évidence visuellement la case à cocher
-              (criticalCheckbox as HTMLElement).style.transition = 'all 0.3s';
-              (criticalCheckbox as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
-              
-              // Réinitialiser après quelques secondes
-              setTimeout(() => {
-                (criticalCheckbox as HTMLElement).style.boxShadow = '';
-              }, 2000);
-            }
+              if (criticalCheckbox) {
+                // Positionner le placeholder juste au-dessus de la case à cocher pour un meilleur ciblage
+                const rect = criticalCheckbox.getBoundingClientRect();
+                criticalPlaceholder.style.position = 'absolute';
+                criticalPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+                criticalPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+                criticalPlaceholder.style.width = rect.width + 'px';
+                criticalPlaceholder.style.height = rect.height + 'px';
+                criticalPlaceholder.style.zIndex = '9999';
+                
+                // Forcer intro.js à rafraîchir sa position
+                intro.refresh();
+                
+                // Mettre en évidence visuellement la case à cocher
+                (criticalCheckbox as HTMLElement).style.transition = 'all 0.3s';
+                (criticalCheckbox as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+                
+                // Réinitialiser après quelques secondes
+                setTimeout(() => {
+                  (criticalCheckbox as HTMLElement).style.boxShadow = '';
+                }, 2000);
+              }
           }, 100);
         }
         
@@ -1591,9 +1555,9 @@ export default function DynamicSurveyCreation() {
         <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                Basic Information
-              </Typography>
+            <Typography variant="h6" sx={{ color: '#1a237e' }}>
+              Basic Information
+            </Typography>
               <Tooltip 
                 title="This section contains the general information of your survey"
                 placement="right"
@@ -1717,40 +1681,40 @@ export default function DynamicSurveyCreation() {
           </Box>
           
           <Box sx={{ height: 'calc(100% - 40px)', position: 'relative' }}>
-            <SurveyFlow 
-              ref={flowRef}
-              onAddNode={() => {
+          <SurveyFlow 
+            ref={flowRef}
+            onAddNode={() => {
+              if (flowRef.current) {
+                const nodes = flowRef.current.getNodes();
+                setPreviewNodes(nodes);
+              }
+            }} 
+            onEdgesChange={handleEdgesChange}
+          />
+          
+          <Tooltip title="Add Question" placement="left">
+            <Fab 
+              color="primary" 
+              aria-label="add question"
+              data-intro="add-question"
+              sx={{
+                position: 'absolute',
+                bottom: 24,
+                right: 24,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
+              onClick={() => {
                 if (flowRef.current) {
-                  const nodes = flowRef.current.getNodes();
-                  setPreviewNodes(nodes);
+                  flowRef.current.addNewQuestion();
                 }
-              }} 
-              onEdgesChange={handleEdgesChange}
-            />
-            
-            <Tooltip title="Add Question" placement="left">
-              <Fab 
-                color="primary" 
-                aria-label="add question"
-                data-intro="add-question"
-                sx={{
-                  position: 'absolute',
-                  bottom: 24,
-                  right: 24,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  },
-                }}
-                onClick={() => {
-                  if (flowRef.current) {
-                    flowRef.current.addNewQuestion();
-                  }
-                }}
-              >
-                <AddIcon />
-              </Fab>
-            </Tooltip>
+              }}
+            >
+              <AddIcon />
+            </Fab>
+          </Tooltip>
           </Box>
         </Box>
       </Paper>
