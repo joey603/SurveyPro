@@ -239,7 +239,7 @@ const SurveyAnswerPage: React.FC = () => {
       }
       return DEFAULT_CITIES;
     } catch (error) {
-      console.error("Erreur lors de la récupération des villes :", error);
+      console.error("Error fetching cities:", error);
       return DEFAULT_CITIES;
     }
   };
@@ -261,7 +261,7 @@ const SurveyAnswerPage: React.FC = () => {
 
         // Charger tous les sondages
         const allSurveys = await fetchAvailableSurveys(token);
-        console.log('Sondages chargés:', allSurveys);
+        console.log('Surveys loaded:', allSurveys);
         
         if (sharedSurveyId) {
           // Si on a un ID dans l'URL, chercher ce sondage spécifique
@@ -274,7 +274,7 @@ const SurveyAnswerPage: React.FC = () => {
             setSelectedSurvey(sharedSurvey);
             setSurveys([sharedSurvey]); // Afficher uniquement ce sondage dans la liste
           } else {
-            setError('Sondage non trouvé');
+            setError('Survey not found');
           }
         } else {
           // Si pas d'ID dans l'URL, afficher uniquement les sondages publics
@@ -286,12 +286,12 @@ const SurveyAnswerPage: React.FC = () => {
         const answeredIds = await fetchAnsweredSurveys();
         if (Array.isArray(answeredIds)) {
           setAnsweredSurveys(answeredIds);
-          console.log('Sondages répondus:', answeredIds);
+          console.log('Answered surveys:', answeredIds);
         }
 
       } catch (error: any) {
-        console.error('Erreur lors du chargement des sondages:', error);
-        setError(error.message || 'Échec du chargement des sondages');
+        console.error('Error loading surveys:', error);
+        setError(error.message || 'Failed to load surveys');
       } finally {
         setLoading(false);
       }
@@ -487,13 +487,13 @@ const SurveyAnswerPage: React.FC = () => {
   const onSubmit = async (data: FormData) => {
     try {
       if (!selectedSurvey) {
-        setSubmitError('Aucun sondage sélectionné');
+        setSubmitError('No survey selected');
         return;
       }
 
       // Valider le formulaire avant la soumission
       if (!validateForm(data)) {
-        setSubmitError('Veuillez répondre à toutes les questions requises');
+        setSubmitError('Please answer all required questions');
         return;
       }
 
@@ -570,7 +570,7 @@ const SurveyAnswerPage: React.FC = () => {
       }
 
       setNotification({
-        message: 'Réponse soumise avec succès',
+        message: 'Survey response submitted successfully',
         severity: 'success',
         open: true
       });
@@ -580,11 +580,11 @@ const SurveyAnswerPage: React.FC = () => {
       reset();
       setSelectedSurvey(null);
     } catch (error: any) {
-      console.error('Erreur lors de la soumission:', error);
+      console.error('Error submitting survey response:', error);
       setSubmitError(
         error.response?.data?.message || 
         error.message || 
-        'Erreur lors de la soumission du sondage'
+        'Error submitting survey response'
       );
     } finally {
       setIsSubmitting(false);
@@ -621,8 +621,8 @@ const SurveyAnswerPage: React.FC = () => {
                 }
               }
             }}
-            onError={(e) => console.error('Erreur de chargement vidéo:', e)}
-            onReady={() => console.log('Vidéo prête à être lue')}
+            onError={(e) => console.error('Error loading video:', e)}
+            onReady={() => console.log('Video ready to be played')}
           />
         </Box>
       );
@@ -645,11 +645,11 @@ const SurveyAnswerPage: React.FC = () => {
               boxShadow: 1
             }}
             onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-              console.error('Erreur de chargement image:', e);
-              console.log('URL qui a échoué:', fullUrl);
+              console.error('Error loading image:', e);
+              console.log('URL that failed:', fullUrl);
               (e.target as HTMLImageElement).style.display = 'none';
             }}
-            onLoad={() => console.log('Image chargée avec succès')}
+            onLoad={() => console.log('Image loaded successfully')}
           />
         </Box>
       );
@@ -735,10 +735,10 @@ const SurveyAnswerPage: React.FC = () => {
                   defaultValue=""
                   render={({ field }) => (
                     <FormControl fullWidth>
-                      <InputLabel>{question.text || 'Sélectionnez une option'}</InputLabel>
+                      <InputLabel>{question.text || 'Select an option'}</InputLabel>
                       <Select
                         {...field}
-                        label={question.text || 'Sélectionnez une option'}
+                        label={question.text || 'Select an option'}
                         onChange={(e) => {
                           const value = e.target.value;
                           field.onChange(value);
@@ -1009,35 +1009,35 @@ const SurveyAnswerPage: React.FC = () => {
             }} 
             id="city-field-container"
           >
-            <FormControl 
-              fullWidth
-              error={!!formErrors['demographic.city']}
+          <FormControl 
+            fullWidth
+            error={!!formErrors['demographic.city']}
+          >
+            <InputLabel>City</InputLabel>
+            <Select
+              {...field}
+              label="City"
+              disabled={isLoadingCities}
+              onChange={(e) => {
+                field.onChange(e);
+                validateField('demographic.city', e.target.value);
+              }}
             >
-              <InputLabel>City</InputLabel>
-              <Select
-                {...field}
-                label="City"
-                disabled={isLoadingCities}
-                onChange={(e) => {
-                  field.onChange(e);
-                  validateField('demographic.city', e.target.value);
-                }}
-              >
-                <MenuItem value="" disabled>
-                  {isLoadingCities ? 'Loading cities...' : 'Select your city'}
+              <MenuItem value="" disabled>
+                {isLoadingCities ? 'Loading cities...' : 'Select your city'}
+              </MenuItem>
+              {cities.map((city) => (
+                <MenuItem key={city} value={city}>
+                  {city}
                 </MenuItem>
-                {cities.map((city) => (
-                  <MenuItem key={city} value={city}>
-                    {city}
-                  </MenuItem>
-                ))}
-              </Select>
-              {formErrors['demographic.city'] && (
-                <FormHelperText error>
-                  {formErrors['demographic.city']}
-                </FormHelperText>
-              )}
-            </FormControl>
+              ))}
+            </Select>
+            {formErrors['demographic.city'] && (
+              <FormHelperText error>
+                {formErrors['demographic.city']}
+              </FormHelperText>
+            )}
+          </FormControl>
           </Box>
         )}
       />
@@ -1063,10 +1063,10 @@ const SurveyAnswerPage: React.FC = () => {
 
       // Combiner les deux types de réponses
       const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
-      console.log('Tous les sondages répondus:', allAnsweredSurveys);
+      console.log('All answered surveys:', allAnsweredSurveys);
       setAnsweredSurveys(allAnsweredSurveys);
     } catch (error) {
-      console.error('Erreur lors de la récupération des sondages répondus:', error);
+      console.error('Error retrieving answered surveys:', error);
     }
   };
 
@@ -1079,13 +1079,13 @@ const SurveyAnswerPage: React.FC = () => {
       const timer = setTimeout(() => {
         setNotification(prev => ({ ...prev, open: false }));
       }, 5000); // Disparaît après 5 secondes
-      
+
       return () => clearTimeout(timer);
     }
   }, [notification.open]);
 
   useEffect(() => {
-    console.log("État actuel des sondages répondus:", answeredSurveys);
+    console.log("Current answered surveys:", answeredSurveys);
   }, [answeredSurveys]);
 
   // Charger les données démographiques sauvegardées lors du premier rendu
@@ -1103,7 +1103,7 @@ const SurveyAnswerPage: React.FC = () => {
         setValue('demographic.educationLevel', data.educationLevel || '');
         setValue('demographic.city', data.city || '');
       } catch (error) {
-        console.error('Erreur lors du chargement des données démographiques:', error);
+        console.error('Error loading demographic data from local storage:', error);
       }
     }
   }, [setValue]);
@@ -1192,14 +1192,14 @@ const SurveyAnswerPage: React.FC = () => {
         navigator.clipboard.writeText(getShareUrl(survey))
           .then(() => {
             setNotification({
-              message: "Lien copié dans le presse-papiers !",
+              message: "Link copied to clipboard!",
               severity: 'success',
               open: true
             });
           })
           .catch(() => {
             setNotification({
-              message: "Erreur lors de la copie du lien",
+              message: "Error copying link",
               severity: 'error',
               open: true
             });
@@ -1221,7 +1221,7 @@ const SurveyAnswerPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Données démographiques récupérées du backend:', data);
+        console.log('Demographic data retrieved from backend:', data);
         
         // Mettre à jour les valeurs du formulaire avec les données récupérées
         if (data) {
@@ -1240,14 +1240,14 @@ const SurveyAnswerPage: React.FC = () => {
           return true;
         }
       } else if (response.status === 404) {
-        console.log('Aucune donnée démographique trouvée dans le backend');
+        console.log('No demographic data found in the backend');
         return false;
       } else {
-        console.error('Erreur lors de la récupération des données démographiques:', await response.text());
+        console.error('Error retrieving demographic data:', await response.text());
         return false;
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des données démographiques:', error);
+      console.error('Error retrieving demographic data:', error);
       return false;
     }
   };
@@ -1265,7 +1265,7 @@ const SurveyAnswerPage: React.FC = () => {
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
                 {lastDemographicData && (
-                  <Tooltip title="Données démographiques chargées automatiquement">
+                  <Tooltip title="Demographic data automatically loaded">
                     <Chip 
                       icon={<AutorenewIcon />} 
                       label="Auto" 
@@ -1447,7 +1447,7 @@ const SurveyAnswerPage: React.FC = () => {
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
                 {lastDemographicData && (
-                  <Tooltip title="Données démographiques chargées automatiquement">
+                  <Tooltip title="Demographic data automatically loaded">
                     <Chip 
                       icon={<AutorenewIcon />} 
                       label="Auto" 
@@ -1468,36 +1468,36 @@ const SurveyAnswerPage: React.FC = () => {
             </Typography>
             
             {getOrderedNodes().map((node, index) => {
-              const isVisible = shouldShowQuestion(node.id);
-              const isCritical = isCriticalQuestion(node.id);
+            const isVisible = shouldShowQuestion(node.id);
+            const isCritical = isCriticalQuestion(node.id);
 
-              if (!isVisible) return null;
+            if (!isVisible) return null;
 
-              return (
-                <Paper
-                  key={node.id}
-                  elevation={1}
+            return (
+              <Paper
+                key={node.id}
+                elevation={1}
                   className="survey-question-paper"
                   data-testid={`question-${node.id}`}
                   id={`survey-question-${index}`}
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    borderRadius: 2,
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                    backgroundColor: 'white'
-                  }}
-                >
-                  <Typography variant="h6" gutterBottom>
-                    {node.data.text || node.data.label || 'Question without text'}
-                  </Typography>
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  backgroundColor: 'white'
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  {node.data.text || node.data.label || 'Question without text'}
+                </Typography>
 
-                  <Box sx={{ mt: 2 }}>
-                    {renderQuestionInput(node)}
-                  </Box>
-                </Paper>
-              );
-            })}
+                <Box sx={{ mt: 2 }}>
+                  {renderQuestionInput(node)}
+                </Box>
+              </Paper>
+            );
+          })}
           </Box>
 
           {submitError && (
@@ -2388,7 +2388,7 @@ const SurveyAnswerPage: React.FC = () => {
         </Menu>
 
         {/* Bouton tutorial flottant */}
-        <Tooltip title="Lancer le tutoriel">
+        <Tooltip title="Start tutorial">
           <Fab
             size="small"
             onClick={startTutorial}
