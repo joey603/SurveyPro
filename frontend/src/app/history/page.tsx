@@ -55,6 +55,8 @@ interface Survey {
   demographicEnabled: boolean;
   createdAt: string;
   userId: string;
+  isDynamic?: boolean;
+  isPrivate?: boolean;
 }
 
 interface Demographic {
@@ -87,6 +89,8 @@ interface SurveyResponse {
   }>;
   questions?: Question[];
   description?: string;
+  isDynamic?: boolean;
+  isPrivate?: boolean;
 }
 
 const SurveyHistoryPage: React.FC = () => {
@@ -119,21 +123,43 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        // Récupérer d'abord les réponses
+        // Récupérer les réponses aux sondages statiques
         const response = await fetch('http://localhost:5041/api/survey-answers/responses/user', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        if (!response.ok) throw new Error('Erreur lors de la récupération des réponses');
+        if (!response.ok) throw new Error('Erreur lors de la récupération des réponses statiques');
 
-        const data = await response.json();
+        const staticResponses = await response.json();
+        
+        // Récupérer les réponses aux sondages dynamiques
+        const dynamicResponse = await fetch('http://localhost:5041/api/dynamic-survey-answers/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!dynamicResponse.ok) throw new Error('Erreur lors de la récupération des réponses dynamiques');
+
+        const dynamicResponses = await dynamicResponse.json();
+        
+        // Combiner les deux types de réponses
+        const allResponses = [...staticResponses, ...dynamicResponses];
         
         // Pour chaque réponse, récupérer les détails du sondage
-        const enhancedResponses = await Promise.all(data.map(async (response: SurveyResponse) => {
+        const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
           try {
-            const surveyResponse = await fetch(`http://localhost:5041/api/surveys/${response.surveyId}`, {
+            // Déterminer si c'est un sondage dynamique ou statique
+            const isDynamic = response.surveyId && typeof response.surveyId === 'string' && 
+                              dynamicResponses.some((dr: any) => dr.surveyId === response.surveyId);
+            
+            const endpoint = isDynamic 
+              ? `http://localhost:5041/api/dynamic-surveys/${response.surveyId}`
+              : `http://localhost:5041/api/surveys/${response.surveyId}`;
+            
+            const surveyResponse = await fetch(endpoint, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -143,7 +169,8 @@ const SurveyHistoryPage: React.FC = () => {
               const surveyData = await surveyResponse.json();
               return {
                 ...response,
-                description: surveyData.description
+                description: surveyData.description,
+                isDynamic: isDynamic
               };
             }
             return response;
@@ -171,22 +198,56 @@ const SurveyHistoryPage: React.FC = () => {
       if (!token) throw new Error('Not authenticated');
 
       console.log('Fetching created surveys...');
-      const response = await fetch('http://localhost:5041/api/surveys', {
+      
+      // Récupérer les sondages statiques
+      const staticResponse = await fetch('http://localhost:5041/api/surveys', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Server response:', errorData);
-        throw new Error(errorData.message || `Error: ${response.status}`);
+      if (!staticResponse.ok) {
+        const errorData = await staticResponse.json().catch(() => ({}));
+        console.error('Server response for static surveys:', errorData);
+        throw new Error(errorData.message || `Error: ${staticResponse.status}`);
       }
 
-      const data = await response.json();
-      console.log('Created surveys data:', data);
-      setCreatedSurveys(data);
+      const staticSurveys = await staticResponse.json();
+      console.log('Created static surveys data:', staticSurveys);
+      
+      // Récupérer les sondages dynamiques
+      const dynamicResponse = await fetch('http://localhost:5041/api/dynamic-surveys', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!dynamicResponse.ok) {
+        const errorData = await dynamicResponse.json().catch(() => ({}));
+        console.error('Server response for dynamic surveys:', errorData);
+        throw new Error(errorData.message || `Error: ${dynamicResponse.status}`);
+      }
+
+      const dynamicSurveysRaw = await dynamicResponse.json();
+      console.log('Created dynamic surveys data:', dynamicSurveysRaw);
+      
+      // Transformer les sondages dynamiques pour qu'ils correspondent au format attendu
+      const dynamicSurveys = dynamicSurveysRaw.map((survey: any) => ({
+        ...survey,
+        isDynamic: true,
+        questions: survey.nodes.map((node: any) => ({
+          id: node.id,
+          text: node.data.text || node.data.label || 'Question sans texte',
+          type: node.data.type || 'text',
+          options: node.data.options || []
+        }))
+      }));
+
+      // Combiner les deux types de sondages
+      const allSurveys = [...staticSurveys, ...dynamicSurveys];
+      setCreatedSurveys(allSurveys);
     } catch (err: any) {
       console.error('Error fetching created surveys:', err);
       setError(err.message || 'Failed to fetch created surveys');
@@ -218,7 +279,12 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const surveyResponse = await fetch(`http://localhost:5041/api/surveys/${responseId}`, {
+        const isDynamic = survey.isDynamic;
+        const endpoint = isDynamic 
+          ? `http://localhost:5041/api/dynamic-surveys/${responseId}`
+          : `http://localhost:5041/api/surveys/${responseId}`;
+
+        const surveyResponse = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -235,6 +301,7 @@ const SurveyHistoryPage: React.FC = () => {
           surveyTitle: surveyData.title,
           completedAt: surveyData.createdAt,
           description: surveyData.description,
+          isDynamic: isDynamic,
           // Ajouter les informations démographiques si elles sont activées
           demographic: surveyData.demographicEnabled ? {
             gender: 'Enabled',
@@ -242,13 +309,24 @@ const SurveyHistoryPage: React.FC = () => {
             educationLevel: 'Enabled',
             city: 'Enabled'
           } : undefined,
-          questions: surveyData.questions.map((q: any) => ({
-            ...q,
-            media: typeof q.media === 'string' ? {
-              url: q.media,
-              type: q.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
-            } : null
-          })),
+          questions: isDynamic 
+            ? surveyData.nodes.map((node: any) => ({
+                id: node.id,
+                text: node.data.text || node.data.label || 'Question sans texte',
+                type: node.data.type || 'text',
+                options: node.data.options || [],
+                media: node.data.mediaUrl ? {
+                  url: node.data.mediaUrl,
+                  type: node.data.mediaUrl.toLowerCase().includes('.mp4') ? 'video' : 'image'
+                } : undefined
+              }))
+            : surveyData.questions.map((q: any) => ({
+                ...q,
+                media: typeof q.media === 'string' ? {
+                  url: q.media,
+                  type: q.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
+                } : null
+              })),
           answers: [] // Pas de réponses car c'est un sondage créé
         };
 
@@ -272,8 +350,15 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Non authentifié');
 
+      // Déterminer si c'est un sondage dynamique
+      const isDynamic = survey.isDynamic;
+
       // Récupérer les détails du sondage original
-      const surveyDetailsResponse = await fetch(`http://localhost:5041/api/surveys/${survey.surveyId}`, {
+      const surveyEndpoint = isDynamic
+        ? `http://localhost:5041/api/dynamic-surveys/${survey.surveyId}`
+        : `http://localhost:5041/api/surveys/${survey.surveyId}`;
+
+      const surveyDetailsResponse = await fetch(surveyEndpoint, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -284,7 +369,11 @@ const SurveyHistoryPage: React.FC = () => {
       console.log('Original survey data:', surveyData);
 
       // Récupérer les détails de la réponse
-      const responseDetails = await fetch(`http://localhost:5041/api/survey-answers/responses/${responseId}`, {
+      const responseEndpoint = isDynamic
+        ? `http://localhost:5041/api/dynamic-survey-answers/response/${responseId}`
+        : `http://localhost:5041/api/survey-answers/responses/${responseId}`;
+
+      const responseDetails = await fetch(responseEndpoint, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -295,39 +384,55 @@ const SurveyHistoryPage: React.FC = () => {
       console.log('Response details:', detailData);
 
       // Après avoir récupéré surveyData
-      console.log('Original survey questions with options:', surveyData.questions);
+      console.log('Original survey questions with options:', isDynamic ? surveyData.nodes : surveyData.questions);
 
       // Après avoir récupéré detailData
       console.log('Response questions:', detailData.questions);
 
       // Modifions la fusion des questions
-      const enhancedQuestions = surveyData.questions.map((originalQuestion: any) => {
-        console.log('Original question:', originalQuestion);
-        console.log('Original question options:', originalQuestion.options);
-        
-        const responseQuestion = detailData.questions.find((q: any) => q.id === originalQuestion.id);
-        console.log('Matched response question:', responseQuestion);
+      const enhancedQuestions = isDynamic
+        ? surveyData.nodes.map((node: any) => {
+            console.log('Original node:', node);
+            
+            return {
+              id: node.id,
+              text: node.data.text || node.data.label || 'Question sans texte',
+              type: node.data.type || 'text',
+              options: node.data.options || [],
+              media: node.data.mediaUrl ? {
+                url: node.data.mediaUrl,
+                type: node.data.mediaUrl.toLowerCase().includes('.mp4') ? 'video' : 'image'
+              } : null
+            };
+          })
+        : surveyData.questions.map((originalQuestion: any) => {
+            console.log('Original question:', originalQuestion);
+            console.log('Original question options:', originalQuestion.options);
+            
+            const responseQuestion = detailData.questions?.find((q: any) => q.id === originalQuestion.id);
+            console.log('Matched response question:', responseQuestion);
 
-        const enhancedQuestion = {
-          id: originalQuestion.id,
-          text: originalQuestion.text,
-          type: originalQuestion.type,
-          options: originalQuestion.options || [],
-          media: typeof originalQuestion.media === 'string' ? {
-            url: originalQuestion.media,
-            type: originalQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
-          } : null
-        };
-        
-        console.log('Enhanced question:', enhancedQuestion);
-        return enhancedQuestion;
-      });
+            const enhancedQuestion = {
+              id: originalQuestion.id,
+              text: originalQuestion.text,
+              type: originalQuestion.type,
+              options: originalQuestion.options || [],
+              media: typeof originalQuestion.media === 'string' ? {
+                url: originalQuestion.media,
+                type: originalQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
+              } : null
+            };
+            
+            console.log('Enhanced question:', enhancedQuestion);
+            return enhancedQuestion;
+          });
 
       const updatedSurvey = {
         ...survey,
         description: surveyData.description,
         questions: enhancedQuestions,
-        answers: detailData.answers // Assurez-vous que les réponses sont incluses
+        answers: detailData.answers || [], // Assurez-vous que les réponses sont incluses
+        isDynamic: isDynamic
       };
 
       console.log('Final updated survey:', updatedSurvey);
@@ -429,6 +534,40 @@ const SurveyHistoryPage: React.FC = () => {
             <Typography variant="h4" fontWeight="bold">
               {selectedSurvey.surveyTitle}
             </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
+              {selectedSurvey.isDynamic ? (
+                <Chip
+                  size="small"
+                  label="Dynamic"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    height: '24px'
+                  }}
+                />
+              ) : (
+                <Chip
+                  size="small"
+                  label="Static"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    height: '24px'
+                  }}
+                />
+              )}
+              {selectedSurvey.isPrivate && (
+                <Chip
+                  size="small"
+                  label="Private"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    height: '24px'
+                  }}
+                />
+              )}
+            </Box>
             <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
               {selectedSurvey.description}
             </Typography>
@@ -1084,6 +1223,39 @@ const SurveyHistoryPage: React.FC = () => {
                                 height: '24px'
                               }}
                             />
+                            {response.isDynamic && (
+                              <Chip
+                                size="small"
+                                label="Dynamic"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {!response.isDynamic && (
+                              <Chip
+                                size="small"
+                                label="Static"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {response.isPrivate && (
+                              <Chip
+                                size="small"
+                                label="Private"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
                           </Stack>
                         </Stack>
                       </Box>
@@ -1294,6 +1466,39 @@ const SurveyHistoryPage: React.FC = () => {
                                 height: '24px'
                               }}
                             />
+                            {survey.isDynamic && (
+                              <Chip
+                                size="small"
+                                label="Dynamic"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {!survey.isDynamic && (
+                              <Chip
+                                size="small"
+                                label="Static"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {survey.isPrivate && (
+                              <Chip
+                                size="small"
+                                label="Private"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
                           </Stack>
                         </Stack>
                       </Box>
