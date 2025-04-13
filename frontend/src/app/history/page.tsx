@@ -123,42 +123,91 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        // Récupérer les réponses aux sondages statiques
-        const response = await fetch('http://localhost:5041/api/survey-answers/responses/user', {
+        const BASE_URL = 'http://localhost:5041/api';
+
+        // Récupérer les réponses aux sondages classiques
+        const response = await fetch(`${BASE_URL}/survey-answers/responses/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        if (!response.ok) throw new Error('Erreur lors de la récupération des réponses statiques');
+        if (!response.ok) throw new Error('Erreur lors de la récupération des réponses classiques');
 
-        const staticResponses = await response.json();
+        const classicData = await response.json();
         
         // Récupérer les réponses aux sondages dynamiques
-        const dynamicResponse = await fetch('http://localhost:5041/api/dynamic-survey-answers/user', {
+        const dynamicResponse = await fetch(`${BASE_URL}/dynamic-survey-answers/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-
-        if (!dynamicResponse.ok) throw new Error('Erreur lors de la récupération des réponses dynamiques');
-
-        const dynamicResponses = await dynamicResponse.json();
         
-        // Combiner les deux types de réponses
-        const allResponses = [...staticResponses, ...dynamicResponses];
+        if (!dynamicResponse.ok) {
+          console.error('Erreur lors de la récupération des réponses dynamiques:', dynamicResponse.status, dynamicResponse.statusText);
+          // Ne pas interrompre le processus si cette partie échoue
+          console.warn('Impossible de récupérer les réponses aux sondages dynamiques, continuons avec seulement les sondages classiques');
+          // Continuer avec seulement les réponses classiques
+          const allResponses = classicData;
+          console.log('Toutes les réponses récupérées (seulement classiques):', allResponses.length);
+          
+          // Continuer le traitement avec ces réponses
+          const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
+            try {
+              const endpoint = `${BASE_URL}/surveys/${response.surveyId}`;
+                
+              const surveyResponse = await fetch(endpoint, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (surveyResponse.ok) {
+                const surveyData = await surveyResponse.json();
+                return {
+                  ...response,
+                  description: surveyData.description,
+                  isPrivate: surveyData.isPrivate
+                };
+              }
+              return response;
+            } catch (error) {
+              console.warn(`Could not fetch survey details for ${response.surveyId}:`, error);
+              return response;
+            }
+          }));
+
+          setResponses(enhancedResponses);
+          return; // Sortir de la fonction
+        }
+        
+        const dynamicData = await dynamicResponse.json();
+        console.log('Réponses dynamiques récupérées:', dynamicData);
+        console.log('Nombre de réponses dynamiques:', dynamicData.length);
+        
+        // Combiner les réponses statiques et dynamiques
+        const allResponses = [
+          ...classicData,
+          ...dynamicData.map((item: any) => ({
+            _id: item._id,
+            surveyId: item.surveyId,
+            surveyTitle: item.surveyTitle,
+            completedAt: item.completedAt,
+            demographic: item.demographic,
+            answers: item.answers,
+            isDynamic: true
+          }))
+        ];
+        
+        console.log('Détail des réponses combinées:', JSON.stringify(allResponses, null, 2));
         
         // Pour chaque réponse, récupérer les détails du sondage
         const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
           try {
-            // Déterminer si c'est un sondage dynamique ou statique
-            const isDynamic = response.surveyId && typeof response.surveyId === 'string' && 
-                              dynamicResponses.some((dr: any) => dr.surveyId === response.surveyId);
-            
-            const endpoint = isDynamic 
-              ? `http://localhost:5041/api/dynamic-surveys/${response.surveyId}`
-              : `http://localhost:5041/api/surveys/${response.surveyId}`;
-            
+            const endpoint = response.isDynamic 
+              ? `${BASE_URL}/dynamic-surveys/${response.surveyId}`
+              : `${BASE_URL}/surveys/${response.surveyId}`;
+              
             const surveyResponse = await fetch(endpoint, {
               headers: {
                 'Authorization': `Bearer ${token}`
@@ -170,7 +219,7 @@ const SurveyHistoryPage: React.FC = () => {
               return {
                 ...response,
                 description: surveyData.description,
-                isDynamic: isDynamic
+                isPrivate: surveyData.isPrivate
               };
             }
             return response;
@@ -183,6 +232,7 @@ const SurveyHistoryPage: React.FC = () => {
         setResponses(enhancedResponses);
       } catch (err: any) {
         setError(err.message);
+        console.error('Error fetching survey responses:', err);
       } finally {
         setLoading(false);
       }
@@ -197,27 +247,28 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Not authenticated');
 
+      const BASE_URL = 'http://localhost:5041/api';
       console.log('Fetching created surveys...');
       
       // Récupérer les sondages statiques
-      const staticResponse = await fetch('http://localhost:5041/api/surveys', {
+      const classicResponse = await fetch(`${BASE_URL}/surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!staticResponse.ok) {
-        const errorData = await staticResponse.json().catch(() => ({}));
-        console.error('Server response for static surveys:', errorData);
-        throw new Error(errorData.message || `Error: ${staticResponse.status}`);
+      if (!classicResponse.ok) {
+        const errorData = await classicResponse.json().catch(() => ({}));
+        console.error('Server response (classic):', errorData);
+        throw new Error(errorData.message || `Error: ${classicResponse.status}`);
       }
 
-      const staticSurveys = await staticResponse.json();
-      console.log('Created static surveys data:', staticSurveys);
+      const classicData = await classicResponse.json();
+      console.log('Created classic surveys data:', classicData.length);
       
       // Récupérer les sondages dynamiques
-      const dynamicResponse = await fetch('http://localhost:5041/api/dynamic-surveys', {
+      const dynamicResponse = await fetch(`${BASE_URL}/dynamic-surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -226,27 +277,36 @@ const SurveyHistoryPage: React.FC = () => {
 
       if (!dynamicResponse.ok) {
         const errorData = await dynamicResponse.json().catch(() => ({}));
-        console.error('Server response for dynamic surveys:', errorData);
-        throw new Error(errorData.message || `Error: ${dynamicResponse.status}`);
+        console.error('Server response (dynamic):', errorData);
+        console.warn('Impossible de récupérer les sondages dynamiques, continuons avec seulement les sondages classiques');
+        
+        // Continuer avec uniquement les sondages classiques
+        console.log('Total created surveys (classic only):', classicData.length);
+        setCreatedSurveys(classicData);
+        setLoading(false);
+        return; // Sortir de la fonction
       }
 
-      const dynamicSurveysRaw = await dynamicResponse.json();
-      console.log('Created dynamic surveys data:', dynamicSurveysRaw);
+      const dynamicData = await dynamicResponse.json();
+      console.log('Created dynamic surveys data:', dynamicData);
+      console.log('Created dynamic surveys count:', dynamicData.length);
       
-      // Transformer les sondages dynamiques pour qu'ils correspondent au format attendu
-      const dynamicSurveys = dynamicSurveysRaw.map((survey: any) => ({
+      // Adapter le format des sondages dynamiques pour correspondre à l'interface Survey
+      const formattedDynamicSurveys = dynamicData.map((survey: any) => ({
         ...survey,
         isDynamic: true,
-        questions: survey.nodes.map((node: any) => ({
+        questions: survey.nodes ? survey.nodes.map((node: any) => ({
           id: node.id,
-          text: node.data.text || node.data.label || 'Question sans texte',
           type: node.data.type || 'text',
+          text: node.data.text || node.data.label || '',
           options: node.data.options || []
-        }))
+        })) : []
       }));
-
+      
       // Combiner les deux types de sondages
-      const allSurveys = [...staticSurveys, ...dynamicSurveys];
+      const allSurveys = [...classicData, ...formattedDynamicSurveys];
+      console.log('Total created surveys:', allSurveys.length);
+      
       setCreatedSurveys(allSurveys);
     } catch (err: any) {
       console.error('Error fetching created surveys:', err);
@@ -279,11 +339,13 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const isDynamic = survey.isDynamic;
-        const endpoint = isDynamic 
-          ? `http://localhost:5041/api/dynamic-surveys/${responseId}`
-          : `http://localhost:5041/api/surveys/${responseId}`;
-
+        const BASE_URL = 'http://localhost:5041/api';
+        
+        // Choisir le bon endpoint en fonction du type de sondage
+        const endpoint = survey.isDynamic
+          ? `${BASE_URL}/dynamic-surveys/${responseId}`
+          : `${BASE_URL}/surveys/${responseId}`;
+        
         const surveyResponse = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -301,7 +363,7 @@ const SurveyHistoryPage: React.FC = () => {
           surveyTitle: surveyData.title,
           completedAt: surveyData.createdAt,
           description: surveyData.description,
-          isDynamic: isDynamic,
+          isDynamic: survey.isDynamic,
           // Ajouter les informations démographiques si elles sont activées
           demographic: surveyData.demographicEnabled ? {
             gender: 'Enabled',
@@ -309,7 +371,7 @@ const SurveyHistoryPage: React.FC = () => {
             educationLevel: 'Enabled',
             city: 'Enabled'
           } : undefined,
-          questions: isDynamic 
+          questions: survey.isDynamic 
             ? surveyData.nodes.map((node: any) => ({
                 id: node.id,
                 text: node.data.text || node.data.label || 'Question sans texte',
@@ -350,94 +412,136 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Non authentifié');
 
-      // Déterminer si c'est un sondage dynamique
-      const isDynamic = survey.isDynamic;
+      const BASE_URL = 'http://localhost:5041/api';
 
-      // Récupérer les détails du sondage original
-      const surveyEndpoint = isDynamic
-        ? `http://localhost:5041/api/dynamic-surveys/${survey.surveyId}`
-        : `http://localhost:5041/api/surveys/${survey.surveyId}`;
+      // Gérer différemment selon le type de sondage (dynamique ou statique)
+      if (survey.isDynamic) {
+        console.log('Récupération des détails pour un sondage dynamique:', survey.surveyId);
+        
+        // Récupérer les détails du sondage dynamique
+        const dynamicSurveyResponse = await fetch(`${BASE_URL}/dynamic-surveys/${survey.surveyId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      const surveyDetailsResponse = await fetch(surveyEndpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        if (!dynamicSurveyResponse.ok) {
+          console.error('Erreur lors de la récupération des détails du sondage dynamique:', 
+            dynamicSurveyResponse.status, 
+            dynamicSurveyResponse.statusText
+          );
+          throw new Error('Erreur lors de la récupération des détails du sondage dynamique');
         }
-      });
+        
+        const dynamicSurveyData = await dynamicSurveyResponse.json();
+        console.log('Données du sondage dynamique:', dynamicSurveyData);
+        
+        // Récupérer les détails de la réponse dynamique
+        const dynamicResponseDetails = await fetch(`${BASE_URL}/dynamic-survey-answers/response/${responseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      if (!surveyDetailsResponse.ok) throw new Error('Erreur lors de la récupération des détails du sondage');
-      const surveyData = await surveyDetailsResponse.json();
-      console.log('Original survey data:', surveyData);
-
-      // Récupérer les détails de la réponse
-      const responseEndpoint = isDynamic
-        ? `http://localhost:5041/api/dynamic-survey-answers/response/${responseId}`
-        : `http://localhost:5041/api/survey-answers/responses/${responseId}`;
-
-      const responseDetails = await fetch(responseEndpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        if (!dynamicResponseDetails.ok) {
+          console.error('Erreur lors de la récupération des détails de la réponse dynamique:', 
+            dynamicResponseDetails.status, 
+            dynamicResponseDetails.statusText
+          );
+          throw new Error('Erreur lors de la récupération des détails de la réponse');
         }
-      });
+        
+        const dynamicDetailData = await dynamicResponseDetails.json();
+        console.log('Détails de la réponse dynamique:', dynamicDetailData);
+        
+        // Formater les questions et réponses pour qu'elles correspondent au format attendu
+        const enhancedQuestions = dynamicSurveyData.nodes.map((node: any) => {
+          return {
+            id: node.id,
+            text: node.data.text || node.data.label || 'Question sans texte',
+            type: node.data.type || 'text',
+            options: node.data.options || [],
+            media: node.data.mediaUrl ? {
+              url: node.data.mediaUrl,
+              type: node.data.mediaUrl.toLowerCase().includes('.mp4') ? 'video' : 'image'
+            } : undefined
+          };
+        });
 
-      if (!responseDetails.ok) throw new Error('Erreur lors de la récupération des détails');
-      const detailData = await responseDetails.json();
-      console.log('Response details:', detailData);
+        const updatedSurvey = {
+          ...survey,
+          description: dynamicSurveyData.description,
+          questions: enhancedQuestions,
+          answers: dynamicDetailData.answers.map((answer: any) => ({
+            questionId: answer.nodeId,
+            answer: answer.answer
+          }))
+        };
 
-      // Après avoir récupéré surveyData
-      console.log('Original survey questions with options:', isDynamic ? surveyData.nodes : surveyData.questions);
+        console.log('Final updated dynamic survey response:', updatedSurvey);
+        setSelectedSurvey(updatedSurvey);
+      } else {
+        // Récupérer les détails du sondage original statique
+        const surveyDetailsResponse = await fetch(`${BASE_URL}/surveys/${survey.surveyId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      // Après avoir récupéré detailData
-      console.log('Response questions:', detailData.questions);
+        if (!surveyDetailsResponse.ok) throw new Error('Erreur lors de la récupération des détails du sondage');
+        const surveyData = await surveyDetailsResponse.json();
+        console.log('Original survey data:', surveyData);
 
-      // Modifions la fusion des questions
-      const enhancedQuestions = isDynamic
-        ? surveyData.nodes.map((node: any) => {
-            console.log('Original node:', node);
-            
-            return {
-              id: node.id,
-              text: node.data.text || node.data.label || 'Question sans texte',
-              type: node.data.type || 'text',
-              options: node.data.options || [],
-              media: node.data.mediaUrl ? {
-                url: node.data.mediaUrl,
-                type: node.data.mediaUrl.toLowerCase().includes('.mp4') ? 'video' : 'image'
-              } : null
-            };
-          })
-        : surveyData.questions.map((originalQuestion: any) => {
-            console.log('Original question:', originalQuestion);
-            console.log('Original question options:', originalQuestion.options);
-            
-            const responseQuestion = detailData.questions?.find((q: any) => q.id === originalQuestion.id);
-            console.log('Matched response question:', responseQuestion);
+        // Récupérer les détails de la réponse statique
+        const responseDetails = await fetch(`${BASE_URL}/survey-answers/responses/${responseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-            const enhancedQuestion = {
-              id: originalQuestion.id,
-              text: originalQuestion.text,
-              type: originalQuestion.type,
-              options: originalQuestion.options || [],
-              media: typeof originalQuestion.media === 'string' ? {
-                url: originalQuestion.media,
-                type: originalQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
-              } : null
-            };
-            
-            console.log('Enhanced question:', enhancedQuestion);
-            return enhancedQuestion;
-          });
+        if (!responseDetails.ok) throw new Error('Erreur lors de la récupération des détails');
+        const detailData = await responseDetails.json();
+        console.log('Response details:', detailData);
 
-      const updatedSurvey = {
-        ...survey,
-        description: surveyData.description,
-        questions: enhancedQuestions,
-        answers: detailData.answers || [], // Assurez-vous que les réponses sont incluses
-        isDynamic: isDynamic
-      };
+        // Après avoir récupéré surveyData
+        console.log('Original survey questions with options:', surveyData.questions);
 
-      console.log('Final updated survey:', updatedSurvey);
-      setSelectedSurvey(updatedSurvey);
+        // Après avoir récupéré detailData
+        console.log('Response questions:', detailData.questions);
 
+        // Modifions la fusion des questions
+        const enhancedQuestions = surveyData.questions.map((originalQuestion: any) => {
+          console.log('Original question:', originalQuestion);
+          console.log('Original question options:', originalQuestion.options);
+          
+          const responseQuestion = detailData.questions.find((q: any) => q.id === originalQuestion.id);
+          console.log('Matched response question:', responseQuestion);
+
+          const enhancedQuestion = {
+            id: originalQuestion.id,
+            text: originalQuestion.text,
+            type: originalQuestion.type,
+            options: originalQuestion.options || [],
+            media: typeof originalQuestion.media === 'string' ? {
+              url: originalQuestion.media,
+              type: originalQuestion.media.toLowerCase().includes('.mp4') ? 'video' : 'image'
+            } : null
+          };
+          
+          console.log('Enhanced question:', enhancedQuestion);
+          return enhancedQuestion;
+        });
+
+        const updatedSurvey = {
+          ...survey,
+          description: surveyData.description,
+          questions: enhancedQuestions,
+          answers: detailData.answers // Assurez-vous que les réponses sont incluses
+        };
+
+        console.log('Final updated static survey response:', updatedSurvey);
+        setSelectedSurvey(updatedSurvey);
+      }
     } catch (err: any) {
       console.error('Error fetching survey details:', err);
       setError(err.message);
@@ -534,40 +638,6 @@ const SurveyHistoryPage: React.FC = () => {
             <Typography variant="h4" fontWeight="bold">
               {selectedSurvey.surveyTitle}
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
-              {selectedSurvey.isDynamic ? (
-                <Chip
-                  size="small"
-                  label="Dynamic"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    height: '24px'
-                  }}
-                />
-              ) : (
-                <Chip
-                  size="small"
-                  label="Static"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    height: '24px'
-                  }}
-                />
-              )}
-              {selectedSurvey.isPrivate && (
-                <Chip
-                  size="small"
-                  label="Private"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    height: '24px'
-                  }}
-                />
-              )}
-            </Box>
             <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
               {selectedSurvey.description}
             </Typography>
@@ -1245,10 +1315,23 @@ const SurveyHistoryPage: React.FC = () => {
                                 }}
                               />
                             )}
+                            {/* @ts-ignore */}
                             {response.isPrivate && (
                               <Chip
                                 size="small"
                                 label="Private"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {/* @ts-ignore */}
+                            {response.isPrivate === false && (
+                              <Chip
+                                size="small"
+                                label="Public"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
@@ -1488,10 +1571,23 @@ const SurveyHistoryPage: React.FC = () => {
                                 }}
                               />
                             )}
+                            {/* @ts-ignore */}
                             {survey.isPrivate && (
                               <Chip
                                 size="small"
                                 label="Private"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px'
+                                }}
+                              />
+                            )}
+                            {/* @ts-ignore */}
+                            {survey.isPrivate === false && (
+                              <Chip
+                                size="small"
+                                label="Public"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',

@@ -256,7 +256,7 @@ exports.deleteMedia = async (req, res) => {
       stack: error.stack
     });
   }
-};
+}; 
 
 // Get all dynamic surveys available for answering
 exports.getAllDynamicSurveysForAnswering = async (req, res) => {
