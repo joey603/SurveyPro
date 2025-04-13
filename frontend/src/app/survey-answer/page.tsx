@@ -2112,10 +2112,10 @@ const SurveyAnswerPage: React.FC = () => {
                             size="small"
                             sx={{
                               ml: 1,
-                              backgroundColor: 'rgba(0, 198, 212, 0.1)',
-                              color: '#00C6D4',
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
                               '& .MuiChip-icon': {
-                                color: '#00C6D4'
+                                color: '#667eea'
                               },
                               height: '24px',
                               fontWeight: 500

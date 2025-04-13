@@ -256,4 +256,61 @@ exports.deleteMedia = async (req, res) => {
       stack: error.stack
     });
   }
+};
+
+// Get all dynamic surveys available for answering
+exports.getAllDynamicSurveysForAnswering = async (req, res) => {
+  console.log('getAllDynamicSurveysForAnswering appelé');
+  console.log('User dans la requête:', req.user);
+  
+  try {
+    console.log('Début de la recherche des sondages dynamiques');
+    
+    // Création du filtre pour la requête
+    const filter = {
+      $or: [
+        { isPrivate: false },
+        { userId: req.user.id }
+      ]
+    };
+    
+    console.log('Filtre de recherche:', filter);
+    
+    const surveys = await DynamicSurvey.find(filter)
+      .select('title description demographicEnabled nodes edges createdAt isPrivate userId')
+      .sort({ createdAt: -1 });
+    
+    console.log('Nombre de sondages dynamiques trouvés:', surveys.length);
+    
+    if (!surveys || surveys.length === 0) {
+      console.log('Aucun sondage dynamique trouvé');
+      return res.status(404).json({ 
+        message: "Aucun sondage dynamique disponible.",
+        debug: {
+          filter,
+          modelName: DynamicSurvey.modelName,
+          collectionName: DynamicSurvey.collection.name
+        }
+      });
+    }
+
+    console.log('Envoi des sondages dynamiques au client');
+    res.status(200).json(surveys);
+  } catch (error) {
+    console.error("Erreur détaillée:", error);
+    console.error("Stack trace:", error.stack);
+    console.error("Nom du modèle:", DynamicSurvey.modelName);
+    console.error("Nom de la collection:", DynamicSurvey.collection.name);
+    
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des sondages dynamiques.",
+      error: error.message,
+      debug: {
+        modelName: DynamicSurvey.modelName,
+        collectionName: DynamicSurvey.collection.name,
+        errorName: error.name,
+        errorStack: error.stack
+      }
+    });
+  }
 }; 

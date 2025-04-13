@@ -205,7 +205,7 @@ exports.getAllSurveysForAnswering = async (req, res) => {
     console.log('Filtre de recherche:', filter);
     
     const surveys = await Survey.find(filter)
-      .select('_id title description questions demographicEnabled createdAt isPrivate')
+      .select('_id title description questions demographicEnabled createdAt isPrivate userId')
       .sort({ createdAt: -1 });
     
     console.log('Nombre de sondages trouvés:', surveys.length);

@@ -306,13 +306,13 @@ export const fetchAvailableSurveys = async (token: string) => {
   try {
     console.log('Fetching surveys from:', API_URL); // Mise à jour du log
 
-    // Mise à jour des URLs pour utiliser API_URL
+    // Utilisation des routes /available pour récupérer tous les sondages publics et les sondages privés de l'utilisateur
     const classicResponse = await axios.get(`${API_URL}/surveys/available`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('Classic surveys:', classicResponse.data);
 
-    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
+    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys/available`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('Dynamic surveys:', dynamicResponse.data);
