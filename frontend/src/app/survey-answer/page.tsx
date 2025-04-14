@@ -2015,15 +2015,20 @@ const SurveyAnswerPage: React.FC = () => {
           maxWidth: '1000px',
           mb: 4,
         }}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-          }}>
-            <Typography variant="h4" fontWeight="bold">
-              Available Surveys
+          <Box 
+            sx={{ 
+              p: 3,
+              bgcolor: 'primary.main', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              Explore
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+              Browse and answer surveys created by users
             </Typography>
           </Box>
 
@@ -2509,14 +2514,16 @@ const SurveyAnswerPage: React.FC = () => {
         maxWidth: '1000px',
         mb: 4,
       }}>
-        <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          py: 4,
-          px: 4,
-          color: 'white',
-          textAlign: 'center',
-          position: 'relative'
-        }}>
+        <Box 
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative'
+          }}
+        >
           <IconButton
             id="back-button"
             data-testid="back-to-surveys-button"
@@ -2531,11 +2538,11 @@ const SurveyAnswerPage: React.FC = () => {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             {selectedSurvey.title}
           </Typography>
-          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-            {selectedSurvey.description}
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            {selectedSurvey.description || 'Please answer all questions to submit this survey'}
           </Typography>
         </Box>
 
