@@ -99,30 +99,88 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         
         // Function to check if a node is a child of the edited node
         const isChildOfEditedNode = (node: Node) => {
-          const nodeId = node.id;
-          // Check if node ID starts with editedNode.id followed by an underscore (pattern for child nodes)
-          return nodeId.startsWith(`${editedNode.id}_`);
+          return node.id.startsWith(`${editedNode.id}_`);
         };
         
-        // Si on ouvre le mode édition, déplacer tous les nœuds vers le bas
-        // Si on ferme le mode édition, remonter tous les nœuds, y compris les enfants des questions critiques
-        return updatedNodes.map(node => {
-          const isCriticalNode = editedNode.data.isCritical;
-          const isChild = isChildOfEditedNode(node);
-          
-          if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
-            return {
-              ...node,
-              position: {
-                ...node.position,
-                y: isEditing 
-                  ? node.position.y + EDITING_HEIGHT_INCREASE 
-                  : node.position.y - EDITING_HEIGHT_INCREASE
-              }
-            };
-          }
-          return node;
-        });
+        // Stocker les positions originales des nœuds enfants lors de l'ouverture de l'édition
+        // et les restaurer lors de la fermeture
+        if (isEditing && editedNode.data.isCritical) {
+          // Stocker les positions actuelles des nœuds enfants dans un attribut temporaire
+          return updatedNodes.map(node => {
+            const isChild = isChildOfEditedNode(node);
+            
+            if (isChild) {
+              // Ajouter un attribut pour stocker la position originale
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  _originalPosition: { ...node.position }
+                },
+                position: {
+                  ...node.position,
+                  y: node.position.y + EDITING_HEIGHT_INCREASE
+                }
+              };
+            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
+              // Déplacer les autres nœuds vers le bas normalement
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: node.position.y + EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        } else if (!isEditing && editedNode.data.isCritical) {
+          // Restaurer les positions originales des nœuds enfants
+          return updatedNodes.map(node => {
+            const isChild = isChildOfEditedNode(node);
+            
+            if (isChild && node.data._originalPosition) {
+              // Récupérer la position originale
+              const originalPos = node.data._originalPosition;
+              
+              // Créer une copie des données sans _originalPosition
+              const newData = { ...node.data };
+              delete newData._originalPosition;
+              
+              return {
+                ...node,
+                data: newData,
+                position: originalPos
+              };
+            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
+              // Déplacer les autres nœuds vers le haut normalement
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: node.position.y - EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        } else {
+          // Comportement normal pour les questions non critiques
+          return updatedNodes.map(node => {
+            if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: isEditing 
+                    ? node.position.y + EDITING_HEIGHT_INCREASE 
+                    : node.position.y - EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        }
       }
       
       return updatedNodes;
@@ -149,10 +207,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     // Augmentation de l'espacement vertical si la question est critique
     const baseVerticalSpacing = 300;
     const criticalVerticalSpacing = 450; // Augmenté pour les questions critiques
-    
-    // Utiliser l'espacement vertical en fonction de l'état critique de la question source
     const verticalSpacing = sourceNode.data.isCritical ? criticalVerticalSpacing : baseVerticalSpacing;
-    
     const horizontalSpacing = 800; // Increased to 800px for a much wider spacing
 
     // Calculate the total width and starting position
@@ -182,8 +237,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           mediaUrl: '',
           isCritical: false,
           onCreatePaths: createPathsFromNode,
-          onChange: (newData: any) => handleNodeChange(newNodeId, newData),
-          parentNodeId: sourceId, // Stocker l'ID du nœud parent pour référence future
+          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
         },
         position: { 
           x: xPosition,
@@ -221,16 +275,15 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newEdges.push(newEdge);
     });
 
-    // Ajuster la vue après l'ajout de nouveaux nœuds
+    // Adjust the view after adding new nodes
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
 
-    // Vérifier si c'est une création initiale ou une modification d'options existantes
-    // Si les nœuds n'existaient pas avant, ajuster la vue
+    // Check if this is an initial creation or modifying existing options
+    // If nodes didn't exist before, adjust the view
     const existingPathNodes = nodes.some(node => node.id.startsWith(`${sourceId}_`));
     if (!existingPathNodes && reactFlowInstance) {
       setTimeout(() => {
-        // Utiliser fitView pour ajuster la vue afin de montrer tous les nœuds
         reactFlowInstance.fitView({
           padding: 0.4,
           duration: 800,
@@ -641,14 +694,11 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
       );
 
-      // Check if the parent has an image or is critical
+      // Check if the parent has an image
       const parentId = parentIds.get(nodeId);
       const parentNode = parentId ? nodes.find(n => n.id === parentId) : null;
       const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
       const parentIsCritical = parentNode?.data.isCritical || false;
-      
-      // Vérifier si le nœud est directement un enfant d'une question critique (en vérifiant le format de l'ID)
-      const isDirectChildOfCritical = parentNode && parentIsCritical && nodeId.startsWith(`${parentId}_`);
       
       let baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       
@@ -659,10 +709,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       
       // Add extra spacing for critical questions
       if (parentIsCritical) {
-        // Ajouter un espacement supplémentaire important si c'est un enfant direct d'une question critique
-        baseSpacing += isDirectChildOfCritical 
-          ? EXTRA_SPACING_FOR_CRITICAL * 1.5  // Augmenter l'espacement pour les enfants directs
-          : EXTRA_SPACING_FOR_CRITICAL;       // Espacement standard pour les autres relations
+        baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
       }
       
       return baseSpacing;

@@ -143,22 +143,17 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       options: newOptions
     };
     
-    // Mettre à jour les données d'abord
     updateNodeData(newData);
     
-    // Créer les chemins après la mise à jour des données avec un petit délai
-    const createPathsFn = data.onCreatePaths;
-    if (createPathsFn) {
-      // Utiliser setTimeout pour permettre à l'interface de se mettre à jour d'abord
-      setTimeout(() => {
-        if (isCritical) {
-          console.log("Creating paths for critical question");
-          createPathsFn(data.id, newOptions.length > 0 ? newOptions : ['Yes', 'No']);
-        } else {
-          console.log("Removing paths");
-          createPathsFn(data.id, []);
-        }
-      }, 50);
+    // Créer les chemins après la mise à jour des données
+    if (data.onCreatePaths) {
+      if (isCritical) {
+        console.log("Creating paths for critical question");
+        data.onCreatePaths(data.id, newOptions.length > 0 ? newOptions : ['Yes', 'No']);
+      } else {
+        console.log("Removing paths");
+        data.onCreatePaths(data.id, []);
+      }
     }
   };
 
