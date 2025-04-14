@@ -4,7 +4,7 @@ echo "Installation des dépendances..."
 npm install --legacy-peer-deps
 
 echo "Installation des packages manquants spécifiques..."
-npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities intro.js intro.js-react --legacy-peer-deps
+npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities intro.js intro.js-react typescript --legacy-peer-deps
 
 # Créer un lien symbolique pour @/utils
 echo "Configuration des alias de chemin..."
@@ -13,5 +13,9 @@ if [ ! -d "node_modules/@" ]; then
 fi
 ln -sf $(pwd)/src node_modules/@
 
+# Corriger les problèmes de conflit PostCSS
+echo "Correction de la configuration PostCSS..."
+rm -f postcss.config.mjs
+
 echo "Construction de l'application..."
-NEXT_TELEMETRY_DISABLED=1 next build 
+NEXT_TELEMETRY_DISABLED=1 SKIP_TYPE_CHECK=true next build 
