@@ -29,6 +29,7 @@
     "@types/react-csv": "^1.1.10",
     "@types/react-toastify": "^4.1.0",
     "@types/recharts": "^1.8.29",
+    "autoprefixer": "^10.4.20",
     "axios": "^1.7.7",
     "chart.js": "^4.4.7",
     "d3": "^7.9.0",
@@ -41,6 +42,7 @@
     "next": "15.0.3",
     "nodemailer": "^6.9.16",
     "papaparse": "^5.4.1",
+    "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
     "react-chartjs-2": "^5.2.0",
@@ -52,6 +54,7 @@
     "react-toastify": "^11.0.2",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.1",
+    "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3"
   },
   "devDependencies": {
@@ -60,10 +63,7 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.20",
     "eslint": "^8",
-    "eslint-config-next": "15.0.3",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15"
+    "eslint-config-next": "15.0.3"
   }
 }
