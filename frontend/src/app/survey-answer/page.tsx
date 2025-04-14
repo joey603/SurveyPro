@@ -470,7 +470,7 @@ const SurveyAnswerPage: React.FC = () => {
     return incomingEdges.some(edge => {
       if (edge.label) {
         const sourceAnswer = currentAnswers[edge.source];
-        return sourceAnswer === edge.label;
+        return String(sourceAnswer) === String(edge.label);
       }
       return shouldShowQuestion(edge.source);
     });
@@ -678,12 +678,33 @@ const SurveyAnswerPage: React.FC = () => {
     }
   };
 
+  // Fonction pour vérifier si c'est une question critique
+  const isCriticalQuestion = (nodeId: string): boolean => {
+    if (!selectedSurvey?.edges) return false;
+    
+    // Une question est critique si elle a des edges sortants avec des labels différents
+    const outgoingEdges = selectedSurvey.edges.filter(e => e.source === nodeId);
+    return outgoingEdges.length > 0 && outgoingEdges.some(e => e.label);
+  };
+
+  // Modifier la fonction renderQuestionInput pour gérer les réponses aux questions dynamiques
   const renderQuestionInput = (question: Question) => (
     <Controller
       name={`answers.${question.id}` as FieldPath}
       control={control}
       defaultValue=""
       render={({ field }) => {
+        // Handler pour les changements de valeur aux questions dynamiques
+        const handleChange = (value: any) => {
+          field.onChange(value);
+          validateField(`answers.${question.id}`, value);
+          
+          // Si c'est un sondage dynamique, mettre à jour les réponses actuelles
+          if (selectedSurvey?.isDynamic) {
+            handleDynamicAnswerChange(question.id, value);
+          }
+        };
+
         const component = (() => {
           switch (question.type) {
             case "text":
@@ -694,8 +715,7 @@ const SurveyAnswerPage: React.FC = () => {
                   error={!!formErrors[`answers.${question.id}`]}
                   helperText={formErrors[`answers.${question.id}`]}
                   onChange={(e) => {
-                    field.onChange(e);
-                    validateField(`answers.${question.id}`, e.target.value);
+                    handleChange(e.target.value);
                   }}
                 />
               );
@@ -706,8 +726,7 @@ const SurveyAnswerPage: React.FC = () => {
                   <RadioGroup 
                     {...field}
                     onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
+                      handleChange(e.target.value);
                     }}
                   >
                     {question.options?.map((option, index) => (
@@ -729,31 +748,22 @@ const SurveyAnswerPage: React.FC = () => {
 
             case "dropdown":
               return (
-                <Controller
-                  name={`answers.${question.id}`}
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>{question.text || 'Select an option'}</InputLabel>
-                      <Select
-                        {...field}
-                        label={question.text || 'Select an option'}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          validateField(`answers.${question.id}`, value);
-                        }}
-                      >
-                        {(question.options || []).map((option: string) => (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>{question.text || 'Select an option'}</InputLabel>
+                  <Select
+                    {...field}
+                    label={question.text || 'Select an option'}
+                    onChange={(e) => {
+                      handleChange(e.target.value);
+                    }}
+                  >
+                    {(question.options || []).map((option: string) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               );
 
             case "yes-no":
@@ -763,12 +773,11 @@ const SurveyAnswerPage: React.FC = () => {
                     {...field} 
                     row
                     onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
+                      handleChange(e.target.value);
                     }}
                   >
-                    <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                    <FormControlLabel value="no" control={<Radio />} label="No" />
+                    <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
+                    <FormControlLabel value="No" control={<Radio />} label="No" />
                   </RadioGroup>
                   {formErrors[`answers.${question.id}`] && (
                     <Typography color="error" variant="caption">
@@ -786,8 +795,7 @@ const SurveyAnswerPage: React.FC = () => {
                     precision={1}
                     size="large"
                     onChange={(_, value) => {
-                      field.onChange(value);
-                      validateField(`answers.${question.id}`, value);
+                      handleChange(value);
                     }}
                     value={typeof field.value === 'number' ? field.value : 0}
                     sx={{ 
@@ -817,8 +825,7 @@ const SurveyAnswerPage: React.FC = () => {
                     max={10}
                     valueLabelDisplay="auto"
                     onChange={(_, value) => {
-                      field.onChange(value);
-                      validateField(`answers.${question.id}`, value);
+                      handleChange(value);
                     }}
                     value={typeof field.value === 'number' ? field.value : 0}
                   />
@@ -838,8 +845,7 @@ const SurveyAnswerPage: React.FC = () => {
                       label="Select date"
                       value={field.value || null}
                       onChange={(newValue) => {
-                        field.onChange(newValue);
-                        validateField(`answers.${question.id}`, newValue);
+                        handleChange(newValue);
                       }}
                       renderInput={(params: TextFieldProps) => (
                         <TextField
@@ -854,6 +860,44 @@ const SurveyAnswerPage: React.FC = () => {
                 </Box>
               );
 
+            case "color-picker":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <input
+                    type="color"
+                    {...field}
+                    style={{ width: '100%', height: '40px' }}
+                    onChange={(e) => {
+                      handleChange(e.target.value);
+                    }}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
+            case "file-upload":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      handleChange(file);
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
             default:
               return (
                 <TextField 
@@ -861,6 +905,9 @@ const SurveyAnswerPage: React.FC = () => {
                   fullWidth 
                   error={!!formErrors[`answers.${question.id}`]}
                   helperText={formErrors[`answers.${question.id}`]}
+                  onChange={(e) => {
+                    handleChange(e.target.value);
+                  }}
                 />
               );
           }
@@ -868,7 +915,16 @@ const SurveyAnswerPage: React.FC = () => {
 
         return (
           <Box sx={{ width: '100%' }}>
+            {question.media && renderQuestionMedia(question.media)}
             {component}
+            {isCriticalQuestion(question.id) && (
+              <Chip 
+                label="This answer impacts following questions" 
+                color="primary" 
+                size="small" 
+                sx={{ mt: 2 }} 
+              />
+            )}
           </Box>
         );
       }}
@@ -1401,9 +1457,22 @@ const SurveyAnswerPage: React.FC = () => {
         }
 
         const outgoingEdges = selectedSurvey?.edges?.filter(e => e.source === nodeId) || [];
-        outgoingEdges.forEach(edge => {
-          calculateDepth(edge.target, depth + 1);
-        });
+        
+        // Pour les questions critiques, suivre uniquement le chemin correspondant à la réponse actuelle
+        if (isCriticalQuestion(nodeId) && currentAnswers[nodeId]) {
+          const matchingEdge = outgoingEdges.find(edge => 
+            String(edge.label) === String(currentAnswers[nodeId])
+          );
+          
+          if (matchingEdge) {
+            calculateDepth(matchingEdge.target, depth + 1);
+          }
+        } else {
+          // Pour les questions non critiques, explorer tous les chemins
+          outgoingEdges.forEach(edge => {
+            calculateDepth(edge.target, depth + 1);
+          });
+        }
       };
 
       // Calculer la profondeur en commençant par le nœud racine
@@ -1432,11 +1501,6 @@ const SurveyAnswerPage: React.FC = () => {
 
       traverse();
       return orderedNodes;
-    };
-
-    // Fonction pour vérifier si c'est une question critique
-    const isCriticalQuestion = (nodeId: string): boolean => {
-      return selectedSurvey?.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
     };
 
     return (
@@ -1468,36 +1532,42 @@ const SurveyAnswerPage: React.FC = () => {
             </Typography>
             
             {getOrderedNodes().map((node, index) => {
-            const isVisible = shouldShowQuestion(node.id);
-            const isCritical = isCriticalQuestion(node.id);
+              const isVisible = shouldShowQuestion(node.id);
+              const isCritical = isCriticalQuestion(node.id);
 
-            if (!isVisible) return null;
+              if (!isVisible) return null;
 
-            return (
-              <Paper
-                key={node.id}
-                elevation={1}
+              return (
+                <Paper
+                  key={node.id}
+                  elevation={1}
                   className="survey-question-paper"
                   data-testid={`question-${node.id}`}
                   id={`survey-question-${index}`}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: 2,
-                  border: '1px solid rgba(0, 0, 0, 0.1)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>
-                  {node.data.text || node.data.label || 'Question without text'}
-                </Typography>
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: isCritical ? '2px solid #3f51b5' : '1px solid rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    {node.data.text || node.data.label || 'Question without text'}
+                  </Typography>
 
-                <Box sx={{ mt: 2 }}>
-                  {renderQuestionInput(node)}
-                </Box>
-              </Paper>
-            );
-          })}
+                  <Box sx={{ mt: 2 }}>
+                    {renderQuestionInput({
+                      id: node.id,
+                      text: node.data.text || node.data.label || '',
+                      type: node.data.type || 'text',
+                      options: node.data.options || [],
+                      media: node.data.mediaUrl || node.data.media
+                    })}
+                  </Box>
+                </Paper>
+              );
+            })}
           </Box>
 
           {submitError && (
