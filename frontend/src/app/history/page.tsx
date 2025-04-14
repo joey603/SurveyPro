@@ -954,7 +954,7 @@ const SurveyHistoryPage: React.FC = () => {
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            Survey History
+            Activity Log
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
             View your survey responses and created surveys
