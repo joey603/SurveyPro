@@ -159,6 +159,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
     <>
       <Card
         elevation={1}
+        className="analytics-survey-card"
         sx={{
           borderRadius: 2,
           overflow: 'hidden',
@@ -472,6 +473,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
                   color="error"
                   onClick={handleDeleteClick}
                   startIcon={<DeleteIcon />}
+                  className="delete-button"
                   sx={{
                     borderColor: '#f44336',
                     color: '#f44336',
@@ -493,6 +495,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
                   color="error"
                   onClick={handleDeleteClick}
                   startIcon={<DeleteIcon />}
+                  className="delete-button"
                   sx={{
                     borderColor: '#f44336',
                     color: '#f44336',
@@ -509,6 +512,8 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
                 variant="contained"
                 size="small"
                 onClick={() => onViewAnalytics(survey)}
+                className="view-button"
+                data-tutorial="view-analytics-button"
                 sx={{
                   ml: 'auto',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

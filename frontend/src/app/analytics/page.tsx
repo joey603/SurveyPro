@@ -721,17 +721,17 @@ const AnalyticsPage: React.FC = () => {
         position: 'bottom'
       },
       {
-        element: '.MuiGrid-container > .MuiGrid-item:first-child',
+        element: '.analytics-survey-card:first-of-type',
         intro: "Each card represents one of your surveys. You can see basic information like the number of responses and when it was created.",
         position: 'right'
       },
       {
-        element: '.MuiGrid-container > .MuiGrid-item:first-child button:first-of-type',
+        element: '.delete-button:first-of-type',
         intro: "Use this button to delete a survey that you no longer need. This action cannot be undone.",
         position: 'top'
       },
       {
-        element: '.MuiGrid-container > .MuiGrid-item:first-child button:last-of-type',
+        element: '[data-tutorial="view-analytics-button"]',
         intro: "Click here to view detailed analytics for a survey, including response data, charts, and demographic information.",
         position: 'top'
       },
