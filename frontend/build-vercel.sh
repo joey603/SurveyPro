@@ -6,6 +6,9 @@ npm install --legacy-peer-deps
 echo "Installation des packages manquants spécifiques..."
 npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities intro.js intro.js-react typescript --legacy-peer-deps
 
+echo "Installation de tailwindcss et autres dépendances CSS nécessaires..."
+npm install tailwindcss autoprefixer postcss --legacy-peer-deps
+
 # Créer un lien symbolique pour @/utils
 echo "Configuration des alias de chemin..."
 if [ ! -d "node_modules/@" ]; then
