@@ -370,52 +370,101 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       return;
     }
 
-    // Supprimer directement sans confirmation
-    // Find the node to delete
+    // Ajouter des styles de transition pour l'animation de suppression
+    const addDeleteTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'delete-transition-styles';
+      styleElement.textContent = `
+        .react-flow__node {
+          transition: transform 0.5s ease, opacity 0.5s ease !important;
+        }
+        .react-flow__edge {
+          transition: opacity 0.5s ease !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('delete-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1000);
+    };
+
+    addDeleteTransitionStyles();
+
+    // Trouver le nœud à supprimer
     const nodeToDelete = nodes.find(node => node.id === nodeId);
     
-    if (nodeToDelete?.data?.media) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
+    // Trouver les arêtes connectées à ce nœud
+    const connectedEdges = edges.filter(edge => 
+      edge.source === nodeId || edge.target === nodeId
+    );
+    
+    // Animer la disparition du nœud et des arêtes
+    setNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? { ...node, style: { ...node.style, opacity: 0 } } 
+          : node
+      )
+    );
+    
+    setEdges(prevEdges => 
+      prevEdges.map(edge => 
+        connectedEdges.some(e => e.id === edge.id)
+          ? { ...edge, style: { ...edge.style, opacity: 0 } } 
+          : edge
+      )
+    );
+    
+    // Attendre que l'animation se termine avant de supprimer réellement
+    setTimeout(async () => {
+      if (nodeToDelete?.data?.media) {
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            setNotification({
+              show: true,
+              message: 'Authentication token not found',
+              type: 'error'
+            });
+            return;
+          }
+
+          // Delete media from Cloudinary
+          await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
+        } catch (error) {
+          console.error('Error deleting media:', error);
           setNotification({
             show: true,
-            message: 'Authentication token not found',
+            message: 'Error while deleting media',
             type: 'error'
           });
-          return;
         }
-
-        // Delete media from Cloudinary
-        await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
-      } catch (error) {
-        console.error('Error deleting media:', error);
-        setNotification({
-          show: true,
-          message: 'Error while deleting media',
-          type: 'error'
-        });
       }
-    }
 
-    // Delete node and its connections
-    setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
-    setEdges(prevEdges => prevEdges.filter(edge => 
-      edge.source !== nodeId && edge.target !== nodeId
-    ));
-    setSelectedNode(null);
+      // Delete node and its connections
+      setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
+      setEdges(prevEdges => prevEdges.filter(edge => 
+        edge.source !== nodeId && edge.target !== nodeId
+      ));
+      setSelectedNode(null);
 
-    setNotification({
-      show: true,
-      message: 'Question deleted successfully',
-      type: 'success'
-    });
+      setNotification({
+        show: true,
+        message: 'Question deleted successfully',
+        type: 'success'
+      });
 
-    // Hide notification after 3 seconds
-    setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
-    }, 3000);
-  }, [nodes]);
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }, 500); // Attendre que l'animation de disparition se termine
+  }, [nodes, edges]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
     // Check if the edge is connected to a critical question
@@ -426,7 +475,42 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         return; // Don't delete edges from critical questions
       }
     }
-    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+    
+    // Ajouter des styles de transition pour l'animation
+    const addEdgeDeleteTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'edge-delete-transition-styles';
+      styleElement.textContent = `
+        .react-flow__edge {
+          transition: opacity 0.5s ease !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('edge-delete-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1000);
+    };
+
+    addEdgeDeleteTransitionStyles();
+    
+    // Animer la disparition de l'arête
+    setEdges(prevEdges => 
+      prevEdges.map(e => 
+        e.id === edgeId 
+          ? { ...e, style: { ...e.style, opacity: 0 } } 
+          : e
+      )
+    );
+    
+    // Supprimer l'arête après que l'animation soit terminée
+    setTimeout(() => {
+      setEdges(prevEdges => prevEdges.filter(edge => edge.id !== edgeId));
+    }, 500);
   }, [edges, nodes]);
 
   const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
@@ -660,13 +744,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   };
 
   const reorganizeFlow = useCallback(() => {
-    const BASE_VERTICAL_SPACING = 200;
+    const BASE_VERTICAL_SPACING = 150;
     const HORIZONTAL_SPACING = 450;
     const START_Y = 50;
     const IMAGE_HEIGHT = 200;
     const BASE_NODE_HEIGHT = 100;
-    const EXTRA_SPACING_FOR_IMAGE = 50; // Additional spacing for parents with images
-    const EXTRA_SPACING_FOR_CRITICAL = 100; // Additional spacing for critical questions
+    const EXTRA_SPACING_FOR_IMAGE = 50;
+    const EXTRA_SPACING_FOR_CRITICAL = 100;
+    const EXTRA_SPACING_FOR_NESTED = 120; // Espacement pour les nœuds imbriqués (C)
     
     const containerWidth = 1200;
     const CENTER_X = containerWidth / 2;
@@ -674,12 +759,37 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
     const nodeHeights = new Map<string, number>();
-    const parentIds = new Map<string, string>(); // To track parent-child relationships
+    const parentIds = new Map<string, string>();
+    const nodeDepths = new Map<string, number>(); // Pour calculer la profondeur des nœuds
     
     // Calculate the height of each node
     const calculateNodeHeight = (node: Node): number => {
       const hasMedia = node.data.mediaUrl && node.data.mediaUrl.length > 0;
       return hasMedia ? BASE_NODE_HEIGHT + IMAGE_HEIGHT : BASE_NODE_HEIGHT;
+    };
+    
+    // Vérifier si un nœud est descendant d'un nœud critique
+    const isDescendantOfCritical = (nodeId: string, depth = 0, visited = new Set<string>()): { result: boolean, depth: number } => {
+      if (depth > 10 || visited.has(nodeId)) return { result: false, depth: 0 }; // Éviter les boucles infinies
+      visited.add(nodeId);
+      
+      // Trouver le parent du nœud
+      const parentId = parentIds.get(nodeId);
+      if (!parentId) return { result: false, depth: 0 };
+      
+      // Vérifier si le parent est critique
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (parentNode?.data.isCritical) {
+        return { result: true, depth: 1 };
+      }
+      
+      // Récursion: vérifier les ancêtres
+      const ancestorResult = isDescendantOfCritical(parentId, depth + 1, visited);
+      if (ancestorResult.result) {
+        return { result: true, depth: ancestorResult.depth + 1 };
+      }
+      
+      return { result: false, depth: 0 };
     };
     
     // Calculate the vertical spacing needed between two levels
@@ -688,10 +798,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const nextLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel + 1);
       
       const maxCurrentHeight = Math.max(
-        ...currentLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+        ...currentLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT),
+        BASE_NODE_HEIGHT
       );
       const maxNextHeight = Math.max(
-        ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+        ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT),
+        BASE_NODE_HEIGHT
       );
 
       // Check if the parent has an image
@@ -700,7 +812,32 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
       const parentIsCritical = parentNode?.data.isCritical || false;
       
-      let baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
+      // Vérifier si le nœud courant est critique ou son parent
+      const currentNode = nodes.find(n => n.id === nodeId);
+      const isCurrentNodeCritical = currentNode?.data.isCritical || false;
+      
+      // Vérifier si le nœud est un descendant d'un nœud critique (cas B ou C)
+      const descentInfo = isDescendantOfCritical(nodeId);
+      const isDescendant = descentInfo.result;
+      const descentDepth = descentInfo.depth;
+      
+      // Calculer l'espacement vertical de base en fonction du contexte
+      let baseSpacing;
+      
+      // Cas spécial: nœud C (petit-enfant d'un nœud critique)
+      if (isDescendant && descentDepth >= 2) {
+        // Pour le cas C → augmenter significativement l'espacement
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + EXTRA_SPACING_FOR_NESTED, 
+                             (maxCurrentHeight + maxNextHeight) / 2 + 70);
+      }
+      // Si ni le nœud courant ni son parent ne sont critiques, utiliser un espacement réduit
+      else if (!isCurrentNodeCritical && !parentIsCritical) {
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 30);
+      } 
+      // Sinon, utiliser l'espacement standard
+      else {
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 50, (maxCurrentHeight + maxNextHeight) / 2 + 50);
+      }
       
       // Add extra spacing for images
       if (parentHasImage) {
@@ -752,12 +889,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         parentIds.set(edge.target, edge.source);
       });
       
-      const processNode = (nodeId: string, level: number, startColumn: number): number => {
+      const processNode = (nodeId: string, level: number, startColumn: number, depth: number = 0): number => {
         const node = nodes.find(n => n.id === nodeId);
         if (!node || processedNodes.has(nodeId)) return startColumn;
         
         processedNodes.add(nodeId);
         nodeLevels.set(nodeId, level);
+        nodeDepths.set(nodeId, depth);  // Stocker la profondeur
         
         const childEdges = edges.filter(edge => edge.source === nodeId);
         if (childEdges.length === 0) {
@@ -772,7 +910,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           
           let currentColumn = startColumn;
           childEdges.forEach(edge => {
-            currentColumn = processNode(edge.target, level + 1, currentColumn);
+            currentColumn = processNode(edge.target, level + 1, currentColumn, depth + 1);
           });
           
           return startColumn + totalWidth;
@@ -780,7 +918,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           nodeColumns.set(nodeId, startColumn);
           let maxColumn = startColumn;
           childEdges.forEach(edge => {
-            maxColumn = Math.max(maxColumn, processNode(edge.target, level + 1, startColumn));
+            maxColumn = Math.max(maxColumn, processNode(edge.target, level + 1, startColumn, depth + 1));
           });
           return maxColumn;
         }
@@ -820,7 +958,36 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     calculateLayout();
     const orderedNodeIds = getOrderedNodes();
 
-    // Update question numbers
+    // Ajouter des styles de transition pour l'animation
+    const addTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'node-transition-styles';
+      styleElement.textContent = `
+        .react-flow__node {
+          transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+        .react-flow__edge {
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+        .react-flow__edge-path {
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('node-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1500); // Légèrement plus que la durée de la transition
+    };
+
+    // Ajouter les styles de transition
+    addTransitionStyles();
+
+    // Update question numbers and positions
     setNodes(prevNodes => {
       const nodeMap = new Map(prevNodes.map(node => [node.id, node]));
       return orderedNodeIds.map((nodeId, index) => {
@@ -857,7 +1024,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           minZoom: 0.1,
           maxZoom: 1,
         });
-      }, 50);
+      }, 1000); // Attendre que l'animation soit presque terminée
     }
   }, [nodes, edges, reactFlowInstance]);
 
@@ -945,6 +1112,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         return;
       }
 
+      // Ajouter des styles de transition pour l'animation
+      const addTransitionStyles = () => {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'new-node-transition-styles';
+        styleElement.textContent = `
+          .react-flow__node {
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge-path {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+          }
+        `;
+        document.head.appendChild(styleElement);
+
+        // Supprimer les styles après l'animation
+        setTimeout(() => {
+          const existingStyle = document.getElementById('new-node-transition-styles');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+        }, 1000);
+      };
+
+      // Ajouter les styles de transition
+      addTransitionStyles();
+
       const newNode: Node = {
         id: newNodeId,
         type: 'questionNode',
@@ -968,9 +1164,24 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             ? (nodes.find(n => n.id === selectedNode)?.position.y || 0) + 150
             : nodes.length * 150 
         },
+        style: {
+          opacity: 0 // Commencer avec une opacité de 0 pour l'animation
+        }
       };
 
+      // Ajouter le nouveau nœud avec animation
       setNodes(prevNodes => [...prevNodes, newNode]);
+
+      // Animer l'apparition du nœud après un court délai
+      setTimeout(() => {
+        setNodes(prevNodes => 
+          prevNodes.map(node => 
+            node.id === newNodeId 
+              ? { ...node, style: { ...node.style, opacity: 1 } } 
+              : node
+          )
+        );
+      }, 50);
 
       // Create a connection only if a non-critical question is selected
       if (selectedNode && !selectedNodeData?.data.isCritical) {
@@ -985,9 +1196,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           style: { 
             strokeWidth: 2,
             stroke: '#667eea',
+            opacity: 0, // Commencer avec une opacité de 0 pour l'animation
           },
         };
+        
+        // Ajouter l'arête avec animation
         setEdges(prevEdges => [...prevEdges, newEdge]);
+        
+        // Animer l'apparition de l'arête après un court délai
+        setTimeout(() => {
+          setEdges(prevEdges => 
+            prevEdges.map(edge => 
+              edge.id === newEdge.id 
+                ? { ...edge, style: { ...edge.style, opacity: 1 } } 
+                : edge
+            )
+          );
+        }, 100);
+      }
+
+      // Ajuster la vue après l'ajout du nouveau nœud
+      if (reactFlowInstance) {
+        setTimeout(() => {
+          reactFlowInstance.fitView({
+            padding: 0.4,
+            duration: 800,
+            minZoom: 0.1,
+            maxZoom: 1,
+          });
+        }, 300);
       }
     },
     setNodes: (newNodes: Node[]) => {
