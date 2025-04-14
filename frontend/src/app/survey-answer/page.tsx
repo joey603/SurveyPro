@@ -1954,8 +1954,19 @@ const SurveyAnswerPage: React.FC = () => {
       });
 
       if (hasCriticalQuestion) {
+        // Trouver la première question critique en parcourant les noeuds du sondage
+        const criticalNodeId = selectedSurvey.nodes?.find(node => 
+          isCriticalQuestion(node.id)
+        )?.id;
+        
+        // Sélectionner l'élément correspondant à la première question critique
+        // ou utiliser le sélecteur par défaut si nous ne la trouvons pas
+        const criticalQuestionSelector = criticalNodeId 
+          ? `[data-testid="question-${criticalNodeId}"]` 
+          : '.survey-question-paper[style*="border: 2px solid"]';
+        
         steps.push({
-          element: '.survey-question-paper:first-of-type',
+          element: criticalQuestionSelector,
           intro: "Critical questions (like Yes/No or dropdown questions) will determine which subsequent questions you'll see. Your experience will be personalized based on your answers.",
           position: 'left'
         });
