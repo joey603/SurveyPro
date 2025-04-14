@@ -201,9 +201,13 @@ router.get('/google/callback',
       console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
+      // Récupérer le domaine d'origine de la requête depuis le cookie ou la session
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      console.log('Origin URL for redirection:', originUrl);
+      
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -234,13 +238,14 @@ router.get('/google/callback',
 
       console.log('Redirecting with tokens:', tokenData);
 
-      const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
       console.log('Redirect URL:', redirectUrl);
       
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );
@@ -263,9 +268,13 @@ router.get('/github/callback',
       console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
+      // Récupérer le domaine d'origine de la requête depuis le cookie ou la session
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      console.log('Origin URL for redirection:', originUrl);
+      
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -296,13 +305,14 @@ router.get('/github/callback',
 
       console.log('Redirecting with tokens:', tokenData);
 
-      const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
       console.log('Redirect URL:', redirectUrl);
       
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );

@@ -33,6 +33,7 @@ import {
   Code as CodeIcon,
   ContentCopy as ContentCopyIcon,
   Check as CheckIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { colors } from '@/theme/colors';
 import {
@@ -59,7 +60,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { QuestionDetailsDialog } from './QuestionDetailsDialog';
+import { QuestionDetailsDialog, QuestionDetails as DialogQuestionDetails } from './QuestionDetailsDialog';
 import { DemographicStatistics } from './DemographicStatistics';
 import { PathSegment } from './PathTreeVisualizer';
 import { AnalysisGroup } from './GroupsList';
@@ -419,6 +420,49 @@ interface QuestionDetails {
   answers: SurveyResponse[];
 }
 
+interface QuestionDetailsDialog {
+  questionId: string;
+  question: string;
+  answers: string[];
+  type: string;
+}
+
+interface QuestionDetailsSurvey {
+  questionId: string;
+  question: Question;
+  answers: SurveyResponse[];
+}
+
+interface QuestionDetailsDialogFormat {
+  questionId: string;
+  question: string;
+  answers: string[];
+  type: string;
+}
+
+interface QuestionDetailsSurveyFormat {
+  questionId: string;
+  question: Question;
+  answers: SurveyResponse[];
+}
+
+// Fonction de conversion
+const convertToDialogFormat = (details: QuestionDetailsSurveyFormat | null): DialogQuestionDetails | null => {
+  if (!details) return null;
+  
+  const answers = details.answers.map(response => {
+    const answer = response.answers.find(a => a.questionId === details.questionId);
+    return answer ? answer.answer : '';
+  }).filter(answer => answer !== '');
+
+  return {
+    questionId: details.questionId,
+    question: details.question.text,
+    type: details.question.type,
+    answers
+  };
+};
+
 // Assurez-vous d'avoir accès aux couleurs de mise en évidence
 // Si elles ne sont pas déjà importées depuis PathTreeVisualizer, ajoutez-les:
 const HIGHLIGHT_COLORS = [
@@ -452,7 +496,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   });
   const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetailsSurveyFormat | null>(null);
   const [showAllResponses, setShowAllResponses] = useState<{[key: string]: boolean}>({});
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPaths, setSelectedPaths] = useState<PathSegment[][]>([]);
@@ -548,7 +592,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   // si le sondage est dynamique
   useEffect(() => {
     if (survey.isDynamic) {
-      setActiveTab(2); // L'index de l'onglet qui contient l'arborescence
+      setActiveTab(1); // Utiliser l'index 1 pour les sondages dynamiques (Answer Filters)
     }
   }, [survey]);
 
@@ -1166,7 +1210,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         .filter(node => 
           node.type === 'questionNode' || 
           node.type === 'question' || 
-          (node.data && (node.data.questionType || node.data.type))
+          (node.data && (node.data.questionType || node.data.type || node.data.text || node.data.label))
         )
         .map(node => {
           // Extraire les données de question du nœud
@@ -1175,9 +1219,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             id: node.id,
             text: nodeData.text || nodeData.label || 'Question sans titre',
             type: mapNodeTypeToQuestionType(nodeData.questionType || nodeData.type || 'text'),
-            options: nodeData.options || []
+            options: nodeData.options || [],
+            isCritical: nodeData.isCritical || false,
+            questionNumber: nodeData.questionNumber || 0
           };
-        });
+        })
+        .sort((a, b) => a.questionNumber - b.questionNumber); // Trier par numéro de question
     }
     
     // Sinon, retourner les questions standards
@@ -1235,6 +1282,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // Sauvegarder les filtres appliqués s'ils sont fournis
     if (appliedFilters) {
       setPersistentFilters(appliedFilters);
+      setAppliedFilters(appliedFilters); // Mettre à jour également appliedFilters
     }
     
     // IMPORTANT: Ne pas masquer le panneau de filtres ici
@@ -1252,12 +1300,26 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       p => JSON.stringify(p) === JSON.stringify(path)
     );
     
+    // Log détaillé du chemin sélectionné
+    console.log("=== Détails du chemin sélectionné ===");
+    console.log("Chemin:", path.map(segment => ({
+      questionId: segment.questionId,
+      questionText: segment.questionText,
+      answer: segment.answer
+    })));
+    console.log("Action:", pathIndex >= 0 ? "Suppression du chemin" : "Ajout du chemin");
+    console.log("=================================");
+    
     if (pathIndex >= 0) {
       // Si déjà sélectionné, le supprimer
-      setSelectedPaths(selectedPaths.filter((_, i) => i !== pathIndex));
+      const newSelectedPaths = selectedPaths.filter((_, i) => i !== pathIndex);
+      setSelectedPaths(newSelectedPaths);
+      console.log("Chemins restants après suppression:", newSelectedPaths.length);
     } else {
       // Sinon, l'ajouter
-      setSelectedPaths([...selectedPaths, path]);
+      const newSelectedPaths = [...selectedPaths, path];
+      setSelectedPaths(newSelectedPaths);
+      console.log("Nombre total de chemins sélectionnés:", newSelectedPaths.length);
     }
   };
 
@@ -1316,23 +1378,68 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Mettre à jour handlePathFilterChange pour utiliser les réponses filtrées
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    console.log("Path filter changed:", isFiltered, "filtered responses:", filteredResps.length);
+    console.log("=== Changement de filtre de parcours ===");
+    console.log("Filtre activé:", isFiltered);
+    console.log("Nombre de réponses filtrées:", filteredResps.length);
+    console.log("Nombre de chemins sélectionnés:", selectedPaths.length);
+    
+    // Log détaillé des chemins sélectionnés
+    if (selectedPaths.length > 0) {
+      console.log("Chemins sélectionnés:");
+      selectedPaths.forEach((path, index) => {
+        console.log(`  Chemin ${index + 1}:`, path.map(segment => ({
+          question: segment.questionText,
+          réponse: segment.answer
+        })));
+      });
+    }
+    
+    // Log des réponses filtrées (limité pour éviter de surcharger la console)
+    if (filteredResps.length > 0) {
+      console.log("Exemple de réponses filtrées (max 3):");
+      filteredResps.slice(0, 3).forEach((resp, index) => {
+        console.log(`  Réponse ${index + 1} (ID: ${resp._id}):`, resp.answers.map(a => ({
+          questionId: a.questionId,
+          answer: a.answer
+        })));
+      });
+      
+      if (filteredResps.length > 3) {
+        console.log(`  ... et ${filteredResps.length - 3} autres réponses`);
+      }
+    }
+    console.log("==================================");
     
     // Mettre à jour l'état des réponses filtrées
-    setFilteredResponses(isFiltered ? filteredResps : responses);
+    setFilteredResponsesByPath(filteredResps);
     
-    // Mettre à jour l'état de filtrage
+    // S'assurer que l'état de filtrage est correctement mis à jour
+    setPathFilterActive(isFiltered);
     setIsPathFiltered(isFiltered);
     
-    // Réinitialiser les filtres avancés si nécessaire
+    // Si le filtre est activé, nous devons mettre à jour les réponses affichées
     if (isFiltered) {
+      // Réinitialiser les filtres avancés si nécessaire
       setAppliedFilters(undefined);
+      
+      // Assurons-nous que les filtres par chemin prennent priorité
+      setFilteredResponses(filteredResps);
+    } else {
+      // Si le filtre est désactivé, revenir aux réponses d'origine ou aux réponses avec filtres avancés
+      if (appliedFilters && Object.keys(appliedFilters.demographic).length > 0 || 
+          appliedFilters && Object.keys(appliedFilters.answers).length > 0) {
+        // Réappliquer les filtres avancés si nécessaire
+        handleAdvancedFilterApply(filteredResponses, appliedFilters);
+      } else {
+        // Sinon, revenir aux réponses d'origine
+        setFilteredResponses(responses);
+      }
     }
   };
   
   // Déterminez quelles réponses afficher en fonction des filtres actifs
   const displayResponses = pathFilterActive 
-    ? filteredPathResponses 
+    ? filteredResponsesByPath 
     : (filteredResponses.length > 0 ? filteredResponses : responses);
 
   // Cette fonction va afficher les résultats de filtrage dans la console pour le débogage
@@ -1376,7 +1483,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       demographic: {},
       answers: {}
     });
+    setAppliedFilters(undefined); // Réinitialiser également appliedFilters
   };
+
+  // Remplacer l'utilisation directe de selectedQuestion par la version convertie
+  const dialogQuestion = convertToDialogFormat(selectedQuestion);
 
   return (
     <Box>
@@ -1407,6 +1518,23 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         </Typography>
         
         <Box>
+          {isPrivateSurvey && (
+            <Button
+              variant={showPrivateLink ? "contained" : "outlined"}
+              startIcon={showPrivateLink ? <LinkIcon /> : <LinkIcon />}
+              onClick={() => setShowPrivateLink(!showPrivateLink)}
+              aria-label={showPrivateLink ? "Hide Link" : "Show Link"}
+              sx={{
+                mr: 1,
+                ...(showPrivateLink ? {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                } : {})
+              }}
+            >
+              {showPrivateLink ? "Hide Link" : "Show Link"}
+            </Button>
+          )}
+          
           <Button
             variant={showFilters ? "contained" : "outlined"}
             startIcon={showFilters ? <ClearIcon /> : <FilterListIcon />}
@@ -1414,8 +1542,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               
               setShowFilters(!showFilters);
             }}
+            aria-label="Filters"
             sx={{
-              mr: 1,
               ...(showFilters ? {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               } : {})
@@ -1423,7 +1551,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           >
             {showFilters ? "Hide Filters" : "Filters"}
           </Button>
-          
         </Box>
       </Box>
 
@@ -1484,13 +1611,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
             {showFilters && (
               <Grid item xs={12}>
                 <AdvancedFilterPanel
-                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${filteredResponses.length}`}
+                  key={`filter-panel-${pathFilterActive ? "path" : "standard"}-${displayResponses.length}`}
                   survey={{
                     ...survey,
                     questions: getQuestionsToDisplay(),
                     isDynamic: survey.isDynamic || false
                   }}
-                  responses={isPathFiltered ? filteredResponses : responses}
+                  responses={displayResponses}
                   onApplyFilters={(filteredResps, appliedFilters) => {
                     handleAdvancedFilterApply(filteredResps, appliedFilters || persistentFilters);
                   }}
@@ -1498,25 +1625,24 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   onResetFilters={handleResetFilters}
                   initialFilters={appliedFilters}
                   selectedPaths={selectedPaths}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
                 />
               </Grid>
             )}
 
             {survey.isDynamic && (
               <Grid item xs={12}>
-              
-                  
-                  <Box sx={{ height: '600px' }}>
-                    <PathTreeVisualizer 
-                      survey={survey} 
-                      responses={filteredResponses} // Utiliser directement filteredResponses au lieu de la condition
-                      onPathSelect={handlePathSelection}
-                      selectedPaths={selectedPaths}
-                      onFilterChange={handlePathFilterChange}
-                      onPathsLoad={handlePathsLoad}
-                    />
-                  </Box>
-                
+                <Box sx={{ height: '600px' }}>
+                  <PathTreeVisualizer 
+                    survey={survey} 
+                    responses={displayResponses}
+                    onPathSelect={handlePathSelection}
+                    selectedPaths={selectedPaths}
+                    onFilterChange={handlePathFilterChange}
+                    onPathsLoad={handlePathsLoad}
+                  />
+                </Box>
               </Grid>
             )}
 
@@ -1545,6 +1671,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                         position: 'relative',
                         overflow: 'hidden'
                       }}
+                      className="question-card"
                     >
                       <Box
                         sx={{
@@ -1623,6 +1750,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             startIcon={<BarChartIcon />}
                             onClick={() => handleQuestionClick(question.id)}
                             disabled={stats.total === 0}
+                            aria-label="Show details"
                             sx={{
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
@@ -1650,12 +1778,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                  <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }} className="general-statistics-paper">
                     <Typography variant="h6" sx={{ mb: 2, color: '#1a237e' }}>
                       General Statistics
                     </Typography>
                     
-                    <Box sx={{ mb: 3 }}>
+                    <Box sx={{ mb: 3 }} className="general-statistics-section">
                       <Typography variant="body2" color="text.secondary">
                         Total responses: <strong>{filteredResponses.length}</strong>
                       </Typography>
@@ -2085,6 +2213,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             variant="contained"
                             startIcon={<TableViewIcon />}
                             onClick={exportToCSV}
+                            aria-label="Export to CSV"
                             sx={{ 
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
@@ -2098,12 +2227,14 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                             variant="contained"
                             startIcon={<CodeIcon />}
                             onClick={exportToJSON}
+                            aria-label="Export to JSON"
                                 sx={{
                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
                             background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                           }
                         }}
+                        className="export-json-button"
                       >
                         Export to JSON
                           </Button>
@@ -2138,9 +2269,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
         {/* Remplacer la boîte de dialogue existante par le nouveau composant */}
         <QuestionDetailsDialog
-          open={showResponseDetails}
-          onClose={() => setShowResponseDetails(false)}
-          question={selectedQuestion}
+          open={!!selectedQuestion}
+          onClose={() => setSelectedQuestion(null)}
+          question={dialogQuestion}
           chartTypes={chartTypes}
           setChartTypes={setChartTypes}
           renderChart={renderChart}

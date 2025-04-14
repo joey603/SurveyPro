@@ -137,14 +137,15 @@ const LoginPage: React.FC = () => {
 
   const handleGoogleLogin = () => {
     try {
-      console.log('Début de la déconnexion Google');
+      console.log('Début de la connexion Google');
       
       // Nettoyer le localStorage
       localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Vérification que le localStorage est vide
-      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      // Stocker l'origine actuelle dans un cookie pour la redirection
+      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      console.log('Cookie origin set to:', window.location.origin);
       
       // Attendre un court instant avant la redirection
       setTimeout(() => {
@@ -153,20 +154,21 @@ const LoginPage: React.FC = () => {
       }, 100);
       
     } catch (error) {
-      console.error('Erreur lors de la déconnexion Google:', error);
+      console.error('Erreur lors de la connexion Google:', error);
     }
   };
 
   const handleGithubLogin = () => {
     try {
-      console.log('Début de la déconnexion GitHub');
+      console.log('Début de la connexion GitHub');
       
       // Nettoyer le localStorage
-      localStorage.clear(); // Supprime tout le localStorage
+      localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Vérification que le localStorage est vide
-      console.log('Contenu du localStorage après nettoyage:', localStorage);
+      // Stocker l'origine actuelle dans un cookie pour la redirection
+      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      console.log('Cookie origin set to:', window.location.origin);
       
       // Attendre un court instant avant la redirection
       setTimeout(() => {
@@ -175,7 +177,7 @@ const LoginPage: React.FC = () => {
       }, 100);
       
     } catch (error) {
-      console.error('Erreur lors de la déconnexion GitHub:', error);
+      console.error('Erreur lors de la connexion GitHub:', error);
     }
   };
 

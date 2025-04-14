@@ -198,6 +198,55 @@ const chartColors = {
 // Nombre d'éléments à afficher dans la vue tronquée
 const MAX_DISPLAYED_ITEMS = 5;
 
+// Fonction utilitaire pour générer des couleurs distinctes
+interface ColorItem {
+  backgroundColor: string;
+  borderColor: string;
+}
+
+const generateDistinctColors = (count: number): ColorItem[] => {
+  const colors: ColorItem[] = [];
+  
+  // Palette de couleurs de base
+  const baseColors = [
+    { h: 234, s: 60, l: 60 }, // Bleu (#667eea)
+    { h: 271, s: 60, l: 60 }, // Violet (#764ba2)
+    { h: 142, s: 60, l: 60 }, // Vert (#4caf50)
+    { h: 24, s: 60, l: 60 },  // Orange (#ff9800)
+    { h: 340, s: 60, l: 60 }, // Rose (#e91e63)
+    { h: 187, s: 60, l: 60 }, // Cyan (#00bcd4)
+    { h: 45, s: 60, l: 60 },  // Jaune (#ffc107)
+    { h: 326, s: 60, l: 60 }, // Magenta (#e91e63)
+    { h: 162, s: 60, l: 60 }, // Turquoise (#009688)
+    { h: 355, s: 60, l: 60 }, // Rouge (#f44336)
+  ];
+  
+  // Si nous avons besoin de plus de couleurs que la palette de base
+  if (count > baseColors.length) {
+    // Générer des couleurs supplémentaires en variant la teinte
+    for (let i = 0; i < count; i++) {
+      const hue = (i * 360 / count) % 360;
+      const saturation = 60 + (i % 10); // Légère variation de saturation
+      const lightness = 60 + (i % 10);  // Légère variation de luminosité
+      
+      colors.push({
+        backgroundColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 0.6)`,
+        borderColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 1)`
+      });
+    }
+  } else {
+    // Utiliser la palette de base
+    baseColors.slice(0, count).forEach(color => {
+      colors.push({
+        backgroundColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.6)`,
+        borderColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 1)`
+      });
+    });
+  }
+  
+  return colors;
+};
+
 export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   survey,
   responses,
@@ -326,19 +375,22 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Sort ages for consistent color assignment
     const sortedAges = Object.keys(truncatedAges).sort((a, b) => parseInt(a) - parseInt(b));
     
+    // Générer des couleurs distinctes pour chaque âge
+    const colors = generateDistinctColors(sortedAges.length);
+    
     const datasets = sortedAges.map((age, index) => ({
       label: `${age} years`,
       data: [{
         x: parseInt(age),
         y: truncatedAges[age]
       }],
-      backgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length],
-      borderColor: chartColors.borders[index % chartColors.borders.length],
+      backgroundColor: colors[index].backgroundColor,
+      borderColor: colors[index].borderColor,
       borderWidth: 2,
       pointRadius: fullSize ? 10 : 8,
       pointHoverRadius: fullSize ? 12 : 10,
-      hoverBackgroundColor: chartColors.backgrounds[index % chartColors.backgrounds.length].replace('0.6', '0.8'),
-      hoverBorderColor: chartColors.borders[index % chartColors.borders.length].replace('1)', '1.5)'),
+      hoverBackgroundColor: colors[index].backgroundColor.replace('0.6', '0.8'),
+      hoverBorderColor: colors[index].borderColor.replace('1)', '1.5)'),
       hoverBorderWidth: 3,
       fill: false
     }));
@@ -386,14 +438,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                     size: fullSize ? 14 : 12
                   }
                 },
-                onHover: (event, legendItem, legend) => {
-                  if (event && legendItem && event.native) {
-                    const target = event.native.target as HTMLElement;
-                    if (target) {
-                      target.style.cursor = 'pointer';
-                    }
-                  }
-                }
+          onClick: () => {}
         },
         tooltip: {
           callbacks: {
@@ -419,6 +464,11 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 cornerRadius: 6,
         }
       },
+      interaction: {
+        mode: 'nearest' as const,
+        intersect: false
+      },
+      onClick: () => {},
       scales: {
         x: {
           type: 'linear' as const,
@@ -463,10 +513,6 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             color: 'rgba(102, 126, 234, 0.1)'
           }
         }
-      },
-      interaction: {
-        intersect: false,
-        mode: 'nearest' as const
             },
             transitions: {
               active: {
@@ -528,13 +574,20 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Appliquer la troncature si nécessaire
     const { data: truncatedCities, isTruncated, total, allData } = truncateData(stats.city);
     
+    // Générer des couleurs distinctes pour chaque ville
+    const colors = generateDistinctColors(Object.keys(fullSize ? stats.city : truncatedCities).length);
+    
     const chartData = {
       labels: Object.keys(fullSize ? stats.city : truncatedCities),
       datasets: [{
         data: Object.values(fullSize ? stats.city : truncatedCities),
-        backgroundColor: chartColors.backgrounds,
-        borderColor: chartColors.borders,
-        borderWidth: 1
+        backgroundColor: colors.map(c => c.backgroundColor),
+        borderColor: colors.map(c => c.borderColor),
+        borderWidth: fullSize ? 2 : 1,
+        hoverBackgroundColor: colors.map(c => c.backgroundColor.replace('0.6', '0.8')),
+        hoverBorderColor: colors.map(c => c.borderColor.replace('1)', '1.5)')),
+        hoverBorderWidth: 3,
+        hoverOffset: fullSize ? 15 : 10
       }]
     };
     
@@ -546,22 +599,105 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)"
       }}>
         <Doughnut 
           data={chartData} 
           options={{
             ...pieOptions,
             maintainAspectRatio: fullSize ? false : true,
+            animation: {
+              duration: fullSize ? 800 : 500,
+              easing: 'easeOutQuart' as const
+            },
             plugins: {
               ...pieOptions.plugins,
               legend: {
                 ...pieOptions.plugins.legend,
                 position: 'right' as const,
+                align: 'center' as const,
                 labels: {
                   font: {
                     size: fullSize ? 14 : 12
+                  },
+                  padding: fullSize ? 25 : 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  boxWidth: fullSize ? 15 : 12,
+                  boxHeight: fullSize ? 15 : 12,
+                },
+                onClick: () => {}
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const label = context.label || '';
+                    const value = context.formattedValue;
+                    const percentage = (context.parsed / displayedResponses.length * 100).toFixed(1);
+                    return `${label}: ${value} (${percentage}%)`;
                   }
+                },
+                titleFont: {
+                  size: fullSize ? 16 : 14,
+                  weight: 'bold' as const
+                },
+                bodyFont: {
+                  size: fullSize ? 14 : 12
+                },
+                padding: fullSize ? 12 : 8,
+                boxPadding: 5,
+                usePointStyle: true,
+                backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                borderColor: 'rgba(102, 126, 234, 0.6)',
+                borderWidth: 1,
+                caretSize: 8,
+                cornerRadius: 6,
+              }
+            },
+            layout: {
+              padding: {
+                top: fullSize ? 30 : 20,
+                bottom: fullSize ? 30 : 20,
+                left: fullSize ? 20 : 10,
+                right: fullSize ? 20 : 10
+              },
+              autoPadding: true
+            },
+            elements: {
+              arc: {
+                borderWidth: fullSize ? 2 : 1,
+                borderColor: '#fff',
+                hoverBorderWidth: 3,
+                hoverBorderColor: '#fff',
+                hoverOffset: fullSize ? 15 : 10,
+                borderAlign: 'center' as const,
+                borderRadius: 1
+              }
+            },
+            transitions: {
+              active: {
+                animation: {
+                  duration: 400,
+                  easing: 'easeOutQuart' as const
+                }
+              },
+              resize: {
+                animation: {
+                  duration: 500,
+                  easing: 'easeOutQuart' as const
+                }
+              },
+              show: {
+                animations: {
+                  x: { from: 0 },
+                  y: { from: 0 }
+                }
+              },
+              hide: {
+                animations: {
+                  x: { to: 0 },
+                  y: { to: 0 }
                 }
               }
             }
@@ -574,7 +710,12 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             left: 0, 
             width: '100%', 
             textAlign: 'center',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            opacity: 0.8,
+            transition: 'opacity 0.3s ease',
+            '&:hover': {
+              opacity: 1
+            }
           }}>
             <Typography variant="caption" color="text.secondary">
               {total - Object.keys(truncatedCities).length} more cities hidden. Click to view all.
@@ -717,15 +858,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   boxWidth: fullSize ? 15 : 12,
                   boxHeight: fullSize ? 15 : 12,
                 },
-                onHover: (event, legendItem, legend) => {
-                  // On hover, highlight the segment
-                  if (event && legendItem && event.native) {
-                    const target = event.native.target as HTMLElement;
-                    if (target) {
-                      target.style.cursor = 'pointer';
-                    }
-                  }
-                }
+                onClick: () => {}
               },
               tooltip: {
                 callbacks: {
@@ -920,7 +1053,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             pointerEvents: 'none'
           }}>
             <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedEducation).length} autres levels hidden. Click to view all.
+              {total - Object.keys(truncatedEducation).length} more education levels hidden. Click to view all.
             </Typography>
           </Box>
         )}
@@ -1057,7 +1190,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   };
 
   return (
-    <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }}>
+    <Box sx={{ mt: 4, p: 3, borderRadius: 2, bgcolor: '#fff', boxShadow: '0 2px 20px rgba(0,0,0,0.05)' }} className="demographic-statistics-section">
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -1192,7 +1325,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           <Grid item xs={12} md={6}>
             <Paper 
               elevation={0} 
-              onClick={() => handleOpenDialog('age', 'Distribution par age')}
+              onClick={() => handleOpenDialog('age', 'Age Distribution')}
               sx={{ 
               p: 3, 
               height: '400px',
@@ -1333,14 +1466,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="h6" sx={{ 
+          <Box component="span" sx={{ 
             fontWeight: 'bold',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
           }}>
             {currentTitle}
-          </Typography>
+          </Box>
           <IconButton edge="end" color="inherit" onClick={handleCloseDialog} aria-label="close">
             <CloseIcon />
           </IconButton>
@@ -1383,25 +1516,25 @@ const GroupsList: React.FC<GroupsListProps> = ({
                 secondary={`${group.respondentCount} respondents • ${group.paths.length} paths`}
               />
               <ListItemSecondaryAction>
-                <Tooltip title="Voir l'analyse de ce groupe">
+                <Tooltip title="View group analysis">
                   <IconButton edge="end" onClick={() => onSelectGroup(group.id)}>
                     <VisibilityIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Renommer">
+                <Tooltip title="Rename">
                   <IconButton edge="end" onClick={() => {
-                    const newName = prompt('Nouveau nom pour ce groupe :', group.name);
+                    const newName = prompt('New group name:', group.name);
                     if (newName) onRenameGroup(group.id, newName);
                   }}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Supprimer">
+                <Tooltip title="Delete">
                   <IconButton 
                     edge="end" 
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
+                      if (confirm('Are you sure you want to delete this group?')) {
                         onDeleteGroup(group.id);
                       }
                     }}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import {
   Box,
@@ -40,6 +40,7 @@ interface QuestionNodeData {
   isCritical: boolean;
   questionNumber: number;
   selectedDate?: Date | null;
+  isEditing?: boolean;
   onChange?: (data: Partial<QuestionNodeData>) => void;
   onCreatePaths?: (nodeId: string, options: string[]) => void;
 }
@@ -76,6 +77,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [mediaTracker, setMediaTracker] = useState<Record<string, string>>({});
+  
+  // Use a ref to track previous editing state
+  const prevEditingRef = useRef(false);
+
+  // Synchroniser l'état local avec les props
+  useEffect(() => {
+    // Mettre à jour l'état local lorsque les props changent
+    setQuestionData({
+      ...data,
+      isCritical: data.isCritical || false,
+    });
+    
+    console.log("QuestionNode received new props:", data);
+  }, [data]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,10 +135,23 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     const isCritical = event.target.checked;
     console.log("Critical change:", isCritical);
     
+    let newType = isCritical ? 'yes-no' : 'text';
+    let newOptions: string[] = [];
+    
+    // Définir les options par défaut selon le type de question
+    if (isCritical) {
+      if (newType === 'yes-no') {
+        newOptions = ['Yes', 'No'];
+      } else if (newType === 'dropdown') {
+        newOptions = ['Option 1', 'Option 2', 'Option 3'];
+      }
+    }
+    
     const newData = { 
       ...questionData, 
       isCritical,
-      type: isCritical ? 'yes-no' : 'text'
+      type: newType,
+      options: newOptions
     };
     
     updateNodeData(newData);
@@ -131,8 +159,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     // Créer les chemins après la mise à jour des données
     if (data.onCreatePaths) {
       if (isCritical) {
-        console.log("Creating Yes/No paths");
-        data.onCreatePaths(data.id, ['Yes', 'No']);
+        console.log("Creating paths for critical question");
+        data.onCreatePaths(data.id, newOptions.length > 0 ? newOptions : ['Yes', 'No']);
       } else {
         console.log("Removing paths");
         data.onCreatePaths(data.id, []);
@@ -328,7 +356,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
   const updateNodeData = (newData: typeof questionData) => {
     setQuestionData(newData);
-    // Propager les changements au nœud parent
+    // Propagate changes to parent node
     if (data.onChange) {
       data.onChange({
         ...data,
@@ -336,6 +364,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       });
     }
   };
+
+  // Notify parent when editing state changes - only when it actually changes
+  useEffect(() => {
+    // Only notify parent when the editing state actually changes
+    if (isEditing !== prevEditingRef.current && data.onChange) {
+      prevEditingRef.current = isEditing;
+      
+      // Create an object with all the data properties that are expected by the interface
+      const nodeUpdate: Partial<QuestionNodeData> = {};
+      
+      // Set a custom property on the node that SurveyFlow can check
+      const customData = {
+        _editingState: isEditing
+      };
+      
+      // Use type assertion to add our custom property
+      data.onChange(Object.assign(nodeUpdate, customData) as Partial<QuestionNodeData>);
+    }
+  }, [isEditing, data]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -346,7 +393,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Typography variant="subtitle1" fontWeight="bold">
             Question {data.questionNumber} 
           </Typography>
-          <IconButton size="small" onClick={() => setIsEditing(!isEditing)}>
+          <IconButton size="small" onClick={() => setIsEditing(!isEditing)} data-intro="edit-question">
             <EditIcon />
           </IconButton>
         </Box>
@@ -362,10 +409,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               }
               label="Critical Question (creates different paths)"
               sx={{ mb: 2 }}
+              data-intro="critical-question"
             />
 
             <Box
               onClick={handleTypeClick}
+              data-intro="question-type-selector"
               sx={{
                 p: 1,
                 border: '1px solid rgba(0, 0, 0, 0.23)',
@@ -445,6 +494,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   variant="outlined"
                   size="small"
                   disabled={isUploading}
+                  data-intro="add-media"
                 >
                   {isUploading ? 'Uploading...' : 'Add Media'}
                 </Button>

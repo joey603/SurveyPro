@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../utils/AuthContext';
+import { useAuth } from '../../utils/AuthContext';
 import { 
   respondToSurveyShare,
   fetchPendingShares 
-} from '../utils/surveyService';
+} from '../../utils/surveyService';
 
 interface SurveyShare {
   _id: string;

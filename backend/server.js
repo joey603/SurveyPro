@@ -5,6 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const passport = require('passport');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const authRoutes = require("./routes/auth");
 const surveyRoutes = require("./routes/surveys");
 const surveyAnswerRoutes = require("./routes/surveyAnswers");
@@ -34,6 +35,7 @@ app.use(passport.session());
 // Middleware de base
 app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
+app.use(cookieParser());
 
 // Configuration CORS avant les routes
 app.use(cors({

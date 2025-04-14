@@ -306,13 +306,13 @@ export const fetchAvailableSurveys = async (token: string) => {
   try {
     console.log('Fetching surveys from:', API_URL); // Mise à jour du log
 
-    // Mise à jour des URLs pour utiliser API_URL
+    // Utilisation des routes /available pour récupérer tous les sondages publics et les sondages privés de l'utilisateur
     const classicResponse = await axios.get(`${API_URL}/surveys/available`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('Classic surveys:', classicResponse.data);
 
-    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
+    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys/available`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('Dynamic surveys:', dynamicResponse.data);
@@ -413,6 +413,28 @@ export const respondToSurveyShare = async (shareId: string, accept: boolean, tok
     return response.data;
   } catch (error) {
     console.error('Error responding to survey share:', error);
+    throw error;
+  }
+};
+
+// Nouvelle fonction pour supprimer explicitement un partage de sondage
+export const deleteSurveyShare = async (shareId: string, token: string) => {
+  try {
+    console.log('Attempting to explicitly delete survey share:', shareId);
+    
+    const response = await axios({
+      method: 'DELETE',
+      url: `${BASE_URL}/api/survey-shares/${shareId}`,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Share deletion response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting survey share:', error);
     throw error;
   }
 };

@@ -46,7 +46,13 @@ export const PathFilterProvider: React.FC<PathFilterProviderProps> = ({ children
     setFilteredQuestionIds(questionIds);
     setIsPathFiltered(true);
     
+    // Log pour le débogage
     console.log("Path filter applied:", questionIds);
+    console.log("Path filter details:", path.map(segment => ({
+      questionId: segment.questionId,
+      questionText: segment.questionText,
+      answer: segment.answer
+    })));
   };
 
   // Effacer le filtre de chemin
