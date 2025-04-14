@@ -1284,7 +1284,7 @@ const AnalyticsPage: React.FC = () => {
             )}
 
             {!loading && !error && (
-              <Grid container spacing={3}>
+              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {sortedSurveys.map((survey, index) => {
                   // Générer une clé unique en utilisant l'index comme fallback
                   const uniqueKey = survey._id 
@@ -1292,26 +1292,19 @@ const AnalyticsPage: React.FC = () => {
                     : `survey-${index}`;
                   
                   return (
-                    <Grid 
-                      item 
-                      xs={12} 
-                      sm={6} 
-                      md={6} 
+                    <AnalyticsCard
                       key={uniqueKey}
-                    >
-                      <AnalyticsCard
-                        survey={survey}
-                        onDelete={handleDeleteSurvey}
-                        onViewAnalytics={handleViewAnalytics}
-                        userId={user?.id}
-                        responses={surveyResponses[survey._id] || []}
-                        onAcceptShare={'shareId' in survey ? handleAcceptShare : undefined}
-                        onRejectShare={'shareId' in survey ? handleRejectShare : undefined}
-                      />
-                    </Grid>
+                      survey={survey}
+                      onDelete={handleDeleteSurvey}
+                      onViewAnalytics={handleViewAnalytics}
+                      userId={user?.id}
+                      responses={surveyResponses[survey._id] || []}
+                      onAcceptShare={'shareId' in survey ? handleAcceptShare : undefined}
+                      onRejectShare={'shareId' in survey ? handleRejectShare : undefined}
+                    />
                   );
                 })}
-              </Grid>
+              </Box>
             )}
           </Box>
         </Paper>
