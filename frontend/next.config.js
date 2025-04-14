@@ -11,6 +11,8 @@ const nextConfig = {
     // Ignorer les erreurs TS durant la construction pour production
     ignoreBuildErrors: true,
   },
+  trailingSlash: true,
+  output: 'standalone',
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -22,6 +24,25 @@ const nextConfig = {
   images: {
     domains: ['res.cloudinary.com'],
     formats: ['image/avif', 'image/webp'],
+  },
+  // Assurez-vous que toutes les routes sont correctement traitées
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'surveypro-frontend.vercel.app'],
+    },
+  },
+  // Ajouter une gestion des 404 personnalisée
+  async rewrites() {
+    return [
+      {
+        source: '/:path*',
+        destination: '/:path*',
+      },
+      {
+        source: '/survey-answer',
+        destination: '/survey-answer',
+      },
+    ];
   },
 };
 
