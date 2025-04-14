@@ -7,7 +7,7 @@ echo "Installation des packages manquants spécifiques..."
 npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities intro.js intro.js-react typescript --legacy-peer-deps
 
 echo "Installation de tailwindcss et autres dépendances CSS nécessaires..."
-npm install --save tailwindcss@latest @tailwindcss/postcss postcss@latest autoprefixer@latest --legacy-peer-deps
+npm install --save tailwindcss@3.3.0 postcss@latest autoprefixer@latest --legacy-peer-deps
 
 # Créer un lien symbolique pour @/utils
 echo "Configuration des alias de chemin..."

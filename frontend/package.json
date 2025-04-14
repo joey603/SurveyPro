@@ -22,7 +22,6 @@
     "@mui/x-date-pickers": "^5.0.20",
     "@nivo/core": "^0.88.0",
     "@nivo/radar": "^0.88.0",
-    "@tailwindcss/postcss": "^1.0.0",
     "@types/d3": "^7.4.3",
     "@types/intro.js": "^5.1.5",
     "@types/lodash": "^4.17.13",
