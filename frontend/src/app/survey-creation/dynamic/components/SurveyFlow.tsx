@@ -981,7 +981,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         if (existingStyle) {
           existingStyle.remove();
         }
-      }, 1500); // Légèrement plus que la durée de la transition
+      }, 1500);
     };
 
     // Ajouter les styles de transition
@@ -1071,8 +1071,82 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   useImperativeHandle(ref, () => ({
     resetFlow: () => {
-      setNodes(initialNodes);
-      setEdges(initialEdges);
+      // Créer un tout nouveau nœud avec isCritical explicitement à false
+      const brandNewNode: Node = {
+        id: '1',
+        type: 'questionNode',
+        data: { 
+          id: '1',
+          questionNumber: 1,
+          type: 'text',
+          text: '',
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+          onCreatePaths: createPathsFromNode,
+          onChange: (newData: any) => handleNodeChange('1', newData)
+        },
+        position: { x: 400, y: 50 },
+      };
+      
+      // Remplacer tous les nœuds par ce nouveau nœud
+      setNodes([brandNewNode]);
+      setEdges([]);
+      
+      // Forcer une mise à jour explicite via handleNodeChange
+      setTimeout(() => {
+        handleNodeChange('1', { 
+          isCritical: false,
+          type: 'text',
+          options: []
+        });
+        
+        // Suppression explicite des chemins
+        createPathsFromNode('1', []);
+        
+        // Log pour debug
+        console.log("Reset flow: node data forced update", brandNewNode);
+      }, 100);
+      
+      // Ajouter une animation de transition pour l'effet visuel
+      const addTransitionStyles = () => {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'reset-transition-styles';
+        styleElement.textContent = `
+          .react-flow__node {
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.7s ease !important;
+          }
+        `;
+        document.head.appendChild(styleElement);
+
+        // Supprimer les styles après l'animation
+        setTimeout(() => {
+          const existingStyle = document.getElementById('reset-transition-styles');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+        }, 1500);
+      };
+      
+      addTransitionStyles();
+      
+      // Afficher une notification de confirmation
+      setNotification({
+        show: true,
+        message: 'Flow has been reset successfully',
+        type: 'success'
+      });
+      
+      // Masquer la notification après quelques secondes
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
+      // Réorganiser le flux après un court délai pour l'animation
+      setTimeout(() => {
+        reorganizeFlow();
+      }, 300);
     },
     getNodes: () => nodes,
     addNewQuestion: () => {

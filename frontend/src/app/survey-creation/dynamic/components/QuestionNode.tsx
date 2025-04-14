@@ -81,6 +81,17 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Use a ref to track previous editing state
   const prevEditingRef = useRef(false);
 
+  // Synchroniser l'état local avec les props
+  useEffect(() => {
+    // Mettre à jour l'état local lorsque les props changent
+    setQuestionData({
+      ...data,
+      isCritical: data.isCritical || false,
+    });
+    
+    console.log("QuestionNode received new props:", data);
+  }, [data]);
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
