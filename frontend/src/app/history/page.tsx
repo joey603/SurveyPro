@@ -35,6 +35,11 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { TextFieldProps } from '@mui/material';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CreateIcon from '@mui/icons-material/Create';
+import SchoolIcon from '@mui/icons-material/School';
+import Tooltip from '@mui/material/Tooltip';
+import Fab from '@mui/material/Fab';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
 
 const DEFAULT_IMAGE = '/placeholder-image.jpg';
 
@@ -941,7 +946,7 @@ const SurveyHistoryPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '1000px ',
+        maxWidth: '1000px',
         mb: 4,
       }}>
         <Box 
@@ -976,6 +981,7 @@ const SurveyHistoryPage: React.FC = () => {
                 onClick={() => handleViewTypeChange('responses')}
                 disabled={isTransitioning}
                 variant={viewType === 'responses' ? "contained" : "outlined"}
+                data-tutorial="responses-button"
                 sx={{
                   py: 1.5,
                   fontSize: '1rem',
@@ -1011,6 +1017,7 @@ const SurveyHistoryPage: React.FC = () => {
                 onClick={() => handleViewTypeChange('created')}
                 disabled={isTransitioning}
                 variant={viewType === 'created' ? "contained" : "outlined"}
+                data-tutorial="created-button"
                 sx={{
                   py: 1.5,
                   fontSize: '1rem',
@@ -1130,6 +1137,7 @@ const SurveyHistoryPage: React.FC = () => {
                     <Paper
                       key={response._id}
                       elevation={1}
+                      className="history-survey-card"
                       sx={{
                         borderRadius: 2,
                         overflow: 'hidden',
@@ -1362,6 +1370,8 @@ const SurveyHistoryPage: React.FC = () => {
                           onClick={() => handleExpandClick(response._id)}
                           variant="contained"
                           size="small"
+                          className="view-details-button"
+                          data-tutorial="view-details-button"
                           sx={{
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             '&:hover': {
@@ -1388,6 +1398,7 @@ const SurveyHistoryPage: React.FC = () => {
                     <Paper
                       key={survey._id}
                       elevation={1}
+                      className="history-survey-card"
                       sx={{
                         borderRadius: 2,
                         overflow: 'hidden',
@@ -1618,6 +1629,8 @@ const SurveyHistoryPage: React.FC = () => {
                           onClick={() => handleExpandClick(survey._id)}
                           variant="contained"
                           size="small"
+                          className="view-details-button"
+                          data-tutorial="view-details-button"
                           sx={{
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             '&:hover': {
@@ -1635,8 +1648,349 @@ const SurveyHistoryPage: React.FC = () => {
           )}
         </Box>
       </Paper>
+
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Start tutorial">
+        <Fab
+          size="small"
+          onClick={openDetails ? startDetailsTutorial : startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
+};
+
+// Fonction pour démarrer le tutoriel principal (liste)
+const startTutorial = () => {
+  // Créer une nouvelle instance et la rendre accessible globalement
+  const intro = introJs();
+  (window as any).introInstance = intro;
+  
+  // Ajouter des styles pour le tutoriel
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    .introjs-tooltip {
+      opacity: 1 !important;
+      visibility: visible !important;
+      z-index: 99998 !important;
+      display: block !important;
+      animation: none !important;
+      transition: none !important;
+    }
+    .introjs-helperLayer {
+      z-index: 99997 !important;
+    }
+    .introjs-tooltip {
+      min-width: 250px !important;
+      max-width: 400px !important;
+      background: white !important;
+      color: #333 !important;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+      border-radius: 5px !important;
+      font-family: sans-serif !important;
+    }
+    .introjs-tooltiptext {
+      padding: 15px !important;
+      text-align: center !important;
+      font-size: 16px !important;
+      line-height: 1.5 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      display: block !important;
+    }
+    .introjs-overlay {
+      opacity: 0.7 !important;
+    }
+    /* Forces les tooltips à s'afficher */
+    .introjs-showElement {
+      z-index: 99999 !important;
+    }
+    .introjs-fixParent {
+      z-index: auto !important;
+    }
+    /* Personnalisation des boutons */
+    .introjs-tooltipbuttons {
+      display: flex !important;
+      justify-content: space-between !important;
+      padding: 10px !important;
+      border-top: 1px solid #eee !important;
+    }
+    .introjs-button {
+      text-shadow: none !important;
+      padding: 8px 16px !important;
+      font-size: 14px !important;
+      border-radius: 4px !important;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border: none !important;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+      margin: 5px !important;
+      transition: all 0.2s !important;
+    }
+    .introjs-prevbutton, .introjs-nextbutton {
+      flex: 1 !important;
+      text-align: center !important;
+    }
+    .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+      opacity: 0.9 !important;
+    }
+    .introjs-skipbutton {
+      background: #f44336 !important;
+      color: white !important;
+    }
+    .introjs-disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
+  `;
+  document.head.appendChild(styleEl);
+  
+  // Créer les étapes du tutoriel
+  const steps = [
+    {
+      element: 'body',
+      intro: "Welcome to your survey history! This tutorial will guide you through the available features.",
+      position: 'top'
+    },
+    {
+      element: '.MuiTypography-h6',
+      intro: "This page allows you to view your survey responses history and the surveys you've created.",
+      position: 'bottom'
+    },
+    {
+      element: '[data-tutorial="responses-button"]', 
+      intro: "Use this button to see the surveys you've responded to.",
+      position: 'bottom'
+    },
+    {
+      element: '[data-tutorial="created-button"]',
+      intro: "Use this button to see the surveys you've created.",
+      position: 'bottom'
+    },
+    {
+      element: 'input[placeholder*="Search"]',
+      intro: "Quickly search for surveys by their title.",
+      position: 'bottom'
+    },
+    {
+      element: '.MuiChip-root',
+      intro: "Filter surveys by creation date by clicking on this filter.",
+      position: 'bottom'
+    },
+    {
+      element: '.history-survey-card:first-of-type',
+      intro: "Each card represents a survey with its basic information.",
+      position: 'right'
+    },
+    {
+      element: '[data-tutorial="view-details-button"]',
+      intro: "Click here to see the complete details of the survey or your response.",
+      position: 'top'
+    },
+    {
+      element: 'body',
+      intro: "You now know how to use the survey history page!",
+      position: 'top'
+    }
+  ];
+  
+  // Configuration du tutoriel
+  intro.setOptions({
+    showBullets: true,
+    showProgress: true,
+    tooltipPosition: 'auto',
+    scrollToElement: true,
+    scrollPadding: 280,
+    exitOnEsc: false,
+    exitOnOverlayClick: false,
+    showButtons: true,
+    showStepNumbers: true,
+    prevLabel: 'Previous',
+    nextLabel: 'Next',
+    skipLabel: '×',
+    doneLabel: 'Finish',
+    steps: steps as any
+  });
+  
+  // Nettoyer à la sortie
+  intro.onexit(function() {
+    if (document.head.contains(styleEl)) {
+      document.head.removeChild(styleEl);
+    }
+  });
+  
+  // Démarrer le tutoriel
+  intro.start();
+};
+
+// Fonction pour démarrer le tutoriel de détails (vue d'une réponse)
+const startDetailsTutorial = () => {
+  // Créer une nouvelle instance et la rendre accessible globalement
+  const intro = introJs();
+  (window as any).introInstance = intro;
+  
+  // Ajouter des styles pour le tutoriel
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    .introjs-tooltip {
+      opacity: 1 !important;
+      visibility: visible !important;
+      z-index: 99998 !important;
+      display: block !important;
+      animation: none !important;
+      transition: none !important;
+    }
+    .introjs-helperLayer {
+      z-index: 99997 !important;
+    }
+    .introjs-tooltip {
+      min-width: 250px !important;
+      max-width: 400px !important;
+      background: white !important;
+      color: #333 !important;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+      border-radius: 5px !important;
+      font-family: sans-serif !important;
+    }
+    .introjs-tooltiptext {
+      padding: 15px !important;
+      text-align: center !important;
+      font-size: 16px !important;
+      line-height: 1.5 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      display: block !important;
+    }
+    .introjs-overlay {
+      opacity: 0.7 !important;
+    }
+    /* Forces les tooltips à s'afficher */
+    .introjs-showElement {
+      z-index: 99999 !important;
+    }
+    .introjs-fixParent {
+      z-index: auto !important;
+    }
+    /* Personnalisation des boutons */
+    .introjs-tooltipbuttons {
+      display: flex !important;
+      justify-content: space-between !important;
+      padding: 10px !important;
+      border-top: 1px solid #eee !important;
+    }
+    .introjs-button {
+      text-shadow: none !important;
+      padding: 8px 16px !important;
+      font-size: 14px !important;
+      border-radius: 4px !important;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border: none !important;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+      margin: 5px !important;
+      transition: all 0.2s !important;
+    }
+    .introjs-prevbutton, .introjs-nextbutton {
+      flex: 1 !important;
+      text-align: center !important;
+    }
+    .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+      opacity: 0.9 !important;
+    }
+    .introjs-skipbutton {
+      background: #f44336 !important;
+      color: white !important;
+    }
+    .introjs-disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
+  `;
+  document.head.appendChild(styleEl);
+  
+  // Créer les étapes du tutoriel
+  const steps = [
+    {
+      element: 'body',
+      intro: "Welcome to your response detailed view! This tutorial will guide you through the available information.",
+      position: 'top'
+    },
+    {
+      element: 'button svg[data-testid="ArrowBackIcon"]',
+      intro: "Click this button to return to the history list.",
+      position: 'right'
+    },
+    {
+      element: 'h6.MuiTypography-h6:nth-of-type(1)',
+      intro: "This is the title of the survey you responded to.",
+      position: 'bottom'
+    },
+    {
+      element: 'h6.MuiTypography-h6:nth-of-type(2)',
+      intro: "This section displays the demographic information you provided.",
+      position: 'bottom'
+    },
+    {
+      element: 'h6.MuiTypography-h6:nth-of-type(3)',
+      intro: "This section presents the survey questions and your answers.",
+      position: 'bottom'
+    },
+    {
+      element: '.MuiPaper-root:nth-child(4)',
+      intro: "Each card shows a question and the answer you provided.",
+      position: 'right'
+    },
+    {
+      element: 'body',
+      intro: "You can now explore your responses in detail!",
+      position: 'top'
+    }
+  ];
+  
+  // Configuration du tutoriel
+  intro.setOptions({
+    showBullets: true,
+    showProgress: true,
+    tooltipPosition: 'auto',
+    scrollToElement: true,
+    scrollPadding: 280,
+    exitOnEsc: false,
+    exitOnOverlayClick: false,
+    showButtons: true,
+    showStepNumbers: true,
+    prevLabel: 'Previous',
+    nextLabel: 'Next',
+    skipLabel: '×',
+    doneLabel: 'Finish',
+    steps: steps as any
+  });
+  
+  // Nettoyer à la sortie
+  intro.onexit(function() {
+    if (document.head.contains(styleEl)) {
+      document.head.removeChild(styleEl);
+    }
+  });
+  
+  // Démarrer le tutoriel
+  intro.start();
 };
 
 export default SurveyHistoryPage;
