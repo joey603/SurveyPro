@@ -124,23 +124,41 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     const isCritical = event.target.checked;
     console.log("Critical change:", isCritical);
     
+    let newType = isCritical ? 'yes-no' : 'text';
+    let newOptions: string[] = [];
+    
+    // Définir les options par défaut selon le type de question
+    if (isCritical) {
+      if (newType === 'yes-no') {
+        newOptions = ['Yes', 'No'];
+      } else if (newType === 'dropdown') {
+        newOptions = ['Option 1', 'Option 2', 'Option 3'];
+      }
+    }
+    
     const newData = { 
       ...questionData, 
       isCritical,
-      type: isCritical ? 'yes-no' : 'text'
+      type: newType,
+      options: newOptions
     };
     
+    // Mettre à jour les données d'abord
     updateNodeData(newData);
     
-    // Créer les chemins après la mise à jour des données
-    if (data.onCreatePaths) {
-      if (isCritical) {
-        console.log("Creating Yes/No paths");
-        data.onCreatePaths(data.id, ['Yes', 'No']);
-      } else {
-        console.log("Removing paths");
-        data.onCreatePaths(data.id, []);
-      }
+    // Créer les chemins après la mise à jour des données avec un petit délai
+    const createPathsFn = data.onCreatePaths;
+    if (createPathsFn) {
+      // Utiliser setTimeout pour permettre à l'interface de se mettre à jour d'abord
+      setTimeout(() => {
+        if (isCritical) {
+          console.log("Creating paths for critical question");
+          createPathsFn(data.id, newOptions.length > 0 ? newOptions : ['Yes', 'No']);
+        } else {
+          console.log("Removing paths");
+          createPathsFn(data.id, []);
+        }
+      }, 50);
     }
   };
 

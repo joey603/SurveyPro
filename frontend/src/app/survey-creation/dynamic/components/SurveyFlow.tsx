@@ -97,9 +97,19 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           return node1.position.y > node2.position.y;
         };
         
-        // If editing, move nodes below this one down
-        // If closing edit, move them back up
+        // Function to check if a node is a child of the edited node
+        const isChildOfEditedNode = (node: Node) => {
+          const nodeId = node.id;
+          // Check if node ID starts with editedNode.id followed by an underscore (pattern for child nodes)
+          return nodeId.startsWith(`${editedNode.id}_`);
+        };
+        
+        // Si on ouvre le mode édition, déplacer tous les nœuds vers le bas
+        // Si on ferme le mode édition, remonter tous les nœuds, y compris les enfants des questions critiques
         return updatedNodes.map(node => {
+          const isCriticalNode = editedNode.data.isCritical;
+          const isChild = isChildOfEditedNode(node);
+          
           if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
             return {
               ...node,
@@ -136,7 +146,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const verticalSpacing = 300; // Augmented to 300px
+    // Augmentation de l'espacement vertical si la question est critique
+    const baseVerticalSpacing = 300;
+    const criticalVerticalSpacing = 450; // Augmenté pour les questions critiques
+    
+    // Utiliser l'espacement vertical en fonction de l'état critique de la question source
+    const verticalSpacing = sourceNode.data.isCritical ? criticalVerticalSpacing : baseVerticalSpacing;
+    
     const horizontalSpacing = 800; // Increased to 800px for a much wider spacing
 
     // Calculate the total width and starting position
@@ -166,7 +182,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           mediaUrl: '',
           isCritical: false,
           onCreatePaths: createPathsFromNode,
-          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
+          onChange: (newData: any) => handleNodeChange(newNodeId, newData),
+          parentNodeId: sourceId, // Stocker l'ID du nœud parent pour référence future
         },
         position: { 
           x: xPosition,
@@ -204,15 +221,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newEdges.push(newEdge);
     });
 
-    // Adjust the view after adding new nodes
+    // Ajuster la vue après l'ajout de nouveaux nœuds
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
 
-    // Check if this is an initial creation or modifying existing options
-    // If nodes didn't exist before, adjust the view
+    // Vérifier si c'est une création initiale ou une modification d'options existantes
+    // Si les nœuds n'existaient pas avant, ajuster la vue
     const existingPathNodes = nodes.some(node => node.id.startsWith(`${sourceId}_`));
     if (!existingPathNodes && reactFlowInstance) {
       setTimeout(() => {
+        // Utiliser fitView pour ajuster la vue afin de montrer tous les nœuds
         reactFlowInstance.fitView({
           padding: 0.4,
           duration: 800,
@@ -595,6 +613,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const IMAGE_HEIGHT = 200;
     const BASE_NODE_HEIGHT = 100;
     const EXTRA_SPACING_FOR_IMAGE = 50; // Additional spacing for parents with images
+    const EXTRA_SPACING_FOR_CRITICAL = 100; // Additional spacing for critical questions
     
     const containerWidth = 1200;
     const CENTER_X = containerWidth / 2;
@@ -622,13 +641,31 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
       );
 
-      // Check if the parent has an image
+      // Check if the parent has an image or is critical
       const parentId = parentIds.get(nodeId);
       const parentNode = parentId ? nodes.find(n => n.id === parentId) : null;
       const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
+      const parentIsCritical = parentNode?.data.isCritical || false;
       
-      const baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
-      return parentHasImage ? baseSpacing + EXTRA_SPACING_FOR_IMAGE : baseSpacing;
+      // Vérifier si le nœud est directement un enfant d'une question critique (en vérifiant le format de l'ID)
+      const isDirectChildOfCritical = parentNode && parentIsCritical && nodeId.startsWith(`${parentId}_`);
+      
+      let baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
+      
+      // Add extra spacing for images
+      if (parentHasImage) {
+        baseSpacing += EXTRA_SPACING_FOR_IMAGE;
+      }
+      
+      // Add extra spacing for critical questions
+      if (parentIsCritical) {
+        // Ajouter un espacement supplémentaire important si c'est un enfant direct d'une question critique
+        baseSpacing += isDirectChildOfCritical 
+          ? EXTRA_SPACING_FOR_CRITICAL * 1.5  // Augmenter l'espacement pour les enfants directs
+          : EXTRA_SPACING_FOR_CRITICAL;       // Espacement standard pour les autres relations
+      }
+      
+      return baseSpacing;
     };
 
     const shouldBranchNode = (node: Node) => {
