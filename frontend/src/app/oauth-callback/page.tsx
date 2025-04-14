@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
 import { handleOAuthCallback } from '@/services/authService';
+import { Box, CircularProgress } from '@mui/material';
 
-const OAuthCallback = () => {
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+    <CircularProgress />
+  </Box>
+);
+
+const OAuthCallbackContent = () => {
   const router = useRouter();
   const { login } = useAuth();
 
@@ -39,6 +46,14 @@ const OAuthCallback = () => {
   }, []);
 
   return null;
+};
+
+const OAuthCallback = () => {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <OAuthCallbackContent />
+    </Suspense>
+  );
 };
 
 export default OAuthCallback; 

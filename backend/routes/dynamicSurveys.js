@@ -9,12 +9,16 @@ const {
   updateDynamicSurvey,
   deleteDynamicSurvey,
   uploadMedia,
-  deleteMedia
+  deleteMedia,
+  getAllDynamicSurveysForAnswering
 } = require("../controllers/dynamicSurveyController");
 
 // Configure Multer
 const storage = multer.diskStorage({});
 const upload = multer({ dest: "uploads/" });
+
+// IMPORTANT: Placer la route /available AVANT toutes les autres routes
+router.get("/available", authMiddleware, getAllDynamicSurveysForAnswering);
 
 // Routes pour les sondages dynamiques
 router.post("/", authMiddleware, createDynamicSurvey);

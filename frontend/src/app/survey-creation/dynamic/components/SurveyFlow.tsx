@@ -71,13 +71,120 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   });
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
-    setNodes(prevNodes => 
-      prevNodes.map(node => 
+    setNodes(prevNodes => {
+      // Filter out non-standard properties (like _editingState) to avoid recursive updates
+      const filteredData = { ...newData };
+      // Remove custom props that shouldn't be stored in the node data
+      if ('_editingState' in filteredData) {
+        delete filteredData._editingState;
+      }
+      
+      // Apply the changes to the node with nodeId
+      const updatedNodes = prevNodes.map(node => 
         node.id === nodeId 
-          ? { ...node, data: { ...node.data, ...newData } }
+          ? { ...node, data: { ...node.data, ...filteredData } }
           : node
-      )
-    );
+      );
+
+      // If the isEditing state changed, adjust positions
+      const editedNode = updatedNodes.find(n => n.id === nodeId);
+      if (editedNode && '_editingState' in newData) {
+        const isEditing = newData._editingState;
+        const EDITING_HEIGHT_INCREASE = 400; // Vertical space to add when editing
+        
+        // Function to check if a node is below another node
+        const isNodeBelow = (node1: Node, node2: Node) => {
+          return node1.position.y > node2.position.y;
+        };
+        
+        // Function to check if a node is a child of the edited node
+        const isChildOfEditedNode = (node: Node) => {
+          return node.id.startsWith(`${editedNode.id}_`);
+        };
+        
+        // Stocker les positions originales des nœuds enfants lors de l'ouverture de l'édition
+        // et les restaurer lors de la fermeture
+        if (isEditing && editedNode.data.isCritical) {
+          // Stocker les positions actuelles des nœuds enfants dans un attribut temporaire
+          return updatedNodes.map(node => {
+            const isChild = isChildOfEditedNode(node);
+            
+            if (isChild) {
+              // Ajouter un attribut pour stocker la position originale
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  _originalPosition: { ...node.position }
+                },
+                position: {
+                  ...node.position,
+                  y: node.position.y + EDITING_HEIGHT_INCREASE
+                }
+              };
+            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
+              // Déplacer les autres nœuds vers le bas normalement
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: node.position.y + EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        } else if (!isEditing && editedNode.data.isCritical) {
+          // Restaurer les positions originales des nœuds enfants
+          return updatedNodes.map(node => {
+            const isChild = isChildOfEditedNode(node);
+            
+            if (isChild && node.data._originalPosition) {
+              // Récupérer la position originale
+              const originalPos = node.data._originalPosition;
+              
+              // Créer une copie des données sans _originalPosition
+              const newData = { ...node.data };
+              delete newData._originalPosition;
+              
+              return {
+                ...node,
+                data: newData,
+                position: originalPos
+              };
+            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
+              // Déplacer les autres nœuds vers le haut normalement
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: node.position.y - EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        } else {
+          // Comportement normal pour les questions non critiques
+          return updatedNodes.map(node => {
+            if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
+              return {
+                ...node,
+                position: {
+                  ...node.position,
+                  y: isEditing 
+                    ? node.position.y + EDITING_HEIGHT_INCREASE 
+                    : node.position.y - EDITING_HEIGHT_INCREASE
+                }
+              };
+            }
+            return node;
+          });
+        }
+      }
+      
+      return updatedNodes;
+    });
   }, []);
 
   const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
@@ -97,21 +204,24 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const verticalSpacing = 300; // Augmenté à 300px
-    const horizontalSpacing = 800; // Augmenté à 800px pour un espacement beaucoup plus large
+    // Augmentation de l'espacement vertical si la question est critique
+    const baseVerticalSpacing = 300;
+    const criticalVerticalSpacing = 450; // Augmenté pour les questions critiques
+    const verticalSpacing = sourceNode.data.isCritical ? criticalVerticalSpacing : baseVerticalSpacing;
+    const horizontalSpacing = 800; // Increased to 800px for a much wider spacing
 
-    // Calculer la largeur totale et la position de départ
+    // Calculate the total width and starting position
     const totalWidth = (options.length - 1) * horizontalSpacing;
     const startX = sourceNode.position.x - (totalWidth / 2);
 
     options.forEach((option, index) => {
-      // Normaliser l'option pour l'ID du nœud
+      // Normalize the option for the node ID
       const normalizedOption = option.trim().toLowerCase().replace(/\s+/g, '_');
       const newNodeId = `${sourceId}_${normalizedOption}`;
       
-      // Calculer la position X absolue pour chaque nœud
+      // Calculate the absolute X position for each node
       const xPosition = options.length === 1 
-        ? sourceNode.position.x // Si un seul nœud, le centrer
+        ? sourceNode.position.x // If there's only one node, center it
         : startX + (index * horizontalSpacing);
 
       const newNode: Node = {
@@ -134,7 +244,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           y: sourceNode.position.y + verticalSpacing,
         },
         style: {
-          width: 350, // Largeur fixe pour tous les nœuds
+          width: 350, // Fixed width for all nodes
         }
       };
       newNodes.push(newNode);
@@ -165,21 +275,23 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newEdges.push(newEdge);
     });
 
-    // Ajuster la vue après l'ajout des nouveaux nœuds
+    // Adjust the view after adding new nodes
     setNodes(prevNodes => [...prevNodes, ...newNodes]);
     setEdges(prevEdges => [...prevEdges, ...newEdges]);
 
-    // Ajuster la vue après un court délai
-    setTimeout(() => {
-      if (reactFlowInstance) {
+    // Check if this is an initial creation or modifying existing options
+    // If nodes didn't exist before, adjust the view
+    const existingPathNodes = nodes.some(node => node.id.startsWith(`${sourceId}_`));
+    if (!existingPathNodes && reactFlowInstance) {
+      setTimeout(() => {
         reactFlowInstance.fitView({
           padding: 0.4,
           duration: 800,
           minZoom: 0.1,
           maxZoom: 1,
         });
-      }
-    }, 100);
+      }, 100);
+    }
 
   }, [nodes, handleNodeChange, reactFlowInstance]);
 
@@ -195,27 +307,27 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onConnect = useCallback(
     (params: Connection) => {
-      // Vérifier s'il y a une boucle potentielle
+      // Check for potential cycle
       const hasCycle = (sourceId: string, targetId: string, visited = new Set<string>()): boolean => {
         if (sourceId === targetId) return true;
         if (visited.has(targetId)) return false;
         
         visited.add(targetId);
         
-        // Vérifier les connexions existantes
+        // Check existing connections
         const connectedEdges = edges.filter(edge => edge.source === targetId);
         return connectedEdges.some(edge => hasCycle(sourceId, edge.target, new Set(visited)));
       };
 
-      // Vérifier si la nouvelle connexion créerait une boucle
+      // Check if the new connection would create a cycle
       if (hasCycle(params.source!, params.target!)) {
         setNotification({
           show: true,
-          message: 'Impossible de créer une boucle dans le flow',
+          message: 'Cannot create a loop in the flow',
           type: 'error'
         });
         
-        // Masquer la notification après 3 secondes
+        // Hide notification after 3 seconds
         setTimeout(() => {
           setNotification(prev => ({ ...prev, show: false }));
         }, 3000);
@@ -223,16 +335,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         return edges;
       }
 
-      // Vérifier si le nœud source existe déjà dans une connexion
+      // Check if the source node already exists in a connection
       const sourceNode = nodes.find(n => n.id === params.source);
       if (!sourceNode?.data.isCritical) {
         const existingConnection = edges.find(edge => edge.source === params.source);
         if (existingConnection) {
-          return edges; // Ne pas ajouter de nouvelle connexion
+          return edges; // Don't add new connection
         }
       }
 
-      // Ajouter la nouvelle connexion si aucune boucle n'est détectée
+      // Add new connection if no cycle is detected
       return setEdges((eds) => addEdge(params, eds));
     },
     [edges, nodes]
@@ -245,11 +357,11 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
-    // Empêcher la suppression de la question 1
+    // Prevent deleting question 1
     if (nodeId === '1') {
       setNotification({
         show: true,
-        message: 'La première question ne peut pas être supprimée',
+        message: 'The first question cannot be deleted',
         type: 'warning'
       });
       setTimeout(() => {
@@ -258,10 +370,58 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this question?')) {
-      // Trouver le nœud à supprimer
-      const nodeToDelete = nodes.find(node => node.id === nodeId);
-      
+    // Ajouter des styles de transition pour l'animation de suppression
+    const addDeleteTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'delete-transition-styles';
+      styleElement.textContent = `
+        .react-flow__node {
+          transition: transform 0.5s ease, opacity 0.5s ease !important;
+        }
+        .react-flow__edge {
+          transition: opacity 0.5s ease !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('delete-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1000);
+    };
+
+    addDeleteTransitionStyles();
+
+    // Trouver le nœud à supprimer
+    const nodeToDelete = nodes.find(node => node.id === nodeId);
+    
+    // Trouver les arêtes connectées à ce nœud
+    const connectedEdges = edges.filter(edge => 
+      edge.source === nodeId || edge.target === nodeId
+    );
+    
+    // Animer la disparition du nœud et des arêtes
+    setNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? { ...node, style: { ...node.style, opacity: 0 } } 
+          : node
+      )
+    );
+    
+    setEdges(prevEdges => 
+      prevEdges.map(edge => 
+        connectedEdges.some(e => e.id === edge.id)
+          ? { ...edge, style: { ...edge.style, opacity: 0 } } 
+          : edge
+      )
+    );
+    
+    // Attendre que l'animation se termine avant de supprimer réellement
+    setTimeout(async () => {
       if (nodeToDelete?.data?.media) {
         try {
           const token = localStorage.getItem('accessToken');
@@ -274,10 +434,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             return;
           }
 
-          // Supprimer le média de Cloudinary
+          // Delete media from Cloudinary
           await dynamicSurveyService.deleteMedia(nodeToDelete.data.media, token);
         } catch (error) {
-          console.error('Erreur lors de la suppression du média:', error);
+          console.error('Error deleting media:', error);
           setNotification({
             show: true,
             message: 'Error while deleting media',
@@ -286,7 +446,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
       }
 
-      // Supprimer le nœud et ses connexions
+      // Delete node and its connections
       setNodes(prevNodes => prevNodes.filter(node => node.id !== nodeId));
       setEdges(prevEdges => prevEdges.filter(edge => 
         edge.source !== nodeId && edge.target !== nodeId
@@ -299,26 +459,90 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         type: 'success'
       });
 
-      // Masquer la notification après 3 secondes
+      // Hide notification after 3 seconds
       setTimeout(() => {
         setNotification(prev => ({ ...prev, show: false }));
       }, 3000);
-    }
-  }, [nodes]);
+    }, 500); // Attendre que l'animation de disparition se termine
+  }, [nodes, edges]);
 
   const onEdgeDelete = useCallback((edgeId: string) => {
-    // Vérifier si l'edge est connectée à une question critique
+    // Check if the edge is connected to a critical question
     const edge = edges.find(e => e.id === edgeId);
     if (edge) {
       const sourceNode = nodes.find(node => node.id === edge.source);
       if (sourceNode?.data?.isCritical) {
-        return; // Ne pas supprimer les edges des questions critiques
+        return; // Don't delete edges from critical questions
       }
     }
-    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+    
+    // Ajouter des styles de transition pour l'animation
+    const addEdgeDeleteTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'edge-delete-transition-styles';
+      styleElement.textContent = `
+        .react-flow__edge {
+          transition: opacity 0.5s ease !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('edge-delete-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1000);
+    };
+
+    addEdgeDeleteTransitionStyles();
+    
+    // Animer la disparition de l'arête
+    setEdges(prevEdges => 
+      prevEdges.map(e => 
+        e.id === edgeId 
+          ? { ...e, style: { ...e.style, opacity: 0 } } 
+          : e
+      )
+    );
+    
+    // Supprimer l'arête après que l'animation soit terminée
+    setTimeout(() => {
+      setEdges(prevEdges => prevEdges.filter(edge => edge.id !== edgeId));
+    }, 500);
   }, [edges, nodes]);
 
   const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
+    // Check for potential cycle with the new connection
+    const hasCycle = (sourceId: string, targetId: string, visited = new Set<string>()): boolean => {
+      if (sourceId === targetId) return true;
+      if (visited.has(targetId)) return false;
+      
+      visited.add(targetId);
+      
+      // Check existing connections
+      const connectedEdges = edges.filter(edge => edge.source === targetId);
+      return connectedEdges.some(edge => hasCycle(sourceId, edge.target, new Set(visited)));
+    };
+
+    // If the new connection would create a cycle, prevent it
+    if (newConnection.source && newConnection.target && 
+        hasCycle(newConnection.source, newConnection.target)) {
+      setNotification({
+        show: true,
+        message: 'Cannot create a loop in the flow',
+        type: 'error'
+      });
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
+      return; // Keep original edges unchanged
+    }
+
     setEdges((els) => {
       const updatedEdges = els.filter((edge) => edge.id !== oldEdge.id);
       if (newConnection) {
@@ -331,11 +555,11 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       return updatedEdges;
     });
-  }, []);
+  }, [edges]);
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.stopPropagation();
-    // Vérifier si l'edge est connectée à une question critique
+    // Check if the edge is connected to a critical question
     const sourceNode = nodes.find(node => node.id === edge.source);
     if (sourceNode?.data?.isCritical) return;
     
@@ -442,7 +666,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   );
 
   const nodesWithCallbacks = nodes.map(node => {
-    // Trouver le nœud parent
+    // Find the parent node
     const parentEdge = edges.find(edge => edge.target === node.id);
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
@@ -466,7 +690,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const DeleteButton = () => {
     if (!selectedEdge && !selectedNode) return null;
     
-    // Empêcher l'affichage du bouton de suppression pour la question 1
+    // Prevent showing the delete button for question 1
     if (selectedNode === '1') return null;
 
     return (
@@ -498,7 +722,15 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           e.currentTarget.style.backgroundColor = '#ff4444';
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2"
+          style={{ verticalAlign: 'middle', marginRight: '4px' }}
+        >
           <path d="M6 6l12 12M6 18L18 6" />
         </svg>
         Delete {selectedEdge ? 'Connection' : 'Question'}
@@ -512,12 +744,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   };
 
   const reorganizeFlow = useCallback(() => {
-    const BASE_VERTICAL_SPACING = 200;
+    const BASE_VERTICAL_SPACING = 150;
     const HORIZONTAL_SPACING = 450;
     const START_Y = 50;
     const IMAGE_HEIGHT = 200;
     const BASE_NODE_HEIGHT = 100;
-    const EXTRA_SPACING_FOR_IMAGE = 50; // Espacement supplémentaire pour les parents avec image
+    const EXTRA_SPACING_FOR_IMAGE = 50;
+    const EXTRA_SPACING_FOR_CRITICAL = 100;
+    const EXTRA_SPACING_FOR_NESTED = 120; // Espacement pour les nœuds imbriqués (C)
     
     const containerWidth = 1200;
     const CENTER_X = containerWidth / 2;
@@ -525,33 +759,97 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const nodeLevels = new Map<string, number>();
     const nodeColumns = new Map<string, number>();
     const nodeHeights = new Map<string, number>();
-    const parentIds = new Map<string, string>(); // Pour tracker les relations parent-enfant
+    const parentIds = new Map<string, string>();
+    const nodeDepths = new Map<string, number>(); // Pour calculer la profondeur des nœuds
     
-    // Calculer la hauteur de chaque nœud
+    // Calculate the height of each node
     const calculateNodeHeight = (node: Node): number => {
       const hasMedia = node.data.mediaUrl && node.data.mediaUrl.length > 0;
       return hasMedia ? BASE_NODE_HEIGHT + IMAGE_HEIGHT : BASE_NODE_HEIGHT;
     };
     
-    // Calculer l'espacement vertical nécessaire entre deux niveaux
+    // Vérifier si un nœud est descendant d'un nœud critique
+    const isDescendantOfCritical = (nodeId: string, depth = 0, visited = new Set<string>()): { result: boolean, depth: number } => {
+      if (depth > 10 || visited.has(nodeId)) return { result: false, depth: 0 }; // Éviter les boucles infinies
+      visited.add(nodeId);
+      
+      // Trouver le parent du nœud
+      const parentId = parentIds.get(nodeId);
+      if (!parentId) return { result: false, depth: 0 };
+      
+      // Vérifier si le parent est critique
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (parentNode?.data.isCritical) {
+        return { result: true, depth: 1 };
+      }
+      
+      // Récursion: vérifier les ancêtres
+      const ancestorResult = isDescendantOfCritical(parentId, depth + 1, visited);
+      if (ancestorResult.result) {
+        return { result: true, depth: ancestorResult.depth + 1 };
+      }
+      
+      return { result: false, depth: 0 };
+    };
+    
+    // Calculate the vertical spacing needed between two levels
     const calculateVerticalSpacing = (currentLevel: number, nodeId: string): number => {
       const currentLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel);
       const nextLevelNodes = nodes.filter(node => nodeLevels.get(node.id) === currentLevel + 1);
       
       const maxCurrentHeight = Math.max(
-        ...currentLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+        ...currentLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT),
+        BASE_NODE_HEIGHT
       );
       const maxNextHeight = Math.max(
-        ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT)
+        ...nextLevelNodes.map(node => nodeHeights.get(node.id) || BASE_NODE_HEIGHT),
+        BASE_NODE_HEIGHT
       );
 
-      // Vérifier si le parent a une image
+      // Check if the parent has an image
       const parentId = parentIds.get(nodeId);
       const parentNode = parentId ? nodes.find(n => n.id === parentId) : null;
       const parentHasImage = parentNode?.data.mediaUrl && parentNode.data.mediaUrl.length > 0;
+      const parentIsCritical = parentNode?.data.isCritical || false;
       
-      const baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
-      return parentHasImage ? baseSpacing + EXTRA_SPACING_FOR_IMAGE : baseSpacing;
+      // Vérifier si le nœud courant est critique ou son parent
+      const currentNode = nodes.find(n => n.id === nodeId);
+      const isCurrentNodeCritical = currentNode?.data.isCritical || false;
+      
+      // Vérifier si le nœud est un descendant d'un nœud critique (cas B ou C)
+      const descentInfo = isDescendantOfCritical(nodeId);
+      const isDescendant = descentInfo.result;
+      const descentDepth = descentInfo.depth;
+      
+      // Calculer l'espacement vertical de base en fonction du contexte
+      let baseSpacing;
+      
+      // Cas spécial: nœud C (petit-enfant d'un nœud critique)
+      if (isDescendant && descentDepth >= 2) {
+        // Pour le cas C → augmenter significativement l'espacement
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + EXTRA_SPACING_FOR_NESTED, 
+                             (maxCurrentHeight + maxNextHeight) / 2 + 70);
+      }
+      // Si ni le nœud courant ni son parent ne sont critiques, utiliser un espacement réduit
+      else if (!isCurrentNodeCritical && !parentIsCritical) {
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 30);
+      } 
+      // Sinon, utiliser l'espacement standard
+      else {
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 50, (maxCurrentHeight + maxNextHeight) / 2 + 50);
+      }
+      
+      // Add extra spacing for images
+      if (parentHasImage) {
+        baseSpacing += EXTRA_SPACING_FOR_IMAGE;
+      }
+      
+      // Add extra spacing for critical questions
+      if (parentIsCritical) {
+        baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
+      }
+      
+      return baseSpacing;
     };
 
     const shouldBranchNode = (node: Node) => {
@@ -586,17 +884,18 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         nodeHeights.set(node.id, calculateNodeHeight(node));
       });
 
-      // Construire les relations parent-enfant
+      // Build parent-child relationships
       edges.forEach(edge => {
         parentIds.set(edge.target, edge.source);
       });
       
-      const processNode = (nodeId: string, level: number, startColumn: number): number => {
+      const processNode = (nodeId: string, level: number, startColumn: number, depth: number = 0): number => {
         const node = nodes.find(n => n.id === nodeId);
         if (!node || processedNodes.has(nodeId)) return startColumn;
         
         processedNodes.add(nodeId);
         nodeLevels.set(nodeId, level);
+        nodeDepths.set(nodeId, depth);  // Stocker la profondeur
         
         const childEdges = edges.filter(edge => edge.source === nodeId);
         if (childEdges.length === 0) {
@@ -611,7 +910,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           
           let currentColumn = startColumn;
           childEdges.forEach(edge => {
-            currentColumn = processNode(edge.target, level + 1, currentColumn);
+            currentColumn = processNode(edge.target, level + 1, currentColumn, depth + 1);
           });
           
           return startColumn + totalWidth;
@@ -619,7 +918,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           nodeColumns.set(nodeId, startColumn);
           let maxColumn = startColumn;
           childEdges.forEach(edge => {
-            maxColumn = Math.max(maxColumn, processNode(edge.target, level + 1, startColumn));
+            maxColumn = Math.max(maxColumn, processNode(edge.target, level + 1, startColumn, depth + 1));
           });
           return maxColumn;
         }
@@ -628,7 +927,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       processNode('1', 0, 0);
     };
     
-    // Fonction pour obtenir tous les nœuds dans l'ordre de parcours
+    // Function to get all nodes in traversal order
     const getOrderedNodes = () => {
       const orderedNodes: string[] = [];
       const visited = new Set<string>();
@@ -638,7 +937,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         visited.add(nodeId);
         orderedNodes.push(nodeId);
 
-        // Trier les edges pour garantir un ordre cohérent
+        // Sort edges for consistent order
         const childEdges = edges
           .filter(edge => edge.source === nodeId)
           .sort((a, b) => {
@@ -652,14 +951,43 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         });
       };
 
-      traverse('1'); // Commencer par le nœud racine
+      traverse('1'); // Start from root node
       return orderedNodes;
     };
 
     calculateLayout();
     const orderedNodeIds = getOrderedNodes();
 
-    // Mettre à jour les numéros de questions
+    // Ajouter des styles de transition pour l'animation
+    const addTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'node-transition-styles';
+      styleElement.textContent = `
+        .react-flow__node {
+          transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+        .react-flow__edge {
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+        .react-flow__edge-path {
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('node-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1500);
+    };
+
+    // Ajouter les styles de transition
+    addTransitionStyles();
+
+    // Update question numbers and positions
     setNodes(prevNodes => {
       const nodeMap = new Map(prevNodes.map(node => [node.id, node]));
       return orderedNodeIds.map((nodeId, index) => {
@@ -681,13 +1009,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           },
           data: {
             ...node.data,
-            questionNumber: index + 1 // Mettre à jour le numéro de question
+            questionNumber: index + 1 // Update question number
           }
         };
       }).filter((node): node is Node => node !== null);
     });
 
-    // Ajuster le zoom et la position de la vue
+    // Adjust zoom and view position
     if (reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({
@@ -696,18 +1024,21 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           minZoom: 0.1,
           maxZoom: 1,
         });
-      }, 50);
+      }, 1000); // Attendre que l'animation soit presque terminée
     }
   }, [nodes, edges, reactFlowInstance]);
 
-  // Ajouter le bouton de réorganisation
+  // Add data-intro attribute to reorganize button
   const ReorganizeButton = () => (
     <div
+      data-intro="reorganize-flow-button"
+      id="reorganize-flow-button"
+      className="reorganize-flow-button"
       style={{
         position: 'absolute',
         top: '20px',
         left: '20px',
-        zIndex: 1000,
+        zIndex: 5,
         backgroundColor: '#667eea',
         color: 'white',
         padding: '8px 16px',
@@ -740,15 +1071,89 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   useImperativeHandle(ref, () => ({
     resetFlow: () => {
-      setNodes(initialNodes);
-      setEdges(initialEdges);
+      // Créer un tout nouveau nœud avec isCritical explicitement à false
+      const brandNewNode: Node = {
+        id: '1',
+        type: 'questionNode',
+        data: { 
+          id: '1',
+          questionNumber: 1,
+          type: 'text',
+          text: '',
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+          onCreatePaths: createPathsFromNode,
+          onChange: (newData: any) => handleNodeChange('1', newData)
+        },
+        position: { x: 400, y: 50 },
+      };
+      
+      // Remplacer tous les nœuds par ce nouveau nœud
+      setNodes([brandNewNode]);
+      setEdges([]);
+      
+      // Forcer une mise à jour explicite via handleNodeChange
+      setTimeout(() => {
+        handleNodeChange('1', { 
+          isCritical: false,
+          type: 'text',
+          options: []
+        });
+        
+        // Suppression explicite des chemins
+        createPathsFromNode('1', []);
+        
+        // Log pour debug
+        console.log("Reset flow: node data forced update", brandNewNode);
+      }, 100);
+      
+      // Ajouter une animation de transition pour l'effet visuel
+      const addTransitionStyles = () => {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'reset-transition-styles';
+        styleElement.textContent = `
+          .react-flow__node {
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.7s ease !important;
+          }
+        `;
+        document.head.appendChild(styleElement);
+
+        // Supprimer les styles après l'animation
+        setTimeout(() => {
+          const existingStyle = document.getElementById('reset-transition-styles');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+        }, 1500);
+      };
+      
+      addTransitionStyles();
+      
+      // Afficher une notification de confirmation
+      setNotification({
+        show: true,
+        message: 'Flow has been reset successfully',
+        type: 'success'
+      });
+      
+      // Masquer la notification après quelques secondes
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
+      // Réorganiser le flux après un court délai pour l'animation
+      setTimeout(() => {
+        reorganizeFlow();
+      }, 300);
     },
     getNodes: () => nodes,
     addNewQuestion: () => {
       const newNodeId = (nodes.length + 1).toString();
       const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
 
-      // Vérifier si la question sélectionnée a déjà une connexion
+      // Check if the selected question already has a connection
       if (selectedNode) {
         const existingConnection = edges.find(edge => edge.source === selectedNode);
         if (existingConnection && !selectedNodeData?.data.isCritical) {
@@ -766,7 +1171,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
       }
 
-      // Si la question sélectionnée est critique, ne pas créer de connexion
+      // If the selected question is critical, don't create a connection
       if (selectedNodeData?.data.isCritical) {
         setNotification({
           show: true,
@@ -780,6 +1185,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         
         return;
       }
+
+      // Ajouter des styles de transition pour l'animation
+      const addTransitionStyles = () => {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'new-node-transition-styles';
+        styleElement.textContent = `
+          .react-flow__node {
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge-path {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+          }
+        `;
+        document.head.appendChild(styleElement);
+
+        // Supprimer les styles après l'animation
+        setTimeout(() => {
+          const existingStyle = document.getElementById('new-node-transition-styles');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+        }, 1000);
+      };
+
+      // Ajouter les styles de transition
+      addTransitionStyles();
 
       const newNode: Node = {
         id: newNodeId,
@@ -804,11 +1238,26 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             ? (nodes.find(n => n.id === selectedNode)?.position.y || 0) + 150
             : nodes.length * 150 
         },
+        style: {
+          opacity: 0 // Commencer avec une opacité de 0 pour l'animation
+        }
       };
 
+      // Ajouter le nouveau nœud avec animation
       setNodes(prevNodes => [...prevNodes, newNode]);
 
-      // Créer une connexion uniquement si une question non critique est sélectionnée
+      // Animer l'apparition du nœud après un court délai
+      setTimeout(() => {
+        setNodes(prevNodes => 
+          prevNodes.map(node => 
+            node.id === newNodeId 
+              ? { ...node, style: { ...node.style, opacity: 1 } } 
+              : node
+          )
+        );
+      }, 50);
+
+      // Create a connection only if a non-critical question is selected
       if (selectedNode && !selectedNodeData?.data.isCritical) {
         const newEdge: Edge = {
           id: `e${selectedNode}-${newNodeId}`,
@@ -821,9 +1270,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           style: { 
             strokeWidth: 2,
             stroke: '#667eea',
+            opacity: 0, // Commencer avec une opacité de 0 pour l'animation
           },
         };
+        
+        // Ajouter l'arête avec animation
         setEdges(prevEdges => [...prevEdges, newEdge]);
+        
+        // Animer l'apparition de l'arête après un court délai
+        setTimeout(() => {
+          setEdges(prevEdges => 
+            prevEdges.map(edge => 
+              edge.id === newEdge.id 
+                ? { ...edge, style: { ...edge.style, opacity: 1 } } 
+                : edge
+            )
+          );
+        }, 100);
+      }
+
+      // Ajuster la vue après l'ajout du nouveau nœud
+      if (reactFlowInstance) {
+        setTimeout(() => {
+          reactFlowInstance.fitView({
+            padding: 0.4,
+            duration: 800,
+            minZoom: 0.1,
+            maxZoom: 1,
+          });
+        }, 300);
       }
     },
     setNodes: (newNodes: Node[]) => {

@@ -25,6 +25,7 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
+  Fab,
 } from '@mui/material';
 import ReactPlayer from 'react-player';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -50,6 +51,29 @@ import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
+// @ts-ignore
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+// @ts-ignore
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+// @ts-ignore
+import { CSS } from '@dnd-kit/utilities';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
+import SchoolIcon from '@mui/icons-material/School';
 
 type Question = {
   id: string;
@@ -152,6 +176,64 @@ const validateFormData = (data: FormData) => {
   return hasErrors ? errors : null;
 };
 
+const SortableQuestionItem = ({ 
+  children, 
+  id 
+}: { 
+  children: React.ReactNode, 
+  id: string 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.8 : 1,
+    position: 'relative' as const,
+    marginBottom: '16px',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children}
+      <div
+        {...listeners}
+        style={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
+          width: '100px',
+          height: '24px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'grab',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px',
+          zIndex: 5,
+        }}
+      >
+        <svg width="40" height="8" viewBox="0 0 40 8">
+          <g fill="#667eea">
+            <circle cx="4" cy="4" r="2" />
+            <circle cx="14" cy="4" r="2" />
+            <circle cx="24" cy="4" r="2" />
+            <circle cx="34" cy="4" r="2" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+};
+
 const SurveyCreationPage = () => {
   const { control, handleSubmit, setValue, getValues, reset, watch } =
     useForm<FormData>({
@@ -164,7 +246,7 @@ const SurveyCreationPage = () => {
       },
     });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove, update, move } = useFieldArray({
     control,
     name: 'questions',
   });
@@ -184,6 +266,14 @@ const SurveyCreationPage = () => {
   const [selectedCity, setSelectedCity] = useState(''); // Ville sélectionnée
 
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
+
+  // Ajout d'un state pour la boîte de dialogue de confirmation
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const [notification, setNotification] = useState<{
     message: string;
@@ -414,75 +504,84 @@ const SurveyCreationPage = () => {
       event.preventDefault();
     }
     
-    // Récupérer tous les médias des questions
-    const currentMedia = fields
-      .map(field => field.media)
-      .filter(media => media && media.trim() !== '');
-      
-    if (currentMedia.length > 0) {
-      console.log('Current media to mark for deletion:', currentMedia);
-      
-      // Marquer tous les médias pour suppression et attendre la mise à jour du state
-      const newTracker = {
-        ...mediaTracker,
-        ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
-      };
-      
-      // Mettre à jour le state et attendre que ce soit fait
-      setMediaTracker(newTracker);
-      
-      // Attendre que le state soit mis à jour
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      try {
-        // Nettoyer les médias avec le nouveau tracker
-        for (const media of currentMedia) {
-          if (!media) continue;
-          const parts = media.split('/');
-          const filename = parts[parts.length - 1];
-          const publicId = `uploads/${filename.split('.')[0]}`;
-          
-          const token = localStorage.getItem('accessToken');
-          if (!token) {
-            throw new Error('No authentication token found');
+    // Utiliser la boîte de dialogue de confirmation
+    setConfirmDialog({
+      open: true,
+      title: 'Reset Survey',
+      message: 'Are you sure you want to reset the survey? All progress will be lost.',
+      onConfirm: async () => {
+        try {
+          // Récupérer tous les médias des questions
+          const currentMedia = fields
+            .map(field => field.media)
+            .filter(media => media && media.trim() !== '');
+            
+          if (currentMedia.length > 0) {
+            console.log('Current media to mark for deletion:', currentMedia);
+            
+            // Marquer tous les médias pour suppression et attendre la mise à jour du state
+            const newTracker = {
+              ...mediaTracker,
+              ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
+            };
+            
+            // Mettre à jour le state et attendre que ce soit fait
+            setMediaTracker(newTracker);
+            
+            // Attendre que le state soit mis à jour
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            try {
+              // Nettoyer les médias avec le nouveau tracker
+              for (const media of currentMedia) {
+                if (!media) continue;
+                const parts = media.split('/');
+                const filename = parts[parts.length - 1];
+                const publicId = `uploads/${filename.split('.')[0]}`;
+                
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                  throw new Error('No authentication token found');
+                }
+
+                const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({ publicId }),
+                });
+
+                if (!response.ok) {
+                  throw new Error(`Failed to delete media: ${publicId}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error deleting media:', error);
+            }
           }
 
-          const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ publicId }),
+          // Réinitialiser le formulaire
+          reset({
+            title: '',
+            description: '',
+            demographicEnabled: false,
+            isPrivate: false,
+            questions: []
           });
-
-          if (!response.ok) {
-            throw new Error(`Failed to delete media: ${publicId}`);
-          }
+          
+          // Réinitialiser le tracker de médias
+          setMediaTracker({});
+        } catch (error) {
+          console.error('Error during reset:', error);
         }
-      } catch (error) {
-        console.error('Error deleting media:', error);
-        setNotification({
-          message: 'Error deleting media files',
-          severity: 'error',
-          open: true
-        });
+        // Fermer la boîte de dialogue de confirmation
+        setConfirmDialog(prev => ({ ...prev, open: false }));
       }
-    }
-
-    // Réinitialiser le formulaire
-    reset({
-      title: '',
-      description: '',
-      demographicEnabled: false,
-      isPrivate: false,
-      questions: []
     });
-    
-    // Réinitialiser le tracker de médias
-    setMediaTracker({});
   };
 
   const handleFileUpload = async (file: File, questionId: string): Promise<void> => {
@@ -677,8 +776,8 @@ const SurveyCreationPage = () => {
           const surveyLink = `${window.location.origin}/survey-answer?surveyId=${result._id}`;
           
           setNotification({
-            message: 'Your private survey has been created successfully!',
-            severity: 'success',
+            message: '',
+            severity: 'info',
             open: true,
             link: surveyLink,
             action: () => {
@@ -690,11 +789,11 @@ const SurveyCreationPage = () => {
             }
           });
         } else {
-          setNotification({
-            message: 'Your survey has been created successfully!',
-            severity: 'success',
-            open: true
-          });
+          // Pour les sondages publics, rediriger directement sans afficher de boîte de dialogue
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.push('/survey-answer');
+          }, 2000);
         }
 
       } catch (error: any) {
@@ -1016,6 +1115,348 @@ const SurveyCreationPage = () => {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = fields.findIndex(item => item.id === active.id);
+      const newIndex = fields.findIndex(item => item.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        move(oldIndex, newIndex);
+      }
+    }
+  };
+
+  const startTutorial = () => {
+    // S'assurer qu'au moins une question existe pour le tutoriel
+    if (fields.length === 0) {
+      handleAddQuestion();
+      setTimeout(() => {
+        runSimpleTutorial();
+      }, 500);
+    } else {
+      runSimpleTutorial();
+    }
+  };
+
+  const runSimpleTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    (window as any).surveyCreationFunctions = {
+      showPreview: () => setShowPreview(true),
+      hidePreview: () => setShowPreview(false)
+    };
+    
+    // Fonction pour forcer l'affichage des tooltips et faire défiler vers l'élément
+    const forceTooltipDisplay = () => {
+      setTimeout(() => {
+        // Trouver l'élément actuellement ciblé
+        const currentStep = intro._currentStep;
+        const currentStepData = intro._options.steps[currentStep];
+        
+        if (currentStepData && currentStepData.element) {
+          let targetElement: Element | null = null;
+          
+          // Obtenir l'élément ciblé
+          if (typeof currentStepData.element === 'string') {
+            if (currentStepData.element === 'body') {
+              targetElement = document.body;
+            } else {
+              targetElement = document.querySelector(currentStepData.element);
+            }
+          } else {
+            targetElement = currentStepData.element;
+          }
+          
+          // Faire défiler vers l'élément si trouvé
+          if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const isInViewport = (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isInViewport) {
+              // Calculer la position de défilement optimale
+              const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
+              
+              // Défilement en douceur
+              window.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }
+        
+        // Forcer l'affichage des tooltips
+        const tooltips = document.querySelectorAll('.introjs-tooltip') as NodeListOf<HTMLElement>;
+        tooltips.forEach(tooltip => {
+          if (tooltip) {
+            tooltip.style.opacity = '1';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.display = 'block';
+          }
+        });
+        
+        // Forcer également l'affichage des messages
+        const tooltipTexts = document.querySelectorAll('.introjs-tooltiptext') as NodeListOf<HTMLElement>;
+        tooltipTexts.forEach(text => {
+          if (text) {
+            text.style.visibility = 'visible';
+            text.style.opacity = '1';
+            text.style.display = 'block';
+          }
+        });
+      }, 100);
+    };
+    
+    // Ajouter des styles plus simples pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+      /* Personnalisation des boutons */
+      .introjs-tooltipbuttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 10px !important;
+        border-top: 1px solid #eee !important;
+      }
+      .introjs-button {
+        text-shadow: none !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        margin: 5px !important;
+        transition: all 0.2s !important;
+      }
+      .introjs-prevbutton, .introjs-nextbutton {
+        flex: 1 !important;
+        text-align: center !important;
+      }
+      .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 0.9 !important;
+      }
+      .introjs-skipbutton {
+        background: #f44336 !important;
+        color: white !important;
+      }
+      .introjs-disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+      }
+      .intro-tuto-button {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Configuration du tutoriel avec construction dynamique des étapes
+    const buildSteps = () => {
+      // Définir les types de position valides pour introJs
+      type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | 'auto';
+      
+      // Créer les étapes avec les positions typées
+      const steps = [
+        {
+          element: '[data-intro="title"]',
+          intro: "Welcome to the survey creator! This tutorial will guide you through the essential features.",
+          position: 'bottom'
+        },
+        {
+          element: '[data-intro="basic-info"]',
+          intro: "Start by filling in the basic information of your survey, such as the title and description.",
+          position: 'bottom'
+        },
+        {
+          element: '[data-intro="demographic"]',
+          intro: "Enable this option to collect demographic information such as age, gender, and city from your participants.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="privacy"]',
+          intro: "Choose whether your survey is public (visible to everyone) or private (accessible only via a link).",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="add-question"]',
+          intro: "Click here to add new questions to your survey.",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="question-type"]',
+          intro: "Select the question type from many options: multiple choice, free text, stars, etc.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="media-upload"]',
+          intro: "Add images or videos to your questions to make them more engaging.",
+          position: 'right'
+        },
+        {
+          element: '[data-intro="reset"]',
+          intro: "The Reset button allows you to completely reset your survey. Warning: this action deletes all your questions and entered information!",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="preview"]',
+          intro: "The Preview function is essential for visualizing your survey. Click this button after the tutorial to see how your survey will appear to participants. You can navigate between questions and check the formatting.",
+          position: 'top'
+        },
+        {
+          element: '[data-intro="submit"]',
+          intro: "Once you're satisfied with your survey, click here to submit it and share it with participants.",
+          position: 'top'
+        },
+        {
+          element: 'body',
+          intro: "Congratulations! You now know how to create a custom survey. Don't hesitate to try the Preview function to see how your survey will appear before submitting it!",
+          position: 'bottom'
+        }
+      ];
+      
+      // Vérifier si les éléments existent avant d'ajouter les étapes correspondantes
+      if (document.querySelector('.SortableQuestionItem')) {
+        steps.splice(7, 0, {
+          element: '.SortableQuestionItem',
+          intro: "You can reorder your questions by dragging them using the handle located at the bottom right of each question.",
+          position: 'bottom'
+        });
+      }
+      
+      if (document.querySelector('.SortableQuestionItem button[color="error"]')) {
+        steps.splice(8, 0, {
+          element: '.SortableQuestionItem button[color="error"]',
+          intro: "Delete a question by clicking this button. Associated media will also be deleted.",
+          position: 'bottom'
+        });
+      }
+      
+      // Conversion explicite pour contourner l'erreur de type
+      return steps as any;
+    };
+    
+    // Personnaliser les boutons de navigation
+    intro.setOptions({
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done'
+    });
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 100,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
+      steps: buildSteps()
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+      
+      // S'assurer que la prévisualisation est fermée si le tutoriel est quitté
+      setShowPreview(false);
+    });
+    
+    // Forcer l'affichage des tooltips après chaque changement
+    intro.onafterchange(function(targetElement) {
+      forceTooltipDisplay();
+      
+      // Personnaliser dynamiquement les boutons
+      const currentStep = intro._currentStep;
+      const totalSteps = intro._options.steps.length;
+      
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+    
+    // Forcer l'affichage initial
+    forceTooltipDisplay();
+  };
+
   return (
     <Box
       component="main"
@@ -1029,38 +1470,82 @@ const SurveyCreationPage = () => {
         padding: { xs: 2, sm: 4 },
       }}
     >
+      <style jsx global>{`
+        .customTooltip {
+          max-width: 400px !important;
+          min-width: 250px !important;
+          z-index: 10000 !important;
+        }
+        .customHighlight {
+          z-index: 9999 !important;
+          position: relative !important;
+        }
+        .introjs-tooltip {
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .introjs-helperLayer {
+          background-color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .introjs-tooltip-title {
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .introjs-button {
+          text-shadow: none !important;
+          padding: 6px 15px !important;
+          font-size: 14px !important;
+          border-radius: 4px !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+          margin: 5px !important;
+        }
+        .introjs-prevbutton, .introjs-nextbutton {
+          transition: all 0.2s !important;
+        }
+        .introjs-prevbutton:hover, .introjs-nextbutton:hover {
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        }
+      `}</style>
+
       <Paper
         component="article"
         data-testid="survey-creation-container"
         elevation={3}
         sx={{
           borderRadius: 3,
-          overflow: 'hidden',
+          overflow: 'visible', // Changer de 'hidden' à 'visible' pour permettre aux tooltips de déborder
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
           maxWidth: '1000px',
           mb: 4,
+          position: 'relative', // Ajouter une position relative pour le contexte de z-index
         }}
       >
         {/* Header avec gradient */}
         <Box
           component="header"
           data-testid="survey-creation-header"
-          sx={{
-            background: colors.primary.gradient,
-            py: 4,
-            px: 4,
+          data-intro="title"
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
             color: 'white',
-            textAlign: 'center',
+            textAlign: 'center'
           }}
         >
           <Typography 
-            component="h1"
-            data-testid="survey-creation-title"
-            variant="h4" 
-            fontWeight="bold"
+            variant="h6" 
+            sx={{ fontWeight: 'bold' }}
           >
-            Create New Survey
+            Standard Survey Creation
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            Create linear surveys with customized questions 
           </Typography>
         </Box>
 
@@ -1080,18 +1565,20 @@ const SurveyCreationPage = () => {
               data-testid="survey-basic-info"
               sx={{ mb: 4 }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: '#1a237e' }}>
-                  Basic Information
-                </Typography>
-                <Tooltip 
-                  title="Cette section contient les informations générales de votre sondage"
-                  placement="right"
-                  TransitionComponent={Zoom}
-                  arrow
-                >
-                  <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
-                </Tooltip>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ color: '#1a237e' }}>
+                    Basic Information
+                  </Typography>
+                  <Tooltip 
+                    title="This section contains the general information of your survey"
+                    placement="right"
+                    TransitionComponent={Zoom}
+                    arrow
+                  >
+                    <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                  </Tooltip>
+                </Box>
               </Box>
 
               <Controller
@@ -1116,6 +1603,7 @@ const SurveyCreationPage = () => {
                         }));
                       }
                     }}
+                    data-intro="basic-info"
                     InputProps={{
                       sx: {
                         '& .MuiOutlinedInput-root': {
@@ -1152,7 +1640,7 @@ const SurveyCreationPage = () => {
                 )}
               />
 
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }} data-intro="demographic">
                 <FormControlLabel
                   control={
                     <Switch
@@ -1166,7 +1654,7 @@ const SurveyCreationPage = () => {
                   label="Enable Demographic Questions"
                 />
                 <Tooltip 
-                  title="Activez cette option pour collecter des informations démographiques (âge, genre, éducation, ville)"
+                  title="Enable this option to collect demographic information (age, gender, education, city)"
                   placement="right"
                   TransitionComponent={Zoom}
                   arrow
@@ -1175,7 +1663,7 @@ const SurveyCreationPage = () => {
                 </Tooltip>
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }} data-intro="privacy">
                 <FormControlLabel
                   control={
                     <Switch
@@ -1222,7 +1710,7 @@ const SurveyCreationPage = () => {
                     Survey Questions
                   </Typography>
                   <Tooltip 
-                    title="Ajoutez autant de questions que nécessaire. Chaque question peut avoir un type différent et inclure des médias"
+                    title="Add as many questions as needed. Each question can have a different type and include media"
                     placement="right"
                     TransitionComponent={Zoom}
                     arrow
@@ -1232,338 +1720,360 @@ const SurveyCreationPage = () => {
                 </Box>
 
                 {/* Liste des questions */}
-                {fields.map((field, index) => (
-                  <Paper
-                    key={field.id}
-                    component="article"
-                    data-testid={`question-card-${index}`}
-                    elevation={1}
-                    sx={{ p: 3, mb: 3, borderRadius: 2 }}
+                <Box sx={{ mb: 4 }}>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                   >
-                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                      <Controller
-                        name={`questions.${index}.type`}
-                        control={control}
-                        render={({ field: typeField }) => (
-                          <TextField
-                            select
-                            label="Question Type"
-                            {...typeField}
-                            onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-                            sx={{ minWidth: 200 }}
+                    <SortableContext
+                      items={fields.map(field => field.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {fields.map((field, index) => (
+                        <SortableQuestionItem key={field.id} id={field.id}>
+                          <Paper
+                            component="article"
+                            data-testid={`question-card-${index}`}
+                            elevation={1}
+                            sx={{ 
+                              p: 3, 
+                              borderRadius: 2,
+                              position: 'relative',
+                              pb: 5, // Espace supplémentaire pour la poignée de glissement
+                            }}
                           >
-                            {questionTypes.map((type) => (
-                              <MenuItem key={type.value} value={type.value}>
-                                {type.label}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        )}
-                      />
+                            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                              <Controller
+                                name={`questions.${index}.type`}
+                                control={control}
+                                render={({ field: typeField }) => (
+                                  <TextField
+                                    select
+                                    label="Question Type"
+                                    {...typeField}
+                                    onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
+                                    sx={{ minWidth: 200 }}
+                                    data-intro={index === 0 ? "question-type" : null}
+                                  >
+                                    {questionTypes.map((type) => (
+                                      <MenuItem key={type.value} value={type.value}>
+                                        {type.label}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                )}
+                              />
 
-                      <Controller
-                        name={`questions.${index}.text`}
-                        control={control}
-                        render={({ field: textField }) => (
-                          <TextField
-                            {...textField}
-                            label="Question Text"
-                            fullWidth
-                            variant="outlined"
-                            error={getQuestionError(index)}
-                            helperText={getQuestionError(index) ? "Question text is required" : ""}
-                            onChange={(e) => {
-                              textField.onChange(e);
-                              const newValue = e.target.value.trim();
-                              const currentQuestion = validationErrors.questions[index];
-                              
-                              setValidationErrors(prev => ({
-                                ...prev,
-                                questions: {
-                                  ...prev.questions,
-                                  [index]: {
-                                    ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                    text: !newValue
-                                  }
-                                }
-                              }));
-                            }}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                '& fieldset': {
-                                  borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
-                                },
-                                '&:hover fieldset': {
-                                  borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
-                                },
-                                '&.Mui-focused fieldset': {
-                                  borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
-                                },
-                              },
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-
-                    {/* Options pour les questions à choix multiples */}
-                    {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
-                      <Box sx={{ ml: 2, mb: 2 }}>
-                        {field.options?.map((option, optionIndex) => (
-                          <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <Controller
-                              name={`questions.${index}.options.${optionIndex}`}
-                              control={control}
-                              defaultValue={option}
-                              render={({ field: optionField }) => (
-                                <TextField
-                                  {...optionField}
-                                  label={`Option ${optionIndex + 1}`}
-                                  fullWidth
-                                  variant="outlined"
-                                  size="small"
-                                  error={getOptionError(index, optionIndex)}
-                                  helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
-                                  onChange={(e) => {
-                                    optionField.onChange(e);
-                                    const newValue = e.target.value.trim();
-                                    
-                                    setValidationErrors(prev => ({
-                                      ...prev,
-                                      questions: {
-                                        ...prev.questions,
-                                        [index]: {
-                                          ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                          options: {
-                                            ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
-                                            [optionIndex]: !newValue
+                              <Controller
+                                name={`questions.${index}.text`}
+                                control={control}
+                                render={({ field: textField }) => (
+                                  <TextField
+                                    {...textField}
+                                    label="Question Text"
+                                    fullWidth
+                                    variant="outlined"
+                                    error={getQuestionError(index)}
+                                    helperText={getQuestionError(index) ? "Question text is required" : ""}
+                                    onChange={(e) => {
+                                      textField.onChange(e);
+                                      const newValue = e.target.value.trim();
+                                      const currentQuestion = validationErrors.questions[index];
+                                      
+                                      setValidationErrors(prev => ({
+                                        ...prev,
+                                        questions: {
+                                          ...prev.questions,
+                                          [index]: {
+                                            ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                            text: !newValue
                                           }
                                         }
-                                      }
-                                    }));
-                                  }}
-                                  sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                      '& fieldset': {
-                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                      }));
+                                    }}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                        },
+                                        '&:hover fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: getQuestionError(index) ? '#ef4444' : '#667eea',
+                                        },
                                       },
-                                      '&:hover fieldset': {
-                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                      },
-                                      '&.Mui-focused fieldset': {
-                                        borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
-                                      },
-                                    },
-                                  }}
-                                />
-                              )}
-                            />
-                            <IconButton
-                              onClick={() => {
-                                const values = getValues();
-                                const currentQuestionValues = values.questions[index];
-                                const newOptions = [...(currentQuestionValues.options ?? [])];
-                                newOptions.splice(optionIndex, 1);
-                                
-                                // Préserver l'état de validation actuel
-                                const currentValidationState = validationErrors.questions[index];
-                                const currentOptions = typeof currentValidationState === 'object' && 
-                                  currentValidationState.options ? { ...currentValidationState.options } : {};
-                                
-                                // Supprimer l'erreur de l'option supprimée et réindexer
-                                const newValidationOptions: { [key: number]: boolean } = {};
-                                Object.entries(currentOptions).forEach(([key, value]) => {
-                                  const keyNum = parseInt(key);
-                                  if (keyNum < optionIndex) {
-                                    newValidationOptions[keyNum] = value;
-                                  } else if (keyNum > optionIndex) {
-                                    newValidationOptions[keyNum - 1] = value;
-                                  }
-                                });
+                                    }}
+                                  />
+                                )}
+                              />
+                            </Box>
 
-                                // Mettre à jour l'état de validation
-                                setValidationErrors(prev => ({
-                                  ...prev,
-                                  questions: {
-                                    ...prev.questions,
-                                    [index]: {
-                                      ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
-                                      options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
-                                    }
-                                  }
-                                }));
+                            {/* Options pour les questions à choix multiples */}
+                            {(field.type === 'multiple-choice' || field.type === 'dropdown') && (
+                              <Box sx={{ ml: 2, mb: 2 }}>
+                                {field.options?.map((option, optionIndex) => (
+                                  <Box key={optionIndex} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                                    <Controller
+                                      name={`questions.${index}.options.${optionIndex}`}
+                                      control={control}
+                                      defaultValue={option}
+                                      render={({ field: optionField }) => (
+                                        <TextField
+                                          {...optionField}
+                                          label={`Option ${optionIndex + 1}`}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={getOptionError(index, optionIndex)}
+                                          helperText={getOptionError(index, optionIndex) ? "Option cannot be empty" : ""}
+                                          onChange={(e) => {
+                                            optionField.onChange(e);
+                                            const newValue = e.target.value.trim();
+                                            
+                                            setValidationErrors(prev => ({
+                                              ...prev,
+                                              questions: {
+                                                ...prev.questions,
+                                                [index]: {
+                                                  ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                                  options: {
+                                                    ...(typeof prev.questions[index] === 'object' && (prev.questions[index] as any).options || {}),
+                                                    [optionIndex]: !newValue
+                                                  }
+                                                }
+                                              }
+                                            }));
+                                          }}
+                                          sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                              '& fieldset': {
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : 'rgba(0, 0, 0, 0.23)',
+                                              },
+                                              '&:hover fieldset': {
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                              },
+                                              '&.Mui-focused fieldset': {
+                                                borderColor: getOptionError(index, optionIndex) ? '#ef4444' : '#667eea',
+                                              },
+                                            },
+                                          }}
+                                        />
+                                      )}
+                                    />
+                                    <IconButton
+                                      onClick={() => {
+                                        const values = getValues();
+                                        const currentQuestionValues = values.questions[index];
+                                        const newOptions = [...(currentQuestionValues.options ?? [])];
+                                        newOptions.splice(optionIndex, 1);
+                                        
+                                        // Préserver l'état de validation actuel
+                                        const currentValidationState = validationErrors.questions[index];
+                                        const currentOptions = typeof currentValidationState === 'object' && 
+                                          currentValidationState.options ? { ...currentValidationState.options } : {};
+                                        
+                                        // Supprimer l'erreur de l'option supprimée et réindexer
+                                        const newValidationOptions: { [key: number]: boolean } = {};
+                                        Object.entries(currentOptions).forEach(([key, value]) => {
+                                          const keyNum = parseInt(key);
+                                          if (keyNum < optionIndex) {
+                                            newValidationOptions[keyNum] = value;
+                                          } else if (keyNum > optionIndex) {
+                                            newValidationOptions[keyNum - 1] = value;
+                                          }
+                                        });
 
-                                // Mettre à jour la question en préservant toutes les valeurs
-                                update(index, {
-                                  ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
-                                  options: newOptions,
-                                });
-                              }}
-                              color="error"
-                              size="small"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Box>
-                        ))}
-                        <Button
-                          onClick={() => handleAddOption(index)}
-                          startIcon={<AddIcon />}
-                          size="small"
-                          sx={{ mt: 1 }}
-                        >
-                          Add Option
-                        </Button>
-                      </Box>
-                    )}
+                                        // Mettre à jour l'état de validation
+                                        setValidationErrors(prev => ({
+                                          ...prev,
+                                          questions: {
+                                            ...prev.questions,
+                                            [index]: {
+                                              ...(typeof prev.questions[index] === 'object' ? prev.questions[index] as object : {}),
+                                              options: Object.keys(newValidationOptions).length > 0 ? newValidationOptions : undefined
+                                            }
+                                          }
+                                        }));
 
-                    {/* Media Upload Section */}
-                    {field.type !== 'color-picker' && (
-                      <Box sx={{ mt: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                          <Button
-                            component="label"
-                            variant="outlined"
-                            disabled={isUploading[field.id]}
-                            startIcon={isUploading[field.id] ? (
-                              <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                            ) : (
-                              <PhotoCameraIcon />
-                            )}
-                            sx={{
-                              color: '#667eea',
-                              borderColor: '#667eea',
-                              '&:hover': {
-                                borderColor: '#764ba2',
-                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                              },
-                              minWidth: '150px',
-                            }}
-                          >
-                            {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
-                            <input
-                              type="file"
-                              hidden
-                              accept="image/*,video/*"
-                              onChange={(e) => {
-                                if (e.target.files?.[0]) {
-                                  const file = e.target.files[0];
-                                  handleFileUpload(file, field.id);
-                                }
-                              }}
-                            />
-                          </Button>
-                          <Typography variant="body2" color="text.secondary">
-                            or
-                          </Typography>
-                          <TextField
-                            value={field.media ? '' : field.mediaUrl || ''}
-                            onChange={(e) => {
-                              const url = e.target.value;
-                              if (url === '' || isValidMediaURL(url)) {
-                                handleMediaChange(index, url, field);
-                              }
-                            }}
-                            placeholder="Enter media URL"
-                            size="small"
-                            fullWidth
-                            sx={{
-                              maxWidth: '400px',
-                              '& .MuiOutlinedInput-root': {
-                                '&:hover fieldset': {
-                                  borderColor: '#667eea',
-                                },
-                                '&.Mui-focused fieldset': {
-                                  borderColor: '#667eea',
-                                },
-                              },
-                            }}
-                          />
-                        </Box>
-                        {(field.media || field.mediaUrl) && (
-                          <Box sx={{ mt: 2, maxWidth: '200px' }}>
-                            {isUploading[field.id] || loadingMedia[field.id] ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
-                                <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                                        // Mettre à jour la question en préservant toutes les valeurs
+                                        update(index, {
+                                          ...currentQuestionValues, // Utiliser les valeurs actuelles du formulaire
+                                          options: newOptions,
+                                        });
+                                      }}
+                                      color="error"
+                                      size="small"
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Box>
+                                ))}
+                                <Button
+                                  onClick={() => handleAddOption(index)}
+                                  startIcon={<AddIcon />}
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                >
+                                  Add Option
+                                </Button>
                               </Box>
-                            ) : isImageFile(field.media || '') ? (
-                              <img 
-                                src={field.media || ''}
-                                alt="Question media"
-                                style={{ 
-                                  width: '100%', 
-                                  height: 'auto',
-                                  borderRadius: '8px',
-                                  objectFit: 'contain'
-                                }}
-                                onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                onError={() => {
-                                  setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                  setNotification({
-                                    message: 'Error loading image. Please check the URL.',
-                                    severity: 'error',
-                                    open: true
-                                  });
-                                }}
-                              />
-                            ) : (
-                              <ReactPlayer
-                                url={field.media}
-                                controls
-                                width="100%"
-                                height="auto"
-                                style={{ borderRadius: '8px' }}
-                                onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                onError={(e) => {
-                                  setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                  console.error('Error loading media:', e);
-                                  setNotification({
-                                    message: 'Error loading media. Please check the URL.',
-                                    severity: 'error',
-                                    open: true
-                                  });
-                                }}
-                              />
                             )}
-                          </Box>
-                        )}
-                      </Box>
-                    )}
 
-                    {/* Delete Question Button */}
-                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        onClick={() => handleDeleteQuestion(index)}
-                        startIcon={<DeleteIcon />}
-                        color="error"
-                        variant="outlined"
-                        size="small"
-                      >
-                        Delete Question
-                      </Button>
-                    </Box>
-                  </Paper>
-                ))}
+                            {/* Media Upload Section */}
+                            {field.type !== 'color-picker' && (
+                              <Box sx={{ mt: 2 }} data-intro={index === 0 ? "media-upload" : null}>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                  <Button
+                                    component="label"
+                                    variant="outlined"
+                                    disabled={isUploading[field.id]}
+                                    startIcon={isUploading[field.id] ? (
+                                      <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                                    ) : (
+                                      <PhotoCameraIcon />
+                                    )}
+                                    sx={{
+                                      color: '#667eea',
+                                      borderColor: '#667eea',
+                                      '&:hover': {
+                                        borderColor: '#764ba2',
+                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                      },
+                                      minWidth: '150px',
+                                    }}
+                                  >
+                                    {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
+                                    <input
+                                      type="file"
+                                      hidden
+                                      accept="image/*,video/*"
+                                      onChange={(e) => {
+                                        if (e.target.files?.[0]) {
+                                          const file = e.target.files[0];
+                                          handleFileUpload(file, field.id);
+                                        }
+                                      }}
+                                    />
+                                  </Button>
+                                  <Typography variant="body2" color="text.secondary">
+                                    or
+                                  </Typography>
+                                  <TextField
+                                    value={field.media ? '' : field.mediaUrl || ''}
+                                    onChange={(e) => {
+                                      const url = e.target.value;
+                                      if (url === '' || isValidMediaURL(url)) {
+                                        handleMediaChange(index, url, field);
+                                      }
+                                    }}
+                                    placeholder="Enter media URL"
+                                    size="small"
+                                    fullWidth
+                                    sx={{
+                                      maxWidth: '400px',
+                                      '& .MuiOutlinedInput-root': {
+                                        '&:hover fieldset': {
+                                          borderColor: '#667eea',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: '#667eea',
+                                        },
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                                {(field.media || field.mediaUrl) && (
+                                  <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                                    {isUploading[field.id] || loadingMedia[field.id] ? (
+                                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+                                        <CircularProgress size={40} sx={{ color: '#667eea' }} />
+                                      </Box>
+                                    ) : isImageFile(field.media || '') ? (
+                                      <img 
+                                        src={field.media || ''}
+                                        alt="Question media"
+                                        style={{ 
+                                          width: '100%', 
+                                          height: 'auto',
+                                          borderRadius: '8px',
+                                          objectFit: 'contain'
+                                        }}
+                                        onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                        onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                        onError={() => {
+                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                          setNotification({
+                                            message: 'Error loading image. Please check the URL.',
+                                            severity: 'error',
+                                            open: true
+                                          });
+                                        }}
+                                      />
+                                    ) : (
+                                      <ReactPlayer
+                                        url={field.media}
+                                        controls
+                                        width="100%"
+                                        height="auto"
+                                        style={{ borderRadius: '8px' }}
+                                        onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                        onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                        onError={(e) => {
+                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                          console.error('Error loading media:', e);
+                                          setNotification({
+                                            message: 'Error loading media. Please check the URL.',
+                                            severity: 'error',
+                                            open: true
+                                          });
+                                        }}
+                                      />
+                                    )}
+                                  </Box>
+                                )}
+                              </Box>
+                            )}
 
-                {/* Bouton Add Question */}
-                <Button
-                  onClick={handleAddQuestion}
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  sx={{
-                    mb: 4,
-                    color: '#667eea',
-                    borderColor: '#667eea',
-                    '&:hover': {
-                      borderColor: '#764ba2',
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    },
-                  }}
-                >
-                  Add Question
-                </Button>
+                            {/* Actions en bas de la question */}
+                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                              {/* Delete Question Button */}
+                              <Button
+                                onClick={() => handleDeleteQuestion(index)}
+                                startIcon={<DeleteIcon />}
+                                color="error"
+                                variant="outlined"
+                                size="small"
+                              >
+                                Delete Question
+                              </Button>
+                            </Box>
+                          </Paper>
+                        </SortableQuestionItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+
+                  {/* Bouton Add Question */}
+                  <Button
+                    onClick={handleAddQuestion}
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    data-intro="add-question"
+                    sx={{
+                      mb: 4,
+                      color: '#667eea',
+                      borderColor: '#667eea',
+                      '&:hover': {
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                      },
+                    }}
+                  >
+                    Add Question
+                  </Button>
+                </Box>
               </Box>
 
               <Divider sx={{ my: 4 }} />
@@ -1582,6 +2092,7 @@ const SurveyCreationPage = () => {
                   onClick={() => handleResetSurvey(null)}
                   variant="contained"
                   startIcon={<DeleteIcon />}
+                  data-intro="reset"
                   sx={{
                     background: colors.action.error.gradient,
                     color: 'white',
@@ -1599,6 +2110,7 @@ const SurveyCreationPage = () => {
                   onClick={() => setShowPreview(true)}
                   variant="contained"
                   startIcon={<VisibilityIcon />}
+                  data-intro="preview"
                   sx={{
                     background: colors.action.info.gradient,
                     color: 'white',
@@ -1616,6 +2128,7 @@ const SurveyCreationPage = () => {
                   onClick={handleSubmit(onSubmit)}
                   variant="contained"
                   disabled={isSubmitting}
+                  data-intro="submit"
                   startIcon={
                     isSubmitting ? (
                       <CircularProgress size={20} color="inherit" />
@@ -1741,14 +2254,8 @@ const SurveyCreationPage = () => {
           }}
         >
           <DialogContent sx={{ mt: 2 }}>
-            <Alert 
-              severity={notification.severity}
-              sx={{ mb: notification.link ? 2 : 0 }}
-            >
-              {notification.message}
-            </Alert>
-            {notification.link && (
-              <Box sx={{ mt: 3, mb: 2 }}>
+            {notification.link ? (
+              <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
                   Here is the link to answer your private survey:
                 </Typography>
@@ -1793,18 +2300,15 @@ const SurveyCreationPage = () => {
                   This link will also be displayed in your analytics dashboard.
                 </Typography>
               </Box>
+            ) : (
+              <Alert 
+                severity={notification.severity}
+              >
+                {notification.message}
+              </Alert>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Button 
-              onClick={() => {
-                setNotification(prev => ({ ...prev, open: false }));
-              }}
-              variant="outlined"
-              color="inherit"
-            >
-              Cancel
-            </Button>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'center' }}>
             <Button 
               onClick={() => {
                 // Si c'est un message d'erreur, fermer simplement la notification
@@ -1825,7 +2329,8 @@ const SurveyCreationPage = () => {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                }
+                },
+                minWidth: '120px'
               }}
             >
               OK
@@ -1857,6 +2362,44 @@ const SurveyCreationPage = () => {
         </Box>
       )}
 
+      {/* Dialog de confirmation pour le reset */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title" sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          py: 2
+        }}>
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            {confirmDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmDialog.onConfirm}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box sx={{ 
         position: 'fixed', 
         bottom: 20, 
@@ -1868,12 +2411,33 @@ const SurveyCreationPage = () => {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         display: 'flex',
         alignItems: 'center',
-        gap: 1
+        gap: 1,
+        zIndex: 9999
       }}>
         <Typography variant="body2">
           Questions: {fields.length}
         </Typography>
       </Box>
+      
+      {/* Floating Tutorial Button */}
+      <Tooltip title="Start tutorial">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 };

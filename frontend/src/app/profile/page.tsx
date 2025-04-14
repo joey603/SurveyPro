@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import axios from 'axios';
 import {
   Container,
@@ -20,7 +20,18 @@ type User = {
   email: string;
 };
 
-const ProfilePage = () => {
+const LoadingFallback = () => (
+  <Box
+    display="flex"
+    justifyContent="center"
+    alignItems="center"
+    height="100vh"
+  >
+    <CircularProgress sx={{ color: '#667eea' }} />
+  </Box>
+);
+
+const ProfileContent = () => {
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -176,6 +187,14 @@ const ProfilePage = () => {
         )}
       </Container>
     </Box>
+  );
+};
+
+const ProfilePage = () => {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ProfileContent />
+    </Suspense>
   );
 };
 

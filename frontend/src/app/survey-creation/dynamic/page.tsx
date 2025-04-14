@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PreviewIcon from '@mui/icons-material/Preview';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SendIcon from '@mui/icons-material/Send';
 import AddIcon from '@mui/icons-material/Add';
 import SurveyFlow from './components/SurveyFlow';
@@ -49,6 +49,10 @@ import PublicIcon from '@mui/icons-material/Public';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Zoom } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SchoolIcon from '@mui/icons-material/School';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
+import InfoIcon from '@mui/icons-material/Info';
 
 const educationOptions = [
   'High School',
@@ -161,11 +165,7 @@ export default function DynamicSurveyCreation() {
         try {
           const token = localStorage.getItem('accessToken');
           if (!token) {
-            setNotification({
-              show: true,
-              message: 'Authentication token not found',
-              type: 'error'
-            });
+            console.error('Authentication token not found');
             return;
           }
 
@@ -178,31 +178,15 @@ export default function DynamicSurveyCreation() {
                   await dynamicSurveyService.deleteMedia(node.data.media, token);
                 } catch (error) {
                   console.error('Error deleting media:', error);
-                  setNotification({
-                    show: true,
-                    message: `Error deleting media for question ${node.data.questionNumber}`,
-                    type: 'warning'
-                  });
                 }
               }
             }
 
             reset();
             flowRef.current.resetFlow();
-            
-            setNotification({
-              show: true,
-              message: 'Survey reset successfully',
-              type: 'success'
-            });
           }
         } catch (error) {
           console.error('Error during reset:', error);
-          setNotification({ 
-            show: true,
-            message: 'Error resetting survey',
-            type: 'error'
-          });
         }
         setConfirmDialog(prev => ({ ...prev, open: false }));
       }
@@ -220,11 +204,7 @@ export default function DynamicSurveyCreation() {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          setNotification({
-            show: true,
-            message: 'Token d\'authentification non trouvé',
-            type: 'error'
-          });
+          console.error('Token d\'authentification non trouvé');
           return;
         }
 
@@ -232,24 +212,12 @@ export default function DynamicSurveyCreation() {
         await dynamicSurveyService.deleteMedia(node.data.media, token);
       } catch (error) {
         console.error('Erreur lors de la suppression du média:', error);
-        setNotification({
-          show: true,
-          message: 'Erreur lors de la suppression du média, mais la question sera supprimée',
-          type: 'warning'
-        });
       }
     }
 
     // Supprimer le nœud de la question
     const updatedNodes = nodes.filter((_, i) => i !== index);
     flowRef.current.setNodes(updatedNodes);
-
-    // Afficher une notification de succès
-    setNotification({
-      show: true,
-      message: 'Question supprimée avec succès',
-      type: 'success'
-    });
   };
 
   const onSubmit = async (data: FormData) => {
@@ -317,8 +285,8 @@ export default function DynamicSurveyCreation() {
           
           setNotification({
             show: true,
-            message: 'Your private survey has been created successfully!',
-            type: 'success',
+            message: '',
+            type: 'info',
             link: surveyLink,
             action: () => {
               setShowSuccess(true);
@@ -884,6 +852,545 @@ export default function DynamicSurveyCreation() {
     }
   };
 
+  // Start tutorial function
+  const startTutorial = () => {
+    // S'assurer qu'au moins une question existe pour le tutoriel
+    if (flowRef.current && flowRef.current.getNodes().length === 0) {
+      flowRef.current.addNewQuestion();
+      
+      // Attendre que les nœuds soient rendus avec un délai plus long
+      setTimeout(() => {
+        // Vérifier que les éléments sont bien présents dans le DOM
+        const reactFlowNode = document.querySelector('.react-flow__node');
+        if (reactFlowNode) {
+          // Appliquer un focus/zoom sur le premier nœud avant de démarrer le tutoriel
+          if (flowRef.current) {
+            flowRef.current.reorganizeFlow();
+            setTimeout(() => runSimpleTutorial(), 500);
+          } else {
+            runSimpleTutorial();
+          }
+        } else {
+          // Si les nœuds ne sont pas encore rendus, attendre encore
+          setTimeout(() => startTutorial(), 200);
+        }
+      }, 800); // Délai augmenté pour s'assurer que les nœuds sont rendus
+    } else {
+      // S'il y a déjà des nœuds, réorganiser avant de démarrer le tutoriel
+      if (flowRef.current) {
+        flowRef.current.reorganizeFlow();
+        setTimeout(() => runSimpleTutorial(), 500);
+      } else {
+        runSimpleTutorial();
+      }
+    }
+  };
+
+  const runSimpleTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    (window as any).surveyCreationFunctions = {
+      showPreview: () => setShowPreview(true),
+      hidePreview: () => setShowPreview(false)
+    };
+    
+    // S'assurer que le mode édition est fermé au début
+    const isEditing = !!document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+    if (isEditing) {
+      const editButton = document.querySelector('.react-flow__node:first-child [data-intro="edit-question"]');
+      if (editButton) {
+        (editButton as HTMLElement).click();
+        // Donner le temps à React de mettre à jour le DOM après la fermeture du mode édition
+        setTimeout(() => {
+          setupAndStartTutorial();
+        }, 300);
+        return;
+      }
+    }
+    
+    // Si nous ne sommes pas en mode édition, démarrer directement le tutoriel
+    setupAndStartTutorial();
+  };
+
+  // Fonction pour configurer et démarrer le tutoriel
+  const setupAndStartTutorial = () => {
+    const intro = (window as any).introInstance;
+    if (!intro) return;
+    
+    // Ajouter des styles pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+      /* Personnalisation des boutons */
+      .introjs-tooltipbuttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 10px !important;
+        border-top: 1px solid #eee !important;
+      }
+      .introjs-button {
+        text-shadow: none !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        margin: 5px !important;
+        transition: all 0.2s !important;
+      }
+      .introjs-prevbutton, .introjs-nextbutton {
+        flex: 1 !important;
+        text-align: center !important;
+      }
+      .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 0.9 !important;
+      }
+      .introjs-skipbutton {
+        background: #f44336 !important;
+        color: white !important;
+      }
+      .introjs-disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+      }
+      .intro-tuto-button {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Définition des étapes du tutoriel
+    const steps = [
+      {
+        element: '[data-intro="header"]',
+        intro: "Welcome to dynamic survey creation! This tool allows you to create surveys with conditional paths based on user responses.",
+        position: 'bottom'
+      },
+      {
+        element: '[data-intro="basic-info"]',
+        intro: "Start by filling in the basic information for your survey: title and description.",
+        position: 'bottom'
+      },
+      {
+        element: '[data-intro="demographic"]',
+        intro: "Enable this option to collect demographic information from participants, such as age, gender, and location.",
+        position: 'right'
+      },
+      {
+        element: '[data-intro="privacy"]',
+        intro: "Choose whether your survey is public or private. Private surveys are accessible only via direct link.",
+        position: 'right'
+      },
+      {
+        element: '[data-intro="flow-canvas"]',
+        intro: "This is your flow creation canvas. Here, you can create and connect questions in a flowchart style.",
+        position: 'top'
+      },
+      {
+        element: '.react-flow__node:first-child',
+        intro: "Each box represents a question in your survey. Click on a question to select it.",
+        position: 'right'
+      },
+      {
+        element: '.react-flow__node:first-child [data-intro="edit-question"]',
+        intro: "Click on the edit icon to modify the content, type, and options of a question.",
+        position: 'right'
+      },
+      {
+        // Nous utiliserons un sélecteur spécial pour cette étape, qui sera remplacé dynamiquement
+        element: '#critical-question-placeholder',
+        intro: "Mark a question as 'Critical' to create different paths based on the answer. This is useful for conditional branching.",
+        position: 'bottom'
+      },
+      {
+        // New step to explain question type selection
+        element: '#question-type-selector-placeholder',
+        intro: "Select the type of question you want to use. Each type (text, multiple choice, etc.) provides different answer options for your survey participants.",
+        position: 'bottom'
+      },
+      {
+        // New step to explain media addition
+        element: '#add-media-placeholder',
+        intro: "Enhance your questions by adding images or videos. Click this button to upload media files that will be displayed with your question.",
+        position: 'bottom'
+      },
+      {
+        // New step to explain connection points and links
+        element: '.react-flow__node:first-child',
+        intro: "Notice the small dots at the top and bottom of each question card. These are connection points. The top point receives incoming connections, while the bottom point creates outgoing connections. Drag from one point to another to create links between questions. You can also click and drag questions to reposition them on the canvas.",
+        position: 'top',
+      },
+      {
+        element: '[data-intro="add-question"]',
+        intro: "Click this button to add a new question to your survey.",
+        position: 'left'
+      },
+      {
+        element: '#reorganize-flow-placeholder',
+        intro: "Use the 'Reorganize Flow' button in the top left of the canvas to automatically organize your survey flow. This helps to better visualize connections between your questions.",
+        position: 'right'
+      },
+      {
+        element: '[data-intro="reset"]',
+        intro: "The Reset button allows you to start over by removing all questions. Warning: this action cannot be undone!",
+        position: 'top'
+      },
+      {
+        element: '[data-intro="preview"]',
+        intro: "Preview your survey to see how it will appear to participants, including conditional paths.",
+        position: 'top'
+      },
+      {
+        element: '[data-intro="submit"]',
+        intro: "When you've finished designing your survey, click Submit to publish it.",
+        position: 'top'
+      }
+    ];
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 100,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
+      steps: steps as any // Cast to any to avoid TypeScript errors
+    });
+    
+    // Mise à jour de la barre de progression après chaque changement
+    intro.onafterchange(function(targetElement) {
+      // Récupérer l'étape actuelle
+      const currentStep = intro._currentStep;
+      const totalSteps = intro._options.steps.length;
+      
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+      }
+      
+      // Vérifier si nous sommes à l'étape concernant la question critique
+      const currentStepData = intro._options.steps[currentStep];
+      if (currentStepData && typeof currentStepData.element === 'string') {
+        // Gestion initiale du mode édition - l'ouvrir si ce n'est pas déjà fait
+        const shouldOpenEditor = 
+          currentStepData.element.includes('critical-question-placeholder') ||
+          currentStepData.element.includes('question-type-selector-placeholder') ||
+          currentStepData.element.includes('add-media-placeholder');
+          
+        if (shouldOpenEditor) {
+          const editButton = document.querySelector('.react-flow__node:first-child [data-intro="edit-question"]');
+          const isAlreadyEditing = !!document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+          
+          // N'ouvrir l'éditeur que s'il n'est pas déjà ouvert
+          if (!isAlreadyEditing && editButton) {
+              (editButton as HTMLElement).click();
+            
+            // Attendre que le formulaire s'ouvre pour les prochaines étapes
+            setTimeout(() => {
+              intro.refresh();
+            }, 300);
+          }
+        }
+        
+        // Gestion de l'étape pour la question critique
+        if (currentStepData.element.includes('critical-question-placeholder')) {
+            setTimeout(() => {
+              // Trouver la case à cocher Critical Question
+              const criticalCheckbox = document.querySelector('.react-flow__node:first-child [data-intro="critical-question"]');
+              
+              if (criticalCheckbox) {
+                // Positionner le placeholder juste au-dessus de la case à cocher pour un meilleur ciblage
+                const rect = criticalCheckbox.getBoundingClientRect();
+                criticalPlaceholder.style.position = 'absolute';
+                criticalPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+                criticalPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+                criticalPlaceholder.style.width = rect.width + 'px';
+                criticalPlaceholder.style.height = rect.height + 'px';
+                criticalPlaceholder.style.zIndex = '9999';
+                
+                // Forcer intro.js à rafraîchir sa position
+                intro.refresh();
+                
+                // Mettre en évidence visuellement la case à cocher
+                (criticalCheckbox as HTMLElement).style.transition = 'all 0.3s';
+                (criticalCheckbox as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+                
+                // Réinitialiser après quelques secondes
+                setTimeout(() => {
+                  (criticalCheckbox as HTMLElement).style.boxShadow = '';
+                }, 2000);
+              }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour le sélecteur de type de question
+        if (currentStepData.element.includes('question-type-selector-placeholder')) {
+          setTimeout(() => {
+            const typeSelector = document.querySelector('.react-flow__node:first-child [data-intro="question-type-selector"]');
+            
+            if (typeSelector) {
+              // Positionner le placeholder juste au-dessus du sélecteur pour un meilleur ciblage
+              const rect = typeSelector.getBoundingClientRect();
+              questionTypePlaceholder.style.position = 'absolute';
+              questionTypePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              questionTypePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              questionTypePlaceholder.style.width = rect.width + 'px';
+              questionTypePlaceholder.style.height = rect.height + 'px';
+              questionTypePlaceholder.style.zIndex = '9999';
+              
+              // Forcer intro.js à rafraîchir sa position
+              intro.refresh();
+              
+              // Mettre en évidence visuellement le sélecteur de type
+              (typeSelector as HTMLElement).style.transition = 'all 0.3s';
+              (typeSelector as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Réinitialiser après quelques secondes
+              setTimeout(() => {
+                (typeSelector as HTMLElement).style.boxShadow = '';
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour l'ajout de média
+        if (currentStepData.element.includes('add-media-placeholder')) {
+          setTimeout(() => {
+            const addMediaButton = document.querySelector('.react-flow__node:first-child [data-intro="add-media"]');
+            
+            if (addMediaButton) {
+              // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
+              const rect = addMediaButton.getBoundingClientRect();
+              addMediaPlaceholder.style.position = 'absolute';
+              addMediaPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              addMediaPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              addMediaPlaceholder.style.width = rect.width + 'px';
+              addMediaPlaceholder.style.height = rect.height + 'px';
+              addMediaPlaceholder.style.zIndex = '9999';
+              
+              // Forcer intro.js à rafraîchir sa position
+              intro.refresh();
+              
+              // Mettre en évidence visuellement le bouton d'ajout de média
+              (addMediaButton as HTMLElement).style.transition = 'all 0.3s';
+              (addMediaButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Réinitialiser après quelques secondes
+              setTimeout(() => {
+                (addMediaButton as HTMLElement).style.boxShadow = '';
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        // Gestion de l'étape pour les points de connexion
+        if (currentStepData.element === '.react-flow__node:first-child' && 
+            currentStepData.intro && 
+            currentStepData.intro.includes('connection points')) {
+          setTimeout(() => {
+            // Sélectionner spécifiquement les points de connexion en haut et en bas
+            const topHandle = document.querySelector('.react-flow__node:first-child .react-flow__handle-top');
+            const bottomHandle = document.querySelector('.react-flow__node:first-child .react-flow__handle-bottom');
+            
+            // Mettre en évidence les points de connexion
+            if (topHandle) {
+              (topHandle as HTMLElement).style.transition = 'all 0.3s';
+              (topHandle as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              (topHandle as HTMLElement).style.transform = 'scale(1.5)';
+            }
+            
+            if (bottomHandle) {
+              (bottomHandle as HTMLElement).style.transition = 'all 0.3s';
+              (bottomHandle as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              (bottomHandle as HTMLElement).style.transform = 'scale(1.5)';
+            }
+            
+            // Réinitialiser après quelques secondes
+            setTimeout(() => {
+              if (topHandle) {
+                (topHandle as HTMLElement).style.boxShadow = '';
+                (topHandle as HTMLElement).style.transform = '';
+              }
+              
+              if (bottomHandle) {
+                (bottomHandle as HTMLElement).style.boxShadow = '';
+                (bottomHandle as HTMLElement).style.transform = '';
+              }
+            }, 3000);
+          }, 100);
+        }
+        
+        // Pour l'étape du bouton Reorganize Flow
+        if (currentStepData.element === '#reorganize-flow-placeholder') {
+          // Trouver le bouton directement par son attribut data-intro
+          const reorganizeButton = document.querySelector('[data-intro="reorganize-flow-button"]');
+          
+          if (reorganizeButton) {
+            // Positionner le placeholder au-dessus du bouton Reorganize Flow
+            const rect = reorganizeButton.getBoundingClientRect();
+            reorganizePlaceholder.style.position = 'absolute';
+            reorganizePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+            reorganizePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+            reorganizePlaceholder.style.width = rect.width + 'px';
+            reorganizePlaceholder.style.height = rect.height + 'px';
+            reorganizePlaceholder.style.zIndex = '9999';
+            
+            // Forcer intro.js à rafraîchir sa position
+            intro.refresh();
+            
+            // Mettre en évidence visuellement le bouton
+            (reorganizeButton as HTMLElement).style.transition = 'all 0.3s';
+            (reorganizeButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+            (reorganizeButton as HTMLElement).style.zIndex = '10001';
+            
+            // Réinitialiser après quelques secondes
+            setTimeout(() => {
+              (reorganizeButton as HTMLElement).style.boxShadow = '';
+            }, 3000);
+          } else {
+            console.log("Reorganize button not found for placeholder positioning!");
+            // Essayer de trouver par ID dans ce cas
+            const altButton = document.getElementById('reorganize-flow-button');
+            if (altButton) {
+              const rect = altButton.getBoundingClientRect();
+              reorganizePlaceholder.style.position = 'absolute';
+              reorganizePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+              reorganizePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+              reorganizePlaceholder.style.width = rect.width + 'px';
+              reorganizePlaceholder.style.height = rect.height + 'px';
+              reorganizePlaceholder.style.zIndex = '9999';
+              
+              intro.refresh();
+              
+              altButton.style.transition = 'all 0.3s';
+              altButton.style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              altButton.style.zIndex = '10001';
+              
+              setTimeout(() => {
+                altButton.style.boxShadow = '';
+              }, 3000);
+            }
+          }
+        }
+      }
+    });
+    
+    // Créer les placeholders pour les éléments spéciaux
+    const criticalPlaceholder = document.createElement('div');
+    criticalPlaceholder.id = 'critical-question-placeholder';
+    criticalPlaceholder.style.position = 'absolute';
+    criticalPlaceholder.style.width = '1px';
+    criticalPlaceholder.style.height = '1px';
+    criticalPlaceholder.style.opacity = '0';
+    document.body.appendChild(criticalPlaceholder);
+    
+    // Créer un placeholder pour le bouton Reorganize Flow
+    const reorganizePlaceholder = document.createElement('div');
+    reorganizePlaceholder.id = 'reorganize-flow-placeholder';
+    reorganizePlaceholder.style.position = 'absolute';
+    reorganizePlaceholder.style.width = '1px';
+    reorganizePlaceholder.style.height = '1px';
+    reorganizePlaceholder.style.opacity = '0';
+    document.body.appendChild(reorganizePlaceholder);
+    
+    // Créer un placeholder pour le sélecteur de type de question
+    const questionTypePlaceholder = document.createElement('div');
+    questionTypePlaceholder.id = 'question-type-selector-placeholder';
+    questionTypePlaceholder.style.position = 'absolute';
+    questionTypePlaceholder.style.width = '1px';
+    questionTypePlaceholder.style.height = '1px';
+    questionTypePlaceholder.style.opacity = '0';
+    document.body.appendChild(questionTypePlaceholder);
+    
+    // Créer un placeholder pour le bouton d'ajout de média
+    const addMediaPlaceholder = document.createElement('div');
+    addMediaPlaceholder.id = 'add-media-placeholder';
+    addMediaPlaceholder.style.position = 'absolute';
+    addMediaPlaceholder.style.width = '1px';
+    addMediaPlaceholder.style.height = '1px';
+    addMediaPlaceholder.style.opacity = '0';
+    document.body.appendChild(addMediaPlaceholder);
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+      // Supprimer les placeholders
+      if (document.body.contains(criticalPlaceholder)) {
+        document.body.removeChild(criticalPlaceholder);
+      }
+      if (document.body.contains(reorganizePlaceholder)) {
+        document.body.removeChild(reorganizePlaceholder);
+      }
+      if (document.body.contains(questionTypePlaceholder)) {
+        document.body.removeChild(questionTypePlaceholder);
+      }
+      if (document.body.contains(addMediaPlaceholder)) {
+        document.body.removeChild(addMediaPlaceholder);
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+  };
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       {/* Notification */}
@@ -897,14 +1404,8 @@ export default function DynamicSurveyCreation() {
           fullWidth
         >
           <DialogContent>
-            <Alert 
-              severity={notification.type}
-              sx={{ mb: notification.link ? 2 : 0 }}
-            >
-              {notification.message}
-            </Alert>
-            {notification.link && (
-              <Box sx={{ mt: 3, mb: 2 }}>
+            {notification.link ? (
+              <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
                   Here is the link to answer your private survey:
                 </Typography>
@@ -956,18 +1457,15 @@ export default function DynamicSurveyCreation() {
                   This link will also be displayed in your analytics dashboard.
                 </Typography>
               </Box>
+            ) : (
+              <Alert 
+                severity={notification.type}
+              >
+                {notification.message}
+              </Alert>
             )}
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Button 
-              onClick={() => {
-                setNotification(prev => ({ ...prev, show: false }));
-              }}
-              variant="outlined"
-              color="inherit"
-            >
-              Cancel
-            </Button>
+          <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'center' }}>
             <Button 
               onClick={() => {
                 setNotification(prev => ({ ...prev, show: false }));
@@ -980,7 +1478,8 @@ export default function DynamicSurveyCreation() {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                }
+                },
+                minWidth: '120px'
               }}
             >
               OK
@@ -989,10 +1488,53 @@ export default function DynamicSurveyCreation() {
         </Dialog>
       )}
       
+      {/* Styles globaux pour le tutoriel */}
+      <style jsx global>{`
+        .customTooltip {
+          max-width: 400px !important;
+          min-width: 250px !important;
+          z-index: 10000 !important;
+        }
+        .customHighlight {
+          z-index: 9999 !important;
+          position: relative !important;
+        }
+        .introjs-tooltip {
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .introjs-helperLayer {
+          background-color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .introjs-tooltip-title {
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .introjs-button {
+          text-shadow: none !important;
+          padding: 6px 15px !important;
+          font-size: 14px !important;
+          border-radius: 4px !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+          margin: 5px !important;
+        }
+        .introjs-prevbutton, .introjs-nextbutton {
+          transition: all 0.2s !important;
+        }
+        .introjs-prevbutton:hover, .introjs-nextbutton:hover {
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        }
+      `}</style>
+      
       {/* Paper principal contenant tous les éléments */}
       <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
         {/* Entête en anglais avec titre et sous-titre centrés */}
         <Box 
+          data-intro="header"
           sx={{ 
             p: 3,
             bgcolor: 'primary.main', 
@@ -1011,9 +1553,21 @@ export default function DynamicSurveyCreation() {
         
         {/* Section des informations de base */}
         <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
-          <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-            Basic Information
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ color: '#1a237e' }}>
+              Basic Information
+            </Typography>
+              <Tooltip 
+                title="This section contains the general information of your survey"
+                placement="right"
+                TransitionComponent={Zoom}
+                arrow
+              >
+                <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+              </Tooltip>
+            </Box>
+          </Box>
           
           <Controller
             name="title"
@@ -1028,6 +1582,7 @@ export default function DynamicSurveyCreation() {
                 error={!!error}
                 helperText={error?.message}
                 sx={{ mb: 2 }}
+                data-intro="basic-info"
               />
             )}
           />
@@ -1055,10 +1610,23 @@ export default function DynamicSurveyCreation() {
                 onChange={(e) => setValue('demographicEnabled', e.target.checked)}
               />
             }
-            label="Enable Demographic Questions"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography>Enable Demographic Questions</Typography>
+                <Tooltip 
+                  title="Enable this option to collect demographic information (age, gender, education, city)"
+                  placement="right"
+                  TransitionComponent={Zoom}
+                  arrow
+                >
+                  <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+                </Tooltip>
+              </Box>
+            }
+            data-intro="demographic"
           />
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }} data-intro="privacy">
             <FormControlLabel
               control={
                 <Switch
@@ -1094,7 +1662,25 @@ export default function DynamicSurveyCreation() {
         </Box>
 
         {/* Flow section */}
-        <Box sx={{ p: 3, pt: 0, height: '600px', position: 'relative' }}>
+        <Box 
+          sx={{ p: 3, height: '620px', position: 'relative' }}
+          data-intro="flow-canvas"
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ color: '#1a237e' }}>
+              Survey Flow
+            </Typography>
+            <Tooltip 
+              title="Create conditional branching by connecting questions based on answers"
+              placement="right"
+              TransitionComponent={Zoom}
+              arrow
+            >
+              <InfoIcon sx={{ ml: 1, color: '#667eea', fontSize: 20, cursor: 'help' }} />
+            </Tooltip>
+          </Box>
+          
+          <Box sx={{ height: 'calc(100% - 40px)', position: 'relative' }}>
           <SurveyFlow 
             ref={flowRef}
             onAddNode={() => {
@@ -1110,6 +1696,7 @@ export default function DynamicSurveyCreation() {
             <Fab 
               color="primary" 
               aria-label="add question"
+              data-intro="add-question"
               sx={{
                 position: 'absolute',
                 bottom: 24,
@@ -1128,16 +1715,18 @@ export default function DynamicSurveyCreation() {
               <AddIcon />
             </Fab>
           </Tooltip>
+          </Box>
         </Box>
       </Paper>
 
       {/* Boutons d'action en dehors du Paper principal */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 3 }}>
         <Button
           onClick={handleResetSurvey}
           variant="contained"
           startIcon={<DeleteIcon />}
           disabled={isSubmitting}
+          data-intro="reset"
           sx={{
             background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
             '&:hover': {
@@ -1151,12 +1740,16 @@ export default function DynamicSurveyCreation() {
         <Button
           onClick={handleOpenPreview}
           variant="contained"
-          startIcon={<PreviewIcon />}
+          startIcon={<VisibilityIcon />}
           disabled={isSubmitting}
+          data-intro="preview"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+            color: 'white',
+            boxShadow: 'none',
             '&:hover': {
-              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+              boxShadow: 'none',
             },
           }}
         >
@@ -1167,6 +1760,7 @@ export default function DynamicSurveyCreation() {
           onClick={handleSubmit(onSubmit)}
           variant="contained"
           disabled={isSubmitting}
+          data-intro="submit"
           startIcon={
             isSubmitting ? (
               <CircularProgress size={20} color="inherit" />
@@ -1236,6 +1830,7 @@ export default function DynamicSurveyCreation() {
             onClick={handlePrevious}
             disabled={questionHistory.length <= 1}
             variant="outlined"
+            color="primary"
           >
             Previous
           </Button>
@@ -1247,11 +1842,16 @@ export default function DynamicSurveyCreation() {
                !previewAnswers[previewNodes[currentPreviewIndex]?.id])
             }
             variant="outlined"
+            color="primary"
           >
             Next
           </Button>
-          <Button onClick={handleClosePreview} variant="contained">
-            Close Preview
+          <Button 
+            onClick={handleClosePreview} 
+            variant="contained"
+            color="secondary"
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
@@ -1316,6 +1916,27 @@ export default function DynamicSurveyCreation() {
           />
         </Box>
       )}
+
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Start tutorial">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 } 

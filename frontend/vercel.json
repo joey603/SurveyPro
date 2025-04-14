@@ -1,18 +1,16 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
+  "framework": "nextjs",
+  "buildCommand": "./build-vercel.sh",
+  "installCommand": "npm install --force",
+  "outputDirectory": ".next",
+  "regions": ["cdg1"],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-backend.onrender.com"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://surveypro-backend.onrender.com/api/:path*"
+    }
+  ]
 } 

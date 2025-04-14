@@ -33,11 +33,15 @@ import {
   Card,
   CardContent,
   CardActions,
+  Tooltip,
+  Fab,
+  Popover,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ClearIcon from '@mui/icons-material/Clear';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -61,6 +65,9 @@ import axios from 'axios';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import LockIcon from '@mui/icons-material/Lock';
+import SchoolIcon from '@mui/icons-material/School';
+import 'intro.js/introjs.css';
+import introJs from 'intro.js';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -232,7 +239,7 @@ const SurveyAnswerPage: React.FC = () => {
       }
       return DEFAULT_CITIES;
     } catch (error) {
-      console.error("Erreur lors de la récupération des villes :", error);
+      console.error("Error fetching cities:", error);
       return DEFAULT_CITIES;
     }
   };
@@ -254,7 +261,7 @@ const SurveyAnswerPage: React.FC = () => {
 
         // Charger tous les sondages
         const allSurveys = await fetchAvailableSurveys(token);
-        console.log('Sondages chargés:', allSurveys);
+        console.log('Surveys loaded:', allSurveys);
         
         if (sharedSurveyId) {
           // Si on a un ID dans l'URL, chercher ce sondage spécifique
@@ -267,7 +274,7 @@ const SurveyAnswerPage: React.FC = () => {
             setSelectedSurvey(sharedSurvey);
             setSurveys([sharedSurvey]); // Afficher uniquement ce sondage dans la liste
           } else {
-            setError('Sondage non trouvé');
+            setError('Survey not found');
           }
         } else {
           // Si pas d'ID dans l'URL, afficher uniquement les sondages publics
@@ -279,12 +286,12 @@ const SurveyAnswerPage: React.FC = () => {
         const answeredIds = await fetchAnsweredSurveys();
         if (Array.isArray(answeredIds)) {
           setAnsweredSurveys(answeredIds);
-          console.log('Sondages répondus:', answeredIds);
+          console.log('Answered surveys:', answeredIds);
         }
 
       } catch (error: any) {
-        console.error('Erreur lors du chargement des sondages:', error);
-        setError(error.message || 'Échec du chargement des sondages');
+        console.error('Error loading surveys:', error);
+        setError(error.message || 'Failed to load surveys');
       } finally {
         setLoading(false);
       }
@@ -463,7 +470,7 @@ const SurveyAnswerPage: React.FC = () => {
     return incomingEdges.some(edge => {
       if (edge.label) {
         const sourceAnswer = currentAnswers[edge.source];
-        return sourceAnswer === edge.label;
+        return String(sourceAnswer) === String(edge.label);
       }
       return shouldShowQuestion(edge.source);
     });
@@ -480,13 +487,13 @@ const SurveyAnswerPage: React.FC = () => {
   const onSubmit = async (data: FormData) => {
     try {
       if (!selectedSurvey) {
-        setSubmitError('Aucun sondage sélectionné');
+        setSubmitError('No survey selected');
         return;
       }
 
       // Valider le formulaire avant la soumission
       if (!validateForm(data)) {
-        setSubmitError('Veuillez répondre à toutes les questions requises');
+        setSubmitError('Please answer all required questions');
         return;
       }
 
@@ -495,6 +502,11 @@ const SurveyAnswerPage: React.FC = () => {
 
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Token non trouvé');
+
+      // Sauvegarder les données démographiques dans le localStorage si elles existent
+      if (selectedSurvey.demographicEnabled && data.demographic) {
+        localStorage.setItem('lastDemographicData', JSON.stringify(data.demographic));
+      }
 
       // Pour les sondages dynamiques, filtrer uniquement les réponses visibles
       if (selectedSurvey.isDynamic && selectedSurvey.nodes) {
@@ -558,7 +570,7 @@ const SurveyAnswerPage: React.FC = () => {
       }
 
       setNotification({
-        message: 'Réponse soumise avec succès',
+        message: 'Survey response submitted successfully',
         severity: 'success',
         open: true
       });
@@ -568,11 +580,11 @@ const SurveyAnswerPage: React.FC = () => {
       reset();
       setSelectedSurvey(null);
     } catch (error: any) {
-      console.error('Erreur lors de la soumission:', error);
+      console.error('Error submitting survey response:', error);
       setSubmitError(
         error.response?.data?.message || 
         error.message || 
-        'Erreur lors de la soumission du sondage'
+        'Error submitting survey response'
       );
     } finally {
       setIsSubmitting(false);
@@ -609,8 +621,8 @@ const SurveyAnswerPage: React.FC = () => {
                 }
               }
             }}
-            onError={(e) => console.error('Erreur de chargement vidéo:', e)}
-            onReady={() => console.log('Vidéo prête à être lue')}
+            onError={(e) => console.error('Error loading video:', e)}
+            onReady={() => console.log('Video ready to be played')}
           />
         </Box>
       );
@@ -633,11 +645,11 @@ const SurveyAnswerPage: React.FC = () => {
               boxShadow: 1
             }}
             onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-              console.error('Erreur de chargement image:', e);
-              console.log('URL qui a échoué:', fullUrl);
+              console.error('Error loading image:', e);
+              console.log('URL that failed:', fullUrl);
               (e.target as HTMLImageElement).style.display = 'none';
             }}
-            onLoad={() => console.log('Image chargée avec succès')}
+            onLoad={() => console.log('Image loaded successfully')}
           />
         </Box>
       );
@@ -666,12 +678,33 @@ const SurveyAnswerPage: React.FC = () => {
     }
   };
 
+  // Fonction pour vérifier si c'est une question critique
+  const isCriticalQuestion = (nodeId: string): boolean => {
+    if (!selectedSurvey?.edges) return false;
+    
+    // Une question est critique si elle a des edges sortants avec des labels différents
+    const outgoingEdges = selectedSurvey.edges.filter(e => e.source === nodeId);
+    return outgoingEdges.length > 0 && outgoingEdges.some(e => e.label);
+  };
+
+  // Modifier la fonction renderQuestionInput pour gérer les réponses aux questions dynamiques
   const renderQuestionInput = (question: Question) => (
     <Controller
       name={`answers.${question.id}` as FieldPath}
       control={control}
       defaultValue=""
       render={({ field }) => {
+        // Handler pour les changements de valeur aux questions dynamiques
+        const handleChange = (value: any) => {
+          field.onChange(value);
+          validateField(`answers.${question.id}`, value);
+          
+          // Si c'est un sondage dynamique, mettre à jour les réponses actuelles
+          if (selectedSurvey?.isDynamic) {
+            handleDynamicAnswerChange(question.id, value);
+          }
+        };
+
         const component = (() => {
           switch (question.type) {
             case "text":
@@ -682,8 +715,7 @@ const SurveyAnswerPage: React.FC = () => {
                   error={!!formErrors[`answers.${question.id}`]}
                   helperText={formErrors[`answers.${question.id}`]}
                   onChange={(e) => {
-                    field.onChange(e);
-                    validateField(`answers.${question.id}`, e.target.value);
+                    handleChange(e.target.value);
                   }}
                 />
               );
@@ -694,8 +726,7 @@ const SurveyAnswerPage: React.FC = () => {
                   <RadioGroup 
                     {...field}
                     onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
+                      handleChange(e.target.value);
                     }}
                   >
                     {question.options?.map((option, index) => (
@@ -717,31 +748,22 @@ const SurveyAnswerPage: React.FC = () => {
 
             case "dropdown":
               return (
-                <Controller
-                  name={`answers.${question.id}`}
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>{question.text || 'Sélectionnez une option'}</InputLabel>
-                      <Select
-                        {...field}
-                        label={question.text || 'Sélectionnez une option'}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          validateField(`answers.${question.id}`, value);
-                        }}
-                      >
-                        {(question.options || []).map((option: string) => (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>{question.text || 'Select an option'}</InputLabel>
+                  <Select
+                    {...field}
+                    label={question.text || 'Select an option'}
+                    onChange={(e) => {
+                      handleChange(e.target.value);
+                    }}
+                  >
+                    {(question.options || []).map((option: string) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               );
 
             case "yes-no":
@@ -751,12 +773,11 @@ const SurveyAnswerPage: React.FC = () => {
                     {...field} 
                     row
                     onChange={(e) => {
-                      field.onChange(e);
-                      validateField(`answers.${question.id}`, e.target.value);
+                      handleChange(e.target.value);
                     }}
                   >
-                    <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                    <FormControlLabel value="no" control={<Radio />} label="No" />
+                    <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
+                    <FormControlLabel value="No" control={<Radio />} label="No" />
                   </RadioGroup>
                   {formErrors[`answers.${question.id}`] && (
                     <Typography color="error" variant="caption">
@@ -774,8 +795,7 @@ const SurveyAnswerPage: React.FC = () => {
                     precision={1}
                     size="large"
                     onChange={(_, value) => {
-                      field.onChange(value);
-                      validateField(`answers.${question.id}`, value);
+                      handleChange(value);
                     }}
                     value={typeof field.value === 'number' ? field.value : 0}
                     sx={{ 
@@ -805,8 +825,7 @@ const SurveyAnswerPage: React.FC = () => {
                     max={10}
                     valueLabelDisplay="auto"
                     onChange={(_, value) => {
-                      field.onChange(value);
-                      validateField(`answers.${question.id}`, value);
+                      handleChange(value);
                     }}
                     value={typeof field.value === 'number' ? field.value : 0}
                   />
@@ -826,8 +845,7 @@ const SurveyAnswerPage: React.FC = () => {
                       label="Select date"
                       value={field.value || null}
                       onChange={(newValue) => {
-                        field.onChange(newValue);
-                        validateField(`answers.${question.id}`, newValue);
+                        handleChange(newValue);
                       }}
                       renderInput={(params: TextFieldProps) => (
                         <TextField
@@ -842,6 +860,44 @@ const SurveyAnswerPage: React.FC = () => {
                 </Box>
               );
 
+            case "color-picker":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <input
+                    type="color"
+                    {...field}
+                    style={{ width: '100%', height: '40px' }}
+                    onChange={(e) => {
+                      handleChange(e.target.value);
+                    }}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
+            case "file-upload":
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      handleChange(file);
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                  {formErrors[`answers.${question.id}`] && (
+                    <Typography color="error" variant="caption">
+                      {formErrors[`answers.${question.id}`]}
+                    </Typography>
+                  )}
+                </Box>
+              );
+
             default:
               return (
                 <TextField 
@@ -849,6 +905,9 @@ const SurveyAnswerPage: React.FC = () => {
                   fullWidth 
                   error={!!formErrors[`answers.${question.id}`]}
                   helperText={formErrors[`answers.${question.id}`]}
+                  onChange={(e) => {
+                    handleChange(e.target.value);
+                  }}
                 />
               );
           }
@@ -856,7 +915,16 @@ const SurveyAnswerPage: React.FC = () => {
 
         return (
           <Box sx={{ width: '100%' }}>
+            {question.media && renderQuestionMedia(question.media)}
             {component}
+            {isCriticalQuestion(question.id) && (
+              <Chip 
+                label="This answer impacts following questions" 
+                color="primary" 
+                size="small" 
+                sx={{ mt: 2 }} 
+              />
+            )}
           </Box>
         );
       }}
@@ -881,10 +949,11 @@ const SurveyAnswerPage: React.FC = () => {
                 validateField('demographic.gender', e.target.value);
               }}
               row
+              className="gender-options"
             >
-              <FormControlLabel value="male" control={<Radio />} label="Male" />
-              <FormControlLabel value="female" control={<Radio />} label="Female" />
-              <FormControlLabel value="other" control={<Radio />} label="Other" />
+              <FormControlLabel value="male" control={<Radio id="gender-male" />} label="Male" />
+              <FormControlLabel value="female" control={<Radio id="gender-female" />} label="Female" />
+              <FormControlLabel value="other" control={<Radio id="gender-other" />} label="Other" />
             </RadioGroup>
             {formErrors['demographic.gender'] && (
               <Typography color="error" variant="caption">
@@ -899,7 +968,17 @@ const SurveyAnswerPage: React.FC = () => {
         name="demographic.dateOfBirth"
         control={control}
         render={({ field }) => (
-          <Box sx={{ mb: 3, width: '100%' }}>
+          <Box 
+            sx={{ 
+              mb: 3, 
+              width: '100%', 
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="dob-field-container"
+          >
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Date of Birth"
@@ -911,6 +990,8 @@ const SurveyAnswerPage: React.FC = () => {
                 renderInput={(params: TextFieldProps) => (
                   <TextField
                     {...params}
+                    id="date-of-birth-field"
+                    className="dob-field"
                     fullWidth
                     error={!!formErrors['demographic.dateOfBirth']}
                     helperText={formErrors['demographic.dateOfBirth']}
@@ -927,14 +1008,26 @@ const SurveyAnswerPage: React.FC = () => {
         control={control}
         defaultValue=""
         render={({ field }) => (
-          <Box sx={{ mb: 3 }}>
+          <Box 
+            sx={{ 
+              mb: 3,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="education-field-container"
+          >
             <FormControl 
               fullWidth
               error={!!formErrors['demographic.educationLevel']}
             >
-              <InputLabel>Education Level</InputLabel>
+              <InputLabel id="education-level-label">Education Level</InputLabel>
               <Select
                 {...field}
+                labelId="education-level-label"
+                id="education-level-field"
+                className="education-field"
                 label="Education Level"
                 onChange={(e) => {
                   field.onChange(e);
@@ -962,6 +1055,16 @@ const SurveyAnswerPage: React.FC = () => {
         control={control}
         defaultValue=""
         render={({ field }) => (
+          <Box 
+            sx={{ 
+              mb: 3,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'rgba(102, 126, 234, 0.03)'
+            }} 
+            id="city-field-container"
+          >
           <FormControl 
             fullWidth
             error={!!formErrors['demographic.city']}
@@ -991,6 +1094,7 @@ const SurveyAnswerPage: React.FC = () => {
               </FormHelperText>
             )}
           </FormControl>
+          </Box>
         )}
       />
     </Box>
@@ -1015,10 +1119,10 @@ const SurveyAnswerPage: React.FC = () => {
 
       // Combiner les deux types de réponses
       const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
-      console.log('Tous les sondages répondus:', allAnsweredSurveys);
+      console.log('All answered surveys:', allAnsweredSurveys);
       setAnsweredSurveys(allAnsweredSurveys);
     } catch (error) {
-      console.error('Erreur lors de la récupération des sondages répondus:', error);
+      console.error('Error retrieving answered surveys:', error);
     }
   };
 
@@ -1037,8 +1141,28 @@ const SurveyAnswerPage: React.FC = () => {
   }, [notification.open]);
 
   useEffect(() => {
-    console.log("État actuel des sondages répondus:", answeredSurveys);
+    console.log("Current answered surveys:", answeredSurveys);
   }, [answeredSurveys]);
+
+  // Charger les données démographiques sauvegardées lors du premier rendu
+  useEffect(() => {
+    // D'abord essayer de charger depuis le backend
+    fetchLastDemographicData();
+    
+    // Ensuite, vérifier si des données sont présentes dans le localStorage
+    const savedDemographicData = localStorage.getItem('lastDemographicData');
+    if (savedDemographicData) {
+      try {
+        const data = JSON.parse(savedDemographicData);
+        setValue('demographic.gender', data.gender || '');
+        setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+        setValue('demographic.educationLevel', data.educationLevel || '');
+        setValue('demographic.city', data.city || '');
+      } catch (error) {
+        console.error('Error loading demographic data from local storage:', error);
+      }
+    }
+  }, [setValue]);
 
   const fetchSurveyResponses = async () => {
     try {
@@ -1124,14 +1248,14 @@ const SurveyAnswerPage: React.FC = () => {
         navigator.clipboard.writeText(getShareUrl(survey))
           .then(() => {
             setNotification({
-              message: "Lien copié dans le presse-papiers !",
+              message: "Link copied to clipboard!",
               severity: 'success',
               open: true
             });
           })
           .catch(() => {
             setNotification({
-              message: "Erreur lors de la copie du lien",
+              message: "Error copying link",
               severity: 'error',
               open: true
             });
@@ -1145,7 +1269,7 @@ const SurveyAnswerPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5041/api/survey-answers/last-demographic', {
+      const response = await fetch(`${BASE_URL}/survey-answers/last-demographic`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         }
@@ -1153,17 +1277,34 @@ const SurveyAnswerPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setLastDemographicData(data);
+        console.log('Demographic data retrieved from backend:', data);
+        
         // Mettre à jour les valeurs du formulaire avec les données récupérées
         if (data) {
+          // Sauvegarder également dans le localStorage pour une utilisation future
+          localStorage.setItem('lastDemographicData', JSON.stringify(data));
+          
+          // Mettre à jour l'état local
+          setLastDemographicData(data);
+          
+          // Mettre à jour le formulaire
           setValue('demographic.gender', data.gender || '');
           setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
           setValue('demographic.educationLevel', data.educationLevel || '');
           setValue('demographic.city', data.city || '');
+          
+          return true;
         }
+      } else if (response.status === 404) {
+        console.log('No demographic data found in the backend');
+        return false;
+      } else {
+        console.error('Error retrieving demographic data:', await response.text());
+        return false;
       }
     } catch (error) {
-      console.error('Error fetching last demographic data:', error);
+      console.error('Error retrieving demographic data:', error);
+      return false;
     }
   };
 
@@ -1176,22 +1317,36 @@ const SurveyAnswerPage: React.FC = () => {
       <Box sx={{ p: 4, backgroundColor: 'white' }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {selectedSurvey.demographicEnabled && (
-            <Box sx={{ mb: 4 }}>
+            <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
+                {lastDemographicData && (
+                  <Tooltip title="Demographic data automatically loaded">
+                    <Chip 
+                      icon={<AutorenewIcon />} 
+                      label="Auto" 
+                      size="small" 
+                      color="primary" 
+                      sx={{ ml: 2 }} 
+                    />
+                  </Tooltip>
+                )}
               </Typography>
               {renderDemographicFields()}
             </Box>
           )}
 
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ mb: 4 }} id="survey-questions-section">
             <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
               Survey questions
             </Typography>
-            {selectedSurvey.questions.map((question: Question) => (
+            {selectedSurvey.questions.map((question: Question, index: number) => (
               <Paper
                 key={question.id}
                 elevation={1}
+                className="survey-question-paper"
+                data-testid={`question-${question.id}`}
+                id={`survey-question-${index}`}
                 sx={{
                   p: 3,
                   mb: 3,
@@ -1302,9 +1457,22 @@ const SurveyAnswerPage: React.FC = () => {
         }
 
         const outgoingEdges = selectedSurvey?.edges?.filter(e => e.source === nodeId) || [];
-        outgoingEdges.forEach(edge => {
-          calculateDepth(edge.target, depth + 1);
-        });
+        
+        // Pour les questions critiques, suivre uniquement le chemin correspondant à la réponse actuelle
+        if (isCriticalQuestion(nodeId) && currentAnswers[nodeId]) {
+          const matchingEdge = outgoingEdges.find(edge => 
+            String(edge.label) === String(currentAnswers[nodeId])
+          );
+          
+          if (matchingEdge) {
+            calculateDepth(matchingEdge.target, depth + 1);
+          }
+        } else {
+          // Pour les questions non critiques, explorer tous les chemins
+          outgoingEdges.forEach(edge => {
+            calculateDepth(edge.target, depth + 1);
+          });
+        }
       };
 
       // Calculer la profondeur en commençant par le nœud racine
@@ -1335,333 +1503,72 @@ const SurveyAnswerPage: React.FC = () => {
       return orderedNodes;
     };
 
-    // Fonction pour vérifier si c'est une question critique
-    const isCriticalQuestion = (nodeId: string): boolean => {
-      return selectedSurvey.edges?.some(e => (e.source === nodeId || e.target === nodeId) && e.label) || false;
-    };
-
-    // Obtenir les nœuds ordonnés
-    const orderedNodes = getOrderedNodes();
-
-    // Modifier la fonction de rendu des questions pour les sondages dynamiques
-    const renderQuestionInput = (node: any) => {
-      // Ajouter le rendu du média avant le rendu de l'input
-      const renderNodeMedia = () => {
-        const mediaUrl = node.data?.mediaUrl || node.data?.media;
-        if (!mediaUrl) return null;
-
-        // Déterminer le type de média basé sur l'extension du fichier
-        const isVideo = mediaUrl.match(/\.(mp4|mov|webm)$/i);
-        const isImage = mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-
-        if (isVideo) {
-          return (
-            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
-              <ReactPlayer
-                url={mediaUrl}
-                controls
-                width="100%"
-                height="auto"
-                style={{ borderRadius: '8px' }}
-                config={{
-                  file: {
-                    attributes: {
-                      controlsList: 'nodownload',
-                      onContextMenu: (e: React.MouseEvent) => e.preventDefault()
-                    }
-                  }
-                }}
-                onError={(e) => console.error('Erreur de chargement vidéo:', e)}
-                onReady={() => console.log('Vidéo prête à être lue')}
-              />
-            </Box>
-          );
-        }
-
-        if (isImage) {
-          return (
-            <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
-              <Box
-                component="img"
-                src={mediaUrl}
-                alt="Question media"
-                sx={{
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                  maxHeight: '400px',
-                  backgroundColor: 'background.paper',
-                  boxShadow: 1
-                }}
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  console.error('Erreur de chargement image:', e);
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-                onLoad={() => console.log('Image chargée avec succès')}
-              />
-            </Box>
-          );
-        }
-
-        return null;
-      };
-
-      return (
-        <Box sx={{ width: '100%' }}>
-          {renderNodeMedia()}
-          {/* Reste du code existant pour le rendu des inputs */}
-          {(() => {
-            const effectiveType = node.data?.questionType || node.data?.type;
-            switch (effectiveType?.toLowerCase()) {
-              case 'yes-no':
-              case 'yesno':
-              case 'boolean':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <RadioGroup
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          handleDynamicAnswerChange(node.id, value);
-                        }}
-                      >
-                        <FormControlLabel value="Yes" control={<Radio />} label="Oui" />
-                        <FormControlLabel value="No" control={<Radio />} label="Non" />
-                      </RadioGroup>
-                    )}
-                  />
-                );
-
-              case 'multiple-choice':
-              case 'multiplechoice':
-              case 'choice':
-              case 'radio':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <RadioGroup
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          handleDynamicAnswerChange(node.id, value);
-                        }}
-                      >
-                        {(node.data?.options || []).map((option: string) => (
-                          <FormControlLabel
-                            key={option}
-                            value={option}
-                            control={<Radio />}
-                            label={option}
-                          />
-                        ))}
-                      </RadioGroup>
-                    )}
-                  />
-                );
-
-              case 'text':
-              case 'textarea':
-              case 'string':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleDynamicAnswerChange(node.id, e.target.value);
-                        }}
-                      />
-                    )}
-                  />
-                );
-
-              case 'rating':
-              case 'stars':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={0}
-                    render={({ field }) => (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Rating
-                          {...field}
-                          onChange={(_, value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                        <Typography>
-                          {field.value ? `${field.value} étoiles` : 'Aucune note'}
-                        </Typography>
-                      </Box>
-                    )}
-                  />
-                );
-
-              case 'slider':
-              case 'range':
-              case 'number':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={0}
-                    render={({ field }) => (
-                      <Box sx={{ width: '100%', px: 2 }}>
-                        <Slider
-                          {...field}
-                          min={0}
-                          max={10}
-                          marks
-                          valueLabelDisplay="auto"
-                          onChange={(_, value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                      </Box>
-                    )}
-                  />
-                );
-
-              case 'date':
-              case 'datetime':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue={null}
-                    render={({ field }) => (
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DatePicker
-                          {...field}
-                          renderInput={(params) => <TextField {...params} fullWidth />}
-                          onChange={(value) => {
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        />
-                      </LocalizationProvider>
-                    )}
-                  />
-                );
-
-              case 'dropdown':
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <FormControl fullWidth>
-                        <InputLabel>{node.data.text || 'Sélectionnez une option'}</InputLabel>
-                        <Select
-                          {...field}
-                          label={node.data.text || 'Sélectionnez une option'}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value);
-                            handleDynamicAnswerChange(node.id, value);
-                          }}
-                        >
-                          {(node.data?.options || []).map((option: string) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                );
-
-              default:
-                console.warn(`Type de question non supporté: ${effectiveType}`, node);
-                // Si aucun type n'est spécifié, on utilise un champ texte par défaut
-                return (
-                  <Controller
-                    name={`answers.${node.id}`}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleDynamicAnswerChange(node.id, e.target.value);
-                        }}
-                        placeholder="Votre réponse..."
-                      />
-                    )}
-                  />
-                );
-            }
-          })()}
-        </Box>
-      );
-    };
-
     return (
       <Box sx={{ p: 3 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {selectedSurvey.demographicEnabled && (
-            <Box sx={{ mb: 4 }}>
+            <Box id="demographic-section" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
                 Demographic informations
+                {lastDemographicData && (
+                  <Tooltip title="Demographic data automatically loaded">
+                    <Chip 
+                      icon={<AutorenewIcon />} 
+                      label="Auto" 
+                      size="small" 
+                      color="primary" 
+                      sx={{ ml: 2 }} 
+                    />
+                  </Tooltip>
+                )}
               </Typography>
               {renderDemographicFields()}
             </Box>
           )}
 
-          {orderedNodes.map((node) => {
-            const isVisible = shouldShowQuestion(node.id);
-            const isCritical = isCriticalQuestion(node.id);
+          <Box id="survey-questions-section" sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+              Survey questions
+            </Typography>
+            
+            {getOrderedNodes().map((node, index) => {
+              const isVisible = shouldShowQuestion(node.id);
+              const isCritical = isCriticalQuestion(node.id);
 
-            if (!isVisible) return null;
+              if (!isVisible) return null;
 
-            return (
-              <Paper
-                key={node.id}
-                elevation={1}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: 2,
-                  border: '1px solid rgba(0, 0, 0, 0.1)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>
-                  {node.data.text || node.data.label || 'Question without text'}
-                </Typography>
+              return (
+                <Paper
+                  key={node.id}
+                  elevation={1}
+                  className="survey-question-paper"
+                  data-testid={`question-${node.id}`}
+                  id={`survey-question-${index}`}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: isCritical ? '2px solid #3f51b5' : '1px solid rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    {node.data.text || node.data.label || 'Question without text'}
+                  </Typography>
 
-                <Box sx={{ mt: 2 }}>
-                  {renderQuestionInput(node)}
-                </Box>
-              </Paper>
-            );
-          })}
+                  <Box sx={{ mt: 2 }}>
+                    {renderQuestionInput({
+                      id: node.id,
+                      text: node.data.text || node.data.label || '',
+                      type: node.data.type || 'text',
+                      options: node.data.options || [],
+                      media: node.data.mediaUrl || node.data.media
+                    })}
+                  </Box>
+                </Paper>
+              );
+            })}
+          </Box>
 
           {submitError && (
             <Typography color="error" sx={{ mt: 2, mb: 2 }}>
@@ -1705,6 +1612,391 @@ const SurveyAnswerPage: React.FC = () => {
     );
   };
 
+  // Ajouter la fonction startTutorial
+  const startTutorial = () => {
+    // Créer une nouvelle instance et la rendre accessible globalement
+    const intro = introJs();
+    (window as any).introInstance = intro;
+    
+    // Ajouter des styles pour le tutoriel
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .introjs-tooltip {
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 99998 !important;
+        display: block !important;
+        animation: none !important;
+        transition: none !important;
+      }
+      .introjs-helperLayer {
+        z-index: 99997 !important;
+      }
+      .introjs-tooltip {
+        min-width: 250px !important;
+        max-width: 400px !important;
+        background: white !important;
+        color: #333 !important;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2) !important;
+        border-radius: 5px !important;
+        font-family: sans-serif !important;
+      }
+      .introjs-tooltiptext {
+        padding: 15px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+      }
+      .introjs-overlay {
+        opacity: 0.7 !important;
+      }
+      /* Forces les tooltips à s'afficher */
+      .introjs-showElement {
+        z-index: 99999 !important;
+      }
+      .introjs-fixParent {
+        z-index: auto !important;
+      }
+      /* Personnalisation des boutons */
+      .introjs-tooltipbuttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 10px !important;
+        border-top: 1px solid #eee !important;
+      }
+      .introjs-button {
+        text-shadow: none !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        margin: 5px !important;
+        transition: all 0.2s !important;
+      }
+      .introjs-prevbutton, .introjs-nextbutton {
+        flex: 1 !important;
+        text-align: center !important;
+      }
+      .introjs-prevbutton:hover, .introjs-nextbutton:hover, .introjs-skipbutton:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        opacity: 0.9 !important;
+      }
+      .introjs-skipbutton {
+        background: #f44336 !important;
+        color: white !important;
+      }
+      .introjs-disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+      }
+      .intro-tuto-button {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Ajouter un contrôleur personnalisé pour le tutoriel
+    const controllerDiv = document.createElement('div');
+    controllerDiv.className = 'tutorial-controller';
+    controllerDiv.style.position = 'fixed';
+    controllerDiv.style.bottom = '20px';
+    controllerDiv.style.left = '50%';
+    controllerDiv.style.transform = 'translateX(-50%)';
+    controllerDiv.style.backgroundColor = 'white';
+    controllerDiv.style.padding = '10px 15px';
+    controllerDiv.style.borderRadius = '50px';
+    controllerDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
+    controllerDiv.style.zIndex = '999999';
+    controllerDiv.style.display = 'flex';
+    controllerDiv.style.justifyContent = 'center';
+    controllerDiv.style.gap = '10px';
+    
+    // Créer les boutons
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.style.padding = '8px 16px';
+    prevButton.style.border = 'none';
+    prevButton.style.borderRadius = '4px';
+    prevButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    prevButton.style.color = 'white';
+    prevButton.style.cursor = 'pointer';
+    prevButton.style.fontWeight = 'bold';
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.style.padding = '8px 16px';
+    nextButton.style.border = 'none';
+    nextButton.style.borderRadius = '4px';
+    nextButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    nextButton.style.color = 'white';
+    nextButton.style.cursor = 'pointer';
+    nextButton.style.fontWeight = 'bold';
+    
+    const exitButton = document.createElement('button');
+    exitButton.textContent = 'Exit';
+    exitButton.style.padding = '8px 16px';
+    exitButton.style.border = 'none';
+    exitButton.style.borderRadius = '4px';
+    exitButton.style.background = '#f44336';
+    exitButton.style.color = 'white';
+    exitButton.style.cursor = 'pointer';
+    exitButton.style.fontWeight = 'bold';
+    
+    // Ajout des écouteurs d'événements
+    prevButton.addEventListener('click', () => {
+      try {
+        intro.previousStep();
+      } catch (e) {
+        console.error('Erreur previous:', e);
+      }
+    });
+    
+    nextButton.addEventListener('click', () => {
+      try {
+        const currentStep = intro._currentStep;
+        if (currentStep < intro._options.steps.length - 1) {
+          intro.nextStep();
+        } else {
+          intro.exit(true);
+          document.body.removeChild(controllerDiv);
+        }
+      } catch (e) {
+        console.error('Erreur next:', e);
+      }
+    });
+    
+    exitButton.addEventListener('click', () => {
+      try {
+        intro.exit(true);
+        document.body.removeChild(controllerDiv);
+      } catch (e) {
+        console.error('Erreur exit:', e);
+      }
+    });
+    
+    // Ajouter les boutons au contrôleur
+    controllerDiv.appendChild(prevButton);
+    controllerDiv.appendChild(nextButton);
+    controllerDiv.appendChild(exitButton);
+    
+    // Déterminer les étapes du tutoriel en fonction de la page actuelle
+    const steps = selectedSurvey 
+      ? getSurveyAnswerTutorialSteps() 
+      : getSurveyListTutorialSteps();
+    
+    // Configuration du tutoriel
+    intro.setOptions({
+      showBullets: true,
+      showProgress: true,
+      tooltipPosition: 'auto',
+      scrollToElement: true,
+      scrollPadding: 280,
+      exitOnEsc: false,
+      exitOnOverlayClick: false,
+      showButtons: true,
+      showStepNumbers: true,
+      prevLabel: 'Previous',
+      nextLabel: 'Next',
+      skipLabel: '×',
+      doneLabel: 'Done',
+      steps: steps as any
+    });
+    
+    // Nettoyer à la sortie
+    intro.onexit(function() {
+      if (document.head.contains(styleEl)) {
+        document.head.removeChild(styleEl);
+      }
+    });
+    
+    // Mise à jour de la barre de progression après chaque changement
+    intro.onafterchange(function(targetElement) {
+      // Récupérer l'étape actuelle
+      const currentStep = intro._currentStep;
+      const totalSteps = intro._options.steps.length;
+      
+      // Mettre à jour la barre de progression
+      const progressBar = document.querySelector('.introjs-progress');
+      if (progressBar) {
+        const progressWidth = (currentStep / (totalSteps - 1)) * 100;
+        (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+      }
+    });
+    
+    // Démarrer le tutoriel
+    intro.start();
+  };
+
+  // Fonction pour obtenir les étapes du tutoriel de la liste des sondages
+  const getSurveyListTutorialSteps = () => {
+    return [
+      {
+        element: 'body',
+        intro: "Welcome to the survey answering section! This tutorial will guide you through the available features.",
+        position: 'top'
+      },
+      {
+        element: '#survey-search-input',
+        intro: "Use this search bar to quickly find surveys by title or description.",
+        position: 'bottom'
+      },
+      {
+        element: '#date-filter-chip',
+        intro: "Filter surveys by creation date by clicking on this filter.",
+        position: 'bottom'
+      },
+      {
+        element: '#sort-filter-chip',
+        intro: "Sort surveys by creation date or by popularity.",
+        position: 'bottom'
+      },
+      {
+        element: '#type-filter-chip',
+        intro: "Filter by survey type: all, dynamic (with conditional paths) or static (linear).",
+        position: 'bottom'
+      },
+      {
+        element: '[data-testid^="survey-card-"]:first-of-type',
+        intro: "This is a survey card. Each card shows the title, a description, and information such as the number of questions.",
+        position: 'right'
+      },
+      {
+        element: '[data-testid^="survey-title-"]:first-of-type',
+        intro: "The survey title is displayed here, with badges indicating if it is private or dynamic.",
+        position: 'bottom'
+      },
+      {
+        element: 'button[id^="share-button-"]',
+        intro: "Share a survey with others via various social networks or by copying the link.",
+        position: 'top'
+      },
+      {
+        element: 'button[id^="answer-button-"]',
+        intro: "Click here to answer the survey. If you have already answered it, the button will be disabled.",
+        position: 'top'
+      },
+      {
+        element: 'body',
+        intro: "Once you click on 'Answer Survey', you can answer the questions and submit your responses. Congratulations, you now know how to use the survey answering page!",
+        position: 'top'
+      }
+    ];
+  };
+
+  // Fonction pour obtenir les étapes du tutoriel de réponse à un sondage
+  const getSurveyAnswerTutorialSteps = () => {
+    const steps = [
+      {
+        element: 'body',
+        intro: "Welcome to the survey answering page! This tutorial will guide you through completing a survey.",
+        position: 'top'
+      },
+      {
+        element: '#back-button',
+        intro: "Click this button to return to the list of surveys at any time.",
+        position: 'right'
+      }
+    ];
+
+    // Ajouter des étapes pour les informations démographiques si activées
+    if (selectedSurvey?.demographicEnabled) {
+      // Introduction générale à la section démographique
+      steps.push({
+        element: '#demographic-section',
+        intro: "The demographic section collects basic information about you. This helps the survey creator analyze responses based on demographics.",
+        position: 'bottom'
+      });
+      
+      // Explications détaillées pour chaque champ démographique
+      steps.push({
+        element: '.gender-options',
+        intro: "Gender field: Select your gender from the options (Male, Female, or Other). This information is used to analyze trends across different gender groups.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#dob-field-container',
+        intro: "Date of Birth field: Select your birth date. Age demographics help researchers understand how responses vary between different age groups.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#education-field-container',
+        intro: "Education Level: Select your highest level of education from options like High School, Bachelor's, Master's, or Ph.D. This helps identify response patterns based on educational background.",
+        position: 'bottom'
+      });
+      
+      steps.push({
+        element: '#city-field-container',
+        intro: "City field: Select your city from the dropdown. Location data enables geographic analysis and helps identify regional trends in survey responses.",
+        position: 'bottom'
+      });
+    }
+
+    // Vérifier s'il s'agit d'un sondage dynamique
+    if (selectedSurvey?.isDynamic) {
+      const hasCriticalQuestion = selectedSurvey.edges?.some(edge => edge.label);
+      
+      steps.push({
+        element: '#survey-questions-section',
+        intro: "This is a dynamic survey that adapts based on your answers. Different questions may appear depending on how you respond.",
+        position: 'top'
+      });
+
+      if (hasCriticalQuestion) {
+        // Trouver la première question critique en parcourant les noeuds du sondage
+        const criticalNodeId = selectedSurvey.nodes?.find(node => 
+          isCriticalQuestion(node.id)
+        )?.id;
+        
+        // Sélectionner l'élément correspondant à la première question critique
+        // ou utiliser le sélecteur par défaut si nous ne la trouvons pas
+        const criticalQuestionSelector = criticalNodeId 
+          ? `[data-testid="question-${criticalNodeId}"]` 
+          : '.survey-question-paper[style*="border: 2px solid"]';
+        
+        steps.push({
+          element: criticalQuestionSelector,
+          intro: "Critical questions (like Yes/No or dropdown questions) will determine which subsequent questions you'll see. Your experience will be personalized based on your answers.",
+          position: 'left'
+        });
+      }
+
+      steps.push({
+        element: 'form',
+        intro: "Answer each question fully before moving to the next. You can't return to previous questions in a dynamic survey after submission.",
+        position: 'bottom'
+      });
+    } else {
+      // Pour les sondages statiques
+      steps.push({
+        element: '#survey-questions-section',
+        intro: "This is a standard survey with a fixed set of questions. Answer each question to the best of your ability.",
+        position: 'bottom'
+      });
+
+    }
+
+    // Finir avec le bouton de soumission
+    steps.push({
+      element: 'button[type="submit"]',
+      intro: "When you've answered all questions, click the Submit button to record your responses.",
+      position: 'top'
+    });
+
+    return steps;
+  };
+
   if (!selectedSurvey) {
     return (
       <Box sx={{
@@ -1723,15 +2015,20 @@ const SurveyAnswerPage: React.FC = () => {
           maxWidth: '1000px',
           mb: 4,
         }}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-          }}>
-            <Typography variant="h4" fontWeight="bold">
-              Available Surveys
+          <Box 
+            sx={{ 
+              p: 3,
+              bgcolor: 'primary.main', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              Explore
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+              Browse and answer surveys created by users
             </Typography>
           </Box>
 
@@ -1901,10 +2198,10 @@ const SurveyAnswerPage: React.FC = () => {
                             size="small"
                             sx={{
                               ml: 1,
-                              backgroundColor: 'rgba(0, 198, 212, 0.1)',
-                              color: '#00C6D4',
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
                               '& .MuiChip-icon': {
-                                color: '#00C6D4'
+                                color: '#667eea'
                               },
                               height: '24px',
                               fontWeight: 500
@@ -2175,6 +2472,27 @@ const SurveyAnswerPage: React.FC = () => {
             </MenuItem>
           ))}
         </Menu>
+
+        {/* Bouton tutorial flottant */}
+        <Tooltip title="Start tutorial">
+          <Fab
+            size="small"
+            onClick={startTutorial}
+            sx={{
+              position: 'fixed',
+              bottom: 20,
+              left: 20,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              },
+              zIndex: 1000
+            }}
+          >
+            <SchoolIcon />
+          </Fab>
+        </Tooltip>
       </Box>
     );
   }
@@ -2196,15 +2514,19 @@ const SurveyAnswerPage: React.FC = () => {
         maxWidth: '1000px',
         mb: 4,
       }}>
-        <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          py: 4,
-          px: 4,
-          color: 'white',
-          textAlign: 'center',
-          position: 'relative'
-        }}>
+        <Box 
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative'
+          }}
+        >
           <IconButton
+            id="back-button"
+            data-testid="back-to-surveys-button"
             onClick={() => setSelectedSurvey(null)}
             sx={{
               position: 'absolute',
@@ -2216,11 +2538,11 @@ const SurveyAnswerPage: React.FC = () => {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             {selectedSurvey.title}
           </Typography>
-          <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-            {selectedSurvey.description}
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            {selectedSurvey.description || 'Please answer all questions to submit this survey'}
           </Typography>
         </Box>
 
@@ -2230,6 +2552,27 @@ const SurveyAnswerPage: React.FC = () => {
           renderSurveyForm()
         )}
       </Paper>
+
+      {/* Bouton tutorial flottant */}
+      <Tooltip title="Lancer le tutoriel">
+        <Fab
+          size="small"
+          onClick={startTutorial}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: 20,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            },
+            zIndex: 1000
+          }}
+        >
+          <SchoolIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 };

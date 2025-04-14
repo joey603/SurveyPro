@@ -3,10 +3,18 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5041/api/auth';
 
 export const loginWithGoogle = () => {
+  // Stocker l'origine actuelle dans un cookie pour la redirection
+  document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+  console.log('Cookie origin set to:', window.location.origin);
+  
   window.location.href = `${API_URL}/google`;
 };
 
 export const loginWithGithub = () => {
+  // Stocker l'origine actuelle dans un cookie pour la redirection
+  document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+  console.log('Cookie origin set to:', window.location.origin);
+  
   window.location.href = `${API_URL}/github`;
 };
 
