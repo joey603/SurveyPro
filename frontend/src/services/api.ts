@@ -1,8 +1,18 @@
 // src/services/api.ts
 import axios from 'axios';
 
+// Déterminer automatiquement l'URL de base en fonction de l'environnement
+const getBaseUrl = () => {
+  // En production (Vercel), utiliser l'URL du backend déployé
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_API_URL || 'https://surveypro-backend.onrender.com/api';
+  }
+  // En développement, utiliser localhost
+  return 'http://localhost:5041/api';
+};
+
 const api = axios.create({
-  baseURL: 'http://localhost:5041/api', // General API base URL
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

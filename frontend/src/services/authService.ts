@@ -1,16 +1,27 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5041/api/auth';
+// Déterminer l'URL de l'API en fonction de l'environnement
+const getApiUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_API_URL ? 
+      `${process.env.NEXT_PUBLIC_API_URL}/auth` : 
+      'https://surveypro-backend.onrender.com/api/auth';
+  }
+  return 'http://localhost:5041/api/auth';
+};
 
 export const loginWithGoogle = () => {
+  const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
   console.log('Cookie origin set to:', window.location.origin);
+  console.log('Redirection vers:', `${API_URL}/google`);
   
   window.location.href = `${API_URL}/google`;
 };
 
 export const loginWithGithub = () => {
+  const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
   console.log('Cookie origin set to:', window.location.origin);
@@ -41,6 +52,7 @@ export const handleOAuthCallback = async (tokens: string) => {
 
 export const refreshToken = async (refreshToken: string) => {
   try {
+    const API_URL = getApiUrl();
     const response = await axios.post(`${API_URL}/refresh-token`, { refreshToken });
     return response.data;
   } catch (error) {
