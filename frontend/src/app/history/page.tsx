@@ -1128,9 +1128,13 @@ const SurveyHistoryPage: React.FC = () => {
           ) : (
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
               {viewType === 'responses' ? (
-                responses.length === 0 ? (
+                loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress sx={{ color: '#667eea' }} />
+                  </Box>
+                ) : responses.length === 0 ? (
                   <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>
-                    <Typography>Vous n'avez répondu à aucun sondage.</Typography>
+                    <Typography>You have not responded to any surveys yet.</Typography>
                   </Paper>
                 ) : (
                   filteredResponses.map((response) => (
