@@ -612,14 +612,16 @@ const SurveyHistoryPage: React.FC = () => {
           maxWidth: '1000px',
           mb: 4,
         }}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-            position: 'relative'
-          }}>
+          <Box 
+            sx={{ 
+              p: 3,
+              bgcolor: 'primary.main', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
             <IconButton
               onClick={() => {
                 setSelectedSurvey(null);
@@ -635,44 +637,42 @@ const SurveyHistoryPage: React.FC = () => {
             >
               <ArrowBackIcon />
             </IconButton>
-            <Typography variant="h4" fontWeight="bold">
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
               {selectedSurvey.surveyTitle}
             </Typography>
-            <Typography variant="subtitle1" sx={{ mt: 1, opacity: 0.9 }}>
-              {selectedSurvey.description}
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+              {selectedSurvey.description || 'Detailed view of your survey response'}
             </Typography>
           </Box>
 
           <Box sx={{ p: 4, backgroundColor: 'white' }}>
-            {selectedSurvey.demographic && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
-                  Demographic Information
-                </Typography>
-                <Paper sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid rgba(0, 0, 0, 0.1)' }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Gender</Typography>
-                      <Typography variant="body1">{selectedSurvey.demographic.gender || 'Not specified'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Date of Birth</Typography>
-                      <Typography variant="body1">
-                        {selectedSurvey.demographic.dateOfBirth ? formatDate(selectedSurvey.demographic.dateOfBirth) : 'Not specified'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Education Level</Typography>
-                      <Typography variant="body1">{selectedSurvey.demographic.educationLevel || 'Not specified'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">City</Typography>
-                      <Typography variant="body1">{selectedSurvey.demographic.city || 'Not specified'}</Typography>
-                    </Grid>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
+                Demographic Information
+              </Typography>
+              <Paper sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" color="textSecondary">Gender</Typography>
+                    <Typography variant="body1">{selectedSurvey.demographic?.gender || 'Not specified'}</Typography>
                   </Grid>
-                </Paper>
-              </Box>
-            )}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" color="textSecondary">Date of Birth</Typography>
+                    <Typography variant="body1">
+                      {selectedSurvey.demographic?.dateOfBirth ? formatDate(selectedSurvey.demographic.dateOfBirth) : 'Not specified'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" color="textSecondary">Education Level</Typography>
+                    <Typography variant="body1">{selectedSurvey.demographic?.educationLevel || 'Not specified'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" color="textSecondary">City</Typography>
+                    <Typography variant="body1">{selectedSurvey.demographic?.city || 'Not specified'}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
 
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
@@ -944,15 +944,20 @@ const SurveyHistoryPage: React.FC = () => {
         maxWidth: '1000px ',
         mb: 4,
       }}>
-        <Box sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          py: 4,
-          px: 4,
-          color: 'white',
-          textAlign: 'center',
-        }}>
-          <Typography variant="h4" fontWeight="bold">
+        <Box 
+          sx={{ 
+            p: 3,
+            bgcolor: 'primary.main', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+            textAlign: 'center'
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             Survey History
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            View your survey responses and created surveys
           </Typography>
         </Box>
 

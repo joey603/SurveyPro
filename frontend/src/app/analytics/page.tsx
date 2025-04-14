@@ -1235,25 +1235,29 @@ const AnalyticsPage: React.FC = () => {
             mb: 4,
           }}
         >
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+          <Box 
+            sx={{ 
+              p: 3,
+              bgcolor: 'primary.main', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              textAlign: 'center',
+              position: 'relative',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
             <Box sx={{ width: 48 }} />
 
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-            >
-              Advanced Analytics
-            </Typography>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                Analytics Dashboard
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+                Analyze your survey responses and gain valuable insights
+              </Typography>
+            </Box>
 
             <Box sx={{ width: 48 }} />
           </Box>
@@ -1325,17 +1329,19 @@ const AnalyticsPage: React.FC = () => {
             mb: 4,
           }}
         >
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4,
-            px: 4,
-            color: 'white',
-            textAlign: 'center',
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+          <Box 
+            sx={{ 
+              p: 3,
+              bgcolor: 'primary.main', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              textAlign: 'center',
+              position: 'relative',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
             <IconButton
               onClick={handleBack}
               sx={{ color: 'white' }}
@@ -1343,12 +1349,14 @@ const AnalyticsPage: React.FC = () => {
               <ArrowBackIcon />
             </IconButton>
 
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-            >
-              {selectedSurvey.title}
-            </Typography>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                {selectedSurvey.title}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+                Detailed analytics and response statistics
+              </Typography>
+            </Box>
 
             <IconButton
               sx={{ color: 'white' }}
