@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/utils/AuthContext";
 import NavBar from "./components/NavBar";
 import { CircularProgress, Backdrop } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { colors } from '../theme/colors';
 import { useAuth } from '@/utils/AuthContext';
@@ -33,11 +33,8 @@ const AuthHandler = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Composant qui utilise les params et la navigation
+const NavigationManager = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -52,6 +49,34 @@ export default function RootLayout({
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  return (
+    <>
+      {isLoading && (
+        <Backdrop
+          sx={{
+            color: colors.primary.main,
+            zIndex: 9999,
+            backgroundColor: colors.background.overlay
+          }}
+          open={true}
+        >
+          <CircularProgress 
+            sx={{
+              color: colors.primary.main
+            }}
+          />
+        </Backdrop>
+      )}
+      {children}
+    </>
+  );
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
@@ -70,26 +95,29 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {isLoading && (
-          <Backdrop
-            sx={{
-              color: colors.primary.main,
-              zIndex: 9999,
-              backgroundColor: colors.background.overlay
-            }}
-            open={true}
-          >
-            <CircularProgress 
-              sx={{
-                color: colors.primary.main
-              }}
-            />
-          </Backdrop>
-        )}
         <AuthProvider>
           <AuthHandler>
             <NavBar />
-            {children}
+            <Suspense fallback={
+              <Backdrop
+                sx={{
+                  color: colors.primary.main,
+                  zIndex: 9999,
+                  backgroundColor: colors.background.overlay
+                }}
+                open={true}
+              >
+                <CircularProgress 
+                  sx={{
+                    color: colors.primary.main
+                  }}
+                />
+              </Backdrop>
+            }>
+              <NavigationManager>
+                {children}
+              </NavigationManager>
+            </Suspense>
           </AuthHandler>
         </AuthProvider>
       </body>
