@@ -182,20 +182,43 @@ router.use(passport.initialize());
 
 router.get('/google', (req, res, next) => {
   console.log('Google Auth Route - Starting authentication');
+  console.log('Request query:', req.query);
+  
   // Stocker l'origine comme paramètre de session/état pour le récupérer ensuite
   const origin = req.query.origin;
   console.log('Origin from URL parameter:', origin);
   
+  // Utiliser un state généré aléatoirement qui contient l'origine
+  let state = origin || process.env.FRONTEND_URL;
+  
+  // Si l'origine est valide, l'encoder dans l'état
   if (origin) {
-    // Stocker l'origine dans la session
-    req.session = req.session || {};
-    req.session.origin = origin;
-    console.log('Origin stored in session:', origin);
+    try {
+      // Tentative de stockage dans la session si disponible
+      if (req.session) {
+        req.session.origin = origin;
+        console.log('Origin stored in session:', origin);
+      }
+      
+      // Toujours stocker dans un cookie comme backup
+      res.cookie('origin', origin, { 
+        maxAge: 3600000, 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
+      console.log('Origin stored in cookie:', origin);
+    } catch (error) {
+      console.error('Error storing origin:', error);
+    }
   }
+  
+  // Log de l'état avant de l'utiliser
+  console.log('Using state for Google OAuth:', state);
   
   passport.authenticate('google', { 
     scope: ['profile', 'email'],
-    state: origin // Ajouter l'origine comme état OAuth
+    state: state // Ajouter l'origine comme état OAuth
   })(req, res, next);
 });
 
@@ -266,20 +289,43 @@ router.get('/google/callback',
 
 router.get('/github', (req, res, next) => {
   console.log('GitHub Auth Route - Starting authentication');
+  console.log('Request query:', req.query);
+  
   // Stocker l'origine comme paramètre de session/état pour le récupérer ensuite
   const origin = req.query.origin;
   console.log('Origin from URL parameter:', origin);
   
+  // Utiliser un state généré aléatoirement qui contient l'origine
+  let state = origin || process.env.FRONTEND_URL;
+  
+  // Si l'origine est valide, l'encoder dans l'état
   if (origin) {
-    // Stocker l'origine dans la session
-    req.session = req.session || {};
-    req.session.origin = origin;
-    console.log('Origin stored in session:', origin);
+    try {
+      // Tentative de stockage dans la session si disponible
+      if (req.session) {
+        req.session.origin = origin;
+        console.log('Origin stored in session:', origin);
+      }
+      
+      // Toujours stocker dans un cookie comme backup
+      res.cookie('origin', origin, { 
+        maxAge: 3600000, 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
+      console.log('Origin stored in cookie:', origin);
+    } catch (error) {
+      console.error('Error storing origin:', error);
+    }
   }
+  
+  // Log de l'état avant de l'utiliser
+  console.log('Using state for GitHub OAuth:', state);
   
   passport.authenticate('github', { 
     scope: ['user:email'],
-    state: origin // Ajouter l'origine comme état OAuth
+    state: state // Ajouter l'origine comme état OAuth
   })(req, res, next);
 });
 

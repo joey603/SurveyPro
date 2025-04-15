@@ -21,10 +21,12 @@ const app = express();
 app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: {
-    secure: false, // mettre à true en production avec HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 heures
+    secure: process.env.NODE_ENV === 'production', // mettre à true en production avec HTTPS
+    maxAge: 24 * 60 * 60 * 1000, // 24 heures
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    httpOnly: true
   }
 }));
 
@@ -44,6 +46,7 @@ const allowedOrigins = [
   'http://localhost:3001', 
   'http://localhost:3002',
   'https://surveypro-frontend.vercel.app',
+  'https://surveypro-frontend-git-main-joey603.vercel.app',
   'https://surveypro-frontend.vercel.app/'
 ];
 
