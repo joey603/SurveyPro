@@ -18,6 +18,8 @@ import { useAuth } from '@/utils/AuthContext';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -30,51 +32,56 @@ const RegisterPage: React.FC = () => {
   const { register } = useAuth();
 
   const validatePassword = (value: string) => {
-    if (value.length < 8) {
-      return "Password must contain at least 8 characters";
+    if (!value) {
+      return 'Password is required';
     }
-    if (!/\d/.test(value)) {
-      return "Password must contain at least one number";
+    if (!PASSWORD_REGEX.test(value)) {
+      return 'Password must be at least 8 characters with 1 uppercase and 1 number';
     }
-    if (!/[A-Z]/.test(value)) {
-      return "Password must contain at least one capital letter";
-    }
-    return "";
+    return '';
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    setPasswordError(validatePassword(newPassword));
+    const value = e.target.value;
+    setPassword(value);
+    setPasswordError(validatePassword(value));
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation du mot de passe
     const passwordValidation = validatePassword(password);
     if (passwordValidation) {
-      setError(passwordValidation);
+      setPasswordError(passwordValidation);
       return;
     }
+    
     setLoading(true);
-    setMessage('');
     setError('');
-
+    
     try {
-      await axios.post('http://localhost:5041/api/auth/register', {
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
+      const response = await axios.post(`${apiUrl}/api/auth/register`, {
         username,
         email,
         password,
       });
-
-      setMessage(
-        'Registration successful! Check your email for verification code.'
-      );
-      localStorage.setItem('email', email);
-      setTimeout(() => {
-        router.push('/verify');
-      }, 2000);
+      
+      if (response.status === 201) {
+        setMessage('Compte créé avec succès. Vous pouvez maintenant vous connecter.');
+        await onRegisterSuccess();
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed");
+      console.error('Erreur d\'inscription:', err);
+      
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erreur lors de l\'inscription. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }
@@ -82,16 +89,11 @@ const RegisterPage: React.FC = () => {
 
   const onRegisterSuccess = async () => {
     try {
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        // Nettoyer le localStorage
-        localStorage.removeItem('redirectAfterLogin');
-        // Utiliser le router.push au lieu de window.location
-        router.push(redirectPath);
-      } else {
-        // Redirection par défaut vers la racine
-        router.push('/');
-      }
+      // Rediriger vers la page de connexion après un court délai
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+      
     } catch (error) {
       console.error('Erreur de redirection:', error);
       // En cas d'erreur, rediriger vers la racine
@@ -100,11 +102,37 @@ const RegisterPage: React.FC = () => {
   };
 
   const handleGoogleRegister = () => {
-    window.location.href = 'http://localhost:5041/api/auth/google';
+    try {
+      // Nettoyer le localStorage
+      localStorage.clear();
+      
+      // Stocker l'origine actuelle dans un cookie pour la redirection
+      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
+      window.location.href = `${apiUrl}/api/auth/google`;
+    } catch (error) {
+      console.error('Erreur lors de la connexion Google:', error);
+    }
   };
 
   const handleGithubRegister = () => {
-    window.location.href = 'http://localhost:5041/api/auth/github';
+    try {
+      // Nettoyer le localStorage
+      localStorage.clear();
+      
+      // Stocker l'origine actuelle dans un cookie pour la redirection
+      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
+      window.location.href = `${apiUrl}/api/auth/github`;
+    } catch (error) {
+      console.error('Erreur lors de la connexion GitHub:', error);
+    }
   };
 
   return (

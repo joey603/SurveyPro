@@ -18,6 +18,8 @@ import {
 import axios from 'axios';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
+import Link from 'next/link';
+import { JWT } from 'google-auth-library/build/src/auth/jwtclient';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,22 +32,22 @@ const LoginPage: React.FC = () => {
   const router = useRouter();
 
   const validateEmail = (value: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!value) {
-      return "Email is required";
+      return "L'email est requis";
     }
     if (!emailRegex.test(value)) {
-      return "Please enter a valid email address";
+      return "Format d'email invalide";
     }
     return "";
   };
 
   const validatePassword = (value: string) => {
     if (!value) {
-      return "Password is required";
+      return "Le mot de passe est requis";
     }
-    if (value.length < 8) {
-      return "Password must contain at least 8 characters";
+    if (value.length < 4) {
+      return "Le mot de passe doit contenir au moins 4 caractères";
     }
     return "";
   };
@@ -66,72 +68,76 @@ const LoginPage: React.FC = () => {
     console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
   }, []);
 
+  const handleFormValidation = () => {
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password);
+
+    setEmailError(emailValidation);
+    setPasswordError(passwordValidation);
+
+    return !emailValidation && !passwordValidation;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation du formulaire
+    if (!handleFormValidation()) {
+      return;
+    }
+
     setIsLoading(true);
     setError('');
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-    const apiUrl = `${baseUrl}/api/auth/login`;
-    
-    console.log('Full API URL:', apiUrl);
 
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        withCredentials: true
-      };
-
-      console.log('Request config:', config);
-      console.log('Request data:', { email, password });
-
-      const response = await axios.post(apiUrl, {
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
+      const response = await axios.post(`${apiUrl}/api/auth/login`, {
         email,
-        password
-      }, config);
-
-      console.log('Response:', response);
-      
-      const { accessToken, refreshToken } = response.data;
-      login(accessToken, refreshToken);
-      onLoginSuccess();
-    } catch (err: any) {
-      console.error('Detailed error:', {
-        message: err.message,
-        response: err.response,
-        config: err.config
+        password,
       });
+
+      if (response.status === 200 && response.data) {
+        setError('');
+        
+        // Stocker le token dans le localStorage et rediriger
+        localStorage.setItem('accessToken', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+        
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+        
+        await onLoginSuccess();
+      }
+    } catch (err: any) {
+      console.error('Erreur de connexion:', err);
       
-      if (err.response?.data?.error === 'existing_user') {
-        window.location.href = err.response.data.redirectUrl;
-        return;
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erreur lors de la connexion. Veuillez réessayer.');
       }
       
-      setError(err.response?.data?.message || 'Une erreur est survenue');
-    } finally {
       setIsLoading(false);
     }
   };
 
   const onLoginSuccess = async () => {
     try {
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        // Nettoyer le localStorage
-        localStorage.removeItem('redirectAfterLogin');
-        // Utiliser le router.push au lieu de window.location
-        router.push(redirectPath);
-      } else {
-        // Redirection par défaut vers la racine
-        router.push('/');
+      const token = localStorage.getItem('accessToken');
+      
+      if (token) {
+        login(token, localStorage.getItem('refreshToken') || '');
       }
-    } catch (error) {
-      console.error('Erreur de redirection:', error);
-      // En cas d'erreur, rediriger vers la racine
+      
+      console.log('Redirection vers la page d\'accueil...');
       router.push('/');
+    } catch (error) {
+      console.error('Erreur lors de la redirection:', error);
+      setError('Erreur lors de la redirection.');
+      setIsLoading(false);
     }
   };
 
@@ -147,10 +153,13 @@ const LoginPage: React.FC = () => {
       document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
       console.log('Cookie origin set to:', window.location.origin);
       
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
       // Attendre un court instant avant la redirection
       setTimeout(() => {
         console.log('Redirection vers Google...');
-        window.location.href = 'http://localhost:5041/api/auth/google';
+        window.location.href = `${apiUrl}/api/auth/google`;
       }, 100);
       
     } catch (error) {
@@ -170,10 +179,13 @@ const LoginPage: React.FC = () => {
       document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
       console.log('Cookie origin set to:', window.location.origin);
       
+      // Récupération de l'URL de l'API à partir des variables d'environnement
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      
       // Attendre un court instant avant la redirection
       setTimeout(() => {
         console.log('Redirection vers GitHub...');
-        window.location.href = 'http://localhost:5041/api/auth/github';
+        window.location.href = `${apiUrl}/api/auth/github`;
       }, 100);
       
     } catch (error) {
