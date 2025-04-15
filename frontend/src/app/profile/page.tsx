@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
+import { useSearchParams } from 'next/navigation';
 
 type User = {
   username: string;
@@ -32,6 +33,7 @@ const LoadingFallback = () => (
 );
 
 const ProfileContent = () => {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,9 @@ const ProfileContent = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:5041/api/auth/profile', {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+
+        const response = await axios.get(`${API_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
