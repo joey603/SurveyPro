@@ -205,7 +205,7 @@ router.get('/google/callback',
       console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie ou la session
+      // Récupérer le domaine d'origine de la requête depuis le cookie
       const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
       console.log('Origin URL for redirection:', originUrl);
       
@@ -272,7 +272,7 @@ router.get('/github/callback',
       console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie ou la session
+      // Récupérer le domaine d'origine de la requête depuis le cookie
       const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
       console.log('Origin URL for redirection:', originUrl);
       
@@ -411,8 +411,8 @@ router.post('/login', async (req, res) => {
 
     res.status(200).json({ accessToken, refreshToken, isVerified: true });
   } catch (error) {
-    console.error("Erreur lors de la connexion:", error);
-    res.status(500).json({ message: "Erreur du serveur" });
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -420,7 +420,7 @@ router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(401).json({ message: "Token de rafraîchissement manquant" });
+    return res.status(401).json({ message: "Refresh token missing" });
   }
 
   try {
@@ -428,7 +428,7 @@ router.post('/refresh-token', async (req, res) => {
     const user = await User.findById(decoded.id);
 
     if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({ message: "Token de rafraîchissement invalide" });
+      return res.status(403).json({ message: "Invalid refresh token" });
     }
 
     const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
@@ -437,8 +437,8 @@ router.post('/refresh-token', async (req, res) => {
 
     res.status(200).json({ accessToken: newAccessToken });
   } catch (error) {
-    console.error("Erreur lors du rafraîchissement du token:", error);
-    res.status(403).json({ message: "Token de rafraîchissement invalide" });
+    console.error("Error refreshing token:", error);
+    res.status(403).json({ message: "Invalid refresh token" });
   }
 });
 
@@ -447,16 +447,16 @@ router.post('/logout', async (req, res) => {
 
   try {
     const user = await User.findOne({ refreshToken });
-    if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé' });
+    if (!user) return res.status(400).json({ message: 'User not found' });
 
     user.accessToken = null;
     user.refreshToken = null;
     await user.save();
 
-    res.status(200).json({ message: 'Déconnexion réussie' });
+    res.status(200).json({ message: 'Logout successful' });
   } catch (error) {
-    console.error('Erreur lors de la déconnexion:', error);
-    res.status(500).json({ message: 'Erreur du serveur' });
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -464,12 +464,12 @@ router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ message: 'User not found' });
     }
     res.status(200).json({ user });
   } catch (error) {
-    console.error('Erreur dans /profile:', error);
-    res.status(500).json({ message: 'Erreur du serveur' });
+    console.error('Error in /profile:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -479,12 +479,12 @@ router.put('/password', authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Mot de passe actuel incorrect' });
+      return res.status(400).json({ message: 'Current password is incorrect' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -493,8 +493,8 @@ router.put('/password', authMiddleware, async (req, res) => {
 
     res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
   } catch (error) {
-    console.error('Erreur lors du changement de mot de passe:', error);
-    res.status(500).json({ message: 'Erreur du serveur' });
+    console.error('Error changing password:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -504,11 +504,11 @@ router.post('/resend-verification', async (req, res) => {
     const user = await User.findOne({ email });
     
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     if (user.isVerified) {
-      return res.status(400).json({ message: 'Cet email est déjà vérifié' });
+      return res.status(400).json({ message: 'This email is already verified' });
     }
 
     const verificationCode = Math.floor(100000 + Math.random() * 900000);
@@ -517,10 +517,10 @@ router.post('/resend-verification', async (req, res) => {
 
     await sendVerificationEmail(email, verificationCode);
 
-    res.status(200).json({ message: 'Un nouveau code de vérification a été envoyé' });
+    res.status(200).json({ message: 'A new verification code has been sent' });
   } catch (error) {
-    console.error('Erreur lors du renvoi du code:', error);
-    res.status(500).json({ message: 'Erreur lors de l\'envoi du nouveau code' });
+    console.error('Error sending verification code:', error);
+    res.status(500).json({ message: 'Error sending new verification code' });
   }
 });
 
@@ -531,7 +531,7 @@ router.post('/forgot-password', async (req, res) => {
 
     if (!user) {
       return res.status(200).json({ 
-        message: "Si un compte existe avec cet email, vous recevrez les instructions de réinitialisation."
+        message: "If an account exists with this email, you will receive the reset instructions."
       });
     }
 
@@ -559,9 +559,9 @@ router.post('/forgot-password', async (req, res) => {
             border-radius: 5px;
             display: inline-block;
             margin: 20px 0;
-          ">Réinitialiser le mot de passe</a>
-          <p>Ce lien expirera dans 1 heure.</p>
-          <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+          ">Reset password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you did not request this reset, ignore this email.</p>
         </div>
       `
     };
@@ -569,12 +569,12 @@ router.post('/forgot-password', async (req, res) => {
     await sgMail.send(msg);
 
     res.status(200).json({ 
-      message: "Les instructions de réinitialisation ont été envoyées à votre email."
+      message: "The reset instructions have been sent to your email."
     });
 
   } catch (error) {
     console.error("Erreur lors de la demande de réinitialisation:", error);
-    res.status(500).json({ message: "Une erreur est survenue lors de l'envoi des instructions." });
+    res.status(500).json({ message: "An error occurred while sending the reset instructions." });
   }
 });
 
@@ -589,7 +589,7 @@ router.post('/reset-password', async (req, res) => {
 
     if (!user) {
       return res.status(400).json({
-        message: "Le lien de réinitialisation est invalide ou a expiré."
+        message: "The reset link is invalid or has expired."
       });
     }
 
@@ -601,13 +601,13 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message: "Le mot de passe a été réinitialisé avec succès."
+      message: "The password has been reset successfully."
     });
 
   } catch (error) {
     console.error("Erreur lors de la réinitialisation du mot de passe:", error);
     res.status(500).json({
-      message: "Une erreur est survenue lors de la réinitialisation du mot de passe."
+      message: "An error occurred while resetting the password."
     });
   }
 });
@@ -620,16 +620,16 @@ const sendVerificationEmail = async (email, verificationCode) => {
     subject: 'Vérification de votre compte SurveyPro',
     html: `
       <div style="text-align: center; font-family: Arial, sans-serif;">
-        <h2>Bienvenue sur SurveyPro !</h2>
-        <p>Votre code de vérification est :</p>
+        <h2>Welcome to SurveyPro !</h2>
+        <p>Your verification code is :</p>
         <h1 style="
           color: #4a90e2;
           font-size: 36px;
           margin: 20px 0;
           letter-spacing: 5px;
         ">${verificationCode}</h1>
-        <p>Ce code expirera dans 24 heures.</p>
-        <p>Si vous n'avez pas créé de compte sur SurveyPro, vous pouvez ignorer cet email.</p>
+        <p>This code will expire in 24 hours.</p>
+        <p>If you did not create an account on SurveyFlow, you can ignore this email.</p>
       </div>
     `
   };
@@ -637,8 +637,8 @@ const sendVerificationEmail = async (email, verificationCode) => {
   try {
     await sgMail.send(msg);
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email:', error);
-    throw new Error('Erreur lors de l\'envoi de l\'email de vérification');
+    console.error('Error sending verification email:', error);
+    throw new Error('Error sending verification email');
   }
 };
 
