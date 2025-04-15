@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: surveypro-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
