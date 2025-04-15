@@ -182,16 +182,21 @@ router.use(passport.initialize());
 
 router.get('/google', (req, res, next) => {
   console.log('Google Auth Route - Starting authentication');
-  // Forcer une nouvelle session
-  req.logout((err) => {
-    if (err) {
-      console.error('Erreur lors de la déconnexion:', err);
-    }
-    passport.authenticate('google', { 
-      scope: ['profile', 'email'],
-      prompt: 'select_account' // Force Google à afficher la page de sélection de compte
-    })(req, res, next);
-  });
+  // Stocker l'origine comme paramètre de session/état pour le récupérer ensuite
+  const origin = req.query.origin;
+  console.log('Origin from URL parameter:', origin);
+  
+  if (origin) {
+    // Stocker l'origine dans la session
+    req.session = req.session || {};
+    req.session.origin = origin;
+    console.log('Origin stored in session:', origin);
+  }
+  
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    state: origin // Ajouter l'origine comme état OAuth
+  })(req, res, next);
 });
 
 router.get('/google/callback',
@@ -205,8 +210,13 @@ router.get('/google/callback',
       console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      // Récupérer l'origine depuis différentes sources, dans l'ordre:
+      // 1. État OAuth (passé via le paramètre state)
+      // 2. Session
+      // 3. Cookie
+      // 4. URL par défaut
+      const state = req.query.state;
+      const originUrl = state || (req.session && req.session.origin) || req.cookies?.origin || process.env.FRONTEND_URL;
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
@@ -256,8 +266,20 @@ router.get('/google/callback',
 
 router.get('/github', (req, res, next) => {
   console.log('GitHub Auth Route - Starting authentication');
+  // Stocker l'origine comme paramètre de session/état pour le récupérer ensuite
+  const origin = req.query.origin;
+  console.log('Origin from URL parameter:', origin);
+  
+  if (origin) {
+    // Stocker l'origine dans la session
+    req.session = req.session || {};
+    req.session.origin = origin;
+    console.log('Origin stored in session:', origin);
+  }
+  
   passport.authenticate('github', { 
-    scope: ['user:email']
+    scope: ['user:email'],
+    state: origin // Ajouter l'origine comme état OAuth
   })(req, res, next);
 });
 
@@ -272,8 +294,13 @@ router.get('/github/callback',
       console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      // Récupérer l'origine depuis différentes sources, dans l'ordre:
+      // 1. État OAuth (passé via le paramètre state)
+      // 2. Session
+      // 3. Cookie
+      // 4. URL par défaut
+      const state = req.query.state;
+      const originUrl = state || (req.session && req.session.origin) || req.cookies?.origin || process.env.FRONTEND_URL;
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
