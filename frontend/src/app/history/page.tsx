@@ -128,10 +128,12 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const BASE_URL = 'http://localhost:5041/api';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
+          `${process.env.NEXT_PUBLIC_API_URL}/api` : 
+          'http://localhost:5041/api';
 
         // Récupérer les réponses aux sondages classiques
-        const response = await fetch(`${BASE_URL}/survey-answers/responses/user`, {
+        const response = await fetch(`${API_URL}/survey-answers/responses/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -142,7 +144,7 @@ const SurveyHistoryPage: React.FC = () => {
         const classicData = await response.json();
         
         // Récupérer les réponses aux sondages dynamiques
-        const dynamicResponse = await fetch(`${BASE_URL}/dynamic-survey-answers/user`, {
+        const dynamicResponse = await fetch(`${API_URL}/dynamic-survey-answers/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -159,7 +161,7 @@ const SurveyHistoryPage: React.FC = () => {
           // Continuer le traitement avec ces réponses
           const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
             try {
-              const endpoint = `${BASE_URL}/surveys/${response.surveyId}`;
+              const endpoint = `${API_URL}/surveys/${response.surveyId}`;
                 
               const surveyResponse = await fetch(endpoint, {
                 headers: {
@@ -210,8 +212,8 @@ const SurveyHistoryPage: React.FC = () => {
         const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
           try {
             const endpoint = response.isDynamic 
-              ? `${BASE_URL}/dynamic-surveys/${response.surveyId}`
-              : `${BASE_URL}/surveys/${response.surveyId}`;
+              ? `${API_URL}/dynamic-surveys/${response.surveyId}`
+              : `${API_URL}/surveys/${response.surveyId}`;
               
             const surveyResponse = await fetch(endpoint, {
               headers: {
@@ -252,11 +254,13 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Not authenticated');
 
-      const BASE_URL = 'http://localhost:5041/api';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
+        `${process.env.NEXT_PUBLIC_API_URL}/api` : 
+        'http://localhost:5041/api';
       console.log('Fetching created surveys...');
       
       // Récupérer les sondages statiques
-      const classicResponse = await fetch(`${BASE_URL}/surveys`, {
+      const classicResponse = await fetch(`${API_URL}/surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -273,7 +277,7 @@ const SurveyHistoryPage: React.FC = () => {
       console.log('Created classic surveys data:', classicData.length);
       
       // Récupérer les sondages dynamiques
-      const dynamicResponse = await fetch(`${BASE_URL}/dynamic-surveys`, {
+      const dynamicResponse = await fetch(`${API_URL}/dynamic-surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -344,12 +348,14 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const BASE_URL = 'http://localhost:5041/api';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
+          `${process.env.NEXT_PUBLIC_API_URL}/api` : 
+          'http://localhost:5041/api';
         
         // Choisir le bon endpoint en fonction du type de sondage
         const endpoint = survey.isDynamic
-          ? `${BASE_URL}/dynamic-surveys/${responseId}`
-          : `${BASE_URL}/surveys/${responseId}`;
+          ? `${API_URL}/dynamic-surveys/${responseId}`
+          : `${API_URL}/surveys/${responseId}`;
         
         const surveyResponse = await fetch(endpoint, {
           headers: {
@@ -417,14 +423,16 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Non authentifié');
 
-      const BASE_URL = 'http://localhost:5041/api';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
+        `${process.env.NEXT_PUBLIC_API_URL}/api` : 
+        'http://localhost:5041/api';
 
       // Gérer différemment selon le type de sondage (dynamique ou statique)
       if (survey.isDynamic) {
         console.log('Récupération des détails pour un sondage dynamique:', survey.surveyId);
         
         // Récupérer les détails du sondage dynamique
-        const dynamicSurveyResponse = await fetch(`${BASE_URL}/dynamic-surveys/${survey.surveyId}`, {
+        const dynamicSurveyResponse = await fetch(`${API_URL}/dynamic-surveys/${survey.surveyId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -442,7 +450,7 @@ const SurveyHistoryPage: React.FC = () => {
         console.log('Données du sondage dynamique:', dynamicSurveyData);
         
         // Récupérer les détails de la réponse dynamique
-        const dynamicResponseDetails = await fetch(`${BASE_URL}/dynamic-survey-answers/response/${responseId}`, {
+        const dynamicResponseDetails = await fetch(`${API_URL}/dynamic-survey-answers/response/${responseId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -487,7 +495,7 @@ const SurveyHistoryPage: React.FC = () => {
         setSelectedSurvey(updatedSurvey);
       } else {
         // Récupérer les détails du sondage original statique
-        const surveyDetailsResponse = await fetch(`${BASE_URL}/surveys/${survey.surveyId}`, {
+        const surveyDetailsResponse = await fetch(`${API_URL}/surveys/${survey.surveyId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -498,7 +506,7 @@ const SurveyHistoryPage: React.FC = () => {
         console.log('Original survey data:', surveyData);
 
         // Récupérer les détails de la réponse statique
-        const responseDetails = await fetch(`${BASE_URL}/survey-answers/responses/${responseId}`, {
+        const responseDetails = await fetch(`${API_URL}/survey-answers/responses/${responseId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5041/api';
+// Utiliser la variable d'environnement si disponible, sinon localhost
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? 
+  `${process.env.NEXT_PUBLIC_API_URL}/api` : 
+  'http://localhost:5041/api';
 
 interface DynamicSurvey {
   title: string;

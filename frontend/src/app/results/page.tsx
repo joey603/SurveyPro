@@ -4242,7 +4242,9 @@ const ResultsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const response = await fetch('http://localhost:5041/api/survey-shares/share', {  // Modifié ici
+        // Utiliser la variable d'environnement pour l'URL de l'API
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+        const response = await fetch(`${apiUrl}/api/survey-shares/share`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
