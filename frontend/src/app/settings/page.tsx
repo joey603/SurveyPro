@@ -1,7 +1,7 @@
 // src/app/settings/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Box,
   Container,
@@ -23,8 +23,10 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import axios from 'axios';
 import { colors } from '@mui/material';
+import { useSearchParams } from 'next/navigation';
 
-const Settings = () => {
+const SettingsContent = () => {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<{ username: string; email: string; authMethod?: string } | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -39,8 +41,16 @@ const Settings = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await axios.get('http://localhost:5041/api/auth/profile', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          window.location.href = '/login';
+          return;
+        }
+        
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+        
+        const response = await axios.get(`${API_URL}/api/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data.user);
         setLoading(false);
@@ -56,8 +66,7 @@ const Settings = () => {
   const handlePasswordChange = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      console.log('[DEBUG] URL:', 'http://localhost:5041/api/auth/password');
-      console.log('[DEBUG] Token:', token ? 'Present' : 'Missing');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
       
       const payload = {
         currentPassword,
@@ -72,7 +81,7 @@ const Settings = () => {
       };
       
       const response = await axios.put(
-        'http://localhost:5041/api/auth/password',
+        `${API_URL}/api/auth/password`,
         payload,
         config
       );
@@ -355,6 +364,19 @@ const Settings = () => {
         </Paper>
       </Box>
     </Box>
+  );
+};
+
+// Composant principal avec Suspense pour résoudre l'erreur de useSearchParams
+const Settings = () => {
+  return (
+    <Suspense fallback={
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 };
 

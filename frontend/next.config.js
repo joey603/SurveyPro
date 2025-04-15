@@ -17,6 +17,8 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
+      'intro.js': path.resolve(__dirname, 'node_modules/intro.js'),
+      'intro.js/introjs.css': path.resolve(__dirname, 'node_modules/intro.js/introjs.css'),
     };
     return config;
   },
