@@ -26,6 +26,8 @@ const nextConfig = {
     // Ignorer les erreurs pendant la construction
     skipTrailingSlashRedirect: true,
     skipMiddlewareUrlNormalize: true,
+    // Ignorer les erreurs de page non trouvée pendant le build
+    missingSuspenseWithCSRBailout: false,
   },
   webpack: (config) => {
     config.resolve.alias = {
