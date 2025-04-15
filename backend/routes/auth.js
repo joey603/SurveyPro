@@ -31,7 +31,7 @@ const API_URL = process.env.API_URL || 'https://surveypro-ir3u.onrender.com';
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${API_URL}/api/auth/google/callback`
+    callbackURL: `http://localhost:5041/api/auth/google/callback`
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
@@ -629,7 +629,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
           letter-spacing: 5px;
         ">${verificationCode}</h1>
         <p>Ce code expirera dans 24 heures.</p>
-        <p>Si vous n'avez pas créé de compte sur SurveyPro, vous pouvez ignorer cet email.</p>
+        <p>Si vous n'avez pas créé de compte sur SurveyFro, vous pouvez ignorer cet email.</p>
       </div>
     `
   };
