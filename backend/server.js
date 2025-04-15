@@ -45,6 +45,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Route racine pour les health checks de Render
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'SurveyPro API',
+    message: 'Welcome to SurveyPro API'
+  });
+});
+
 // Route de health check pour vérifier que le serveur est en ligne
 app.get('/api/health', (req, res) => {
   res.status(200).json({
