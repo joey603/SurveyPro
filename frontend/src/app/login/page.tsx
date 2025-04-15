@@ -149,8 +149,9 @@ const LoginPage: React.FC = () => {
       console.log('localStorage nettoyé');
       
       // Stocker l'origine actuelle dans un cookie pour la redirection
-      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
-      console.log('Cookie origin set to:', window.location.origin);
+      const currentOrigin = window.location.origin;
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+      console.log('Cookie origin set to:', currentOrigin);
       
       // Récupération de l'URL de l'API à partir des variables d'environnement
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
@@ -175,8 +176,9 @@ const LoginPage: React.FC = () => {
       console.log('localStorage nettoyé');
       
       // Stocker l'origine actuelle dans un cookie pour la redirection
-      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
-      console.log('Cookie origin set to:', window.location.origin);
+      const currentOrigin = window.location.origin;
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+      console.log('Cookie origin set to:', currentOrigin);
       
       // Récupération de l'URL de l'API à partir des variables d'environnement
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';

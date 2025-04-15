@@ -5,7 +5,7 @@ const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
     return process.env.NEXT_PUBLIC_API_URL ? 
       `${process.env.NEXT_PUBLIC_API_URL}/auth` : 
-      'https://surveypro-backend.onrender.com/api/auth';
+      'https://surveypro-ir3u.onrender.com/api/auth';
   }
   return 'http://localhost:5041/api/auth';
 };
@@ -13,8 +13,9 @@ const getApiUrl = () => {
 export const loginWithGoogle = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
-  document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
-  console.log('Cookie origin set to:', window.location.origin);
+  const currentOrigin = window.location.origin;
+  document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+  console.log('Cookie origin set to:', currentOrigin);
   console.log('Redirection vers:', `${API_URL}/google`);
   
   window.location.href = `${API_URL}/google`;
@@ -23,8 +24,9 @@ export const loginWithGoogle = () => {
 export const loginWithGithub = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
-  document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
-  console.log('Cookie origin set to:', window.location.origin);
+  const currentOrigin = window.location.origin;
+  document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+  console.log('Cookie origin set to:', currentOrigin);
   
   window.location.href = `${API_URL}/github`;
 };
