@@ -17,34 +17,6 @@ const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 
-// CORS doit être configuré avant tout autre middleware
-app.use(cors({
-  origin: '*', // Autoriser toutes les origines pendant le débogage
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-
-// Middleware pour gérer explicitement les requêtes OPTIONS
-app.use((req, res, next) => {
-  // Pour les requêtes OPTIONS, nous répondons immédiatement avec les bons headers
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.status(200).end();
-  }
-  next();
-});
-
-// Middleware pour logger toutes les requêtes (debug)
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'None'}`);
-  next();
-});
-
 // Configuration de la session (nécessaire pour Passport)
 app.use(session({
   secret: process.env.JWT_SECRET,
@@ -65,6 +37,40 @@ app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
+// Configuration CORS améliorée avant les routes
+const allowedOrigins = [
+  process.env.FRONTEND_URL, 
+  'http://localhost:3000', 
+  'http://localhost:3001', 
+  'http://localhost:3002',
+  'https://surveypro-frontend.vercel.app',
+  'https://surveypro-frontend.vercel.app/'
+];
+
+// Middleware CORS configuré pour gérer correctement les requêtes preflight
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permettre les requêtes sans origine (ex: applications mobiles, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Vérifier si l'origine est autorisée
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('vercel.app')) {
+      callback(null, true);
+    } else {
+      console.log('Origine bloquée par CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
+
+// Gérer les requêtes OPTIONS explicitement
+app.options('*', cors());
+
 // Route racine pour les health checks de Render
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -80,7 +86,10 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     message: 'Server is up and running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins: allowedOrigins
+    }
   });
 });
 
