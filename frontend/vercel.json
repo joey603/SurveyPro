@@ -11,12 +11,19 @@
     {
       "source": "/api/:path*",
       "destination": "https://surveypro-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/survey-answer",
+      "destination": "/survey-answer"
+    },
+    {
+      "source": "/survey-answer/:path*",
+      "destination": "/survey-answer"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ],
-  "routes": [
-    { "src": "/survey-answer", "dest": "/survey-answer" },
-    { "src": "/survey-answer/(.*)", "dest": "/survey-answer" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/" }
-  ]
+  "trailingSlash": true
 } 
