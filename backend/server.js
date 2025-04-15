@@ -17,6 +17,34 @@ const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 
+// CORS doit être configuré avant tout autre middleware
+app.use(cors({
+  origin: '*', // Autoriser toutes les origines pendant le débogage
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Middleware pour gérer explicitement les requêtes OPTIONS
+app.use((req, res, next) => {
+  // Pour les requêtes OPTIONS, nous répondons immédiatement avec les bons headers
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Middleware pour logger toutes les requêtes (debug)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'None'}`);
+  next();
+});
+
 // Configuration de la session (nécessaire pour Passport)
 app.use(session({
   secret: process.env.JWT_SECRET,
@@ -36,46 +64,6 @@ app.use(passport.session());
 app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
-
-// Traitement des requêtes OPTIONS manuellement pour CORS preflight
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 heures en secondes
-  res.sendStatus(204); // No Content
-});
-
-// Configuration CORS améliorée
-app.use(cors({
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'https://surveypro-frontend.vercel.app'
-    ];
-    
-    // Permettre les requêtes sans origine (comme les applications mobiles)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`Origine bloquée par CORS: ${origin}`);
-      callback(null, false);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-
-// Middleware pour logger toutes les requêtes (debug)
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'None'}`);
-  next();
-});
 
 // Route racine pour les health checks de Render
 app.get('/', (req, res) => {
