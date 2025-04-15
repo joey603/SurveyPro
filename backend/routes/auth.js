@@ -23,16 +23,11 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// URL de base pour les callbacks basée sur l'environnement
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://surveypro-ir3u.onrender.com' 
-  : 'http://localhost:5041';
-
 // Configuration de Passport pour Google
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${BASE_URL}/api/auth/google/callback`
+    callbackURL: `http://localhost:5041/api/auth/google/callback`
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
@@ -101,7 +96,7 @@ passport.use(new GoogleStrategy({
 passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: `${BASE_URL}/api/auth/github/callback`,
+    callbackURL: "http://localhost:5041/api/auth/github/callback",
     scope: ['user:email']
   },
   async function(accessToken, refreshToken, profile, done) {
