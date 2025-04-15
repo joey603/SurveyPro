@@ -19,7 +19,6 @@ import axios from 'axios';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Link from 'next/link';
-import { JWT } from 'google-auth-library/build/src/auth/jwtclient';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
