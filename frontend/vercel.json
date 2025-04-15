@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "./build-vercel.sh",
-  "installCommand": "npm install --force",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",
   "regions": ["cdg1"],
   "env": {

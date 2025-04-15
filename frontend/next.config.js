@@ -24,26 +24,25 @@ const nextConfig = {
   images: {
     domains: ['res.cloudinary.com'],
     formats: ['image/avif', 'image/webp'],
+    unoptimized: true,
   },
-  // Assurez-vous que toutes les routes sont correctement traitées
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['localhost:3000', 'surveypro-frontend.vercel.app'],
-    },
-  },
-  // Ajouter une gestion des 404 personnalisée
+  // Configuration pour le déploiement
   async rewrites() {
     return [
       {
-        source: '/:path*',
-        destination: '/:path*',
+        source: '/api/:path*',
+        destination: 'https://surveypro-backend.onrender.com/api/:path*',
       },
       {
         source: '/survey-answer',
         destination: '/survey-answer',
       },
+      {
+        source: '/survey-answer/:path*',
+        destination: '/survey-answer',
+      }
     ];
-  },
+  }
 };
 
 module.exports = nextConfig; 
