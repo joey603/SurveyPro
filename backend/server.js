@@ -37,13 +37,45 @@ app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
-// Configuration CORS avant les routes
+// Traitement des requêtes OPTIONS manuellement pour CORS preflight
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 heures en secondes
+  res.sendStatus(204); // No Content
+});
+
+// Configuration CORS améliorée
 app.use(cors({
-  origin: [process.env.FRONTEND_URL, 'http://localhost:3001', 'http://localhost:3002'],
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'https://surveypro-frontend.vercel.app'
+    ];
+    
+    // Permettre les requêtes sans origine (comme les applications mobiles)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Origine bloquée par CORS: ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Middleware pour logger toutes les requêtes (debug)
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'None'}`);
+  next();
+});
 
 // Route racine pour les health checks de Render
 app.get('/', (req, res) => {
