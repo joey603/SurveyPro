@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities typescript --no-save --force"
+    "lint": "next lint"
   },
   "dependencies": {
     "@date-io/date-fns": "^2.17.0",
