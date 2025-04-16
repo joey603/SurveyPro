@@ -14,7 +14,7 @@ const nextConfig = {
   trailingSlash: true,
   output: 'standalone',
   // Spécifier un dossier de build personnalisé
-  distDir: 'build',
+  distDir: '.next',
   // Ignorer les erreurs pendant la construction
   onDemandEntries: {
     // Period (in ms) where the server will keep pages in the buffer
