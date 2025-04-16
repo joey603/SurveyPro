@@ -40,25 +40,33 @@ const nextConfig = {
   },
   // Configuration des images
   images: {
-    domains: ['res.cloudinary.com'],
+    domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
     formats: ['image/avif', 'image/webp'],
     unoptimized: true,
   },
   // Configuration pour le déploiement
   async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+        },
+      ],
+    };
+  },
+  // Ajouter des en-têtes pour CORS
+  async headers() {
     return [
       {
-        source: '/api/:path*',
-        destination: 'https://surveypro-backend.onrender.com/api/:path*',
+        source: '/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS,PATCH' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
+        ],
       },
-      {
-        source: '/survey-answer',
-        destination: '/survey-answer',
-      },
-      {
-        source: '/survey-answer/:path*',
-        destination: '/survey-answer',
-      }
     ];
   }
 };
