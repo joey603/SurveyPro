@@ -4,7 +4,7 @@ import axios from 'axios';
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
     return process.env.NEXT_PUBLIC_API_URL ? 
-      `${process.env.NEXT_PUBLIC_API_URL}/auth` : 
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth` : 
       'https://surveypro-ir3u.onrender.com/api/auth';
   }
   return 'http://localhost:5041/api/auth';
