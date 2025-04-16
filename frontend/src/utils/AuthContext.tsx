@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
+import { loginWithGoogle as googleLogin, loginWithGithub as githubLogin } from "@/services/authService";
 
 interface AuthContextType {
   accessToken: string | null;
@@ -11,6 +12,8 @@ interface AuthContextType {
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
   register: (accessToken: string, refreshToken: string) => void;
+  loginWithGoogle: () => void;
+  loginWithGithub: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const publicRoutes = ['/login', '/register', '/verify', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/register', '/verify', '/forgot-password', '/reset-password', '/oauth-callback'];
 
   const isTokenExpired = (token: string | null): boolean => {
     if (!token) return true;
@@ -98,6 +101,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push("/verify");
   };
 
+  // Méthodes de connexion OAuth
+  const loginWithGoogle = () => {
+    googleLogin();
+  };
+
+  const loginWithGithub = () => {
+    githubLogin();
+  };
+
   if (isLoading) {
     return null;
   }
@@ -109,7 +121,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout, 
       register,
       accessToken,
-      user 
+      user,
+      loginWithGoogle,
+      loginWithGithub
     }}>
       {children}
     </AuthContext.Provider>

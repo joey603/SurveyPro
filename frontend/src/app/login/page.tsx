@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle, loginWithGithub } = useAuth();
   const router = useRouter();
 
   const validateEmail = (value: string) => {
@@ -148,20 +148,8 @@ const LoginPage: React.FC = () => {
       localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Stocker l'origine actuelle dans un cookie pour la redirection
-      const currentOrigin = window.location.origin;
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-      console.log('Cookie origin set to:', currentOrigin);
-      
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-      
-      // Attendre un court instant avant la redirection
-      setTimeout(() => {
-        console.log('Redirection vers Google...');
-        window.location.href = `${apiUrl}/api/auth/google`;
-      }, 100);
-      
+      // Utiliser la fonction de service pour la connexion Google
+      loginWithGoogle();
     } catch (error) {
       console.error('Erreur lors de la connexion Google:', error);
     }
@@ -175,20 +163,8 @@ const LoginPage: React.FC = () => {
       localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Stocker l'origine actuelle dans un cookie pour la redirection
-      const currentOrigin = window.location.origin;
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-      console.log('Cookie origin set to:', currentOrigin);
-      
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-      
-      // Attendre un court instant avant la redirection
-      setTimeout(() => {
-        console.log('Redirection vers GitHub...');
-        window.location.href = `${apiUrl}/api/auth/github`;
-      }, 100);
-      
+      // Utiliser la fonction de service pour la connexion GitHub
+      loginWithGithub();
     } catch (error) {
       console.error('Erreur lors de la connexion GitHub:', error);
     }
