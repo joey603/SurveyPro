@@ -23,10 +23,7 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
   experimental: {
-    // Ignorer les erreurs pendant la construction
-    skipTrailingSlashRedirect: true,
-    skipMiddlewareUrlNormalize: true,
-    // Ignorer les erreurs de page non trouvée pendant le build
+    esmExternals: true,
     missingSuspenseWithCSRBailout: false,
   },
   webpack: (config) => {
