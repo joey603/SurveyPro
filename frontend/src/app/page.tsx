@@ -22,6 +22,8 @@ import pollAnimation from '../assets/animation-pollIcon.json';
 import analyticsAnimation from '../assets/animation-analyticsIcon.json';
 import timelineAnimation from '../assets/animation-timeline.json';
 
+// Force redéploiement Vercel - Authentification OAuth
+
 const Home = () => {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
