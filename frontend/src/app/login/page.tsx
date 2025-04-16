@@ -89,10 +89,14 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      // Utiliser un chemin relatif en production pour bénéficier des rewrites Vercel
+      const apiPath = process.env.NODE_ENV === 'production' 
+        ? '/api/auth/login' 
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041'}/api/auth/login`;
       
-      const response = await axios.post(`${apiUrl}/api/auth/login`, {
+      console.log('API Path for login:', apiPath);
+      
+      const response = await axios.post(apiPath, {
         email,
         password,
       });
