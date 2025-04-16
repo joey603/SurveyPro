@@ -44,7 +44,9 @@ const allowedOrigins = [
   'http://localhost:3001', 
   'http://localhost:3002',
   'https://surveypro-frontend.vercel.app',
-  'https://surveypro-frontend.vercel.app/'
+  'https://surveypro-frontend-git-main-joey603.vercel.app',
+  'https://surveypro-frontend.vercel.app/',
+  'https://surveypro-frontend-git-main-joey603.vercel.app/'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
@@ -53,16 +55,19 @@ app.use(cors({
     // Permettre les requêtes sans origine (ex: applications mobiles, curl, etc.)
     if (!origin) return callback(null, true);
     
-    // Vérifier si l'origine est autorisée
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('vercel.app')) {
+    // Autorise toutes les origines Vercel et localhost
+    if (allowedOrigins.indexOf(origin) !== -1 || 
+        origin.includes('localhost') || 
+        origin.includes('vercel.app') ||
+        origin.includes('127.0.0.1')) {
       callback(null, true);
     } else {
-      console.log('Origine bloquée par CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('Origine autorisée par CORS:', origin);
+      callback(null, true); // Autoriser toutes les origines pour le test
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   preflightContinue: false,
   optionsSuccessStatus: 204
