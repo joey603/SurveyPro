@@ -39,14 +39,16 @@ app.use(cookieParser());
 
 // Configuration CORS améliorée avant les routes
 const allowedOrigins = [
-  process.env.FRONTEND_URL, 
+  ...process.env.FRONTEND_URL?.split(',') || [],
   'http://localhost:3000', 
   'http://localhost:3001', 
   'http://localhost:3002',
   'https://surveypro-frontend.vercel.app',
   'https://surveypro-frontend-git-main-joey603.vercel.app',
   'https://surveypro-frontend.vercel.app/',
-  'https://surveypro-frontend-git-main-joey603.vercel.app/'
+  'https://surveypro-frontend-git-main-joey603.vercel.app/',
+  'https://surveyflow.vercel.app',
+  'https://surveyflow-git-main-joey603.vercel.app'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
@@ -60,9 +62,10 @@ app.use(cors({
         origin.includes('localhost') || 
         origin.includes('vercel.app') ||
         origin.includes('127.0.0.1')) {
+      console.log('Origine acceptée par CORS:', origin);
       callback(null, true);
     } else {
-      console.log('Origine autorisée par CORS:', origin);
+      console.log('Origine inconnue mais autorisée par CORS:', origin);
       callback(null, true); // Autoriser toutes les origines pour le test
     }
   },
