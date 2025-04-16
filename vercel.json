@@ -1,8 +1,9 @@
 {
-  "framework": "nextjs",
-  "root": "frontend",
+  "framework": null,
   "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm install",
+  "devCommand": "cd frontend && npm run dev",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
   },
