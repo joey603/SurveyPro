@@ -1,9 +1,4 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": "build",
-  "regions": ["cdg1"],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
   },
@@ -11,24 +6,7 @@
     {
       "source": "/api/:path*",
       "destination": "https://surveypro-ir3u.onrender.com/api/:path*"
-    },
-    {
-      "source": "/survey-answer",
-      "destination": "/survey-answer"
-    },
-    {
-      "source": "/survey-answer/:path*",
-      "destination": "/survey-answer"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
     }
-  ],
-  "trailingSlash": true,
-  "routes": [
-    { "src": "/oauth-callback", "dest": "/oauth-callback" },
-    { "src": "/(.*)", "dest": "/$1" }
   ],
   "headers": [
     {
