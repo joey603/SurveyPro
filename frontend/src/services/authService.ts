@@ -3,9 +3,9 @@ import axios from 'axios';
 // Déterminer l'URL de l'API en fonction de l'environnement
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_API_URL ? 
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth` : 
-      'https://surveypro-ir3u.onrender.com/api/auth';
+    // En production sur Vercel, nous utilisons des rewrites donc nous pouvons utiliser des chemins relatifs
+    // ce qui évite les problèmes CORS
+    return '/api/auth';
   }
   return 'http://localhost:5041/api/auth';
 };
