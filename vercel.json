@@ -1,9 +1,9 @@
 {
   "framework": null,
-  "buildCommand": "npm install && cd frontend && npm install && npm run build",
+  "buildCommand": "./vercel-build.sh",
   "outputDirectory": "frontend/.next",
   "installCommand": "npm install",
-  "devCommand": "cd frontend && npm run dev",
+  "devCommand": "npm run dev",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
   },
