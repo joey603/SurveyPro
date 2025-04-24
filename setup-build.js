@@ -33,15 +33,15 @@ try {
     process.exit(1);
   }
 
-  // S'assurer que React est correctement installé
-  console.log('📦 Installation des dépendances React (ceci peut prendre quelques instants)...');
+  // S'assurer que React et les plugins babel sont correctement installés
+  console.log('📦 Installation des dépendances essentielles (ceci peut prendre quelques instants)...');
   try {
     // Installer les dépendances essentielles directement
-    execSync('cd ' + frontendDir + ' && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 --no-save --force', 
+    execSync('cd ' + frontendDir + ' && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 babel-plugin-module-resolver@5.0.0 --no-save --force', 
       { stdio: 'inherit' });
-    console.log('✅ Installation de React terminée');
+    console.log('✅ Installation des dépendances terminée');
   } catch (error) {
-    console.error('⚠️ Avertissement lors de l\'installation des dépendances React:', error.message);
+    console.error('⚠️ Avertissement lors de l\'installation des dépendances:', error.message);
     // Ne pas échouer, continuer malgré l'erreur
   }
 
@@ -53,6 +53,7 @@ try {
       
       // S'assurer que les dépendances essentielles sont présentes
       packageJson.dependencies = packageJson.dependencies || {};
+      packageJson.devDependencies = packageJson.devDependencies || {};
       
       let modifiedPackageJson = false;
       
@@ -71,6 +72,12 @@ try {
       if (!packageJson.dependencies.next) {
         console.log('⚠️ Dépendance Next.js manquante, ajout...');
         packageJson.dependencies.next = "^14.0.4";
+        modifiedPackageJson = true;
+      }
+      
+      if (!packageJson.devDependencies['babel-plugin-module-resolver']) {
+        console.log('⚠️ Plugin babel-module-resolver manquant, ajout...');
+        packageJson.devDependencies['babel-plugin-module-resolver'] = "^5.0.0";
         modifiedPackageJson = true;
       }
       
@@ -315,21 +322,32 @@ export default function Page() {
 
   // Créer un .babelrc pour s'assurer que les imports fonctionnent
   const babelrcPath = path.join(frontendDir, '.babelrc');
-  if (!fs.existsSync(babelrcPath)) {
-    console.log('📝 Création du fichier .babelrc...');
-    const babelrcContent = `{
-  "presets": ["next/babel"],
-  "plugins": [
-    ["module-resolver", {
-      "root": ["./"],
-      "alias": {
-        "@": "./src"
-      }
-    }]
-  ]
-}`;
-    fs.writeFileSync(babelrcPath, babelrcContent);
+  if (fs.existsSync(babelrcPath)) {
+    console.log('🔄 Suppression du fichier .babelrc existant...');
+    fs.unlinkSync(babelrcPath);
   }
+  
+  // Vérifier si Next.js 14 utilise encore babel ou swc
+  console.log('📝 Vérification si babel est nécessaire...');
+  const hasModuleResolverPlugin = true;
+  try {
+    const modulePath = path.join(frontendDir, 'node_modules', 'babel-plugin-module-resolver');
+    if (!fs.existsSync(modulePath)) {
+      console.log('⚠️ babel-plugin-module-resolver non trouvé, tentative d\'installation...');
+      execSync('cd ' + frontendDir + ' && npm install babel-plugin-module-resolver@5.0.0 --save-dev --force', 
+        { stdio: 'inherit' });
+    }
+  } catch (error) {
+    console.error('⚠️ Erreur lors de la vérification/installation de babel-plugin-module-resolver:', error.message);
+  }
+  
+  // Utiliser une configuration très simple du fichier .babelrc
+  console.log('📝 Création d\'un fichier .babelrc simple...');
+  const simpleBabelrc = `{
+  "presets": ["next/babel"],
+  "plugins": []
+}`;
+  fs.writeFileSync(babelrcPath, simpleBabelrc);
 
   // Créer/modifier le fichier tsconfig.json pour éviter les erreurs d'alias
   const tsconfigPath = path.join(frontendDir, 'tsconfig.json');
@@ -352,6 +370,8 @@ export default function Page() {
   // Créer un fichier next.config.js très simple si nécessaire
   const nextConfigPath = path.join(frontendDir, 'next.config.js');
   const simpleNextConfig = `/** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
   typescript: {
@@ -362,6 +382,7 @@ const nextConfig = {
   },
   images: {
     domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
+    unoptimized: true,
   },
   experimental: {
     esmExternals: 'loose',
@@ -369,7 +390,7 @@ const nextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': require('path').resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src')
     };
     return config;
   },
@@ -379,6 +400,9 @@ module.exports = nextConfig;`;
 
   if (!fs.existsSync(nextConfigPath)) {
     console.log('📝 Création d\'un fichier next.config.js simple...');
+    fs.writeFileSync(nextConfigPath, simpleNextConfig);
+  } else {
+    console.log('🔄 Mise à jour du fichier next.config.js...');
     fs.writeFileSync(nextConfigPath, simpleNextConfig);
   }
 

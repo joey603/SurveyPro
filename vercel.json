@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd frontend && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 --force && npm run build",
+  "buildCommand": "cd frontend && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 babel-plugin-module-resolver --no-save --force && npm run build",
   "installCommand": "npm install",
   "outputDirectory": "frontend/.next",
   "env": {
