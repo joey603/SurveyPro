@@ -18,7 +18,7 @@ try {
   const frontendDir = path.join(rootDir, 'frontend');
   const srcDir = path.join(frontendDir, 'src');
   const appDir = path.join(srcDir, 'app');
-  const pagesDir = path.join(srcDir, 'pages');  // Ajout d'un dossier pages pour compatibilité
+  const pagesDir = path.join(srcDir, 'pages');
   const nodeModulesPath = path.join(frontendDir, 'node_modules', '@');
 
   console.log('📂 Vérification des chemins critiques:');
@@ -40,56 +40,117 @@ try {
     console.log('✅ Dossier src créé');
   }
 
-  // Créer des dossiers pages/app si nécessaire pour Next.js
-  if (!fs.existsSync(appDir)) {
-    console.log('📁 Création du dossier app...');
-    fs.mkdirSync(appDir, { recursive: true });
-    
-    // Créer un fichier page.tsx basique
-    const pageContent = `
-    export default function Page() {
-      return <div>SurveyPro Application</div>;
-    }
-    `;
-    fs.writeFileSync(path.join(appDir, 'page.tsx'), pageContent);
+  // Détecter quel mode de routing est utilisé (app ou pages) et s'assurer qu'ils ne sont pas en conflit
+  const appDirExists = fs.existsSync(appDir);
+  const pagesDirExists = fs.existsSync(pagesDir);
+  const appPageExists = appDirExists && fs.existsSync(path.join(appDir, 'page.tsx'));
+  const pagesIndexExists = pagesDirExists && fs.existsSync(path.join(pagesDir, 'index.tsx'));
+
+  // Supprimer le fichier pages/index.tsx s'il y a conflit avec app/page.tsx
+  if (appPageExists && pagesIndexExists) {
+    console.log('⚠️ Conflit détecté entre app/page.tsx et pages/index.tsx - Suppression de pages/index.tsx');
+    fs.unlinkSync(path.join(pagesDir, 'index.tsx'));
   }
-
-  // Créer également un dossier pages pour la compatibilité
-  if (!fs.existsSync(pagesDir)) {
-    console.log('📁 Création du dossier pages pour compatibilité...');
-    fs.mkdirSync(pagesDir, { recursive: true });
-    
-    // Créer un fichier index.tsx basique
-    const indexContent = `
-    export default function IndexPage() {
-      return <div>SurveyPro Application</div>;
-    }
-    `;
-    fs.writeFileSync(path.join(pagesDir, 'index.tsx'), indexContent);
+  
+  // Sélectionner un mode de routing principal (privilégier App Router si existant)
+  let useAppRouter = true;
+  
+  if (appDirExists && fs.readdirSync(appDir).length > 0) {
+    console.log('✅ Utilisation du App Router (dossier app)');
+    useAppRouter = true;
+  } else if (pagesDirExists && fs.readdirSync(pagesDir).length > 0) {
+    console.log('✅ Utilisation du Pages Router (dossier pages)');
+    useAppRouter = false;
+  } else {
+    console.log('🔍 Aucun routeur trouvé, création de l\'App Router par défaut');
+    useAppRouter = true;
   }
-
-  // Vérifier si le dossier app est bien rempli
-  const appFiles = fs.readdirSync(appDir);
-  console.log('📋 Fichiers dans le dossier app:', appFiles);
-
-  // Créer un fichier app/layout.tsx s'il n'existe pas
-  const layoutPath = path.join(appDir, 'layout.tsx');
-  if (!fs.existsSync(layoutPath)) {
-    console.log('📝 Création d\'un layout par défaut...');
-    const layoutContent = `
-    export default function RootLayout({
-      children,
-    }: {
-      children: React.ReactNode;
-    }) {
-      return (
-        <html lang="en">
-          <body>{children}</body>
-        </html>
-      );
+  
+  // Créer le routeur manquant en fonction de la détection
+  if (useAppRouter) {
+    // Utiliser App Router: créer le dossier app et les fichiers nécessaires
+    if (!fs.existsSync(appDir)) {
+      console.log('📁 Création du dossier app...');
+      fs.mkdirSync(appDir, { recursive: true });
     }
-    `;
-    fs.writeFileSync(layoutPath, layoutContent);
+    
+    // Créer app/page.tsx s'il n'existe pas
+    const appPagePath = path.join(appDir, 'page.tsx');
+    if (!fs.existsSync(appPagePath)) {
+      console.log('📝 Création de app/page.tsx');
+      const pageContent = `export default function Page() {
+  return <div>SurveyPro Application</div>;
+}`;
+      fs.writeFileSync(appPagePath, pageContent);
+    }
+    
+    // Créer app/layout.tsx s'il n'existe pas
+    const layoutPath = path.join(appDir, 'layout.tsx');
+    if (!fs.existsSync(layoutPath)) {
+      console.log('📝 Création de app/layout.tsx');
+      const layoutContent = `export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}`;
+      fs.writeFileSync(layoutPath, layoutContent);
+    }
+    
+    // Suppression du dossier pages s'il est vide
+    if (pagesDirExists) {
+      const pagesFiles = fs.readdirSync(pagesDir);
+      if (pagesFiles.length === 0) {
+        console.log('🧹 Suppression du dossier pages vide...');
+        fs.rmdirSync(pagesDir);
+      } else {
+        console.log('⚠️ Le dossier pages contient des fichiers, vérifiez qu\'il n\'y a pas de conflit avec app');
+      }
+    }
+  } else {
+    // Utiliser Pages Router: créer le dossier pages et les fichiers nécessaires
+    if (!fs.existsSync(pagesDir)) {
+      console.log('📁 Création du dossier pages...');
+      fs.mkdirSync(pagesDir, { recursive: true });
+    }
+    
+    // Créer pages/index.tsx s'il n'existe pas
+    const indexPath = path.join(pagesDir, 'index.tsx');
+    if (!fs.existsSync(indexPath)) {
+      console.log('📝 Création de pages/index.tsx');
+      const indexContent = `export default function Home() {
+  return <div>SurveyPro Application</div>;
+}`;
+      fs.writeFileSync(indexPath, indexContent);
+    }
+    
+    // Créer pages/_app.tsx s'il n'existe pas
+    const appPath = path.join(pagesDir, '_app.tsx');
+    if (!fs.existsSync(appPath)) {
+      console.log('📝 Création de pages/_app.tsx');
+      const appContent = `import type { AppProps } from 'next/app';
+
+export default function App({ Component, pageProps }: AppProps) {
+  return <Component {...pageProps} />;
+}`;
+      fs.writeFileSync(appPath, appContent);
+    }
+    
+    // Suppression du dossier app s'il est vide
+    if (appDirExists) {
+      const appFiles = fs.readdirSync(appDir);
+      if (appFiles.length === 0) {
+        console.log('🧹 Suppression du dossier app vide...');
+        fs.rmdirSync(appDir);
+      } else {
+        console.log('⚠️ Le dossier app contient des fichiers, vérifiez qu\'il n\'y a pas de conflit avec pages');
+      }
+    }
   }
 
   // Créer un lien symbolique pour @/
@@ -126,19 +187,17 @@ try {
   const babelrcPath = path.join(frontendDir, '.babelrc');
   if (!fs.existsSync(babelrcPath)) {
     console.log('📝 Création du fichier .babelrc...');
-    const babelrcContent = `
-    {
-      "presets": ["next/babel"],
-      "plugins": [
-        ["module-resolver", {
-          "root": ["./"],
-          "alias": {
-            "@": "./src"
-          }
-        }]
-      ]
-    }
-    `;
+    const babelrcContent = `{
+  "presets": ["next/babel"],
+  "plugins": [
+    ["module-resolver", {
+      "root": ["./"],
+      "alias": {
+        "@": "./src"
+      }
+    }]
+  ]
+}`;
     fs.writeFileSync(babelrcPath, babelrcContent);
   }
 
