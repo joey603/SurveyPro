@@ -12,6 +12,10 @@ const nextConfig = {
   },
   output: 'standalone',
   distDir: '.next',
+  // Chemin explicite vers le dossier source contenant app
+  experimental: {
+    appDir: true
+  },
   // Webpack configuration pour les alias
   webpack: (config) => {
     config.resolve.alias = {
