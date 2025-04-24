@@ -13,15 +13,47 @@ process.env.SKIP_TYPE_CHECK = 'true';
 process.env.NODE_OPTIONS = '--max-old-space-size=4096';
 
 try {
-  // Créer le lien symbolique pour @/
+  // Chemin vers le dossier frontend
   const frontendDir = path.resolve(__dirname, 'frontend');
   const nodeModulesPath = path.join(frontendDir, 'node_modules', '@');
   const srcPath = path.join(frontendDir, 'src');
+  const appPath = path.join(srcPath, 'app');
+  const pagesPath = path.join(srcPath, 'pages');
 
   console.log('📂 Vérification des chemins critiques:');
   console.log(`- Frontend: ${frontendDir}`);
   console.log(`- Source: ${srcPath}`);
+  console.log(`- App directory: ${appPath}`);
 
+  // Vérifier que le dossier src/app existe
+  if (fs.existsSync(appPath)) {
+    console.log('✅ Le dossier src/app existe');
+  } else {
+    console.log('⚠️ Le dossier src/app n\'existe pas, création...');
+    
+    if (!fs.existsSync(srcPath)) {
+      fs.mkdirSync(srcPath, { recursive: true });
+    }
+    
+    fs.mkdirSync(appPath, { recursive: true });
+    
+    // Créer un fichier page.js minimal dans le dossier app s'il n'existe pas
+    const pageFilePath = path.join(appPath, 'page.tsx');
+    if (!fs.existsSync(pageFilePath)) {
+      console.log('📝 Création d\'un fichier page.tsx minimal...');
+      fs.writeFileSync(pageFilePath, `
+        export default function Home() {
+          return (
+            <div>
+              <h1>SurveyPro</h1>
+            </div>
+          )
+        }
+      `);
+    }
+  }
+
+  // Créer le lien symbolique pour @/
   if (fs.existsSync(srcPath)) {
     if (!fs.existsSync(path.dirname(nodeModulesPath))) {
       console.log('📁 Création du dossier node_modules/@');
@@ -59,6 +91,11 @@ try {
     console.log('🧹 Nettoyage du cache Next.js...');
     fs.rmSync(nextCacheDir, { recursive: true, force: true });
   }
+
+  // Créer un fichier .npmrc pour éviter les problèmes de dépendances peer
+  const npmrcPath = path.join(frontendDir, '.npmrc');
+  console.log('📝 Création du fichier .npmrc...');
+  fs.writeFileSync(npmrcPath, 'legacy-peer-deps=true\nstrict-peer-dependencies=false\nauto-install-peers=true\n');
 
   console.log('✅ Préparation terminée avec succès!');
 } catch (error) {
