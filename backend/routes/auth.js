@@ -194,6 +194,23 @@ router.get('/google', (req, res, next) => {
   });
 });
 
+// Vérifier si une URL est une origine valide
+const isValidOrigin = (url) => {
+  if (!url) return false;
+  
+  try {
+    // Vérifier si c'est une URL Vercel
+    if (url.includes('vercel.app')) return true;
+    
+    // Vérifier si c'est une URL dans la liste des origines autorisées
+    const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+    return allowedOrigins.some(origin => url.startsWith(origin.trim()));
+  } catch (error) {
+    console.error('Error validating origin:', error);
+    return false;
+  }
+};
+
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
@@ -206,8 +223,17 @@ router.get('/google/callback',
       console.log('Google Callback - User:', req.user);
       
       // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
-      console.log('Origin URL for redirection:', originUrl);
+      let originUrl = req.cookies?.origin;
+      console.log('Original origin from cookie:', originUrl);
+      
+      // Vérifier si l'origine est valide, sinon utiliser la première URL de FRONTEND_URL
+      if (!isValidOrigin(originUrl)) {
+        const fallbackUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+        originUrl = fallbackUrls.length > 0 ? fallbackUrls[0].trim() : 'https://surveyflow.vercel.app';
+        console.log('Using fallback origin:', originUrl);
+      }
+      
+      console.log('Final origin URL for redirection:', originUrl);
       
       if (!req.user) {
         console.error('No user data in request');
@@ -248,7 +274,12 @@ router.get('/google/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
+      // Utiliser également la nouvelle fonction isValidOrigin pour l'erreur
+      let originUrl = req.cookies?.origin;
+      if (!isValidOrigin(originUrl)) {
+        const fallbackUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+        originUrl = fallbackUrls.length > 0 ? fallbackUrls[0].trim() : 'https://surveyflow.vercel.app';
+      }
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
@@ -273,8 +304,17 @@ router.get('/github/callback',
       console.log('GitHub Callback - User:', req.user);
       
       // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
-      console.log('Origin URL for redirection:', originUrl);
+      let originUrl = req.cookies?.origin;
+      console.log('Original origin from cookie:', originUrl);
+      
+      // Vérifier si l'origine est valide, sinon utiliser la première URL de FRONTEND_URL
+      if (!isValidOrigin(originUrl)) {
+        const fallbackUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+        originUrl = fallbackUrls.length > 0 ? fallbackUrls[0].trim() : 'https://surveyflow.vercel.app';
+        console.log('Using fallback origin:', originUrl);
+      }
+      
+      console.log('Final origin URL for redirection:', originUrl);
       
       if (!req.user) {
         console.error('No user data in request');
@@ -315,7 +355,12 @@ router.get('/github/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
+      // Utiliser également la nouvelle fonction isValidOrigin pour l'erreur
+      let originUrl = req.cookies?.origin;
+      if (!isValidOrigin(originUrl)) {
+        const fallbackUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+        originUrl = fallbackUrls.length > 0 ? fallbackUrls[0].trim() : 'https://surveyflow.vercel.app';
+      }
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
