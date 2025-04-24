@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node prebuild-check.js",
-    "prebuild": "node prebuild-check.js && node ../setup-build.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

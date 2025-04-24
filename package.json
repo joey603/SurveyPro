@@ -1,12 +1,4 @@
 {
-  "name": "surveypro",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "build": "cd frontend && npm install --legacy-peer-deps && npm run build",
-    "dev": "cd frontend && npm run dev",
-    "start": "cd frontend && npm start"
-  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
