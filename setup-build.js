@@ -22,6 +22,37 @@ try {
   console.log(`- Frontend: ${frontendDir}`);
   console.log(`- Source: ${srcPath}`);
 
+  // Copier le dossier app de src vers la racine pour Next.js
+  const srcAppDir = path.join(srcPath, 'app');
+  const rootAppDir = path.join(frontendDir, 'app');
+  
+  if (fs.existsSync(srcAppDir)) {
+    console.log('📋 Copie du dossier app vers la racine pour Next.js...');
+    
+    // Supprimer le dossier app racine s'il existe déjà
+    if (fs.existsSync(rootAppDir)) {
+      console.log('🧹 Nettoyage du dossier app existant...');
+      fs.rmSync(rootAppDir, { recursive: true, force: true });
+    }
+    
+    // Créer le dossier app à la racine
+    fs.mkdirSync(rootAppDir, { recursive: true });
+    
+    // Copier le contenu
+    try {
+      execSync(`cp -r ${srcAppDir}/* ${rootAppDir}/`);
+      console.log('✅ Dossier app copié avec succès!');
+    } catch (error) {
+      console.error('❌ Erreur lors de la copie du dossier app:', error.message);
+      
+      // Méthode alternative avec fs
+      console.log('🔄 Tentative avec méthode alternative...');
+      copyFolderRecursiveSync(srcAppDir, frontendDir);
+    }
+  } else {
+    console.error('❌ Dossier src/app introuvable!');
+  }
+
   if (fs.existsSync(srcPath)) {
     if (!fs.existsSync(path.dirname(nodeModulesPath))) {
       console.log('📁 Création du dossier node_modules/@');
@@ -64,4 +95,25 @@ try {
 } catch (error) {
   console.error('❌ Erreur lors de la préparation du build:', error);
   // Ne pas échouer le processus pour éviter de bloquer le build
+}
+
+// Fonction alternative pour copier des dossiers
+function copyFolderRecursiveSync(source, target) {
+  const targetFolder = path.join(target, path.basename(source));
+  if (!fs.existsSync(targetFolder)) {
+    fs.mkdirSync(targetFolder, { recursive: true });
+  }
+
+  if (fs.lstatSync(source).isDirectory()) {
+    const files = fs.readdirSync(source);
+    files.forEach(function(file) {
+      const curSource = path.join(source, file);
+      if (fs.lstatSync(curSource).isDirectory()) {
+        copyFolderRecursiveSync(curSource, targetFolder);
+      } else {
+        const targetFile = path.join(targetFolder, file);
+        fs.copyFileSync(curSource, targetFile);
+      }
+    });
+  }
 } 
