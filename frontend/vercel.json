@@ -20,6 +20,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "PRESERVE_ORIGINAL_PAGES": "true"
   }
 } 
