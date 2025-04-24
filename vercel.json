@@ -1,8 +1,13 @@
 {
   "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
+  "installCommand": "true",
   "outputDirectory": "frontend/.next",
-  "installCommand": "cd frontend && npm install --legacy-peer-deps",
-  "devCommand": "cd frontend && npm run dev",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "PRESERVE_ORIGINAL_PAGES": "true",
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "SKIP_TYPE_CHECK": "true"
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -19,8 +24,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
       ]
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
-  }
+  ]
 } 
