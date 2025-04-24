@@ -48,7 +48,9 @@ const allowedOrigins = [
   'https://surveypro-frontend.vercel.app/',
   'https://surveypro-frontend-git-main-joey603.vercel.app/',
   'https://surveyflow.vercel.app',
-  'https://surveyflow-git-main-joey603.vercel.app'
+  'https://surveyflow-git-main-joey603.vercel.app',
+  'https://surveyflow.vercel.app/',
+  'https://surveyflow-git-main-joey603.vercel.app/'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
@@ -57,7 +59,7 @@ app.use(cors({
     // Permettre les requêtes sans origine (ex: applications mobiles, curl, etc.)
     if (!origin) return callback(null, true);
     
-    // Autorise toutes les origines Vercel et localhost
+    // Autoriser toutes les origines listées, toutes les origines Vercel et localhost
     if (allowedOrigins.indexOf(origin) !== -1 || 
         origin.includes('localhost') || 
         origin.includes('vercel.app') ||
@@ -65,15 +67,17 @@ app.use(cors({
       console.log('Origine acceptée par CORS:', origin);
       callback(null, true);
     } else {
-      console.log('Origine inconnue mais autorisée par CORS:', origin);
-      callback(null, true); // Autoriser toutes les origines pour le test
+      console.log('Origine inconnue:', origin);
+      callback(null, true); // Autoriser quand même toutes les origines pour le développement
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'Authorization'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // 24 heures en secondes
 }));
 
 // Gérer les requêtes OPTIONS explicitement

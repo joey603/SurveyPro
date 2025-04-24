@@ -1,10 +1,10 @@
 {
-  "framework": null,
+  "framework": "nextjs",
   "rootDirectory": "frontend",
-  "buildCommand": "npm install && npm run build",
-  "installCommand": "npm install",
-  "devCommand": "npm run dev",
-  "outputDirectory": ".next",
+  "buildCommand": "cd frontend && chmod +x build-vercel.sh && ./build-vercel.sh",
+  "installCommand": "cd frontend && npm install --legacy-peer-deps",
+  "devCommand": "cd frontend && npm run dev",
+  "outputDirectory": "frontend/.next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
   },

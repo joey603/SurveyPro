@@ -1,4 +1,3 @@
-
 # SurveyPro
 
 SurveyPro is a modern web application for creating, managing, and analyzing online surveys.
@@ -107,3 +106,70 @@ The application will be available at: `http://localhost:3000`
 ## Support
 
 For support, email yoelibarthel603@gmail.com.
+
+## Guide de déploiement
+
+### Déploiement du Backend (Render)
+
+1. Créez un compte sur [Render](https://render.com/) si ce n'est pas déjà fait
+2. Depuis le tableau de bord, cliquez sur "New" et sélectionnez "Web Service"
+3. Connectez votre dépôt GitHub ou GitLab
+4. Configurez votre service :
+   - **Nom** : surveypro-backend
+   - **Environnement** : Node
+   - **Branch** : main (ou votre branche de production)
+   - **Root Directory** : backend
+   - **Build Command** : npm install
+   - **Start Command** : node server.js
+   - **Plan** : Free
+
+5. Dans la section "Advanced", ajoutez les variables d'environnement suivantes :
+   - `NODE_ENV` : production
+   - `PORT` : 5041 (ou le port de votre choix)
+   - `MONGO_URI` : votre chaîne de connexion MongoDB
+   - `JWT_SECRET` : votre clé secrète JWT
+   - `JWT_REFRESH_SECRET` : votre clé secrète de refresh token
+   - `FRONTEND_URL` : https://surveyflow.vercel.app,http://localhost:3000
+   - `API_URL` : l'URL de votre backend (à remplir après déploiement)
+   - `SENDGRID_API_KEY` : votre clé API SendGrid
+   - `EMAIL_FROM` : votre email d'envoi
+   - Ajoutez toutes les autres variables d'environnement nécessaires de votre fichier .env
+
+6. Cliquez sur "Create Web Service"
+
+### Déploiement du Frontend (Vercel)
+
+1. Créez un compte sur [Vercel](https://vercel.com/) si ce n'est pas déjà fait
+2. Depuis le tableau de bord, cliquez sur "Add New..." et sélectionnez "Project"
+3. Importez votre dépôt GitHub
+4. Configurez votre projet :
+   - **Framework Preset** : Next.js
+   - **Root Directory** : frontend
+   - **Build Command** : chmod +x build-vercel.sh && ./build-vercel.sh
+   - **Output Directory** : .next
+
+5. Dans l'onglet "Environment Variables", ajoutez :
+   - `NEXT_PUBLIC_API_URL` : l'URL de votre backend Render (ex: https://surveypro-ir3u.onrender.com)
+   - `NEXT_TELEMETRY_DISABLED` : 1
+   - `SKIP_TYPE_CHECK` : true
+   - `NODE_ENV` : production
+
+6. Cliquez sur "Deploy"
+
+### Après le déploiement
+
+1. Une fois le frontend déployé, copiez l'URL générée par Vercel
+2. Retournez dans les paramètres de votre backend sur Render
+3. Mettez à jour la variable `FRONTEND_URL` pour inclure cette URL
+4. Vérifiez que votre application fonctionne en testant les fonctionnalités (création de compte, connexion, création de sondage, etc.)
+
+### Dépannage
+
+Si vous rencontrez des problèmes de CORS :
+1. Vérifiez les origines autorisées dans `server.js`
+2. Assurez-vous que la variable d'environnement `FRONTEND_URL` est correctement configurée
+3. Consultez les logs du backend et du frontend pour identifier les erreurs
+
+Si le frontend ne se connecte pas au backend :
+1. Vérifiez que `NEXT_PUBLIC_API_URL` pointe vers la bonne URL du backend
+2. Assurez-vous que les rewrites dans `next.config.js` et `vercel.json` sont correctement configurés
