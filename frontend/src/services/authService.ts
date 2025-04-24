@@ -3,9 +3,8 @@ import axios from 'axios';
 // Déterminer l'URL de l'API en fonction de l'environnement
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
-    // En production sur Vercel, nous utilisons des rewrites donc nous pouvons utiliser des chemins relatifs
-    // ce qui évite les problèmes CORS
-    return '/api/auth';
+    // En production sur Vercel, utiliser l'URL complète du backend
+    return `${process.env.NEXT_PUBLIC_API_URL || 'https://surveypro-ir3u.onrender.com'}/api/auth`;
   }
   return 'http://localhost:5041/api/auth';
 };
@@ -27,6 +26,7 @@ export const loginWithGithub = () => {
   const currentOrigin = window.location.origin;
   document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
   console.log('Cookie origin set to:', currentOrigin);
+  console.log('Redirection vers:', `${API_URL}/github`);
   
   window.location.href = `${API_URL}/github`;
 };

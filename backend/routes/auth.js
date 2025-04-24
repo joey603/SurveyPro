@@ -197,7 +197,7 @@ router.get('/google', (req, res, next) => {
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureRedirect: '/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.',
     failureMessage: true
   }),
   async (req, res) => {
@@ -206,7 +206,7 @@ router.get('/google/callback',
       console.log('Google Callback - User:', req.user);
       
       // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
@@ -248,7 +248,7 @@ router.get('/google/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
@@ -264,7 +264,7 @@ router.get('/github', (req, res, next) => {
 router.get('/github/callback',
   passport.authenticate('github', { 
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureRedirect: '/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.',
     failureMessage: true
   }),
   async (req, res) => {
@@ -273,7 +273,7 @@ router.get('/github/callback',
       console.log('GitHub Callback - User:', req.user);
       
       // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
@@ -315,7 +315,7 @@ router.get('/github/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL.split(',')[0];
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
