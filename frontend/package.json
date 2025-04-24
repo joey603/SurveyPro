@@ -9,7 +9,7 @@
   "scripts": {
     "prebuild": "node ../setup-build.js",
     "dev": "next dev",
-    "build": "node react-build-fix.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },

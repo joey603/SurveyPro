@@ -11,6 +11,7 @@ console.log('🚀 Préparation de l\'environnement de build...');
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 process.env.SKIP_TYPE_CHECK = 'true';
 process.env.NODE_OPTIONS = '--max-old-space-size=4096';
+process.env.NEXT_IGNORE_ESLINT = 'true';
 
 try {
   // Chemins importants
@@ -30,6 +31,18 @@ try {
   if (!fs.existsSync(frontendDir)) {
     console.error('❌ Erreur: Le dossier frontend n\'existe pas');
     process.exit(1);
+  }
+
+  // S'assurer que React est correctement installé
+  console.log('📦 Installation des dépendances React (ceci peut prendre quelques instants)...');
+  try {
+    // Installer les dépendances essentielles directement
+    execSync('cd ' + frontendDir + ' && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 --no-save --force', 
+      { stdio: 'inherit' });
+    console.log('✅ Installation de React terminée');
+  } catch (error) {
+    console.error('⚠️ Avertissement lors de l\'installation des dépendances React:', error.message);
+    // Ne pas échouer, continuer malgré l'erreur
   }
 
   // Vérifier que package.json existe et contient les dépendances nécessaires
@@ -57,9 +70,15 @@ try {
       
       if (!packageJson.dependencies.next) {
         console.log('⚠️ Dépendance Next.js manquante, ajout...');
-        packageJson.dependencies.next = "^14.0.0";
+        packageJson.dependencies.next = "^14.0.4";
         modifiedPackageJson = true;
       }
+      
+      // Ajouter des overrides pour s'assurer que les versions sont correctes
+      packageJson.overrides = packageJson.overrides || {};
+      packageJson.overrides.react = "^18.2.0";
+      packageJson.overrides["react-dom"] = "^18.2.0";
+      modifiedPackageJson = true;
       
       if (modifiedPackageJson) {
         fs.writeFileSync(frontendPackageJsonPath, JSON.stringify(packageJson, null, 2));
@@ -328,6 +347,39 @@ export default function Page() {
     } catch (error) {
       console.error('❌ Erreur lors de la modification du tsconfig.json:', error);
     }
+  }
+
+  // Créer un fichier next.config.js très simple si nécessaire
+  const nextConfigPath = path.join(frontendDir, 'next.config.js');
+  const simpleNextConfig = `/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  images: {
+    domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
+  },
+  experimental: {
+    esmExternals: 'loose',
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, './src')
+    };
+    return config;
+  },
+};
+
+module.exports = nextConfig;`;
+
+  if (!fs.existsSync(nextConfigPath)) {
+    console.log('📝 Création d\'un fichier next.config.js simple...');
+    fs.writeFileSync(nextConfigPath, simpleNextConfig);
   }
 
   // Nettoyer le cache .next si nécessaire

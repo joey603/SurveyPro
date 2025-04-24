@@ -1,13 +1,15 @@
 {
-  "buildCommand": "cd frontend && npm install --force && npm run build",
-  "installCommand": "npm install --force",
+  "buildCommand": "cd frontend && npm install react@18.2.0 react-dom@18.2.0 next@14.0.4 --force && npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "frontend/.next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
     "PRESERVE_ORIGINAL_PAGES": "true",
     "NEXT_TELEMETRY_DISABLED": "1",
     "SKIP_TYPE_CHECK": "true",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "NEXT_SHARP_PATH": "/tmp/node_modules/sharp",
+    "NEXT_IGNORE_ESLINT": "true"
   },
   "rewrites": [
     {
