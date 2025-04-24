@@ -100,16 +100,11 @@ const AnalyticsPage: React.FC = () => {
       try {
         const token = localStorage.getItem('accessToken') || '';
         
-        console.log('Chargement des données d\'analyse...');
-        console.log('API_URL:', process.env.NEXT_PUBLIC_API_URL);
-        
         // Charger tous les sondages (statiques, dynamiques et partagés acceptés)
-        console.log('Chargement de tous les sondages...');
         const allSurveys = await fetchSurveys(token);
-        console.log('Sondages chargés:', allSurveys.length);
+        console.log('Tous les sondages chargés:', allSurveys.length);
         
         // Charger séparément les partages en attente
-        console.log('Chargement des partages en attente...');
         const pendingSharesData = await fetchPendingShares(token);
         console.log('Partages en attente chargés:', pendingSharesData.length);
         
@@ -117,14 +112,10 @@ const AnalyticsPage: React.FC = () => {
         // car ils sont déjà inclus dans allSurveys
         
         // Charger les réponses pour tous les sondages
-        console.log('Chargement des réponses pour chaque sondage...');
         const responsesPromises = allSurveys.map((survey: any) => 
           getSurveyAnswers(survey._id, token, survey.isDynamic)
             .then(responses => ({ surveyId: survey._id, responses }))
-            .catch(error => {
-              console.error(`Erreur lors du chargement des réponses pour ${survey._id}:`, error);
-              return { surveyId: survey._id, responses: [] };
-            })
+            .catch(() => ({ surveyId: survey._id, responses: [] }))
         );
 
         const responsesData = await Promise.all(responsesPromises);
@@ -132,8 +123,6 @@ const AnalyticsPage: React.FC = () => {
           acc[surveyId] = responses;
           return acc;
         }, {} as { [key: string]: any[] });
-
-        console.log('Réponses chargées pour', Object.keys(responsesMap).length, 'sondages');
 
         // Définir les états avec les données chargées
         setSurveys([...allSurveys, ...pendingSharesData]); 

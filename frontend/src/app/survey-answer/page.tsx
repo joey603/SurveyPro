@@ -140,7 +140,7 @@ type FieldPath = `answers.${string}` | keyof FormData | `demographic.${keyof For
 
 const SurveyAnswerPage: React.FC = () => {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [urlToRedirect, setUrlToRedirect] = useState<string | null>(null);
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,51 +246,47 @@ const SurveyAnswerPage: React.FC = () => {
 
   useEffect(() => {
     const loadSurveys = async () => {
-      setLoading(true);
       try {
-        // Vérifier si l'utilisateur est authentifié
-        if (!isAuthenticated) {
-          console.log('Utilisateur non connecté, redirection vers login');
-          router.push('/login');
-          return;
-        }
+        setLoading(true);
+        setError(null);
         
-        console.log('Chargement des sondages disponibles...');
-        console.log('API_URL:', process.env.NEXT_PUBLIC_API_URL);
-
-        // Récupérer le token
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          setError('Vous devez être connecté pour accéder à cette page');
-          router.push('/login');
-          return;
+          throw new Error('Aucun token d\'authentification trouvé');
         }
 
-        // Charger les sondages disponibles
-        console.log('Récupération des sondages...');
-        try {
-          const availableSurveys = await fetchAvailableSurveys(token);
-          setSurveys(availableSurveys || []);
-          console.log('Sondages disponibles:', availableSurveys?.length || 0);
-        } catch (err) {
-          console.error('Erreur lors de la récupération des sondages:', err);
-          setSurveys([]);
+        // Vérifier d'abord s'il y a un ID de survey dans l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSurveyId = urlParams.get('surveyId');
+
+        // Charger tous les sondages
+        const allSurveys = await fetchAvailableSurveys(token);
+        console.log('Surveys loaded:', allSurveys);
+        
+        if (sharedSurveyId) {
+          // Si on a un ID dans l'URL, chercher ce sondage spécifique
+          const sharedSurvey = allSurveys.find(
+            (survey: { _id: string }) => survey._id === sharedSurveyId
+          );
+          
+          if (sharedSurvey) {
+            // Si c'est un sondage privé ou public, l'afficher directement
+            setSelectedSurvey(sharedSurvey);
+            setSurveys([sharedSurvey]); // Afficher uniquement ce sondage dans la liste
+          } else {
+            setError('Survey not found');
+          }
+        } else {
+          // Si pas d'ID dans l'URL, afficher uniquement les sondages publics
+          const publicSurveys = allSurveys.filter(survey => !survey.isPrivate);
+          setSurveys(publicSurveys);
         }
 
         // Charger les IDs des sondages déjà répondus
-        console.log('Récupération des sondages répondus...');
-        try {
-          const answeredIds = await fetchAnsweredSurveys(token);
-          if (Array.isArray(answeredIds)) {
-            setAnsweredSurveys(answeredIds);
-            console.log('Sondages répondus:', answeredIds.length);
-          } else {
-            console.error('Les IDs reçus ne sont pas un tableau:', answeredIds);
-            setAnsweredSurveys([]);
-          }
-        } catch (err) {
-          console.error('Erreur lors de la récupération des sondages répondus:', err);
-          setAnsweredSurveys([]);
+        const answeredIds = await fetchAnsweredSurveys();
+        if (Array.isArray(answeredIds)) {
+          setAnsweredSurveys(answeredIds);
+          console.log('Answered surveys:', answeredIds);
         }
 
       } catch (error: any) {
@@ -302,7 +298,7 @@ const SurveyAnswerPage: React.FC = () => {
     };
 
     loadSurveys();
-  }, [router, isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     const loadCities = async () => {

@@ -1,7 +1,11 @@
 {
+  "framework": "nextjs",
+  "outputDirectory": ".next",
   "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -18,9 +22,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
       ]
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
-    "PRESERVE_ORIGINAL_PAGES": "true"
-  }
+  ]
 } 

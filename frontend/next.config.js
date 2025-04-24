@@ -1,24 +1,31 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
-  reactStrictMode: true,
-  distDir: '.next',
-  output: 'standalone',
-  
-  // Ignorer les erreurs TypeScript et ESLint pendant le build
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   eslint: {
+    // Désactiver la vérification ESLint pendant la construction
     ignoreDuringBuilds: true,
   },
-  
+  typescript: {
+    // Ignorer les erreurs TS durant la construction pour production
+    ignoreBuildErrors: true,
+  },
+  output: 'standalone',
+  distDir: '.next',
+  // Webpack configuration pour les alias
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src')
+    };
+    return config;
+  },
   // Configuration des images
   images: {
-    domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app', 'localhost'],
+    domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
     unoptimized: true,
   },
-  
-  // Configuration des redirections API
+  // Rewrites API
   async rewrites() {
     return [
       {
@@ -26,16 +33,7 @@ const nextConfig = {
         destination: 'https://surveypro-ir3u.onrender.com/api/:path*',
       },
     ];
-  },
-  
-  // Configuration des alias
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': __dirname + '/src',
-    };
-    return config;
-  },
+  }
 };
 
 module.exports = nextConfig; 
