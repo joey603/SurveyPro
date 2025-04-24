@@ -57,37 +57,95 @@ try {
     console.log('✅ Dossier app existant trouvé');
   }
 
-  // Liste des fichiers essentiels à vérifier
-  const essentialFiles = ['layout.tsx', 'page.tsx'];
-  let filesExist = true;
-
-  // Vérifier si tous les fichiers essentiels existent
-  for (const file of essentialFiles) {
-    const filePath = path.join(appDir, file);
-    if (!fs.existsSync(filePath)) {
-      console.log(`⚠️ Fichier ${file} manquant`);
-      filesExist = false;
-    }
-  }
-
-  // Ne pas toucher aux fichiers existants
-  if (filesExist) {
-    console.log('✅ Tous les fichiers essentiels existent et ne seront pas modifiés');
-  } else {
-    console.log('⚠️ Des fichiers essentiels sont manquants, création de fichiers temporaires...');
+  // Vérifier si le fichier page.tsx existe déjà
+  const pagePath = path.join(appDir, 'page.tsx');
+  const originalPageExists = fs.existsSync(pagePath);
+  
+  if (originalPageExists) {
+    console.log('✅ Le fichier page.tsx existe déjà et ne sera pas modifié');
     
-    // Si le layout n'existe pas, le créer
+    // Si le fichier layout.tsx n'existe pas, le créer avec une version minimale
     const layoutPath = path.join(appDir, 'layout.tsx');
     if (!fs.existsSync(layoutPath)) {
-      console.log('📝 Création du fichier layout.tsx...');
-      const layoutContent = `"use client";
+      console.log('📝 Création d\'un layout.tsx minimal...');
+      // Version très simple sans imports qui peuvent causer des erreurs
+      const layoutContent = `export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="fr">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>SurveyPro</title>
+      </head>
+      <body>
+        {children}
+      </body>
+    </html>
+  );
+}`;
+      fs.writeFileSync(layoutPath, layoutContent);
+    }
+    
+    // Vérifier si le fichier globals.css existe
+    const globalsCssPath = path.join(appDir, 'globals.css');
+    if (!fs.existsSync(globalsCssPath)) {
+      console.log('📝 Création d\'un fichier CSS minimal...');
+      const cssContent = `* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
 
-import "./globals.css";
-import { AuthProvider } from "@/utils/AuthContext";
-import NavBar from "./components/NavBar";
-import { CircularProgress, Backdrop } from '@mui/material';
-import { useState, useEffect, Suspense } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}`;
+      fs.writeFileSync(globalsCssPath, cssContent);
+    }
+  } else {
+    console.log('⚠️ Fichier page.tsx manquant, création d\'une structure minimale...');
+    
+    // Créer un fichier globals.css minimal
+    const globalsCssPath = path.join(appDir, 'globals.css');
+    if (!fs.existsSync(globalsCssPath)) {
+      console.log('📝 Création d\'un fichier CSS minimal...');
+      const cssContent = `* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}`;
+      fs.writeFileSync(globalsCssPath, cssContent);
+    }
+    
+    // Créer un layout.tsx minimal
+    const layoutPath = path.join(appDir, 'layout.tsx');
+    console.log('📝 Création d\'un layout.tsx minimal...');
+    const layoutContent = `import './globals.css';
 
 export default function RootLayout({
   children,
@@ -97,78 +155,64 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
-          rel="stylesheet"
-        />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>SurveyPro</title>
       </head>
       <body>
-        <AuthProvider>
-          <NavBar />
-          {children}
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );
 }`;
-      fs.writeFileSync(layoutPath, layoutContent);
-    }
+    fs.writeFileSync(layoutPath, layoutContent);
     
-    // Si la page n'existe pas, la créer
-    const pagePath = path.join(appDir, 'page.tsx');
-    if (!fs.existsSync(pagePath)) {
-      console.log('📝 Création du fichier page.tsx...');
-      const pageContent = `'use client';
-
-import React from 'react';
-import { Box, Typography, Button, Container } from '@mui/material';
-import { useRouter } from 'next/navigation';
-
-export default function Page() {
-  const router = useRouter();
-  
+    // Créer une page.tsx minimale
+    console.log('📝 Création d\'une page.tsx minimale...');
+    const pageContent = `export default function Page() {
   return (
-    <Container maxWidth="lg" sx={{ mt: 8, textAlign: 'center' }}>
-      <Typography variant="h3" component="h1" gutterBottom>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: '2rem',
+      textAlign: 'center'
+    }}>
+      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
         Bienvenue sur SurveyPro
-      </Typography>
-      <Typography variant="h5" color="text.secondary" paragraph>
+      </h1>
+      <p style={{ fontSize: '1.25rem', marginBottom: '2rem', color: '#555' }}>
         Votre plateforme de sondages professionnels
-      </Typography>
-      <Box sx={{ mt: 4 }}>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          size="large"
-          onClick={() => router.push('/login')}
-          sx={{ mx: 1 }}
-        >
+      </p>
+      <div>
+        <a href="/login" style={{ 
+          display: 'inline-block',
+          background: '#4C1D95', 
+          color: 'white',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '0.375rem',
+          fontWeight: 'bold',
+          margin: '0 0.5rem'
+        }}>
           Se connecter
-        </Button>
-        <Button 
-          variant="outlined" 
-          color="primary" 
-          size="large"
-          onClick={() => router.push('/register')}
-          sx={{ mx: 1 }}
-        >
+        </a>
+        <a href="/register" style={{ 
+          display: 'inline-block',
+          border: '1px solid #4C1D95',
+          color: '#4C1D95',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '0.375rem',
+          fontWeight: 'bold',
+          margin: '0 0.5rem'
+        }}>
           S'inscrire
-        </Button>
-      </Box>
-    </Container>
+        </a>
+      </div>
+    </div>
   );
 }`;
-      fs.writeFileSync(pagePath, pageContent);
-    }
+    fs.writeFileSync(pagePath, pageContent);
   }
 
   // Créer un lien symbolique pour @/

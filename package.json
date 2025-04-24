@@ -1,11 +1,25 @@
 {
   "name": "surveypro",
   "version": "1.0.0",
+  "description": "Surveys and analytics platform",
+  "main": "index.js",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "build": "cd frontend && npm install --legacy-peer-deps && npm run build",
     "dev": "cd frontend && npm run dev",
-    "start": "cd frontend && npm start"
+    "build": "node setup-build.js && cd frontend && npm run build",
+    "prebuild": "node setup-build.js",
+    "start": "cd frontend && npm run start",
+    "prettier": "prettier --write \"**/*.{js,jsx,ts,tsx,json}\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.0.0"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
