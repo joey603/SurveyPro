@@ -131,19 +131,27 @@ const SurveyHistoryPage: React.FC = () => {
         const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
           `${process.env.NEXT_PUBLIC_API_URL}/api` : 
           'http://localhost:5041/api';
+        
+        console.log('API_URL pour les réponses:', API_URL);
 
         // Récupérer les réponses aux sondages classiques
+        console.log('Récupération des réponses classiques...');
         const response = await fetch(`${API_URL}/survey-answers/responses/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        if (!response.ok) throw new Error('Erreur lors de la récupération des réponses classiques');
+        if (!response.ok) {
+          console.error('Erreur lors de la récupération des réponses classiques:', response.status, response.statusText);
+          throw new Error(`Erreur lors de la récupération des réponses classiques: ${response.status}`);
+        }
 
         const classicData = await response.json();
+        console.log('Réponses classiques récupérées:', classicData.length);
         
         // Récupérer les réponses aux sondages dynamiques
+        console.log('Récupération des réponses dynamiques...');
         const dynamicResponse = await fetch(`${API_URL}/dynamic-survey-answers/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -154,6 +162,7 @@ const SurveyHistoryPage: React.FC = () => {
           console.error('Erreur lors de la récupération des réponses dynamiques:', dynamicResponse.status, dynamicResponse.statusText);
           // Ne pas interrompre le processus si cette partie échoue
           console.warn('Impossible de récupérer les réponses aux sondages dynamiques, continuons avec seulement les sondages classiques');
+          
           // Continuer avec seulement les réponses classiques
           const allResponses = classicData;
           console.log('Toutes les réponses récupérées (seulement classiques):', allResponses.length);
@@ -161,6 +170,7 @@ const SurveyHistoryPage: React.FC = () => {
           // Continuer le traitement avec ces réponses
           const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
             try {
+              console.log('Récupération des détails pour le sondage:', response.surveyId);
               const endpoint = `${API_URL}/surveys/${response.surveyId}`;
                 
               const surveyResponse = await fetch(endpoint, {
@@ -171,12 +181,14 @@ const SurveyHistoryPage: React.FC = () => {
 
               if (surveyResponse.ok) {
                 const surveyData = await surveyResponse.json();
+                console.log('Détails récupérés pour le sondage:', response.surveyId);
                 return {
                   ...response,
                   description: surveyData.description,
                   isPrivate: surveyData.isPrivate
                 };
               }
+              console.warn('Impossible de récupérer les détails pour le sondage:', response.surveyId);
               return response;
             } catch (error) {
               console.warn(`Could not fetch survey details for ${response.surveyId}:`, error);
@@ -189,8 +201,7 @@ const SurveyHistoryPage: React.FC = () => {
         }
         
         const dynamicData = await dynamicResponse.json();
-        console.log('Réponses dynamiques récupérées:', dynamicData);
-        console.log('Nombre de réponses dynamiques:', dynamicData.length);
+        console.log('Réponses dynamiques récupérées:', dynamicData.length);
         
         // Combiner les réponses statiques et dynamiques
         const allResponses = [
@@ -206,11 +217,12 @@ const SurveyHistoryPage: React.FC = () => {
           }))
         ];
         
-        console.log('Détail des réponses combinées:', JSON.stringify(allResponses, null, 2));
+        console.log('Total des réponses combinées:', allResponses.length);
         
         // Pour chaque réponse, récupérer les détails du sondage
         const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
           try {
+            console.log('Récupération des détails pour le sondage:', response.surveyId, 'isDynamic:', response.isDynamic);
             const endpoint = response.isDynamic 
               ? `${API_URL}/dynamic-surveys/${response.surveyId}`
               : `${API_URL}/surveys/${response.surveyId}`;
@@ -223,12 +235,14 @@ const SurveyHistoryPage: React.FC = () => {
 
             if (surveyResponse.ok) {
               const surveyData = await surveyResponse.json();
+              console.log('Détails récupérés pour le sondage:', response.surveyId);
               return {
                 ...response,
                 description: surveyData.description,
                 isPrivate: surveyData.isPrivate
               };
             }
+            console.warn('Impossible de récupérer les détails pour le sondage:', response.surveyId);
             return response;
           } catch (error) {
             console.warn(`Could not fetch survey details for ${response.surveyId}:`, error);
@@ -236,6 +250,7 @@ const SurveyHistoryPage: React.FC = () => {
           }
         }));
 
+        console.log('Toutes les réponses enrichies:', enhancedResponses.length);
         setResponses(enhancedResponses);
       } catch (err: any) {
         setError(err.message);

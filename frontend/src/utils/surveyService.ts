@@ -214,27 +214,36 @@ interface DynamicSurvey {
 export const fetchSurveys = async (token: string) => {
   try {
     console.log('===== DÉBUT fetchSurveys =====');
+    console.log('BASE_URL:', BASE_URL);
+    console.log('API_URL:', API_URL);
     
     // Récupérer les sondages statiques de l'utilisateur
-    const response = await axios.get(`${BASE_URL}/api/surveys`, {
+    console.log('Récupération des sondages statiques...');
+    const response = await axios.get(`${API_URL}/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
     // Récupérer les sondages dynamiques de l'utilisateur
-    const dynamicResponse = await axios.get(`${BASE_URL}/api/dynamic-surveys`, {
+    console.log('Récupération des sondages dynamiques...');
+    const dynamicResponse = await axios.get(`${API_URL}/dynamic-surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
     // Récupérer les sondages partagés et acceptés
-    const sharedResponse = await axios.get(`${BASE_URL}/api/survey-shares/shared-with-me`, {
+    console.log('Récupération des sondages partagés...');
+    const sharedResponse = await axios.get(`${API_URL}/survey-shares/shared-with-me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+    
+    console.log('Sondages statiques reçus:', response.data);
+    console.log('Sondages dynamiques reçus:', dynamicResponse.data);
+    console.log('Sondages partagés reçus:', sharedResponse.data);
     
     const surveys = response.data.map((survey: any) => ({
       ...survey,
@@ -275,6 +284,15 @@ export const fetchSurveys = async (token: string) => {
     return allSurveys;
   } catch (error) {
     console.error('Erreur lors de la récupération des sondages:', error);
+    // Ajout de plus de détails sur l'erreur
+    if (axios.isAxiosError(error)) {
+      console.error('Détails de l\'erreur axios:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
+    }
     return [];
   }
 };
@@ -441,22 +459,40 @@ export const deleteSurveyShare = async (shareId: string, token: string) => {
 
 export const fetchAnsweredSurveys = async (token: string) => {
   try {
+    console.log('===== DÉBUT fetchAnsweredSurveys =====');
+    console.log('BASE_URL:', BASE_URL);
+    console.log('API_URL:', API_URL);
+    
     // Récupérer les réponses aux sondages classiques
-    const classicResponse = await axios.get(`${BASE_URL}/survey-answers/responses/user`, {
+    console.log('Récupération des réponses aux sondages classiques...');
+    const classicResponse = await axios.get(`${API_URL}/survey-answers/responses/user`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const classicAnswers = classicResponse.data.map((response: any) => response.surveyId);
+    console.log('Réponses classiques récupérées:', classicAnswers);
 
     // Récupérer les réponses aux sondages dynamiques
+    console.log('Récupération des réponses aux sondages dynamiques...');
     const dynamicAnswers = await dynamicSurveyService.getUserAnsweredSurveys(token);
+    console.log('Réponses dynamiques récupérées:', dynamicAnswers);
 
     // Combiner les deux types de réponses
     const allAnsweredSurveys = [...classicAnswers, ...dynamicAnswers];
     console.log('Tous les sondages répondus:', allAnsweredSurveys);
+    console.log('===== FIN fetchAnsweredSurveys =====');
 
     return allAnsweredSurveys;
   } catch (error) {
     console.error('Erreur lors de la récupération des sondages répondus:', error);
+    // Ajout de plus de détails sur l'erreur
+    if (axios.isAxiosError(error)) {
+      console.error('Détails de l\'erreur axios:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
+    }
     return [];
   }
 };
