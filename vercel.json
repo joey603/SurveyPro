@@ -1,12 +1,13 @@
 {
-  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
-  "installCommand": "true",
+  "buildCommand": "cd frontend && npm install --force && npm run build",
+  "installCommand": "npm install --force",
   "outputDirectory": "frontend/.next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
     "PRESERVE_ORIGINAL_PAGES": "true",
     "NEXT_TELEMETRY_DISABLED": "1",
-    "SKIP_TYPE_CHECK": "true"
+    "SKIP_TYPE_CHECK": "true",
+    "NODE_ENV": "production"
   },
   "rewrites": [
     {

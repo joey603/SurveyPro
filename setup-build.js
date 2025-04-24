@@ -32,6 +32,44 @@ try {
     process.exit(1);
   }
 
+  // Vérifier que package.json existe et contient les dépendances nécessaires
+  const frontendPackageJsonPath = path.join(frontendDir, 'package.json');
+  if (fs.existsSync(frontendPackageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(frontendPackageJsonPath, 'utf8'));
+      
+      // S'assurer que les dépendances essentielles sont présentes
+      packageJson.dependencies = packageJson.dependencies || {};
+      
+      let modifiedPackageJson = false;
+      
+      if (!packageJson.dependencies.react) {
+        console.log('⚠️ Dépendance React manquante, ajout...');
+        packageJson.dependencies.react = "^18.2.0";
+        modifiedPackageJson = true;
+      }
+      
+      if (!packageJson.dependencies['react-dom']) {
+        console.log('⚠️ Dépendance React DOM manquante, ajout...');
+        packageJson.dependencies['react-dom'] = "^18.2.0";
+        modifiedPackageJson = true;
+      }
+      
+      if (!packageJson.dependencies.next) {
+        console.log('⚠️ Dépendance Next.js manquante, ajout...');
+        packageJson.dependencies.next = "^14.0.0";
+        modifiedPackageJson = true;
+      }
+      
+      if (modifiedPackageJson) {
+        fs.writeFileSync(frontendPackageJsonPath, JSON.stringify(packageJson, null, 2));
+        console.log('✅ package.json mis à jour avec les dépendances nécessaires');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la lecture/modification du package.json:', error);
+    }
+  }
+
   if (!fs.existsSync(srcDir)) {
     console.error('❌ Erreur: Le dossier src n\'existe pas');
     fs.mkdirSync(srcDir, { recursive: true });
@@ -69,7 +107,11 @@ try {
     if (!fs.existsSync(layoutPath)) {
       console.log('📝 Création d\'un layout.tsx minimal...');
       // Version très simple sans imports qui peuvent causer des erreurs
-      const layoutContent = `export default function RootLayout({
+      const layoutContent = `'use client';
+
+import React from 'react';
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -145,7 +187,10 @@ a {
     // Créer un layout.tsx minimal
     const layoutPath = path.join(appDir, 'layout.tsx');
     console.log('📝 Création d\'un layout.tsx minimal...');
-    const layoutContent = `import './globals.css';
+    const layoutContent = `'use client';
+
+import React from 'react';
+import './globals.css';
 
 export default function RootLayout({
   children,
@@ -169,7 +214,11 @@ export default function RootLayout({
     
     // Créer une page.tsx minimale
     console.log('📝 Création d\'une page.tsx minimale...');
-    const pageContent = `export default function Page() {
+    const pageContent = `'use client';
+
+import React from 'react';
+
+export default function Page() {
   return (
     <div style={{ 
       display: 'flex', 
@@ -261,6 +310,24 @@ export default function RootLayout({
   ]
 }`;
     fs.writeFileSync(babelrcPath, babelrcContent);
+  }
+
+  // Créer/modifier le fichier tsconfig.json pour éviter les erreurs d'alias
+  const tsconfigPath = path.join(frontendDir, 'tsconfig.json');
+  if (fs.existsSync(tsconfigPath)) {
+    try {
+      const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
+      
+      // S'assurer que les chemins sont correctement configurés
+      tsconfig.compilerOptions = tsconfig.compilerOptions || {};
+      tsconfig.compilerOptions.paths = tsconfig.compilerOptions.paths || {};
+      tsconfig.compilerOptions.paths['@/*'] = ['./src/*'];
+      
+      fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
+      console.log('✅ tsconfig.json mis à jour avec les chemins d\'alias');
+    } catch (error) {
+      console.error('❌ Erreur lors de la modification du tsconfig.json:', error);
+    }
   }
 
   // Nettoyer le cache .next si nécessaire
