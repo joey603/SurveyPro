@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "SKIP_TYPE_CHECK=true NEXT_TELEMETRY_DISABLED=1 next build",
+    "postinstall": "[ -d node_modules/@ ] || mkdir -p node_modules/@ && ln -sf $(pwd)/src node_modules/@",
     "start": "next start",
     "lint": "next lint"
   },

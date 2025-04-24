@@ -30,7 +30,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://surveypro-ir3u.onrender.com/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL + '/api/:path*',
       },
     ];
   }
