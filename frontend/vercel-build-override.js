@@ -8,6 +8,7 @@ const OUTPUT_DIR = '.next';
 const SUCCESS_FILE = path.join(OUTPUT_DIR, 'BUILD_SUCCESS');
 const STATIC_DIR = path.join(OUTPUT_DIR, 'static');
 const SERVER_DIR = path.join(OUTPUT_DIR, 'server');
+const SERVERLESS_DIR = path.join(OUTPUT_DIR, 'serverless');
 
 console.log('🔄 Démarrage du processus de build personnalisé pour Vercel...');
 
@@ -23,6 +24,7 @@ try {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   fs.mkdirSync(STATIC_DIR, { recursive: true });
   fs.mkdirSync(SERVER_DIR, { recursive: true });
+  fs.mkdirSync(SERVERLESS_DIR, { recursive: true });
 
   // Créer une page HTML statique qui redirige vers l'application hébergée sur Render
   console.log('📝 Création de la page statique...');
@@ -233,6 +235,32 @@ createServer((req, res) => {
   fs.writeFileSync(path.join(SERVER_DIR, 'pages/_document.js'), 'module.exports = function(){return "Document Page"}');
   
   fs.writeFileSync(path.join(SERVER_DIR, 'pages-manifest.json'), JSON.stringify(pagesManifest, null, 2));
+  
+  // Créer des fichiers serverless (CRITIQUE pour Vercel)
+  console.log('📝 Création des fichiers serverless requis par Vercel...');
+  
+  // Créer les dossiers pour les pages serverless
+  fs.mkdirSync(path.join(SERVERLESS_DIR, 'pages'), { recursive: true });
+  
+  // Fichiers minimaux pour serverless
+  const serverlessPageContent = `
+module.exports = {
+  render: (req, res) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/html');
+    res.end(\`${htmlContent}\`);
+  }
+};
+  `;
+  
+  // Créer les mêmes pages en version serverless
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/index.js'), serverlessPageContent);
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_app.js'), 'module.exports = {render: (req, res) => {res.end("App Page")}}');
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_error.js'), 'module.exports = {render: (req, res) => {res.end("Error Page")}}');
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_document.js'), 'module.exports = {render: (req, res) => {res.end("Document Page")}}');
+  
+  // Créer le manifest des pages serverless
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages-manifest.json'), JSON.stringify(pagesManifest, null, 2));
 
   // Créer un fichier pour indiquer que le build est terminé avec succès
   fs.writeFileSync(SUCCESS_FILE, 'Build terminé avec succès');

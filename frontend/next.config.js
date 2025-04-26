@@ -12,9 +12,11 @@ const nextConfig = {
     domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
     unoptimized: true,
   },
-  // Configuration simplifiée pour éviter les erreurs
-  output: 'export',  // Utiliser un export statique plutôt que des pages dynamiques
-  // Désactiver le rendu statique
+  // Configuration pour Vercel
+  target: 'serverless',  // Indiquer à Next.js de générer des fonctions serverless
+  // Activer l'export statique
+  output: 'export',
+  // Dossier de sortie
   distDir: '.next',
   // Rewrites API
   async rewrites() {
