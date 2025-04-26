@@ -67,9 +67,9 @@ const OAuthCallbackPage = () => {
             // Mettre à jour le contexte d'authentification
             auth.login(tokenData.accessToken, tokenData.refreshToken);
             
-            // Rediriger immédiatement vers la page d'accueil
-            console.log('Redirecting to home page immediately');
-            router.push('/');
+            // Rediriger immédiatement vers la page d'accueil en utilisant window.location.href
+            console.log('Redirecting to home page immediately with window.location');
+            window.location.href = '/';
             return;
           } catch (error: any) {
             console.error('Error parsing token data:', error);
@@ -92,6 +92,14 @@ const OAuthCallbackPage = () => {
     };
 
     processCallback();
+
+    // Redirection automatique après 3 secondes même si le processus n'est pas terminé
+    const redirectTimer = setTimeout(() => {
+      console.log('Timeout reached, forcing redirect to home page');
+      window.location.href = '/';
+    }, 3000);
+
+    return () => clearTimeout(redirectTimer);
   }, [auth, router, searchParams]);
 
   // Fonction pour revenir à la page de connexion
@@ -136,7 +144,7 @@ const OAuthCallbackPage = () => {
               </Typography>
               <Button
                 variant="contained"
-                onClick={() => router.push('/')}
+                onClick={() => window.location.href = '/'}
                 sx={{
                   mt: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -169,7 +177,7 @@ const OAuthCallbackPage = () => {
               
               <Button
                 variant="contained"
-                onClick={goToLogin}
+                onClick={() => window.location.href = '/login'}
                 sx={{
                   mt: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
