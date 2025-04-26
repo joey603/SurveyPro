@@ -26,5 +26,11 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
+  ],
+  "routes": [
+    { "src": "/oauth-callback", "dest": "/oauth-callback" },
+    { "src": "/oauth-callback/(.*)", "dest": "/oauth-callback" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/" }
   ]
 } 
