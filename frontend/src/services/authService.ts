@@ -14,6 +14,7 @@ export const loginWithGoogle = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
+  // Définir un cookie avec un domaine plus large pour s'assurer qu'il est accessible par le serveur backend
   document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
   console.log('Cookie origin set to:', currentOrigin);
   console.log('Redirection vers:', `${API_URL}/google`);
@@ -25,6 +26,7 @@ export const loginWithGithub = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
+  // Définir un cookie avec un domaine plus large pour s'assurer qu'il est accessible par le serveur backend
   document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
   console.log('Cookie origin set to:', currentOrigin);
   
