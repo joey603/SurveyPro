@@ -193,21 +193,28 @@ const LoginPage: React.FC = () => {
       // URL de l'API backend pour l'authentification Google
       const backendUrl = 'https://surveypro-ir3u.onrender.com';
       
+      // Récupérer l'URL d'origine actuelle pour le callback
+      const currentOrigin = window.location.origin;
+      console.log('Current application origin:', currentOrigin);
+      
       // Sauvegarder l'origine dans les cookies
       try {
-        const currentOrigin = window.location.origin;
         document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
-        console.log('Origine sauvegardée dans les cookies:', currentOrigin);
+        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        
+        // Ajouter l'origine à l'URL de redirection
+        const googleAuthUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(currentOrigin)}`;
+        console.log('URL de redirection Google avec origine:', googleAuthUrl);
+        
+        // Redirection directe vers l'URL d'authentification Google
+        window.location.href = googleAuthUrl;
       } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        // En cas d'erreur, essayer la redirection simple
+        window.location.href = `${backendUrl}/api/auth/google`;
       }
-      
-      // Log avant redirection
-      console.log('Redirection vers Google OAuth:', `${backendUrl}/api/auth/google`);
-      
-      // Redirection directe vers l'URL d'authentification Google
-      window.location.href = `${backendUrl}/api/auth/google`;
     } catch (error) {
       console.error('Erreur lors de la connexion Google:', error);
     }
@@ -224,21 +231,28 @@ const LoginPage: React.FC = () => {
       // URL de l'API backend pour l'authentification GitHub
       const backendUrl = 'https://surveypro-ir3u.onrender.com';
       
+      // Récupérer l'URL d'origine actuelle pour le callback
+      const currentOrigin = window.location.origin;
+      console.log('Current application origin:', currentOrigin);
+      
       // Sauvegarder l'origine dans les cookies
       try {
-        const currentOrigin = window.location.origin;
         document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
-        console.log('Origine sauvegardée dans les cookies:', currentOrigin);
+        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        
+        // Ajouter l'origine à l'URL de redirection
+        const githubAuthUrl = `${backendUrl}/api/auth/github?redirect_uri=${encodeURIComponent(currentOrigin)}`;
+        console.log('URL de redirection GitHub avec origine:', githubAuthUrl);
+        
+        // Redirection directe vers l'URL d'authentification GitHub
+        window.location.href = githubAuthUrl;
       } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        // En cas d'erreur, essayer la redirection simple
+        window.location.href = `${backendUrl}/api/auth/github`;
       }
-      
-      // Log avant redirection
-      console.log('Redirection vers GitHub OAuth:', `${backendUrl}/api/auth/github`);
-      
-      // Redirection directe vers l'URL d'authentification GitHub
-      window.location.href = `${backendUrl}/api/auth/github`;
     } catch (error) {
       console.error('Erreur lors de la connexion GitHub:', error);
     }

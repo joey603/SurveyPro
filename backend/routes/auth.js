@@ -840,10 +840,12 @@ const getRedirectUrl = (req) => {
     }
   });
   
-  // Ajouter les URL par défaut en dernier recours
+  // Ajouter les URL par défaut en dernier recours - priorité aux URL récentes de surveyflow
+  candidateUrls.push('https://surveyflow-iota.vercel.app'); // Priorité à l'URL principale actuelle
+  candidateUrls.push('https://surveyflow-git-main-joeys-projects-2b62a68a.vercel.app');
+  candidateUrls.push('https://surveyflow-h48jq3s6z-joeys-projects-2b62a68a.vercel.app');
   candidateUrls.push('https://surveyflow.vercel.app');
   candidateUrls.push('https://surveypro-frontend.vercel.app');
-  candidateUrls.push('https://surveyflow-git-main-joeys-projects-2b62a68a.vercel.app');
   candidateUrls.push('https://surveyflow-git-dev-joeys-projects.vercel.app');
   
   console.log('All candidate redirect URLs:', candidateUrls);
@@ -865,6 +867,7 @@ const getRedirectUrl = (req) => {
           parsedUrl.host.includes('localhost') ||
           parsedUrl.host.includes('surveypro-ir3u.onrender.com') ||
           parsedUrl.host.includes('surveyflow.io') ||
+          parsedUrl.host === 'surveyflow-iota.vercel.app' ||
           parsedUrl.host === 'surveyflow.vercel.app' ||
           parsedUrl.host === 'surveypro-frontend.vercel.app') {
         return true;
@@ -889,7 +892,7 @@ const getRedirectUrl = (req) => {
   
   // Si aucune URL valide n'est trouvée, utiliser l'URL par défaut
   console.log('No valid URL found, using default');
-  return 'https://surveyflow.vercel.app';
+  return 'https://surveyflow-iota.vercel.app'; // URL par défaut mise à jour
 };
 
 module.exports = router;
