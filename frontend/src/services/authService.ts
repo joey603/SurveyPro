@@ -3,8 +3,9 @@ import axios from 'axios';
 // Déterminer l'URL de l'API en fonction de l'environnement
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
-    // En production, pour OAuth nous devons utiliser l'URL complète du backend
-    return 'https://surveypro-ir3u.onrender.com/api/auth';
+    // En production sur Vercel, nous utilisons des rewrites donc nous pouvons utiliser des chemins relatifs
+    // ce qui évite les problèmes CORS
+    return '/api/auth';
   }
   return 'http://localhost:5041/api/auth';
 };
@@ -30,28 +31,23 @@ export const loginWithGithub = () => {
   window.location.href = `${API_URL}/github`;
 };
 
-export const handleOAuthCallback = async (tokensParam: string) => {
+export const handleOAuthCallback = async (tokens: string) => {
   try {
-    console.log('Handling OAuth callback');
-    // Décoder les tokens reçus
-    const tokensData = JSON.parse(decodeURIComponent(tokensParam));
-    console.log('Tokens data received:', { ...tokensData, accessToken: '***', refreshToken: '***' });
+    console.log('Raw tokens string:', tokens); // Debug log
+    const parsedData = JSON.parse(decodeURIComponent(tokens));
+    console.log('Parsed OAuth data:', parsedData); // Debug log
     
-    // Extraire les tokens et les données utilisateur
-    const { accessToken, refreshToken, user } = tokensData;
-    
-    if (!accessToken || !refreshToken || !user) {
-      throw new Error('Invalid authentication data received');
+    if (!parsedData.accessToken || !parsedData.refreshToken) {
+      throw new Error('Missing tokens in parsed data');
     }
     
-    // Stocker les tokens dans le localStorage
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
-    
-    return { accessToken, refreshToken, user };
+    return {
+      accessToken: parsedData.accessToken,
+      refreshToken: parsedData.refreshToken,
+      user: parsedData.user
+    };
   } catch (error) {
-    console.error('Error in handleOAuthCallback:', error);
+    console.error('Error handling OAuth callback:', error);
     throw error;
   }
 };

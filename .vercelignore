@@ -1,10 +1,5 @@
 README.md
 .git
-# Exclure le backend du déploiement
 backend/
 .DS_Store
-*.log
-# Exclure les dépendances et fichiers générés
-**/node_modules
-**/.next
-# Garder le dossier frontend 
+*.log 
