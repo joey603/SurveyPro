@@ -8,7 +8,8 @@
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
     "NODE_ENV": "production",
     "NEXT_TELEMETRY_DISABLED": "1",
-    "NEXT_SHARP_PATH": "./node_modules/sharp"
+    "NEXT_SHARP_PATH": "./node_modules/sharp",
+    "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
   },
   "rewrites": [
     {
