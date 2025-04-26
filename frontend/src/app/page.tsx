@@ -12,9 +12,6 @@ import {
   Slide,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import PollIcon from '@mui/icons-material/Poll';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import TimelineIcon from '@mui/icons-material/Timeline';
 import { useAuth } from '../utils/AuthContext';
 import Avatar from '@mui/material/Avatar';
 import Lottie from 'lottie-react';

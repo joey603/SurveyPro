@@ -33,6 +33,16 @@ if [ -d "frontend" ]; then
   # Installation des dépendances et build
   echo "Installation des dépendances..."
   npm install
+
+  # Installation explicite de js-cookie et ses types
+  echo "Installation explicite de js-cookie..."
+  npm install js-cookie @types/js-cookie --save
+
+  # Vérifier que js-cookie est bien installé
+  if [ ! -d "node_modules/js-cookie" ]; then
+    echo "⚠️ js-cookie toujours manquant, tentative finale d'installation..."
+    npm install js-cookie @types/js-cookie --save --force
+  fi
   
   echo "Démarrage du build Next.js..."
   npm run build
