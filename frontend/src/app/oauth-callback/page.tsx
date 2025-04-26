@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
 import { handleOAuthCallback } from '@/services/authService';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Typography, Paper, Button, Alert } from '@mui/material';
 
 const LoadingFallback = () => (
   <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -12,58 +12,133 @@ const LoadingFallback = () => (
   </Box>
 );
 
-const OAuthCallbackContent = () => {
+const OAuthCallbackPage = () => {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const auth = useAuth();
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState<string>('');
+  const [authMethod, setAuthMethod] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const processCallback = async () => {
       try {
-        const params = new URLSearchParams(window.location.search);
-        const tokensParam = params.get('tokens');
-        const errorParam = params.get('error');
+        const tokensParam = searchParams.get('tokens');
+        const errorParam = searchParams.get('error');
+        const messageParam = searchParams.get('message');
         
-        if (errorParam === 'existing_user' || !tokensParam) {
-          router.push('/login');
+        // En cas d'erreur
+        if (errorParam) {
+          setStatus('error');
+          setMessage(messageParam || 'Une erreur est survenue lors de l\'authentification');
+          // Si l'erreur indique que l'utilisateur existe déjà avec une autre méthode
+          if (errorParam === 'existing_user') {
+            setAuthMethod(searchParams.get('authMethod') || null);
+          }
           return;
         }
 
-        const { accessToken, refreshToken, user } = await handleOAuthCallback(tokensParam);
-        
-        console.log('Received user data:', user);
-        
-        if (!user) {
-          console.error('No user data found in token response');
-          router.push('/login');
+        // Si on a des tokens, traiter l'authentification
+        if (tokensParam) {
+          const tokenData = JSON.parse(decodeURIComponent(tokensParam));
+          
+          // Vérifier si le token contient une info indiquant un compte existant
+          if (tokenData.existingUser) {
+            setStatus('success');
+            setMessage(`Vous vous êtes connecté avec succès ! Un compte existant avec cet email a été utilisé pour la connexion.`);
+          } else {
+            setStatus('success');
+            setMessage('Vous vous êtes connecté avec succès !');
+          }
+          
+          auth.login(tokenData.accessToken, tokenData.refreshToken);
+          
+          // Rediriger après un court délai pour que l'utilisateur puisse voir le message
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 1500);
           return;
         }
 
-        // Stockage explicite des informations utilisateur pour les utiliser plus tard si nécessaire
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        // Log de débogage pour voir si authMethod est correctement défini
-        console.log('User authentication method:', user.authMethod);
-        
-        await login(accessToken, refreshToken);
-        router.push('/');
+        setStatus('error');
+        setMessage('Aucune information d\'authentification n\'a été reçue');
       } catch (error) {
-        console.error('Error in OAuth callback:', error);
-        router.push('/login');
+        console.error('Error processing OAuth callback:', error);
+        setStatus('error');
+        setMessage('Une erreur est survenue lors du traitement de l\'authentification');
       }
     };
 
-    handleCallback();
-  }, []);
+    processCallback();
+  }, [auth, router, searchParams]);
 
-  return null;
-};
-
-const OAuthCallback = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <OAuthCallbackContent />
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        bgcolor="#f5f5f5"
+        px={2}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            maxWidth: 500,
+            width: '100%',
+            p: 4,
+            borderRadius: 2,
+            textAlign: 'center'
+          }}
+        >
+          {status === 'loading' && (
+            <>
+              <CircularProgress sx={{ mb: 2, color: '#667eea' }} />
+              <Typography variant="h6">Traitement de l'authentification...</Typography>
+            </>
+          )}
+
+          {status === 'success' && (
+            <>
+              <Alert severity="success" sx={{ mb: 2 }}>Authentification réussie !</Alert>
+              <Typography variant="body1" sx={{ mb: 2 }}>{message}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Vous allez être redirigé vers votre tableau de bord...
+              </Typography>
+            </>
+          )}
+
+          {status === 'error' && (
+            <>
+              <Alert severity="error" sx={{ mb: 2 }}>Erreur d'authentification</Alert>
+              <Typography variant="body1" sx={{ mb: 2 }}>{message}</Typography>
+              
+              {authMethod && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Veuillez vous connecter en utilisant la méthode: {authMethod}
+                </Typography>
+              )}
+              
+              <Button
+                variant="contained"
+                onClick={() => router.push('/login')}
+                sx={{
+                  mt: 2,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  }
+                }}
+              >
+                Retour à la page de connexion
+              </Button>
+            </>
+          )}
+        </Paper>
+      </Box>
     </Suspense>
   );
 };
 
-export default OAuthCallback; 
+export default OAuthCallbackPage; 

@@ -36,36 +36,37 @@ passport.use(new GoogleStrategy({
   async function(accessToken, refreshToken, profile, done) {
     try {
       console.log('Google Strategy - Starting user processing');
-      console.log('Google profile data:', { 
-        id: profile.id,
-        displayName: profile.displayName,
-        email: profile.emails[0].value
-      });
-      
       let user = await User.findOne({ email: profile.emails[0].value });
       
       if (user) {
-        console.log('Utilisateur existant trouvé avec email:', profile.emails[0].value);
-        console.log('Informations utilisateur existant:', {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          authMethod: user.authMethod,
-          isVerified: user.isVerified
-        });
+        console.log('Existing user found with Google authentication:', user);
         
-        // Mettre à jour l'utilisateur même si créé avec une autre méthode
-        // Si l'utilisateur a une authentification locale (email/mot de passe),
-        // nous conservons son mot de passe mais ajoutons Google comme méthode alternative
+        // Si l'utilisateur existe mais utilise une méthode d'authentification différente
         if (user.authMethod !== 'google') {
-          console.log('Liaison de compte: Ajout de Google comme méthode d\'authentification alternative');
-          // Nous conservons la méthode originale si c'est 'local', sinon nous la remplaçons par 'multiple'
-          user.authMethod = user.authMethod === 'local' ? 'local' : 'multiple';
-          // Nous stockons également l'id Google pour référence future
-          user.googleId = profile.id;
+          console.log('User exists but with different auth method:', user.authMethod);
+          // Mettre à jour l'utilisateur pour indiquer qu'il utilise aussi Google
+          // On ne change pas la méthode d'authentification principale pour éviter de perturber les connexions existantes
+          
+          // Mettre à jour les tokens
+          const newAccessToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '4h' }
+          );
+          const newRefreshToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+          );
+          
+          user.accessToken = newAccessToken;
+          user.refreshToken = newRefreshToken;
+          await user.save();
+          
+          return done(null, user);
         }
         
-        // Mettre à jour les tokens
+        // Mettre à jour les tokens si l'utilisateur existe déjà avec Google
         const newAccessToken = jwt.sign(
           { id: user._id },
           process.env.JWT_SECRET,
@@ -79,16 +80,12 @@ passport.use(new GoogleStrategy({
         
         user.accessToken = newAccessToken;
         user.refreshToken = newRefreshToken;
-        
-        console.log('Tokens mis à jour pour l\'utilisateur existant');
         await user.save();
         
-        console.log('Authentification réussie avec compte existant');
         return done(null, user);
       }
 
       // Pour un nouvel utilisateur
-      console.log('Création d\'un nouvel utilisateur avec email:', profile.emails[0].value);
       // Créer d'abord l'utilisateur
       user = new User({
         username: profile.displayName,
@@ -136,13 +133,6 @@ passport.use(new GitHubStrategy({
   async function(accessToken, refreshToken, profile, done) {
     try {
       console.log('GitHub Strategy - Starting user processing');
-      console.log('GitHub profile data:', {
-        id: profile.id,
-        username: profile.username,
-        displayName: profile.displayName,
-        emails: profile.emails ? profile.emails.map(e => e.value) : []
-      });
-      
       const emails = profile.emails;
       let primaryEmail;
       
@@ -158,27 +148,34 @@ passport.use(new GitHubStrategy({
       console.log('Existing user:', user);
       
       if (user) {
-        console.log('Utilisateur existant trouvé avec email:', primaryEmail);
-        console.log('Informations utilisateur existant:', {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          authMethod: user.authMethod,
-          isVerified: user.isVerified
-        });
+        console.log('Existing user found with GitHub authentication:', user);
         
-        // Mettre à jour l'utilisateur même si créé avec une autre méthode
-        // Si l'utilisateur a une authentification locale (email/mot de passe),
-        // nous conservons son mot de passe mais ajoutons GitHub comme méthode alternative
+        // Si l'utilisateur existe mais utilise une méthode d'authentification différente
         if (user.authMethod !== 'github') {
-          console.log('Liaison de compte: Ajout de GitHub comme méthode d\'authentification alternative');
-          // Nous conservons la méthode originale si c'est 'local', sinon nous la remplaçons par 'multiple'
-          user.authMethod = user.authMethod === 'local' ? 'local' : 'multiple';
-          // Nous stockons également l'id GitHub pour référence future
-          user.githubId = profile.id;
+          console.log('User exists but with different auth method:', user.authMethod);
+          // Mettre à jour l'utilisateur pour indiquer qu'il utilise aussi GitHub
+          // On ne change pas la méthode d'authentification principale pour éviter de perturber les connexions existantes
+          
+          // Mettre à jour les tokens
+          const newAccessToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '4h' }
+          );
+          const newRefreshToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+          );
+          
+          user.accessToken = newAccessToken;
+          user.refreshToken = newRefreshToken;
+          await user.save();
+          
+          return done(null, user);
         }
         
-        // Mettre à jour les tokens
+        // Mettre à jour les tokens si l'utilisateur existe
         const newAccessToken = jwt.sign(
           { id: user._id },
           process.env.JWT_SECRET,
@@ -192,16 +189,12 @@ passport.use(new GitHubStrategy({
         
         user.accessToken = newAccessToken;
         user.refreshToken = newRefreshToken;
-        
-        console.log('Tokens mis à jour pour l\'utilisateur existant');
         await user.save();
         
-        console.log('Authentification réussie avec compte existant');
         return done(null, user);
       }
 
       // Pour un nouvel utilisateur
-      console.log('Création d\'un nouvel utilisateur avec email:', primaryEmail);
       // Créer d'abord l'utilisateur
       user = new User({
         username: profile.username || profile.displayName,
@@ -255,61 +248,70 @@ router.get('/google', (req, res, next) => {
   });
 });
 
-router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
-  try {
-    // Génération du JWT
-    const user = req.user;
-    
-    // Détermination correcte de authMethod (local, google, github, ou multiple)
-    let authMethod = 'google';
-    if (user.password && (user.googleId || user.githubId)) {
-      authMethod = 'multiple';
-    } else if (user.password) {
-      authMethod = 'local';
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
+  }),
+  async (req, res) => {
+    try {
+      console.log('Google Callback - Starting response handling');
+      console.log('Google Callback - User:', req.user);
+      
+      // Récupérer le domaine d'origine de la requête depuis le cookie
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      console.log('Origin URL for redirection:', originUrl);
+      
+      if (!req.user) {
+        console.error('No user data in request');
+        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+      }
+
+      const accessToken = jwt.sign(
+        { 
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '4h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: req.user._id }, 
+        process.env.JWT_REFRESH_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      // Vérifier si c'est un compte existant avec une autre méthode d'authentification
+      const existingUser = req.user.authMethod !== 'google';
+
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        existingUser,
+        user: {
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username,
+          authMethod: req.user.authMethod
+        }
+      };
+
+      console.log('Redirecting with tokens:', tokenData);
+
+      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      console.log('Redirect URL:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google Callback Error:', error);
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
-    
-    console.log(`Authentification réussie pour ${user.email} avec authMethod: ${authMethod}`);
-    
-    const accessToken = jwt.sign(
-      { 
-        id: user._id,
-        email: user.email,
-        authMethod: authMethod,
-        username: user.username,
-        isVerified: true
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    // Formatage de la réponse utilisateur
-    const userResponse = {
-      id: user._id,
-      email: user.email,
-      username: user.username,
-      authMethod: authMethod,
-      isVerified: user.isVerified !== undefined ? user.isVerified : true
-    };
-
-    const responseData = {
-      accessToken,
-      refreshToken,
-      user: userResponse
-    };
-
-    // Utiliser la fonction de redirection commune
-    handleOAuthCallback(req, res, responseData);
-  } catch (error) {
-    console.error('Google Callback Error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
   }
-});
+);
 
 router.get('/github', (req, res, next) => {
   console.log('GitHub Auth Route - Starting authentication');
@@ -318,61 +320,70 @@ router.get('/github', (req, res, next) => {
   })(req, res, next);
 });
 
-router.get('/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
-  try {
-    // Génération du JWT
-    const user = req.user;
-    
-    // Détermination correcte de authMethod (local, google, github, ou multiple)
-    let authMethod = 'github';
-    if (user.password && (user.googleId || user.githubId)) {
-      authMethod = 'multiple';
-    } else if (user.password) {
-      authMethod = 'local';
+router.get('/github/callback',
+  passport.authenticate('github', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`,
+    failureMessage: true
+  }),
+  async (req, res) => {
+    try {
+      console.log('GitHub Callback - Starting response handling');
+      console.log('GitHub Callback - User:', req.user);
+      
+      // Récupérer le domaine d'origine de la requête depuis le cookie
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      console.log('Origin URL for redirection:', originUrl);
+      
+      if (!req.user) {
+        console.error('No user data in request');
+        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+      }
+
+      const accessToken = jwt.sign(
+        { 
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '4h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: req.user._id }, 
+        process.env.JWT_REFRESH_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      // Vérifier si c'est un compte existant avec une autre méthode d'authentification
+      const existingUser = req.user.authMethod !== 'github';
+      
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        existingUser,
+        user: {
+          id: req.user._id,
+          email: req.user.email,
+          username: req.user.username,
+          authMethod: req.user.authMethod
+        }
+      };
+
+      console.log('Redirecting with tokens:', tokenData);
+
+      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
+      console.log('Redirect URL:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('GitHub Callback Error:', error);
+      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
-    
-    console.log(`Authentification réussie pour ${user.email} avec authMethod: ${authMethod}`);
-    
-    const accessToken = jwt.sign(
-      { 
-        id: user._id,
-        email: user.email,
-        authMethod: authMethod,
-        username: user.username,
-        isVerified: true
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    // Formatage de la réponse utilisateur
-    const userResponse = {
-      id: user._id,
-      email: user.email,
-      username: user.username,
-      authMethod: authMethod,
-      isVerified: user.isVerified !== undefined ? user.isVerified : true
-    };
-
-    const responseData = {
-      accessToken,
-      refreshToken,
-      user: userResponse
-    };
-
-    // Utiliser la fonction de redirection commune
-    handleOAuthCallback(req, res, responseData);
-  } catch (error) {
-    console.error('GitHub Callback Error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
   }
-});
+);
 
 router.post('/register', async (req, res) => {
   try {
@@ -693,48 +704,6 @@ const sendVerificationEmail = async (email, verificationCode) => {
     console.error('Error sending verification email:', error);
     throw new Error('Error sending verification email');
   }
-};
-
-// Import la fonction de gestion de callback OAuth en haut du fichier
-const handleOAuthCallback = (req, res, tokens) => {
-  console.log('OAuth successful. Tokens:', tokens);
-  
-  // Afficher tous les cookies pour le débogage
-  console.log('All cookies:', req.headers.cookie);
-  
-  // Récupérer le domaine d'origine de la requête depuis le cookie
-  const originUrl = req.cookies?.origin;
-  console.log('Origin from cookie:', originUrl);
-  
-  // Déterminer l'URL de redirection frontale en fonction de l'environnement
-  let clientRedirectUrl;
-  
-  // URL spécifique pour le déploiement de prévisualisation actuel
-  const currentPreviewUrl = 'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app';
-  
-  if (originUrl) {
-    // Si l'origine est définie dans un cookie, l'utiliser
-    clientRedirectUrl = `${originUrl}/oauth-callback`;
-    console.log('Using origin from cookie for redirect:', clientRedirectUrl);
-  } else if (process.env.NODE_ENV === 'production') {
-    // En production, utiliser en priorité l'URL du déploiement de prévisualisation actuel
-    clientRedirectUrl = `${currentPreviewUrl}/oauth-callback`;
-    console.log('Using preview deployment URL for redirect:', clientRedirectUrl);
-  } else {
-    // En développement, utiliser localhost
-    clientRedirectUrl = 'http://localhost:3000/oauth-callback';
-    console.log('Using localhost for redirect:', clientRedirectUrl);
-  }
-  
-  // Créer la chaîne URL encodée des tokens
-  const encodedTokens = encodeURIComponent(JSON.stringify(tokens));
-  
-  // Construire l'URL de redirection complète
-  const redirectUrl = `${clientRedirectUrl}?tokens=${encodedTokens}`;
-  console.log('Final redirect URL:', redirectUrl);
-  
-  // Rediriger l'utilisateur vers l'application frontale
-  res.redirect(redirectUrl);
 };
 
 module.exports = router;
