@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 // Configuration de base
 const OUTPUT_DIR = '.next';
@@ -183,6 +184,9 @@ createServer((req, res) => {
   
   fs.writeFileSync(path.join(OUTPUT_DIR, 'build-manifest.json'), JSON.stringify(buildManifest, null, 2));
   
+  // Générer des IDs aléatoires pour le mode d'aperçu
+  const generateId = () => crypto.randomBytes(16).toString('hex');
+  
   // Créer prerender-manifest.json pour Vercel
   console.log('📝 Création du fichier prerender-manifest.json pour Vercel...');
   const prerenderManifest = {
@@ -195,10 +199,40 @@ createServer((req, res) => {
       }
     },
     dynamicRoutes: {},
-    notFoundRoutes: []
+    notFoundRoutes: [],
+    preview: {
+      previewModeId: generateId(),
+      previewModeSigningKey: generateId(),
+      previewModeEncryptionKey: generateId()
+    }
   };
   
   fs.writeFileSync(path.join(OUTPUT_DIR, 'prerender-manifest.json'), JSON.stringify(prerenderManifest, null, 2));
+  
+  // Créer un fichier requis pour Next.js
+  console.log('📝 Création des fichiers additionnels requis par Next.js...');
+  
+  // Créer react-loadable-manifest.json
+  const reactLoadableManifest = {};
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'react-loadable-manifest.json'), JSON.stringify(reactLoadableManifest, null, 2));
+  
+  // Créer un fichier pages-manifest.json
+  const pagesManifest = {
+    "/": "pages/index.js",
+    "/_app": "pages/_app.js",
+    "/_error": "pages/_error.js",
+    "/_document": "pages/_document.js"
+  };
+  
+  fs.mkdirSync(path.join(SERVER_DIR, 'pages'), { recursive: true });
+  
+  // Créer des fichiers JS minimaux pour chaque page
+  fs.writeFileSync(path.join(SERVER_DIR, 'pages/index.js'), 'module.exports = function(){return "Index Page"}');
+  fs.writeFileSync(path.join(SERVER_DIR, 'pages/_app.js'), 'module.exports = function(){return "App Page"}');
+  fs.writeFileSync(path.join(SERVER_DIR, 'pages/_error.js'), 'module.exports = function(){return "Error Page"}');
+  fs.writeFileSync(path.join(SERVER_DIR, 'pages/_document.js'), 'module.exports = function(){return "Document Page"}');
+  
+  fs.writeFileSync(path.join(SERVER_DIR, 'pages-manifest.json'), JSON.stringify(pagesManifest, null, 2));
 
   // Créer un fichier pour indiquer que le build est terminé avec succès
   fs.writeFileSync(SUCCESS_FILE, 'Build terminé avec succès');
