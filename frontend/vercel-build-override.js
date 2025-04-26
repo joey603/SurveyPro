@@ -261,6 +261,39 @@ module.exports = {
   
   // Créer le manifest des pages serverless
   fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages-manifest.json'), JSON.stringify(pagesManifest, null, 2));
+  
+  // NOUVEAU: Ajouter des fichiers HTML et JSON pour les fonctions serverless
+  console.log('📝 Création des fichiers HTML et JSON pour les fonctions serverless...');
+  
+  // Créer les dossiers pour les fichiers HTML et JSON
+  fs.mkdirSync(path.join(SERVERLESS_DIR, 'pages/index'), { recursive: true });
+  
+  // Fichier HTML pour la page d'index
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/index/index.html'), htmlContent);
+  
+  // Fichier JSON pour la page d'index
+  const indexJsonData = {
+    pageProps: {},
+    __N_SSG: true
+  };
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/index/index.json'), JSON.stringify(indexJsonData, null, 2));
+  
+  // Faire la même chose pour les autres pages
+  fs.mkdirSync(path.join(SERVERLESS_DIR, 'pages/_app'), { recursive: true });
+  fs.mkdirSync(path.join(SERVERLESS_DIR, 'pages/_error'), { recursive: true });
+  fs.mkdirSync(path.join(SERVERLESS_DIR, 'pages/_document'), { recursive: true });
+  
+  // Fichiers HTML minimalistes pour chaque page
+  const minimalHtml = '<html><body>Page minimale</body></html>';
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_app/index.html'), minimalHtml);
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_error/index.html'), minimalHtml);
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_document/index.html'), minimalHtml);
+  
+  // Fichiers JSON vides pour chaque page
+  const emptyJsonData = { pageProps: {}, __N_SSG: true };
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_app/index.json'), JSON.stringify(emptyJsonData, null, 2));
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_error/index.json'), JSON.stringify(emptyJsonData, null, 2));
+  fs.writeFileSync(path.join(SERVERLESS_DIR, 'pages/_document/index.json'), JSON.stringify(emptyJsonData, null, 2));
 
   // Créer un fichier pour indiquer que le build est terminé avec succès
   fs.writeFileSync(SUCCESS_FILE, 'Build terminé avec succès');
