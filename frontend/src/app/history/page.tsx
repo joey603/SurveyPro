@@ -347,14 +347,14 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
-          `${process.env.NEXT_PUBLIC_API_URL}/api` : 
-          'http://localhost:5041/api';
+        // Utiliser la constante API_URL qui est déjà configurée pour gérer correctement les environnements
+        const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5041/api';
+        console.log('Fetching survey details from', apiUrl);
         
         // Choisir le bon endpoint en fonction du type de sondage
         const endpoint = survey.isDynamic
-          ? `${API_URL}/dynamic-surveys/${responseId}`
-          : `${API_URL}/surveys/${responseId}`;
+          ? `${apiUrl}/dynamic-surveys/${responseId}`
+          : `${apiUrl}/surveys/${responseId}`;
         
         const surveyResponse = await fetch(endpoint, {
           headers: {
@@ -422,16 +422,16 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Non authentifié');
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
-        `${process.env.NEXT_PUBLIC_API_URL}/api` : 
-        'http://localhost:5041/api';
+      // Utiliser la constante API_URL qui est déjà configurée pour gérer correctement les environnements
+      const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5041/api';
+      console.log('Fetching response details from', apiUrl);
 
       // Gérer différemment selon le type de sondage (dynamique ou statique)
       if (survey.isDynamic) {
         console.log('Récupération des détails pour un sondage dynamique:', survey.surveyId);
         
         // Récupérer les détails du sondage dynamique
-        const dynamicSurveyResponse = await fetch(`${API_URL}/dynamic-surveys/${survey.surveyId}`, {
+        const dynamicSurveyResponse = await fetch(`${apiUrl}/dynamic-surveys/${survey.surveyId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -449,7 +449,7 @@ const SurveyHistoryPage: React.FC = () => {
         console.log('Données du sondage dynamique:', dynamicSurveyData);
         
         // Récupérer les détails de la réponse dynamique
-        const dynamicResponseDetails = await fetch(`${API_URL}/dynamic-survey-answers/response/${responseId}`, {
+        const dynamicResponseDetails = await fetch(`${apiUrl}/dynamic-survey-answers/response/${responseId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -494,7 +494,7 @@ const SurveyHistoryPage: React.FC = () => {
         setSelectedSurvey(updatedSurvey);
       } else {
         // Récupérer les détails du sondage original statique
-        const surveyDetailsResponse = await fetch(`${API_URL}/surveys/${survey.surveyId}`, {
+        const surveyDetailsResponse = await fetch(`${apiUrl}/surveys/${survey.surveyId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -505,7 +505,7 @@ const SurveyHistoryPage: React.FC = () => {
         console.log('Original survey data:', surveyData);
 
         // Récupérer les détails de la réponse statique
-        const responseDetails = await fetch(`${API_URL}/survey-answers/responses/${responseId}`, {
+        const responseDetails = await fetch(`${apiUrl}/survey-answers/responses/${responseId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
