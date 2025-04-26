@@ -43,10 +43,23 @@ export const handleOAuthCallback = async (tokens: string) => {
       throw new Error('Missing tokens in parsed data');
     }
     
+    // Vérifier que les données utilisateur sont complètes
+    if (!parsedData.user || !parsedData.user.id || !parsedData.user.email) {
+      console.error('Incomplete user data in OAuth response:', parsedData.user);
+      throw new Error('Incomplete user data');
+    }
+    
+    // Si le mode d'authentification est présent, le conserver
+    const authMethod = parsedData.user.authMethod || 'google';
+    console.log('Authentication method from OAuth response:', authMethod);
+    
     return {
       accessToken: parsedData.accessToken,
       refreshToken: parsedData.refreshToken,
-      user: parsedData.user
+      user: {
+        ...parsedData.user,
+        authMethod // S'assurer que authMethod est toujours présent
+      }
     };
   } catch (error) {
     console.error('Error handling OAuth callback:', error);

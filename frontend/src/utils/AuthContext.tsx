@@ -78,6 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Décoder et définir les informations utilisateur
       const decoded = jwtDecode(accessToken);
+      console.log('Decoded token data:', decoded);
+      
+      // S'assurer que nous avons toutes les informations utilisateur nécessaires
+      if (!decoded) {
+        console.error('Failed to decode JWT token');
+        throw new Error('Invalid token');
+      }
+      
       setUser(decoded);
       
       router.push("/");

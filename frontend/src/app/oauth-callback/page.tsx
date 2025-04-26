@@ -30,14 +30,24 @@ const OAuthCallbackContent = () => {
 
         const { accessToken, refreshToken, user } = await handleOAuthCallback(tokensParam);
         
+        console.log('Received user data:', user);
+        
         if (!user) {
+          console.error('No user data found in token response');
           router.push('/login');
           return;
         }
 
+        // Stockage explicite des informations utilisateur pour les utiliser plus tard si nécessaire
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Log de débogage pour voir si authMethod est correctement défini
+        console.log('User authentication method:', user.authMethod);
+        
         await login(accessToken, refreshToken);
         router.push('/');
       } catch (error) {
+        console.error('Error in OAuth callback:', error);
         router.push('/login');
       }
     };
