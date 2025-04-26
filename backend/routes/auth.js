@@ -205,13 +205,9 @@ router.get('/google/callback',
       console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
-      console.log('Origin URL for redirection:', originUrl);
-      
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -240,16 +236,13 @@ router.get('/google/callback',
         }
       };
 
-      console.log('Redirecting with tokens:', tokenData);
-
-      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
-      console.log('Redirect URL:', redirectUrl);
+      console.log('Generated tokens for user:', tokenData);
       
-      res.redirect(redirectUrl);
+      // Utiliser la fonction de redirection commune
+      handleOAuthCallback(req, res, tokenData);
     } catch (error) {
       console.error('Google Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
-      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );
@@ -272,13 +265,9 @@ router.get('/github/callback',
       console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
-      console.log('Origin URL for redirection:', originUrl);
-      
       if (!req.user) {
         console.error('No user data in request');
-        return res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
+        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.`);
       }
 
       const accessToken = jwt.sign(
@@ -307,16 +296,13 @@ router.get('/github/callback',
         }
       };
 
-      console.log('Redirecting with tokens:', tokenData);
-
-      const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
-      console.log('Redirect URL:', redirectUrl);
+      console.log('Generated tokens for user:', tokenData);
       
-      res.redirect(redirectUrl);
+      // Utiliser la fonction de redirection commune
+      handleOAuthCallback(req, res, tokenData);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
-      res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
+      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
     }
   }
 );
@@ -640,6 +626,47 @@ const sendVerificationEmail = async (email, verificationCode) => {
     console.error('Error sending verification email:', error);
     throw new Error('Error sending verification email');
   }
+};
+
+// Import la fonction de gestion de callback OAuth en haut du fichier
+const handleOAuthCallback = (req, res, tokens) => {
+  console.log('OAuth successful. Tokens:', tokens);
+  
+  // Récupérer le domaine d'origine de la requête depuis le cookie
+  const originUrl = req.cookies?.origin;
+  console.log('Origin from cookie:', originUrl);
+  
+  // Déterminer l'URL de redirection frontale en fonction de l'environnement
+  let clientRedirectUrl;
+  
+  if (originUrl) {
+    // Si l'origine est définie dans un cookie, l'utiliser
+    clientRedirectUrl = `${originUrl}/oauth-callback`;
+    console.log('Using origin from cookie for redirect:', clientRedirectUrl);
+  } else if (process.env.NODE_ENV === 'production') {
+    // En production, utiliser les URLs de Vercel configurées
+    const possibleFrontendUrls = process.env.FRONTEND_URL 
+      ? process.env.FRONTEND_URL.split(',') 
+      : ['https://surveyflow.vercel.app'];
+    
+    // Utiliser la première URL configurée
+    clientRedirectUrl = `${possibleFrontendUrls[0]}/oauth-callback`;
+    console.log('Using configured FRONTEND_URL for redirect:', clientRedirectUrl);
+  } else {
+    // En développement, utiliser localhost
+    clientRedirectUrl = 'http://localhost:3000/oauth-callback';
+    console.log('Using localhost for redirect:', clientRedirectUrl);
+  }
+  
+  // Créer la chaîne URL encodée des tokens
+  const encodedTokens = encodeURIComponent(JSON.stringify(tokens));
+  
+  // Construire l'URL de redirection complète
+  const redirectUrl = `${clientRedirectUrl}?tokens=${encodedTokens}`;
+  console.log('Final redirect URL:', redirectUrl);
+  
+  // Rediriger l'utilisateur vers l'application frontale
+  res.redirect(redirectUrl);
 };
 
 module.exports = router;
