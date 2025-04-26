@@ -57,17 +57,6 @@ const OAuthCallbackPage = () => {
             const tokenData = JSON.parse(decodedTokens);
             console.log('Token data parsed successfully:', !!tokenData.accessToken, !!tokenData.refreshToken);
             
-            // Vérifier si le token contient une info indiquant un compte existant
-            if (tokenData.existingUser) {
-              console.log('Existing user detected in token data');
-              setStatus('success');
-              setMessage(`Vous vous êtes connecté avec succès ! Un compte existant avec cet email a été utilisé pour la connexion.`);
-            } else {
-              console.log('New user authentication successful');
-              setStatus('success');
-              setMessage('Vous vous êtes connecté avec succès !');
-            }
-            
             // Stocker les tokens dans localStorage
             localStorage.setItem('accessToken', tokenData.accessToken);
             localStorage.setItem('refreshToken', tokenData.refreshToken);
@@ -78,11 +67,9 @@ const OAuthCallbackPage = () => {
             // Mettre à jour le contexte d'authentification
             auth.login(tokenData.accessToken, tokenData.refreshToken);
             
-            // Rediriger après un court délai pour que l'utilisateur puisse voir le message
-            console.log('Redirecting to dashboard in 1.5 seconds...');
-            setTimeout(() => {
-              router.push('/dashboard');
-            }, 1500);
+            // Rediriger immédiatement vers la page d'accueil
+            console.log('Redirecting to home page immediately');
+            router.push('/');
             return;
           } catch (error: any) {
             console.error('Error parsing token data:', error);
@@ -145,11 +132,11 @@ const OAuthCallbackPage = () => {
               <Alert severity="success" sx={{ mb: 2 }}>Authentification réussie !</Alert>
               <Typography variant="body1" sx={{ mb: 2 }}>{message}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Vous allez être redirigé vers votre tableau de bord...
+                Vous allez être redirigé vers la page d'accueil...
               </Typography>
               <Button
                 variant="contained"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/')}
                 sx={{
                   mt: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -158,7 +145,7 @@ const OAuthCallbackPage = () => {
                   }
                 }}
               >
-                Aller au tableau de bord
+                Aller à l'accueil
               </Button>
             </>
           )}
