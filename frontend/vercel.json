@@ -1,12 +1,15 @@
 {
   "version": 2,
-  "framework": null,
-  "buildCommand": "echo 'Skipping build process'",
-  "outputDirectory": "public",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/api/:path*",
+      "destination": "https://surveypro-ir3u.onrender.com/api/:path*"
     }
   ]
 } 
