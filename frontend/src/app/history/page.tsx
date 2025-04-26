@@ -128,12 +128,12 @@ const SurveyHistoryPage: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('Non authentifié');
 
-        const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
-          `${process.env.NEXT_PUBLIC_API_URL}/api` : 
-          'http://localhost:5041/api';
+        // Utiliser la constante API_URL qui est déjà configurée pour gérer correctement les environnements
+        const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5041/api';
+        console.log('Fetching survey responses from', apiUrl);
 
         // Récupérer les réponses aux sondages classiques
-        const response = await fetch(`${API_URL}/survey-answers/responses/user`, {
+        const response = await fetch(`${apiUrl}/survey-answers/responses/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -144,7 +144,7 @@ const SurveyHistoryPage: React.FC = () => {
         const classicData = await response.json();
         
         // Récupérer les réponses aux sondages dynamiques
-        const dynamicResponse = await fetch(`${API_URL}/dynamic-survey-answers/user`, {
+        const dynamicResponse = await fetch(`${apiUrl}/dynamic-survey-answers/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -161,7 +161,7 @@ const SurveyHistoryPage: React.FC = () => {
           // Continuer le traitement avec ces réponses
           const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
             try {
-              const endpoint = `${API_URL}/surveys/${response.surveyId}`;
+              const endpoint = `${apiUrl}/surveys/${response.surveyId}`;
                 
               const surveyResponse = await fetch(endpoint, {
                 headers: {
@@ -212,8 +212,8 @@ const SurveyHistoryPage: React.FC = () => {
         const enhancedResponses = await Promise.all(allResponses.map(async (response: SurveyResponse) => {
           try {
             const endpoint = response.isDynamic 
-              ? `${API_URL}/dynamic-surveys/${response.surveyId}`
-              : `${API_URL}/surveys/${response.surveyId}`;
+              ? `${apiUrl}/dynamic-surveys/${response.surveyId}`
+              : `${apiUrl}/surveys/${response.surveyId}`;
               
             const surveyResponse = await fetch(endpoint, {
               headers: {
