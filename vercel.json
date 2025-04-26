@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "cd frontend && npm install --no-audit --no-fund --legacy-peer-deps && npm run build",
   "outputDirectory": "frontend/.next",
   "framework": "nextjs",
   "env": {
@@ -8,6 +8,7 @@
     "NODE_ENV": "production",
     "NEXT_TELEMETRY_DISABLED": "1"
   },
+  "ignoreCommand": "node -e \"process.exit(0)\"",
   "rewrites": [
     {
       "source": "/api/:path*",

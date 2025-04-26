@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "npm install tailwindcss@latest postcss@latest autoprefixer@latest --legacy-peer-deps",
     "start": "next start",
     "lint": "next lint"
   },
