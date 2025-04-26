@@ -29,6 +29,13 @@ if [ -d "frontend" ]; then
   ls -la
   
   echo "Structure de fichiers préparée pour le déploiement."
+  
+  # Installation des dépendances et build
+  echo "Installation des dépendances..."
+  npm install
+  
+  echo "Démarrage du build Next.js..."
+  npm run build
 else
   echo "❌ ERREUR: Dossier frontend non trouvé!"
   echo "Création d'une structure minimale pour le déploiement..."
