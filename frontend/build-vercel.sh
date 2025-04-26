@@ -18,6 +18,10 @@ rm -rf .next
 echo "⚛️ Installation de React et ReactDOM en premier..."
 npm install react@18.3.1 react-dom@18.3.1 --save --legacy-peer-deps --no-package-lock
 
+# Installer js-cookie explicitement
+echo "🍪 Installation de js-cookie et ses types..."
+npm install js-cookie @types/js-cookie --save --legacy-peer-deps --no-package-lock
+
 # Installer toutes les dépendances avec --force pour résoudre les conflits
 echo "📦 Installation des dépendances principales..."
 npm install --save --legacy-peer-deps --no-package-lock
@@ -27,6 +31,12 @@ if [ ! -d "node_modules/react" ] || [ ! -d "node_modules/react-dom" ]; then
   echo "⚠️ React ou ReactDOM toujours manquant, tentative finale d'installation..."
   npm uninstall react react-dom
   npm install react@18.3.1 react-dom@18.3.1 --save --legacy-peer-deps --no-package-lock
+fi
+
+# Vérifier que js-cookie est bien installé
+if [ ! -d "node_modules/js-cookie" ]; then
+  echo "⚠️ js-cookie toujours manquant, tentative finale d'installation..."
+  npm install js-cookie @types/js-cookie --save --legacy-peer-deps --no-package-lock
 fi
 
 # Pour les tests, créer un fichier routes-manifest.json minimal
