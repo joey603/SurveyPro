@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm install --no-audit --no-fund --legacy-peer-deps && npm run build",
+  "buildCommand": "chmod +x vercel-build.sh && ./vercel-build.sh && npm run build",
+  "installCommand": "npm install --no-audit --no-fund --legacy-peer-deps",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
