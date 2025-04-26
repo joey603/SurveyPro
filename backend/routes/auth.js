@@ -255,62 +255,61 @@ router.get('/google', (req, res, next) => {
   });
 });
 
-router.get('/google/callback',
-  passport.authenticate('google', { 
-    session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`,
-    failureMessage: true
-  }),
-  async (req, res) => {
-    try {
-      console.log('Google Callback - Starting response handling');
-      console.log('Google Callback - User:', req.user);
-      
-      if (!req.user) {
-        console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
-      }
-
-      const accessToken = jwt.sign(
-        { 
-          id: req.user._id,
-          email: req.user.email,
-          username: req.user.username,
-          authMethod: req.user.authMethod,
-          isVerified: true
-        }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '4h' }
-      );
-      
-      const refreshToken = jwt.sign(
-        { id: req.user._id }, 
-        process.env.JWT_REFRESH_SECRET, 
-        { expiresIn: '7d' }
-      );
-
-      const tokenData = {
-        accessToken,
-        refreshToken,
-        user: {
-          id: req.user._id,
-          email: req.user.email,
-          username: req.user.username,
-          authMethod: req.user.authMethod,
-          isVerified: req.user.isVerified || true
-        }
-      };
-
-      console.log('Generated tokens for user:', tokenData);
-      
-      // Utiliser la fonction de redirection commune
-      handleOAuthCallback(req, res, tokenData);
-    } catch (error) {
-      console.error('Google Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
+router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
+  try {
+    // Génération du JWT
+    const user = req.user;
+    
+    // Détermination correcte de authMethod (local, google, github, ou multiple)
+    let authMethod = 'google';
+    if (user.password && (user.googleId || user.githubId)) {
+      authMethod = 'multiple';
+    } else if (user.password) {
+      authMethod = 'local';
     }
+    
+    console.log(`Authentification réussie pour ${user.email} avec authMethod: ${authMethod}`);
+    
+    const accessToken = jwt.sign(
+      { 
+        id: user._id,
+        email: user.email,
+        authMethod: authMethod,
+        username: user.username,
+        isVerified: true
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Formatage de la réponse utilisateur
+    const userResponse = {
+      id: user._id,
+      email: user.email,
+      username: user.username,
+      authMethod: authMethod,
+      isVerified: user.isVerified !== undefined ? user.isVerified : true
+    };
+
+    const responseData = {
+      accessToken,
+      refreshToken,
+      user: userResponse
+    };
+
+    // Utiliser la fonction de redirection commune
+    handleOAuthCallback(req, res, responseData);
+  } catch (error) {
+    console.error('Google Callback Error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
   }
-);
+});
 
 router.get('/github', (req, res, next) => {
   console.log('GitHub Auth Route - Starting authentication');
@@ -319,62 +318,61 @@ router.get('/github', (req, res, next) => {
   })(req, res, next);
 });
 
-router.get('/github/callback',
-  passport.authenticate('github', { 
-    session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`,
-    failureMessage: true
-  }),
-  async (req, res) => {
-    try {
-      console.log('GitHub Callback - Starting response handling');
-      console.log('GitHub Callback - User:', req.user);
-      
-      if (!req.user) {
-        console.error('No user data in request');
-        return res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
-      }
-
-      const accessToken = jwt.sign(
-        { 
-          id: req.user._id,
-          email: req.user.email,
-          username: req.user.username,
-          authMethod: req.user.authMethod,
-          isVerified: true
-        }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '4h' }
-      );
-      
-      const refreshToken = jwt.sign(
-        { id: req.user._id }, 
-        process.env.JWT_REFRESH_SECRET, 
-        { expiresIn: '7d' }
-      );
-
-      const tokenData = {
-        accessToken,
-        refreshToken,
-        user: {
-          id: req.user._id,
-          email: req.user.email,
-          username: req.user.username,
-          authMethod: req.user.authMethod,
-          isVerified: req.user.isVerified || true
-        }
-      };
-
-      console.log('Generated tokens for user:', tokenData);
-      
-      // Utiliser la fonction de redirection commune
-      handleOAuthCallback(req, res, tokenData);
-    } catch (error) {
-      console.error('GitHub Callback Error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
+router.get('/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
+  try {
+    // Génération du JWT
+    const user = req.user;
+    
+    // Détermination correcte de authMethod (local, google, github, ou multiple)
+    let authMethod = 'github';
+    if (user.password && (user.googleId || user.githubId)) {
+      authMethod = 'multiple';
+    } else if (user.password) {
+      authMethod = 'local';
     }
+    
+    console.log(`Authentification réussie pour ${user.email} avec authMethod: ${authMethod}`);
+    
+    const accessToken = jwt.sign(
+      { 
+        id: user._id,
+        email: user.email,
+        authMethod: authMethod,
+        username: user.username,
+        isVerified: true
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Formatage de la réponse utilisateur
+    const userResponse = {
+      id: user._id,
+      email: user.email,
+      username: user.username,
+      authMethod: authMethod,
+      isVerified: user.isVerified !== undefined ? user.isVerified : true
+    };
+
+    const responseData = {
+      accessToken,
+      refreshToken,
+      user: userResponse
+    };
+
+    // Utiliser la fonction de redirection commune
+    handleOAuthCallback(req, res, responseData);
+  } catch (error) {
+    console.error('GitHub Callback Error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?error=server_error&message=Une erreur est survenue lors de l'authentification`);
   }
-);
+});
 
 router.post('/register', async (req, res) => {
   try {

@@ -26,6 +26,13 @@ const authMiddleware = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log('Token decoded successfully:', decoded);
+      
+      // Vérifier si le token utilise l'ancien format (id) ou le nouveau (userId)
+      if (!decoded.id && !decoded.userId) {
+        console.log('Invalid token format - no user ID found');
+        return res.status(401).json({ message: 'Invalid token format' });
+      }
+      
       req.user = decoded;
       next();
     } catch (error) {
