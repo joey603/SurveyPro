@@ -12,6 +12,16 @@ const nextConfig = {
     domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
     unoptimized: true,
   },
+  // Configuration spéciale pour Vercel
+  output: 'standalone',
+  // Désactiver complètement le pré-rendu statique
+  experimental: {
+    disableStaticImages: true,
+    appDocumentPreloading: false,
+  },
+  // Configuration pour éviter les erreurs de pré-rendu
+  reactStrictMode: false,
+  staticPageGenerationTimeout: 60,
   // Rewrites API
   async rewrites() {
     return [
