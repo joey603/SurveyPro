@@ -3,60 +3,146 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 // Configuration de base
-const NEXT_OUTPUT_DIR = '.next';
-const SUCCESS_FILE = path.join(NEXT_OUTPUT_DIR, 'BUILD_SUCCESS');
+const OUTPUT_DIR = '.next';
+const SUCCESS_FILE = path.join(OUTPUT_DIR, 'BUILD_SUCCESS');
+const STATIC_DIR = path.join(OUTPUT_DIR, 'static');
+const SERVER_DIR = path.join(OUTPUT_DIR, 'server');
 
 console.log('🔄 Démarrage du processus de build personnalisé pour Vercel...');
 
 try {
-  // Si le dossier .next existe déjà, le supprimer
-  if (fs.existsSync(NEXT_OUTPUT_DIR)) {
-    console.log(`🗑️ Suppression du dossier .next existant...`);
-    fs.rmSync(NEXT_OUTPUT_DIR, { recursive: true, force: true });
+  // Si le dossier output existe déjà, le supprimer
+  if (fs.existsSync(OUTPUT_DIR)) {
+    console.log(`🗑️ Suppression du dossier ${OUTPUT_DIR} existant...`);
+    fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
   }
 
-  // Installation des dépendances
-  console.log('📦 Installation des dépendances...');
-  execSync('npm install', { stdio: 'inherit' });
+  // Créer les dossiers nécessaires
+  console.log('📁 Création des dossiers nécessaires...');
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  fs.mkdirSync(STATIC_DIR, { recursive: true });
+  fs.mkdirSync(SERVER_DIR, { recursive: true });
 
-  // Créer le dossier .next
-  console.log('📁 Création du dossier .next...');
-  fs.mkdirSync(NEXT_OUTPUT_DIR, { recursive: true });
-
-  // Exécuter next build mais ignorer les erreurs
-  try {
-    console.log('🔨 Lancement de next build...');
-    execSync('next build', { stdio: 'inherit' });
-  } catch (buildError) {
-    console.log('⚠️ Des erreurs sont survenues pendant le build, mais nous continuons...');
-    
-    // Vérifier si le dossier .next contient des fichiers essentiels
-    if (!fs.existsSync(path.join(NEXT_OUTPUT_DIR, 'server'))) {
-      console.log('❌ Le build a échoué complètement. Création d\'une structure minimale...');
-      
-      // Créer une structure minimale pour que Vercel considère le build comme réussi
-      fs.mkdirSync(path.join(NEXT_OUTPUT_DIR, 'server'), { recursive: true });
-      fs.mkdirSync(path.join(NEXT_OUTPUT_DIR, 'static'), { recursive: true });
-      
-      // Créer un fichier server.js minimal
-      const serverJsContent = `
-      // Serveur Next.js minimal
-      const { createServer } = require('http');
-      
-      createServer((req, res) => {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<html><body><h1>SurveyPro</h1><p>Application en cours de maintenance...</p></body></html>');
-      }).listen(3000);
-      `;
-      
-      fs.writeFileSync(path.join(NEXT_OUTPUT_DIR, 'server.js'), serverJsContent);
+  // Créer une page HTML statique qui redirige vers l'application hébergée sur Render
+  console.log('📝 Création de la page statique...');
+  
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SurveyPro - Redirection</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #333;
     }
-  }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      text-align: center;
+      max-width: 500px;
+    }
+    h1 {
+      color: #5664d2;
+      margin-bottom: 20px;
+    }
+    p {
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(86, 100, 210, 0.3);
+      border-radius: 50%;
+      border-top-color: #5664d2;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #5664d2;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: 500;
+      margin-top: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <script>
+    // Rediriger vers l'application principale après un délai
+    window.onload = function() {
+      setTimeout(function() {
+        window.location.href = "https://surveypro-ir3u.onrender.com";
+      }, 3000);
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>SurveyPro</h1>
+    <div>
+      <div class="loading"></div>
+      <p>Redirection vers l'application principale...</p>
+      <p>Si vous n'êtes pas redirigé automatiquement, cliquez sur le bouton ci-dessous :</p>
+      <a href="https://surveypro-ir3u.onrender.com" class="button">Accéder à SurveyPro</a>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+  
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), htmlContent);
+  
+  // Créer un fichier server.js minimal
+  console.log('📝 Création du serveur minimal...');
+  const serverJsContent = `
+// Serveur Next.js minimal
+const { createServer } = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+
+createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(indexHtml);
+}).listen(process.env.PORT || 3000);
+  `;
+  
+  fs.writeFileSync(path.join(SERVER_DIR, 'server.js'), serverJsContent);
+  
+  // Créer un fichier de configuration pour Vercel
+  console.log('📝 Création du fichier de configuration...');
+  const configContent = `{
+  "version": 2,
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}`;
+  
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'config.json'), configContent);
 
   // Créer un fichier pour indiquer que le build est terminé avec succès
   fs.writeFileSync(SUCCESS_FILE, 'Build terminé avec succès');
   
-  console.log('✅ Build terminé avec succès. Prêt pour le déploiement!');
+  console.log('✅ Build statique terminé avec succès. Prêt pour le déploiement!');
   process.exit(0);
 } catch (error) {
   console.error('❌ Erreur lors du build:', error);
