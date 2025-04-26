@@ -32,14 +32,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!token) return true;
     try {
       const decoded: any = jwtDecode(token);
-      if (!decoded.exp) return true;
-      if (!decoded.id && !decoded.userId) {
-        console.warn('Token invalide - aucun ID utilisateur trouvé', decoded);
-        return true;
-      }
       return decoded.exp * 1000 < Date.now();
-    } catch (error) {
-      console.error('Erreur lors de la vérification du token:', error);
+    } catch {
       return true;
     }
   };
@@ -83,22 +77,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(true);
       
       // Décoder et définir les informations utilisateur
-      const decoded = jwtDecode(accessToken) as any;
-      console.log('Decoded token data:', decoded);
-      
-      // S'assurer que nous avons toutes les informations utilisateur nécessaires
-      if (!decoded) {
-        console.error('Failed to decode JWT token');
-        throw new Error('Invalid token');
-      }
-      
-      // Normaliser le format en convertissant userId en id si nécessaire
-      const normalizedUser = { ...decoded };
-      if (normalizedUser.userId && !normalizedUser.id) {
-        normalizedUser.id = normalizedUser.userId;
-      }
-      
-      setUser(normalizedUser);
+      const decoded = jwtDecode(accessToken);
+      setUser(decoded);
       
       router.push("/");
     } catch (error) {

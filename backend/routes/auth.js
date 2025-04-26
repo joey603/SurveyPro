@@ -787,7 +787,52 @@ const getRedirectUrl = (req) => {
     }
   }
   
-  // 6. Utiliser les URLs configurées comme fallback
+  // 6. Extraire du Referer initial si disponible dans le journal de session
+  if (req.headers?.referrer_log) {
+    try {
+      const referrerLogUrl = new URL(req.headers.referrer_log);
+      candidateUrls.push(`${referrerLogUrl.protocol}//${referrerLogUrl.host}`);
+      console.log('Origin from referrer log:', `${referrerLogUrl.protocol}//${referrerLogUrl.host}`);
+    } catch (error) {
+      console.error('Error parsing referrer log URL:', error);
+    }
+  }
+
+  // 7. Extraire l'origine depuis la session si disponible
+  if (req.session?.referrerOrigin) {
+    candidateUrls.push(req.session.referrerOrigin);
+    console.log('Origin from session referrer:', req.session.referrerOrigin);
+  }
+  
+  // 8. Ajouter tous les URLs de Vercel Preview possibles
+  // Cette partie est critique pour les déploiements de prévisualisation
+  if (req.headers?.referer) {
+    try {
+      const refererUrl = new URL(req.headers.referer);
+      
+      // Capturer les URL de type surveyflow-[hash]-joeys-projects.vercel.app
+      if (refererUrl.host.includes('-joeys-projects') || 
+          refererUrl.host.includes('surveyflow-') ||
+          refererUrl.host.includes('vercel.app')) {
+        candidateUrls.push(`${refererUrl.protocol}//${refererUrl.host}`);
+        console.log('Origin from Vercel preview URL:', `${refererUrl.protocol}//${refererUrl.host}`);
+      }
+    } catch (error) {
+      console.error('Error parsing Vercel preview URL:', error);
+    }
+  }
+
+  // 9. Extraire l'origine depuis User-Agent ou autres en-têtes qui pourraient contenir des indices
+  if (req.headers?.['user-agent'] && req.headers['user-agent'].includes('vercel')) {
+    // Essayer d'extraire un domaine vercel.app du User-Agent si présent
+    const vercelMatch = req.headers['user-agent'].match(/https?:\/\/([a-zA-Z0-9-]+\.vercel\.app)/);
+    if (vercelMatch && vercelMatch[0]) {
+      candidateUrls.push(vercelMatch[0]);
+      console.log('Origin from User-Agent:', vercelMatch[0]);
+    }
+  }
+  
+  // 10. Utiliser les URLs configurées comme fallback
   const frontendUrls = process.env.FRONTEND_URL?.split(',') || [];
   frontendUrls.forEach(url => {
     if (url && url.trim()) {
@@ -795,19 +840,50 @@ const getRedirectUrl = (req) => {
     }
   });
   
-  // Ajouter une URL par défaut en dernier recours
+  // Ajouter les URL par défaut en dernier recours
   candidateUrls.push('https://surveyflow.vercel.app');
+  candidateUrls.push('https://surveypro-frontend.vercel.app');
+  candidateUrls.push('https://surveyflow-git-main-joeys-projects-2b62a68a.vercel.app');
+  candidateUrls.push('https://surveyflow-git-dev-joeys-projects.vercel.app');
   
   console.log('All candidate redirect URLs:', candidateUrls);
   
-  // Choisir la première URL valide
-  for (const url of candidateUrls) {
+  // Fonction pour vérifier si une URL est valide et non issue d'un fournisseur OAuth
+  const isValidRedirectUrl = (url) => {
     try {
-      new URL(url); // Vérifie que l'URL est valide
+      const parsedUrl = new URL(url);
+      // Vérifier que ce n'est pas un fournisseur OAuth
+      if (parsedUrl.host.includes('accounts.google.com') ||
+          parsedUrl.host.includes('github.com') ||
+          parsedUrl.host.includes('oauth')) {
+        return false;
+      }
+      
+      // Vérifier que c'est un domaine autorisé
+      // Liste blanche de domaines: vercel.app, localhost, surveypro-ir3u.onrender.com, et les domaines personnalisés
+      if (parsedUrl.host.includes('vercel.app') || 
+          parsedUrl.host.includes('localhost') ||
+          parsedUrl.host.includes('surveypro-ir3u.onrender.com') ||
+          parsedUrl.host.includes('surveyflow.io') ||
+          parsedUrl.host === 'surveyflow.vercel.app' ||
+          parsedUrl.host === 'surveypro-frontend.vercel.app') {
+        return true;
+      }
+      
+      // Vérifier en dernier les URL de preview Vercel
+      return (parsedUrl.host.includes('-joeys-projects') && parsedUrl.host.includes('vercel.app')) ||
+             (parsedUrl.host.includes('surveyflow-') && parsedUrl.host.includes('vercel.app'));
+    } catch (error) {
+      console.error('Error validating URL:', url, error);
+      return false;
+    }
+  };
+  
+  // Choisir la première URL valide qui n'est pas un fournisseur OAuth
+  for (const url of candidateUrls) {
+    if (url && isValidRedirectUrl(url)) {
       console.log('Selected redirect URL:', url);
       return url.trim();
-    } catch (error) {
-      console.warn('Invalid URL candidate:', url);
     }
   }
   

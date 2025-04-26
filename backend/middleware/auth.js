@@ -10,16 +10,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Token décodé dans middleware auth:', decoded);
-    
-    // Vérifier si le token utilise l'ancien format (id) ou le nouveau (userId)
-    const userId = decoded.id || decoded.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: 'Format de token invalide' });
-    }
-    
-    const user = await User.findById(userId);
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       // L'utilisateur n'existe plus dans la base de données
@@ -32,7 +23,6 @@ const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Erreur d\'authentification:', error);
     res.status(401).json({ message: 'Non autorisé' });
   }
 };

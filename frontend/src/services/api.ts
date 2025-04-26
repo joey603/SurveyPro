@@ -24,15 +24,6 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
-    
-    // Débogage: afficher les informations de token dans un format masqué
-    try {
-      const decodedToken = JSON.parse(atob(token.split('.')[1]));
-      const userIdField = decodedToken.id ? 'id' : (decodedToken.userId ? 'userId' : 'aucun');
-      console.log(`API Request: Using token format with ${userIdField} field`);
-    } catch (e) {
-      console.error('Failed to debug token:', e);
-    }
   }
   return config;
 });
@@ -41,24 +32,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Vérifier si l'erreur est liée à l'authentification (401 Unauthorized, 403 Forbidden)
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.error('Erreur d\'authentification détectée:', error.response.data);
-      
-      // Si le backend demande de nettoyer les tokens, le faire
-      if (error.response.data?.clearTokens) {
-        console.log('Suppression des tokens demandée par le serveur');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        
-        // Rediriger vers la page de connexion
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      }
-    } else {
-      console.error('API Error:', error.response?.data || error.message);
-    }
+    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

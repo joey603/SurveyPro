@@ -17,6 +17,6 @@ services:
       - key: JWT_REFRESH_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app,https://surveyflow.vercel.app,http://localhost:3000
+        value: https://surveyflow.vercel.app,http://localhost:3000,https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app
       - key: API_URL
         value: https://surveypro-ir3u.onrender.com

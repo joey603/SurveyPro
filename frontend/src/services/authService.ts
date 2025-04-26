@@ -1,119 +1,166 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
-// Déterminer l'URL de l'API en fonction de l'environnement
-const getApiUrl = () => {
+// Fonction pour obtenir l'URL de l'API en fonction de l'environnement
+export const getApiUrl = () => {
+  // En production, utiliser l'URL de l'API déployée
   if (process.env.NODE_ENV === 'production') {
-    // En production sur Vercel, nous utilisons des rewrites donc nous pouvons utiliser des chemins relatifs
-    // ce qui évite les problèmes CORS
-    return '/api/auth';
+    // Priorité à l'URL définie dans les variables d'environnement
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    
+    // URLs alternatives pour les déploiements Vercel
+    // L'API backend est déployée sur Render ou une autre plateforme
+    return 'https://surveypro-ir3u.onrender.com';
   }
-  return 'http://localhost:5041/api/auth';
+
+  // En développement, utiliser l'API locale
+  return 'http://localhost:5000';
 };
 
+// Fonction pour sauvegarder l'origine actuelle dans les cookies
+const saveOriginInCookies = () => {
+  try {
+    // Obtenir l'URL complète actuelle
+    const currentOrigin = window.location.origin;
+    // Sauvegarder l'origine principale
+    Cookies.set('origin', currentOrigin, { expires: 1 });
+    
+    // Sauvegarder aussi dans un cookie alternatif au cas où
+    Cookies.set('origin_alt', currentOrigin, { expires: 1 });
+    
+    // Sauvegarder l'URL complète actuelle comme redirect_uri
+    Cookies.set('redirect_uri', currentOrigin, { expires: 1 });
+    
+    // Enregistrer aussi le pathname actuel si nécessaire pour une redirection plus précise
+    if (window.location.pathname !== '/' && !window.location.pathname.includes('/auth/')) {
+      Cookies.set('redirect_path', window.location.pathname, { expires: 1 });
+    }
+    
+    console.log('Origine sauvegardée dans les cookies:', currentOrigin);
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+  }
+};
+
+// Fonction pour se connecter avec Google
 export const loginWithGoogle = () => {
-  const API_URL = getApiUrl();
-  // Stocker l'origine actuelle dans un cookie pour la redirection
-  const currentOrigin = window.location.origin;
-  
-  // Double sécurité : stocker aussi l'origine dans le localStorage
   try {
-    localStorage.setItem('auth_origin', currentOrigin);
-    console.log('Origin saved in localStorage:', currentOrigin);
+    // Sauvegarder l'origine avant la redirection
+    saveOriginInCookies();
+    
+    // Obtenir l'URL de l'API
+    const apiUrl = getApiUrl();
+    
+    // Rediriger vers l'endpoint Google OAuth du backend
+    window.location.href = `${apiUrl}/auth/google`;
+    
+    return true;
   } catch (error) {
-    console.error('Could not save origin in localStorage:', error);
+    console.error('Erreur lors de la connexion avec Google:', error);
+    return false;
   }
-  
-  // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
-  // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
-  // En développement ou sans HTTPS, ça utilisera SameSite=Lax
-  try {
-    if (currentOrigin.includes('https://')) {
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-      // Essayons aussi un cookie avec d'autres paramètres pour plus de compatibilité
-      document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
-    } else {
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
-    }
-    console.log('Cookie origin set to:', currentOrigin);
-  } catch (error) {
-    console.error('Could not set cookie:', error);
-  }
-  
-  // Ajouter le paramètre de redirection à l'URL d'authentification
-  const redirectUri = encodeURIComponent(currentOrigin);
-  const authUrl = `${API_URL}/google?redirect_uri=${redirectUri}`;
-  console.log('Redirection vers:', authUrl);
-  
-  // Rediriger vers l'API d'authentification Google
-  window.location.href = authUrl;
 };
 
+// Fonction pour se connecter avec GitHub
 export const loginWithGithub = () => {
-  const API_URL = getApiUrl();
-  // Stocker l'origine actuelle dans un cookie pour la redirection
-  const currentOrigin = window.location.origin;
-  
-  // Double sécurité : stocker aussi l'origine dans le localStorage
   try {
-    localStorage.setItem('auth_origin', currentOrigin);
-    console.log('Origin saved in localStorage:', currentOrigin);
+    // Sauvegarder l'origine avant la redirection
+    saveOriginInCookies();
+    
+    // Obtenir l'URL de l'API
+    const apiUrl = getApiUrl();
+    
+    // Rediriger vers l'endpoint GitHub OAuth du backend
+    window.location.href = `${apiUrl}/auth/github`;
+    
+    return true;
   } catch (error) {
-    console.error('Could not save origin in localStorage:', error);
+    console.error('Erreur lors de la connexion avec GitHub:', error);
+    return false;
   }
-  
-  // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
-  // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
-  // En développement ou sans HTTPS, ça utilisera SameSite=Lax
+};
+
+// Fonction pour traiter le callback OAuth et stocker les tokens
+export const handleOAuthCallback = async (tokens: { accessToken: string; refreshToken: string }) => {
   try {
-    if (currentOrigin.includes('https://')) {
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-      // Essayons aussi un cookie avec d'autres paramètres pour plus de compatibilité
-      document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+    if (!tokens || !tokens.accessToken || !tokens.refreshToken) {
+      throw new Error('Tokens d\'authentification manquants ou invalides');
+    }
+    
+    // Sauvegarder les tokens en localStorage
+    localStorage.setItem('accessToken', tokens.accessToken);
+    localStorage.setItem('refreshToken', tokens.refreshToken);
+    
+    // Obtenir l'URL de redirection depuis les cookies
+    let redirectPath = Cookies.get('redirect_path') || '/dashboard';
+    
+    // Nettoyer les cookies après utilisation
+    Cookies.remove('origin');
+    Cookies.remove('origin_alt');
+    Cookies.remove('redirect_uri');
+    Cookies.remove('redirect_path');
+    
+    // Rediriger vers la bonne page
+    window.location.href = redirectPath;
+    
+    return true;
+  } catch (error) {
+    console.error('Erreur lors du traitement du callback OAuth:', error);
+    // En cas d'erreur, rediriger vers la page de connexion
+    window.location.href = '/auth/login?error=callback_failed';
+    return false;
+  }
+};
+
+// Fonction pour rafraîchir le token d'accès
+export const refreshToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (!refreshToken) {
+      throw new Error('Refresh token manquant');
+    }
+    
+    const apiUrl = getApiUrl();
+    const response = await axios.post(`${apiUrl}/auth/refresh-token`, { refreshToken });
+    
+    if (response.data && response.data.accessToken) {
+      // Mettre à jour le token d'accès
+      localStorage.setItem('accessToken', response.data.accessToken);
+      
+      // Si un nouveau refresh token est fourni, le mettre à jour également
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+      
+      return response.data.accessToken;
     } else {
-      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+      throw new Error('Nouveau token d\'accès non reçu');
     }
-    console.log('Cookie origin set to:', currentOrigin);
   } catch (error) {
-    console.error('Could not set cookie:', error);
-  }
-  
-  // Ajouter le paramètre de redirection à l'URL d'authentification
-  const redirectUri = encodeURIComponent(currentOrigin);
-  const authUrl = `${API_URL}/github?redirect_uri=${redirectUri}`;
-  console.log('Redirection vers:', authUrl);
-  
-  // Rediriger vers l'API d'authentification GitHub
-  window.location.href = authUrl;
-};
-
-export const handleOAuthCallback = async (tokens: string) => {
-  try {
-    console.log('Raw tokens string:', tokens); // Debug log
-    const parsedData = JSON.parse(decodeURIComponent(tokens));
-    console.log('Parsed OAuth data:', parsedData); // Debug log
+    console.error('Erreur lors du rafraîchissement du token:', error);
     
-    if (!parsedData.accessToken || !parsedData.refreshToken) {
-      throw new Error('Missing tokens in parsed data');
-    }
+    // En cas d'échec, déconnecter l'utilisateur
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     
-    return {
-      accessToken: parsedData.accessToken,
-      refreshToken: parsedData.refreshToken,
-      user: parsedData.user
-    };
-  } catch (error) {
-    console.error('Error handling OAuth callback:', error);
-    throw error;
+    // Rediriger vers la page de connexion
+    window.location.href = '/auth/login?error=session_expired';
+    
+    return null;
   }
 };
 
-export const refreshToken = async (refreshToken: string) => {
-  try {
-    const API_URL = getApiUrl();
-    const response = await axios.post(`${API_URL}/refresh-token`, { refreshToken });
-    return response.data;
-  } catch (error) {
-    console.error('Error refreshing token:', error);
-    throw error;
-  }
+// Fonction pour déconnecter l'utilisateur
+export const logout = () => {
+  // Supprimer les tokens du localStorage
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  
+  // Rediriger vers la page de connexion
+  window.location.href = '/auth/login?status=logged_out';
+  
+  return true;
 }; 
