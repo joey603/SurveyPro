@@ -124,7 +124,7 @@ export const refreshToken = async () => {
     }
     
     const apiUrl = getApiUrl();
-    const response = await axios.post(`${apiUrl}/auth/refresh-token`, { refreshToken });
+    const response = await axios.post(`${apiUrl}/api/auth/refresh-token`, { refreshToken });
     
     if (response.data && response.data.accessToken) {
       // Mettre à jour le token d'accès
