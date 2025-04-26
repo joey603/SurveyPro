@@ -36,11 +36,23 @@ passport.use(new GoogleStrategy({
   async function(accessToken, refreshToken, profile, done) {
     try {
       console.log('Google Strategy - Starting user processing');
+      console.log('Google profile data:', { 
+        id: profile.id,
+        displayName: profile.displayName,
+        email: profile.emails[0].value
+      });
+      
       let user = await User.findOne({ email: profile.emails[0].value });
       
       if (user) {
         console.log('Utilisateur existant trouvé avec email:', profile.emails[0].value);
-        console.log('Méthode d\'authentification actuelle:', user.authMethod);
+        console.log('Informations utilisateur existant:', {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          authMethod: user.authMethod,
+          isVerified: user.isVerified
+        });
         
         // Mettre à jour l'utilisateur même si créé avec une autre méthode
         // Si l'utilisateur a une authentification locale (email/mot de passe),
@@ -49,6 +61,8 @@ passport.use(new GoogleStrategy({
           console.log('Liaison de compte: Ajout de Google comme méthode d\'authentification alternative');
           // Nous conservons la méthode originale si c'est 'local', sinon nous la remplaçons par 'multiple'
           user.authMethod = user.authMethod === 'local' ? 'local' : 'multiple';
+          // Nous stockons également l'id Google pour référence future
+          user.googleId = profile.id;
         }
         
         // Mettre à jour les tokens
@@ -65,6 +79,8 @@ passport.use(new GoogleStrategy({
         
         user.accessToken = newAccessToken;
         user.refreshToken = newRefreshToken;
+        
+        console.log('Tokens mis à jour pour l\'utilisateur existant');
         await user.save();
         
         console.log('Authentification réussie avec compte existant');
@@ -120,6 +136,13 @@ passport.use(new GitHubStrategy({
   async function(accessToken, refreshToken, profile, done) {
     try {
       console.log('GitHub Strategy - Starting user processing');
+      console.log('GitHub profile data:', {
+        id: profile.id,
+        username: profile.username,
+        displayName: profile.displayName,
+        emails: profile.emails ? profile.emails.map(e => e.value) : []
+      });
+      
       const emails = profile.emails;
       let primaryEmail;
       
@@ -136,7 +159,13 @@ passport.use(new GitHubStrategy({
       
       if (user) {
         console.log('Utilisateur existant trouvé avec email:', primaryEmail);
-        console.log('Méthode d\'authentification actuelle:', user.authMethod);
+        console.log('Informations utilisateur existant:', {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          authMethod: user.authMethod,
+          isVerified: user.isVerified
+        });
         
         // Mettre à jour l'utilisateur même si créé avec une autre méthode
         // Si l'utilisateur a une authentification locale (email/mot de passe),
@@ -145,6 +174,8 @@ passport.use(new GitHubStrategy({
           console.log('Liaison de compte: Ajout de GitHub comme méthode d\'authentification alternative');
           // Nous conservons la méthode originale si c'est 'local', sinon nous la remplaçons par 'multiple'
           user.authMethod = user.authMethod === 'local' ? 'local' : 'multiple';
+          // Nous stockons également l'id GitHub pour référence future
+          user.githubId = profile.id;
         }
         
         // Mettre à jour les tokens
@@ -161,6 +192,8 @@ passport.use(new GitHubStrategy({
         
         user.accessToken = newAccessToken;
         user.refreshToken = newRefreshToken;
+        
+        console.log('Tokens mis à jour pour l\'utilisateur existant');
         await user.save();
         
         console.log('Authentification réussie avec compte existant');
@@ -242,7 +275,9 @@ router.get('/google/callback',
         { 
           id: req.user._id,
           email: req.user.email,
-          username: req.user.username
+          username: req.user.username,
+          authMethod: req.user.authMethod,
+          isVerified: true
         }, 
         process.env.JWT_SECRET, 
         { expiresIn: '4h' }
@@ -260,7 +295,9 @@ router.get('/google/callback',
         user: {
           id: req.user._id,
           email: req.user.email,
-          username: req.user.username
+          username: req.user.username,
+          authMethod: req.user.authMethod,
+          isVerified: req.user.isVerified || true
         }
       };
 
@@ -302,7 +339,9 @@ router.get('/github/callback',
         { 
           id: req.user._id,
           email: req.user.email,
-          username: req.user.username
+          username: req.user.username,
+          authMethod: req.user.authMethod,
+          isVerified: true
         }, 
         process.env.JWT_SECRET, 
         { expiresIn: '4h' }
@@ -320,7 +359,9 @@ router.get('/github/callback',
         user: {
           id: req.user._id,
           email: req.user.email,
-          username: req.user.username
+          username: req.user.username,
+          authMethod: req.user.authMethod,
+          isVerified: req.user.isVerified || true
         }
       };
 

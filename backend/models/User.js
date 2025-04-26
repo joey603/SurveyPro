@@ -12,9 +12,11 @@ const userSchema = new mongoose.Schema({
   refreshToken: { type: String }, // Token de rafraîchissement
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  googleId: { type: String }, // ID Google pour l'authentification OAuth
+  githubId: { type: String }, // ID GitHub pour l'authentification OAuth
   authMethod: {
     type: String,
-    enum: ['local', 'google', 'github'],
+    enum: ['local', 'google', 'github', 'multiple'],
     default: 'local'
   }
 });
