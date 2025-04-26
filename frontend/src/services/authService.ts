@@ -50,11 +50,15 @@ export const loginWithGoogle = () => {
     // Sauvegarder l'origine avant la redirection
     saveOriginInCookies();
     
-    // Obtenir l'URL de l'API
-    const apiUrl = getApiUrl();
+    // URL de l'API backend pour l'authentification Google
+    // En production, utiliser l'URL explicite du backend
+    const backendUrl = 'https://surveypro-ir3u.onrender.com';
+    
+    // Log pour le debugging
+    console.log('Redirection vers Google OAuth:', `${backendUrl}/api/auth/google`);
     
     // Rediriger vers l'endpoint Google OAuth du backend
-    window.location.href = `${apiUrl}/api/auth/google`;
+    window.location.href = `${backendUrl}/api/auth/google`;
     
     return true;
   } catch (error) {
@@ -69,11 +73,15 @@ export const loginWithGithub = () => {
     // Sauvegarder l'origine avant la redirection
     saveOriginInCookies();
     
-    // Obtenir l'URL de l'API
-    const apiUrl = getApiUrl();
+    // URL de l'API backend pour l'authentification GitHub
+    // En production, utiliser l'URL explicite du backend
+    const backendUrl = 'https://surveypro-ir3u.onrender.com';
+    
+    // Log pour le debugging
+    console.log('Redirection vers GitHub OAuth:', `${backendUrl}/api/auth/github`);
     
     // Rediriger vers l'endpoint GitHub OAuth du backend
-    window.location.href = `${apiUrl}/api/auth/github`;
+    window.location.href = `${backendUrl}/api/auth/github`;
     
     return true;
   } catch (error) {

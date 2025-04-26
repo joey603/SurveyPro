@@ -20,6 +20,39 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Link from 'next/link';
 
+// Fonction pour tester l'existence des endpoints d'authentification
+const testAuthEndpoints = async () => {
+  try {
+    console.log('Test des endpoints d\'authentification...');
+    
+    // URL de l'API backend
+    const backendUrl = 'https://surveypro-ir3u.onrender.com';
+    
+    // Tester l'endpoint Google
+    console.log('Test de l\'endpoint Google:', `${backendUrl}/api/auth/google`);
+    
+    // Tester l'endpoint GitHub
+    console.log('Test de l\'endpoint GitHub:', `${backendUrl}/api/auth/github`);
+    
+    // Essayer d'atteindre les endpoints sans effectuer de redirection
+    try {
+      const googleResponse = await fetch(`${backendUrl}/api/auth/google`, { method: 'HEAD' });
+      console.log('Réponse de l\'endpoint Google:', googleResponse.status, googleResponse.statusText);
+    } catch (err) {
+      console.error('Erreur lors du test de l\'endpoint Google:', err);
+    }
+    
+    try {
+      const githubResponse = await fetch(`${backendUrl}/api/auth/github`, { method: 'HEAD' });
+      console.log('Réponse de l\'endpoint GitHub:', githubResponse.status, githubResponse.statusText);
+    } catch (err) {
+      console.error('Erreur lors du test de l\'endpoint GitHub:', err);
+    }
+  } catch (error) {
+    console.error('Erreur lors du test des endpoints:', error);
+  }
+};
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -29,6 +62,11 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, loginWithGoogle, loginWithGithub } = useAuth();
   const router = useRouter();
+
+  // Exécuter le test des endpoints au chargement de la page
+  useEffect(() => {
+    testAuthEndpoints();
+  }, []);
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -152,8 +190,24 @@ const LoginPage: React.FC = () => {
       localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Utiliser la fonction de service pour la connexion Google
-      loginWithGoogle();
+      // URL de l'API backend pour l'authentification Google
+      const backendUrl = 'https://surveypro-ir3u.onrender.com';
+      
+      // Sauvegarder l'origine dans les cookies
+      try {
+        const currentOrigin = window.location.origin;
+        document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
+        console.log('Origine sauvegardée dans les cookies:', currentOrigin);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+      }
+      
+      // Log avant redirection
+      console.log('Redirection vers Google OAuth:', `${backendUrl}/api/auth/google`);
+      
+      // Redirection directe vers l'URL d'authentification Google
+      window.location.href = `${backendUrl}/api/auth/google`;
     } catch (error) {
       console.error('Erreur lors de la connexion Google:', error);
     }
@@ -167,8 +221,24 @@ const LoginPage: React.FC = () => {
       localStorage.clear();
       console.log('localStorage nettoyé');
       
-      // Utiliser la fonction de service pour la connexion GitHub
-      loginWithGithub();
+      // URL de l'API backend pour l'authentification GitHub
+      const backendUrl = 'https://surveypro-ir3u.onrender.com';
+      
+      // Sauvegarder l'origine dans les cookies
+      try {
+        const currentOrigin = window.location.origin;
+        document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
+        console.log('Origine sauvegardée dans les cookies:', currentOrigin);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+      }
+      
+      // Log avant redirection
+      console.log('Redirection vers GitHub OAuth:', `${backendUrl}/api/auth/github`);
+      
+      // Redirection directe vers l'URL d'authentification GitHub
+      window.location.href = `${backendUrl}/api/auth/github`;
     } catch (error) {
       console.error('Erreur lors de la connexion GitHub:', error);
     }
