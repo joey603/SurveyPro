@@ -1,4 +1,12 @@
 {
+  "name": "surveypro",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && next dev",
+    "build": "cd frontend && next build",
+    "start": "cd frontend && next start"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
