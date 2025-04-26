@@ -6,7 +6,7 @@ import NavBar from "./components/NavBar";
 import { CircularProgress, Backdrop } from '@mui/material';
 import { useState, useEffect, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { colors } from '../theme/colors';
+import { colors } from '@/theme/colors';
 import { useAuth } from '@/utils/AuthContext';
 
 const AuthHandler = ({ children }: { children: React.ReactNode }) => {
