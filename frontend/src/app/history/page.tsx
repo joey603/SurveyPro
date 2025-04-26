@@ -592,14 +592,9 @@ const SurveyHistoryPage: React.FC = () => {
     setDateRange({ start: null, end: null });
   };
 
+  // Ajoutons une fonction de chargement pour Suspense
   const LoadingFallback = () => (
-    <Box 
-      display="flex" 
-      justifyContent="center" 
-      alignItems="center" 
-      height="100vh"
-      width="100%"
-    >
+    <Box display="flex" justifyContent="center" alignItems="center" height="100vh" width="100%">
       <CircularProgress sx={{ color: '#667eea' }} />
     </Box>
   );
@@ -1145,28 +1140,14 @@ const SurveyHistoryPage: React.FC = () => {
             </Box>
 
             {isTransitioning ? (
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                p: 4, 
-                width: '100%', 
-                minHeight: '200px' 
-              }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, width: '100%', gridColumn: '1 / -1', minHeight: '200px' }}>
                 <CircularProgress sx={{ color: '#667eea' }} />
               </Box>
             ) : (
               <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {viewType === 'responses' ? (
                   loading ? (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      p: 4,
-                      gridColumn: '1 / -1',
-                      minHeight: '200px'
-                    }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, width: '100%', gridColumn: '1 / -1' }}>
                       <CircularProgress sx={{ color: '#667eea' }} />
                     </Box>
                   ) : responses.length === 0 ? (
@@ -1420,11 +1401,7 @@ const SurveyHistoryPage: React.FC = () => {
                               }
                             }}
                           >
-                            {loadingDetails === response._id ? (
-                              <CircularProgress size={20} color="inherit" />
-                            ) : (
-                              'View Details'
-                            )}
+                            View Details
                           </Button>
                         </Box>
                       </Paper>
@@ -1683,11 +1660,7 @@ const SurveyHistoryPage: React.FC = () => {
                               }
                             }}
                           >
-                            {loadingDetails === survey._id ? (
-                              <CircularProgress size={20} color="inherit" />
-                            ) : (
-                              'View Details'
-                            )}
+                            View Details
                           </Button>
                         </Box>
                       </Paper>
