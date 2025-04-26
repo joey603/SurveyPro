@@ -1,12 +1,21 @@
 {
-  "framework": null,
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/.next",
-  "installCommand": "cd frontend && npm install",
-  "devCommand": "cd frontend && npm run dev",
+  "version": 2,
+  "buildCommand": "chmod +x vercel-build.sh && ./vercel-build.sh && npm run build",
+  "installCommand": "npm install --no-audit --no-fund --legacy-peer-deps",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
   },
+  "ignoreCommand": "node -e \"process.exit(0)\"",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://surveypro-ir3u.onrender.com/api/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
