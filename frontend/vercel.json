@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "buildCommand": "npm install && npm run build",
-  "framework": "nextjs",
+  "buildCommand": "node vercel-build-override.js",
   "outputDirectory": ".next",
+  "framework": "nextjs",
   "devCommand": "cd frontend && npm run dev",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
   },
   "rewrites": [
     {
