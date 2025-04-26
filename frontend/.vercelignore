@@ -1,5 +1,4 @@
 production-build
-build-vercel.sh
 
 # Fichiers et dossiers à ignorer lors du déploiement Vercel
 node_modules
