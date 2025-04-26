@@ -632,6 +632,9 @@ const sendVerificationEmail = async (email, verificationCode) => {
 const handleOAuthCallback = (req, res, tokens) => {
   console.log('OAuth successful. Tokens:', tokens);
   
+  // Afficher tous les cookies pour le débogage
+  console.log('All cookies:', req.headers.cookie);
+  
   // Récupérer le domaine d'origine de la requête depuis le cookie
   const originUrl = req.cookies?.origin;
   console.log('Origin from cookie:', originUrl);
@@ -639,19 +642,17 @@ const handleOAuthCallback = (req, res, tokens) => {
   // Déterminer l'URL de redirection frontale en fonction de l'environnement
   let clientRedirectUrl;
   
+  // URL spécifique pour le déploiement de prévisualisation actuel
+  const currentPreviewUrl = 'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app';
+  
   if (originUrl) {
     // Si l'origine est définie dans un cookie, l'utiliser
     clientRedirectUrl = `${originUrl}/oauth-callback`;
     console.log('Using origin from cookie for redirect:', clientRedirectUrl);
   } else if (process.env.NODE_ENV === 'production') {
-    // En production, utiliser les URLs de Vercel configurées
-    const possibleFrontendUrls = process.env.FRONTEND_URL 
-      ? process.env.FRONTEND_URL.split(',') 
-      : ['https://surveyflow.vercel.app'];
-    
-    // Utiliser la première URL configurée
-    clientRedirectUrl = `${possibleFrontendUrls[0]}/oauth-callback`;
-    console.log('Using configured FRONTEND_URL for redirect:', clientRedirectUrl);
+    // En production, utiliser en priorité l'URL du déploiement de prévisualisation actuel
+    clientRedirectUrl = `${currentPreviewUrl}/oauth-callback`;
+    console.log('Using preview deployment URL for redirect:', clientRedirectUrl);
   } else {
     // En développement, utiliser localhost
     clientRedirectUrl = 'http://localhost:3000/oauth-callback';
