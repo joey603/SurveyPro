@@ -138,9 +138,76 @@ createServer((req, res) => {
 }`;
   
   fs.writeFileSync(path.join(OUTPUT_DIR, 'config.json'), configContent);
+  
+  // Créer routes-manifest.json pour Vercel
+  console.log('📝 Création du fichier routes-manifest.json pour Vercel...');
+  const routesManifest = {
+    version: 3,
+    basePath: "",
+    pages404: true,
+    redirects: [],
+    headers: [],
+    dynamicRoutes: [],
+    staticRoutes: [
+      {
+        page: "/",
+        regex: "^/(?:/)?$",
+        routeKeys: {},
+        namedRegex: "^/(?:/)?$"
+      }
+    ],
+    dataRoutes: [],
+    rewrites: [
+      {
+        source: "/api/:path*",
+        destination: "https://surveypro-ir3u.onrender.com/api/:path*"
+      }
+    ]
+  };
+  
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'routes-manifest.json'), JSON.stringify(routesManifest, null, 2));
+  
+  // Créer build-manifest.json pour Vercel
+  console.log('📝 Création du fichier build-manifest.json pour Vercel...');
+  const buildManifest = {
+    polyfillFiles: [],
+    devFiles: [],
+    ampDevFiles: [],
+    lowPriorityFiles: [],
+    rootMainFiles: [],
+    pages: {
+      "/": ["static/chunks/pages/index.js"]
+    },
+    ampFirstPages: []
+  };
+  
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'build-manifest.json'), JSON.stringify(buildManifest, null, 2));
+  
+  // Créer prerender-manifest.json pour Vercel
+  console.log('📝 Création du fichier prerender-manifest.json pour Vercel...');
+  const prerenderManifest = {
+    version: 4,
+    routes: {
+      "/": {
+        initialRevalidateSeconds: false,
+        srcRoute: null,
+        dataRoute: null
+      }
+    },
+    dynamicRoutes: {},
+    notFoundRoutes: []
+  };
+  
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'prerender-manifest.json'), JSON.stringify(prerenderManifest, null, 2));
 
   // Créer un fichier pour indiquer que le build est terminé avec succès
   fs.writeFileSync(SUCCESS_FILE, 'Build terminé avec succès');
+  
+  // Créer le dossier static/chunks/pages pour les références
+  fs.mkdirSync(path.join(STATIC_DIR, 'chunks/pages'), { recursive: true });
+  
+  // Créer un fichier JS vide pour la page d'index
+  fs.writeFileSync(path.join(STATIC_DIR, 'chunks/pages/index.js'), '// Placeholder file');
   
   console.log('✅ Build statique terminé avec succès. Prêt pour le déploiement!');
   process.exit(0);
