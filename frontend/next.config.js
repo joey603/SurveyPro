@@ -12,12 +12,18 @@ const nextConfig = {
     domains: ['res.cloudinary.com', 'surveypro-ir3u.onrender.com', 'vercel.app'],
     unoptimized: true,
   },
-  // Désactiver le rendu statique qui cause des erreurs
+  // Configuration critique pour Vercel - désactiver complètement le rendu statique
   output: 'standalone',
-  // Résoudre le problème de useContext dans React
   experimental: {
-    serverComponents: false,
+    // Désactiver complètement le pré-rendu statique
+    isrMemoryCacheSize: 0,
+    // Désactiver la génération au moment de la construction
+    staticPageGenerationTimeout: 0,
   },
+  // Désactiver tous les rendus statiques
+  staticPageGenerationTimeout: 0,
+  // Forcer l'utilisation du mode client
+  reactStrictMode: false,
   // Rewrites API
   async rewrites() {
     return [
