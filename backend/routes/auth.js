@@ -259,8 +259,8 @@ router.get('/google/callback',
       console.log('Google Callback - Starting response handling');
       console.log('Google Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      // Récupérer l'URL d'origine avec la nouvelle fonction
+      const originUrl = getRedirectUrl(req);
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
@@ -307,7 +307,7 @@ router.get('/google/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = getRedirectUrl(req);
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
@@ -331,8 +331,8 @@ router.get('/github/callback',
       console.log('GitHub Callback - Starting response handling');
       console.log('GitHub Callback - User:', req.user);
       
-      // Récupérer le domaine d'origine de la requête depuis le cookie
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      // Récupérer l'URL d'origine avec la nouvelle fonction
+      const originUrl = getRedirectUrl(req);
       console.log('Origin URL for redirection:', originUrl);
       
       if (!req.user) {
@@ -379,7 +379,7 @@ router.get('/github/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('GitHub Callback Error:', error);
-      const originUrl = req.cookies?.origin || process.env.FRONTEND_URL;
+      const originUrl = getRedirectUrl(req);
       res.redirect(`${originUrl}/oauth-callback?error=existing_user&message=Une erreur est survenue lors de l'authentification`);
     }
   }
@@ -704,6 +704,39 @@ const sendVerificationEmail = async (email, verificationCode) => {
     console.error('Error sending verification email:', error);
     throw new Error('Error sending verification email');
   }
+};
+
+// Fonction utilitaire pour obtenir l'URL de redirection
+const getRedirectUrl = (req) => {
+  // Essayer d'abord de récupérer l'origine depuis le cookie
+  let originUrl = req.cookies?.origin;
+  console.log('Origin from cookie:', originUrl);
+  
+  // Si pas de cookie, utiliser le referer
+  if (!originUrl && req.headers.referer) {
+    try {
+      const refererUrl = new URL(req.headers.referer);
+      originUrl = `${refererUrl.protocol}//${refererUrl.host}`;
+      console.log('Origin from referer:', originUrl);
+    } catch (error) {
+      console.error('Error parsing referer URL:', error);
+    }
+  }
+  
+  // Si toujours pas d'origine, utiliser l'URL frontend par défaut
+  if (!originUrl) {
+    // Vérifier si FRONTEND_URL contient plusieurs URLs (séparées par des virgules)
+    const frontendUrls = process.env.FRONTEND_URL?.split(',') || [];
+    
+    // Utiliser la première URL non-localhost comme valeur par défaut
+    originUrl = frontendUrls.find(url => !url.includes('localhost')) || 
+                frontendUrls[0] || 
+                'https://surveyflow.vercel.app';
+                
+    console.log('Using default frontend URL:', originUrl);
+  }
+  
+  return originUrl.trim();
 };
 
 module.exports = router;

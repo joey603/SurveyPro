@@ -14,11 +14,23 @@ export const loginWithGoogle = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
-  // Définir un cookie avec un domaine plus large pour s'assurer qu'il est accessible par le serveur backend
-  document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+  
+  // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
+  // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
+  // En développement ou sans HTTPS, ça utilisera SameSite=Lax
+  if (currentOrigin.includes('https://')) {
+    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+  } else {
+    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+  }
+  
   console.log('Cookie origin set to:', currentOrigin);
   console.log('Redirection vers:', `${API_URL}/google`);
   
+  // Nettoyer le localStorage pour éviter les problèmes d'authentification
+  localStorage.clear();
+  
+  // Rediriger vers l'API d'authentification Google
   window.location.href = `${API_URL}/google`;
 };
 
@@ -26,10 +38,23 @@ export const loginWithGithub = () => {
   const API_URL = getApiUrl();
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
-  // Définir un cookie avec un domaine plus large pour s'assurer qu'il est accessible par le serveur backend
-  document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-  console.log('Cookie origin set to:', currentOrigin);
   
+  // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
+  // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
+  // En développement ou sans HTTPS, ça utilisera SameSite=Lax
+  if (currentOrigin.includes('https://')) {
+    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+  } else {
+    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+  }
+  
+  console.log('Cookie origin set to:', currentOrigin);
+  console.log('Redirection vers:', `${API_URL}/github`);
+  
+  // Nettoyer le localStorage pour éviter les problèmes d'authentification
+  localStorage.clear();
+  
+  // Rediriger vers l'API d'authentification GitHub
   window.location.href = `${API_URL}/github`;
 };
 
@@ -43,23 +68,10 @@ export const handleOAuthCallback = async (tokens: string) => {
       throw new Error('Missing tokens in parsed data');
     }
     
-    // Vérifier que les données utilisateur sont complètes
-    if (!parsedData.user || !parsedData.user.id || !parsedData.user.email) {
-      console.error('Incomplete user data in OAuth response:', parsedData.user);
-      throw new Error('Incomplete user data');
-    }
-    
-    // Si le mode d'authentification est présent, le conserver
-    const authMethod = parsedData.user.authMethod || 'google';
-    console.log('Authentication method from OAuth response:', authMethod);
-    
     return {
       accessToken: parsedData.accessToken,
       refreshToken: parsedData.refreshToken,
-      user: {
-        ...parsedData.user,
-        authMethod // S'assurer que authMethod est toujours présent
-      }
+      user: parsedData.user
     };
   } catch (error) {
     console.error('Error handling OAuth callback:', error);
