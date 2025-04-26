@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "framework": null,
   "buildCommand": "echo 'Skipping build process'",
   "outputDirectory": "public",
   "rewrites": [
