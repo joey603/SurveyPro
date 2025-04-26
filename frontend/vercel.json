@@ -1,13 +1,14 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "chmod +x build-vercel.sh && ./build-vercel.sh",
+  "installCommand": "echo 'Installation gérée par le script build-vercel.sh'",
   "outputDirectory": ".next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
     "NODE_ENV": "production",
-    "NEXT_TELEMETRY_DISABLED": "1"
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "NEXT_SHARP_PATH": "./node_modules/sharp"
   },
   "rewrites": [
     {

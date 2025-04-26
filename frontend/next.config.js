@@ -14,14 +14,32 @@ const nextConfig = {
   },
   // Configuration spéciale pour Vercel
   output: 'standalone',
-  // Désactiver complètement le pré-rendu statique
-  experimental: {
-    disableStaticImages: true,
-    appDocumentPreloading: false,
-  },
   // Configuration pour éviter les erreurs de pré-rendu
   reactStrictMode: false,
-  staticPageGenerationTimeout: 60,
+  // Désactiver le prérendu statique des pages
+  experimental: {
+    disableOptimizedLoading: true,
+    esmExternals: 'loose'
+  },
+  // Augmenter la limite de mémoire pour le build
+  webpack: (config, { isServer }) => {
+    // Augmenter la limite de mémoire pour le bundle
+    config.performance = {
+      maxEntrypointSize: 512000,
+      maxAssetSize: 512000,
+    };
+    
+    // Si ce n'est pas le serveur, ajouter react comme externe
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      };
+    }
+    
+    return config;
+  },
   // Rewrites API
   async rewrites() {
     return [
@@ -30,6 +48,11 @@ const nextConfig = {
         destination: 'https://surveypro-ir3u.onrender.com/api/:path*',
       },
     ];
+  },
+  // Désactiver les vérifications de taille du bundle
+  onDemandEntries: {
+    maxInactiveAge: 60 * 60 * 1000,
+    pagesBufferLength: 5,
   }
 };
 

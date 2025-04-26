@@ -1,24 +1,32 @@
 #!/bin/bash
 
-echo "Installation des dépendances..."
-npm install --legacy-peer-deps
+# Script personnalisé pour le déploiement sur Vercel
+echo "🚀 Démarrage du script de build personnalisé pour Vercel"
 
-echo "Installation des packages manquants spécifiques..."
-npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities intro.js intro.js-react typescript --legacy-peer-deps
-
-echo "Installation de tailwindcss et autres dépendances CSS nécessaires..."
-npm install --save tailwindcss@3.3.0 postcss@latest autoprefixer@latest --legacy-peer-deps
-
-# Créer un lien symbolique pour @/utils
-echo "Configuration des alias de chemin..."
-if [ ! -d "node_modules/@" ]; then
-  mkdir -p node_modules/@
+# Vérifier que nous sommes dans le bon répertoire
+if [ ! -f "package.json" ]; then
+  echo "❌ Erreur: package.json non trouvé. Vérifiez le répertoire."
+  exit 1
 fi
-ln -sf $(pwd)/src node_modules/@
 
-# Corriger les problèmes de conflit PostCSS
-echo "Correction de la configuration PostCSS..."
-rm -f postcss.config.mjs
+# Assurer que node_modules est supprimé pour une installation propre
+echo "🧹 Nettoyage des dépendances existantes..."
+rm -rf node_modules
+rm -rf .next
 
-echo "Construction de l'application..."
-NEXT_TELEMETRY_DISABLED=1 SKIP_TYPE_CHECK=true next build 
+# Installer toutes les dépendances avec --force pour résoudre les conflits
+echo "📦 Installation des dépendances avec --force et --legacy-peer-deps..."
+npm install --force --legacy-peer-deps
+
+# Vérifier que react et react-dom sont bien installés
+if [ ! -d "node_modules/react" ] || [ ! -d "node_modules/react-dom" ]; then
+  echo "⚠️ React ou ReactDOM manquant, installation forcée..."
+  npm install react@18.3.1 react-dom@18.3.1 --save --legacy-peer-deps --force
+fi
+
+# Construction de l'application Next.js
+echo "🏗️ Construction de l'application Next.js..."
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
+
+echo "✅ Script de build terminé avec succès"
+exit 0 
