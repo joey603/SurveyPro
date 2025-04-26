@@ -954,6 +954,10 @@ const SurveyHistoryPage: React.FC = () => {
           pb: 8,
           minHeight: 'calc(100vh - 64px)',
           bgcolor: 'background.default',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          width: '100%'
         }}
       >
         <Paper elevation={3} sx={{
