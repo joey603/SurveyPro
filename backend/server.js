@@ -50,7 +50,8 @@ const allowedOrigins = [
   'https://surveyflow.vercel.app',
   'https://surveyflow-git-main-joey603.vercel.app',
   'https://surveyflow.vercel.app/',
-  'https://surveyflow-git-main-joey603.vercel.app/'
+  'https://surveyflow-git-main-joey603.vercel.app/',
+  'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight

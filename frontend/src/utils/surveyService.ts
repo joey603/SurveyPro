@@ -1,8 +1,9 @@
 import axios from "axios";
 import { dynamicSurveyService } from "./dynamicSurveyService";
 
-export const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-export const API_URL = `${BASE_URL}/api`;
+// En production sur Vercel, utiliser les chemins relatifs pour profiter des rewrites
+export const BASE_URL = process.env.NODE_ENV === 'production' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041');
+export const API_URL = process.env.NODE_ENV === 'production' ? '/api' : `${BASE_URL}/api`;
 
 const DEFAULT_CITIES = [
   "Tel Aviv",

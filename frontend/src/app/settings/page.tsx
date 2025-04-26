@@ -47,9 +47,10 @@ const SettingsContent = () => {
           return;
         }
         
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+        // Utiliser une URL relative en production pour profiter des rewrites
+        const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041'}/api`;
         
-        const response = await axios.get(`${API_URL}/api/auth/profile`, {
+        const response = await axios.get(`${apiUrl}/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data.user);
@@ -66,7 +67,8 @@ const SettingsContent = () => {
   const handlePasswordChange = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      // Utiliser une URL relative en production pour profiter des rewrites
+      const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041'}/api`;
       
       const payload = {
         currentPassword,
@@ -81,7 +83,7 @@ const SettingsContent = () => {
       };
       
       const response = await axios.put(
-        `${API_URL}/api/auth/password`,
+        `${apiUrl}/auth/password`,
         payload,
         config
       );

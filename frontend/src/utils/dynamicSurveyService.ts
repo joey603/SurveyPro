@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Utiliser la variable d'environnement si disponible, sinon localhost
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? 
-  `${process.env.NEXT_PUBLIC_API_URL}/api` : 
-  'http://localhost:5041/api';
+// En production sur Vercel, utiliser les chemins relatifs pour profiter des rewrites
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : (process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : 'http://localhost:5041/api');
 
 interface DynamicSurvey {
   title: string;

@@ -254,13 +254,12 @@ const SurveyHistoryPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Not authenticated');
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ? 
-        `${process.env.NEXT_PUBLIC_API_URL}/api` : 
-        'http://localhost:5041/api';
-      console.log('Fetching created surveys...');
+      // Utiliser la constante API_URL qui est déjà configurée pour gérer correctement les environnements
+      const apiUrl = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5041/api';
+      console.log('Fetching created surveys from', apiUrl);
       
       // Récupérer les sondages statiques
-      const classicResponse = await fetch(`${API_URL}/surveys`, {
+      const classicResponse = await fetch(`${apiUrl}/surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -277,7 +276,7 @@ const SurveyHistoryPage: React.FC = () => {
       console.log('Created classic surveys data:', classicData.length);
       
       // Récupérer les sondages dynamiques
-      const dynamicResponse = await fetch(`${API_URL}/dynamic-surveys`, {
+      const dynamicResponse = await fetch(`${apiUrl}/dynamic-surveys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

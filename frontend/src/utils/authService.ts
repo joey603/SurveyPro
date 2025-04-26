@@ -1,19 +1,19 @@
 import axios from "axios";
+import { API_URL, BASE_URL } from "./surveyService";
 
-// Helper function to get the access token
-const getAccessToken = () => {
-  const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Authentication token not found. Please log in.");
+// Récupérer le token d'accès du localStorage
+export const getAccessToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('accessToken');
   }
-  return token;
+  return null;
 };
 
 // Create a survey with authentication
 export const createSurvey = async (surveyData: any) => {
   const token = getAccessToken();
   try {
-    const response = await axios.post("http://localhost:5041/api/surveys", surveyData, {
+    const response = await axios.post(`${API_URL}/surveys`, surveyData, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -30,7 +30,7 @@ export const createSurvey = async (surveyData: any) => {
 export const fetchSurveys = async () => {
   const token = getAccessToken();
   try {
-    const response = await axios.get("http://localhost:5041/api/surveys", {
+    const response = await axios.get(`${API_URL}/surveys`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
