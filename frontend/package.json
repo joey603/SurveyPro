@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "SKIP_TYPE_CHECK=true NEXT_TELEMETRY_DISABLED=1 next build",
-    "postinstall": "[ -d node_modules/@ ] || mkdir -p node_modules/@ && ln -sf $(pwd)/src node_modules/@",
+    "build": "next build",
+    "postinstall": "npm install tailwindcss@latest postcss@latest autoprefixer@latest --legacy-peer-deps",
     "start": "next start",
     "lint": "next lint"
   },

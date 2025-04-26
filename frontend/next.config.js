@@ -10,7 +10,6 @@ const nextConfig = {
     // Ignorer les erreurs TS durant la construction pour production
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
   distDir: '.next',
   // Webpack configuration pour les alias
   webpack: (config) => {
@@ -30,7 +29,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL + '/api/:path*',
+        destination: 'https://surveypro-ir3u.onrender.com/api/:path*',
       },
     ];
   }

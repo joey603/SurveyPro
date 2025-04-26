@@ -1,11 +1,12 @@
 {
+  "version": 2,
+  "buildCommand": "cd frontend && NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npm install --legacy-peer-deps && npm run build",
+  "outputDirectory": "frontend/.next",
   "framework": "nextjs",
-  "rootDirectory": "frontend",
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
   },
   "rewrites": [
     {
