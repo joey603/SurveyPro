@@ -15,23 +15,37 @@ export const loginWithGoogle = () => {
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
   
+  // Double sécurité : stocker aussi l'origine dans le localStorage
+  try {
+    localStorage.setItem('auth_origin', currentOrigin);
+    console.log('Origin saved in localStorage:', currentOrigin);
+  } catch (error) {
+    console.error('Could not save origin in localStorage:', error);
+  }
+  
   // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
   // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
   // En développement ou sans HTTPS, ça utilisera SameSite=Lax
-  if (currentOrigin.includes('https://')) {
-    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-  } else {
-    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+  try {
+    if (currentOrigin.includes('https://')) {
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+      // Essayons aussi un cookie avec d'autres paramètres pour plus de compatibilité
+      document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+    } else {
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+    }
+    console.log('Cookie origin set to:', currentOrigin);
+  } catch (error) {
+    console.error('Could not set cookie:', error);
   }
   
-  console.log('Cookie origin set to:', currentOrigin);
-  console.log('Redirection vers:', `${API_URL}/google`);
-  
-  // Nettoyer le localStorage pour éviter les problèmes d'authentification
-  localStorage.clear();
+  // Ajouter le paramètre de redirection à l'URL d'authentification
+  const redirectUri = encodeURIComponent(currentOrigin);
+  const authUrl = `${API_URL}/google?redirect_uri=${redirectUri}`;
+  console.log('Redirection vers:', authUrl);
   
   // Rediriger vers l'API d'authentification Google
-  window.location.href = `${API_URL}/google`;
+  window.location.href = authUrl;
 };
 
 export const loginWithGithub = () => {
@@ -39,23 +53,37 @@ export const loginWithGithub = () => {
   // Stocker l'origine actuelle dans un cookie pour la redirection
   const currentOrigin = window.location.origin;
   
+  // Double sécurité : stocker aussi l'origine dans le localStorage
+  try {
+    localStorage.setItem('auth_origin', currentOrigin);
+    console.log('Origin saved in localStorage:', currentOrigin);
+  } catch (error) {
+    console.error('Could not save origin in localStorage:', error);
+  }
+  
   // Configurer le cookie avec les bonnes options pour qu'il soit accessible au backend
   // En production sur un domaine avec HTTPS, ça utilisera SameSite=None, Secure
   // En développement ou sans HTTPS, ça utilisera SameSite=Lax
-  if (currentOrigin.includes('https://')) {
-    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
-  } else {
-    document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+  try {
+    if (currentOrigin.includes('https://')) {
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=None; Secure`;
+      // Essayons aussi un cookie avec d'autres paramètres pour plus de compatibilité
+      document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+    } else {
+      document.cookie = `origin=${currentOrigin}; path=/; max-age=3600; SameSite=Lax`;
+    }
+    console.log('Cookie origin set to:', currentOrigin);
+  } catch (error) {
+    console.error('Could not set cookie:', error);
   }
   
-  console.log('Cookie origin set to:', currentOrigin);
-  console.log('Redirection vers:', `${API_URL}/github`);
-  
-  // Nettoyer le localStorage pour éviter les problèmes d'authentification
-  localStorage.clear();
+  // Ajouter le paramètre de redirection à l'URL d'authentification
+  const redirectUri = encodeURIComponent(currentOrigin);
+  const authUrl = `${API_URL}/github?redirect_uri=${redirectUri}`;
+  console.log('Redirection vers:', authUrl);
   
   // Rediriger vers l'API d'authentification GitHub
-  window.location.href = `${API_URL}/github`;
+  window.location.href = authUrl;
 };
 
 export const handleOAuthCallback = async (tokens: string) => {

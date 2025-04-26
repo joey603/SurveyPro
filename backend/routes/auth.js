@@ -236,6 +236,20 @@ router.use(passport.initialize());
 
 router.get('/google', (req, res, next) => {
   console.log('Google Auth Route - Starting authentication');
+  console.log('Redirect URI from query:', req.query.redirect_uri);
+  
+  // Stocker l'URI de redirection dans la session
+  if (req.query.redirect_uri) {
+    // Stocker dans un cookie qui sera accessible au callback
+    res.cookie('redirect_uri', req.query.redirect_uri, {
+      maxAge: 3600000, // 1 heure
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    console.log('Stored redirect_uri in cookie:', req.query.redirect_uri);
+  }
+  
   // Forcer une nouvelle session
   req.logout((err) => {
     if (err) {
@@ -243,7 +257,8 @@ router.get('/google', (req, res, next) => {
     }
     passport.authenticate('google', { 
       scope: ['profile', 'email'],
-      prompt: 'select_account' // Force Google à afficher la page de sélection de compte
+      prompt: 'select_account', // Force Google à afficher la page de sélection de compte
+      state: req.query.redirect_uri // Passer l'URI de redirection dans l'état
     })(req, res, next);
   });
 });
@@ -315,8 +330,23 @@ router.get('/google/callback',
 
 router.get('/github', (req, res, next) => {
   console.log('GitHub Auth Route - Starting authentication');
+  console.log('Redirect URI from query:', req.query.redirect_uri);
+  
+  // Stocker l'URI de redirection dans la session
+  if (req.query.redirect_uri) {
+    // Stocker dans un cookie qui sera accessible au callback
+    res.cookie('redirect_uri', req.query.redirect_uri, {
+      maxAge: 3600000, // 1 heure
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    console.log('Stored redirect_uri in cookie:', req.query.redirect_uri);
+  }
+  
   passport.authenticate('github', { 
-    scope: ['user:email']
+    scope: ['user:email'],
+    state: req.query.redirect_uri // Passer l'URI de redirection dans l'état
   })(req, res, next);
 });
 
@@ -708,35 +738,82 @@ const sendVerificationEmail = async (email, verificationCode) => {
 
 // Fonction utilitaire pour obtenir l'URL de redirection
 const getRedirectUrl = (req) => {
-  // Essayer d'abord de récupérer l'origine depuis le cookie
-  let originUrl = req.cookies?.origin;
-  console.log('Origin from cookie:', originUrl);
+  // Liste des URL candidates
+  const candidateUrls = [];
   
-  // Si pas de cookie, utiliser le referer
-  if (!originUrl && req.headers.referer) {
+  // 1. Essayer de récupérer l'origine depuis le cookie spécifique de redirection
+  if (req.cookies?.redirect_uri) {
+    candidateUrls.push(req.cookies.redirect_uri);
+    console.log('Origin from redirect_uri cookie:', req.cookies.redirect_uri);
+  }
+  
+  // 2. Récupérer depuis le paramètre state (utilisé par OAuth)
+  if (req.query?.state) {
+    candidateUrls.push(req.query.state);
+    console.log('Origin from state parameter:', req.query.state);
+  }
+  
+  // 3. Essayer de récupérer l'origine depuis les cookies d'origine
+  if (req.cookies?.origin) {
+    candidateUrls.push(req.cookies.origin);
+    console.log('Origin from main cookie:', req.cookies.origin);
+  }
+  
+  if (req.cookies?.origin_alt) {
+    candidateUrls.push(req.cookies.origin_alt);
+    console.log('Origin from alt cookie:', req.cookies.origin_alt);
+  }
+  
+  // 4. Essayer de récupérer depuis d'autres sources qui pourraient provenir du frontend
+  if (req.query?.redirect_uri) {
+    candidateUrls.push(req.query.redirect_uri);
+    console.log('Origin from query param:', req.query.redirect_uri);
+  }
+  
+  // 5. Utiliser le referer seulement s'il n'est pas un domaine OAuth
+  if (req.headers.referer) {
     try {
       const refererUrl = new URL(req.headers.referer);
-      originUrl = `${refererUrl.protocol}//${refererUrl.host}`;
-      console.log('Origin from referer:', originUrl);
+      // Ne pas utiliser le referer s'il provient des domaines OAuth
+      if (!refererUrl.host.includes('accounts.google.com') && 
+          !refererUrl.host.includes('github.com')) {
+        candidateUrls.push(`${refererUrl.protocol}//${refererUrl.host}`);
+        console.log('Origin from referer:', `${refererUrl.protocol}//${refererUrl.host}`);
+      } else {
+        console.log('Referer is an OAuth provider domain, not using it:', refererUrl.host);
+      }
     } catch (error) {
       console.error('Error parsing referer URL:', error);
     }
   }
   
-  // Si toujours pas d'origine, utiliser l'URL frontend par défaut
-  if (!originUrl) {
-    // Vérifier si FRONTEND_URL contient plusieurs URLs (séparées par des virgules)
-    const frontendUrls = process.env.FRONTEND_URL?.split(',') || [];
-    
-    // Utiliser la première URL non-localhost comme valeur par défaut
-    originUrl = frontendUrls.find(url => !url.includes('localhost')) || 
-                frontendUrls[0] || 
-                'https://surveyflow.vercel.app';
-                
-    console.log('Using default frontend URL:', originUrl);
+  // 6. Utiliser les URLs configurées comme fallback
+  const frontendUrls = process.env.FRONTEND_URL?.split(',') || [];
+  frontendUrls.forEach(url => {
+    if (url && url.trim()) {
+      candidateUrls.push(url.trim());
+    }
+  });
+  
+  // Ajouter une URL par défaut en dernier recours
+  candidateUrls.push('https://surveyflow.vercel.app');
+  
+  console.log('All candidate redirect URLs:', candidateUrls);
+  
+  // Choisir la première URL valide
+  for (const url of candidateUrls) {
+    try {
+      new URL(url); // Vérifie que l'URL est valide
+      console.log('Selected redirect URL:', url);
+      return url.trim();
+    } catch (error) {
+      console.warn('Invalid URL candidate:', url);
+    }
   }
   
-  return originUrl.trim();
+  // Si aucune URL valide n'est trouvée, utiliser l'URL par défaut
+  console.log('No valid URL found, using default');
+  return 'https://surveyflow.vercel.app';
 };
 
 module.exports = router;
