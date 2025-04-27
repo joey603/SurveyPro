@@ -1,198 +1,79 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
-import { Box, CircularProgress, Typography, Paper, Button, Alert } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
-const LoadingFallback = () => (
-  <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-    <CircularProgress />
-  </Box>
-);
-
+// Page la plus minimaliste possible pour accélérer le chargement
 const OAuthCallbackPage = () => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState<string>('');
-  const [authMethod, setAuthMethod] = useState<string | null>(null);
-  const [debug, setDebug] = useState<string>('');
-
+  
   useEffect(() => {
+    // Redirection automatique ultra-rapide après seulement 500ms
+    const redirectTimer = setTimeout(() => {
+      console.log('Timeout reached, forcing redirect to home page');
+      window.location.href = '/';
+    }, 500);
+    
     const processCallback = async () => {
       try {
-        console.log('OAuth Callback - Processing authentication result');
-        console.log('URL Search Params:', window.location.search);
+        console.log('OAuth Callback - Processing tokens');
         
-        // Obtenir les paramètres de l'URL
+        // Obtenir les tokens depuis l'URL
         const tokensParam = searchParams.get('tokens');
-        const errorParam = searchParams.get('error');
-        const messageParam = searchParams.get('message');
-
-        // Stocker des informations de débogage
-        setDebug(`Tokens: ${!!tokensParam}, Error: ${errorParam}, Message: ${messageParam}`);
         
-        // En cas d'erreur
-        if (errorParam) {
-          console.log('OAuth Callback - Error detected:', errorParam, messageParam);
-          setStatus('error');
-          setMessage(messageParam || 'Une erreur est survenue lors de l\'authentification');
-          // Si l'erreur indique que l'utilisateur existe déjà avec une autre méthode
-          if (errorParam === 'existing_user') {
-            const authMethodParam = searchParams.get('authMethod');
-            console.log('Existing user with auth method:', authMethodParam);
-            setAuthMethod(authMethodParam || null);
-          }
-          return;
-        }
-
-        // Si on a des tokens, traiter l'authentification
         if (tokensParam) {
-          console.log('OAuth Callback - Tokens received, processing...');
           try {
-            const decodedTokens = decodeURIComponent(tokensParam);
-            console.log('Decoded tokens JSON:', decodedTokens);
-            const tokenData = JSON.parse(decodedTokens);
-            console.log('Token data parsed successfully:', !!tokenData.accessToken, !!tokenData.refreshToken);
+            // Stocker les tokens d'abord, traiter ensuite
+            const tokenData = JSON.parse(decodeURIComponent(tokensParam));
             
-            // Stocker les tokens dans localStorage
+            // Stocker les tokens
             localStorage.setItem('accessToken', tokenData.accessToken);
             localStorage.setItem('refreshToken', tokenData.refreshToken);
             if (tokenData.user) {
               localStorage.setItem('user', JSON.stringify(tokenData.user));
             }
             
-            // Mettre à jour le contexte d'authentification
+            // Mettre à jour l'authentification
             auth.login(tokenData.accessToken, tokenData.refreshToken);
             
-            // Rediriger immédiatement vers la page d'accueil en utilisant window.location.href
-            console.log('Redirecting to home page immediately with window.location');
+            // Rediriger immédiatement
+            console.log('Redirecting to home page');
             window.location.href = '/';
-            return;
-          } catch (error: any) {
-            console.error('Error parsing token data:', error);
-            setStatus('error');
-            setMessage('Erreur lors du traitement des données d\'authentification');
-            setDebug(`Parse error: ${error.message}, Token data: ${tokensParam.substring(0, 50)}...`);
-            return;
+          } catch (error) {
+            console.error('Error processing tokens:', error);
+            window.location.href = '/';
           }
+        } else {
+          // Pas de tokens, rediriger vers l'accueil quand même
+          window.location.href = '/';
         }
-
-        // Aucun token ni erreur
-        console.log('OAuth Callback - No tokens or error found');
-        setStatus('error');
-        setMessage('Aucune information d\'authentification n\'a été reçue');
-      } catch (error: any) {
-        console.error('Error processing OAuth callback:', error);
-        setStatus('error');
-        setMessage(`Une erreur est survenue lors du traitement de l'authentification: ${error.message}`);
+      } catch (error) {
+        console.error('Error:', error);
+        window.location.href = '/';
       }
     };
 
+    // Exécuter le traitement immédiatement
     processCallback();
-
-    // Redirection automatique après 3 secondes même si le processus n'est pas terminé
-    const redirectTimer = setTimeout(() => {
-      console.log('Timeout reached, forcing redirect to home page');
-      window.location.href = '/';
-    }, 3000);
-
+    
+    // Nettoyage
     return () => clearTimeout(redirectTimer);
-  }, [auth, router, searchParams]);
+  }, [auth, searchParams]);
 
-  // Fonction pour revenir à la page de connexion
-  const goToLogin = () => {
-    console.log('Redirecting to login page...');
-    router.push('/login');
-  };
-
+  // UI minimale pour accélérer le chargement
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-        bgcolor="#f5f5f5"
-        px={2}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            maxWidth: 500,
-            width: '100%',
-            p: 4,
-            borderRadius: 2,
-            textAlign: 'center'
-          }}
-        >
-          {status === 'loading' && (
-            <>
-              <CircularProgress sx={{ mb: 2, color: '#667eea' }} />
-              <Typography variant="h6">Traitement de l'authentification...</Typography>
-            </>
-          )}
-
-          {status === 'success' && (
-            <>
-              <Alert severity="success" sx={{ mb: 2 }}>Authentification réussie !</Alert>
-              <Typography variant="body1" sx={{ mb: 2 }}>{message}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Vous allez être redirigé vers la page d'accueil...
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={() => window.location.href = '/'}
-                sx={{
-                  mt: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  }
-                }}
-              >
-                Aller à l'accueil
-              </Button>
-            </>
-          )}
-
-          {status === 'error' && (
-            <>
-              <Alert severity="error" sx={{ mb: 2 }}>Erreur d'authentification</Alert>
-              <Typography variant="body1" sx={{ mb: 2 }}>{message}</Typography>
-              
-              {authMethod && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Veuillez vous connecter en utilisant la méthode: {authMethod}
-                </Typography>
-              )}
-              
-              {debug && (
-                <Typography variant="caption" display="block" sx={{ mb: 2, color: 'text.secondary', fontSize: '0.7rem' }}>
-                  Info de débogage: {debug}
-                </Typography>
-              )}
-              
-              <Button
-                variant="contained"
-                onClick={() => window.location.href = '/login'}
-                sx={{
-                  mt: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                  }
-                }}
-              >
-                Retour à la page de connexion
-              </Button>
-            </>
-          )}
-        </Paper>
-      </Box>
-    </Suspense>
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      height="100vh"
+      bgcolor="#f5f5f5"
+    >
+      <CircularProgress size={40} />
+    </Box>
   );
 };
 
