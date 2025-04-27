@@ -67,6 +67,13 @@ ChartJS.register(
   ScatterController
 );
 
+// Désactiver le comportement des légendes au clic
+// Nous utilisons une fonction plus sûre qui sera injectée dans les options de chaque graphique
+const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
+  e.stopPropagation();
+  return false; // Empêche l'action par défaut
+};
+
 // Types
 interface SurveyResponse {
   _id: string;
@@ -132,7 +139,8 @@ const commonChartOptions = {
         },
         boxWidth: 12,
         usePointStyle: true
-      }
+      },
+      onClick: preventLegendClickBehavior
     },
     title: {
       display: true,
@@ -160,7 +168,19 @@ const pieOptions = {
     ...commonChartOptions.plugins,
     legend: {
       ...commonChartOptions.plugins.legend,
-      position: 'right' as const
+      position: 'bottom' as const,
+      labels: {
+        ...commonChartOptions.plugins.legend.labels,
+        padding: 15,
+        boxWidth: 15,
+        usePointStyle: true,
+        pointStyle: 'circle',
+        font: {
+          size: 12
+        }
+      },
+      display: true,
+      onClick: preventLegendClickBehavior
     }
   },
   layout: {
@@ -168,7 +188,7 @@ const pieOptions = {
       left: 20,
       right: 20,
       top: 15,
-      bottom: 15
+      bottom: 40
     }
   },
   elements: {
@@ -177,7 +197,8 @@ const pieOptions = {
       borderColor: '#fff',
       borderAlign: 'center' as const
     }
-  }
+  },
+  maintainAspectRatio: false
 };
 
 // Colors for charts
@@ -250,6 +271,38 @@ const generateDistinctColors = (count: number): ColorItem[] => {
   return colors;
 };
 
+// Mettre à jour également le style CSS pour mieux gérer les légendes
+const styles = `
+  /* Styles CSS pour les légendes des graphiques avec barre de défilement */
+  .chart-container {
+    position: relative;
+  }
+  
+  /* Assurer que le graphique a une hauteur minimale */
+  .chart-container > div {
+    min-height: 450px;
+  }
+  
+  /* Styles pour les légendes des graphiques */
+  .chart-container .chartjs-legend-container {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 5px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+  }
+  
+  /* Ajuster les légendes de Chart.js */
+  .chartjs-render-monitor {
+    height: auto !important;
+  }
+  
+  /* Styles supplémentaires pour les légendes de grande taille */
+  .MuiDialog-paper .chartjs-render-monitor {
+    min-height: 500px;
+  }
+`;
+
 export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   survey,
   responses,
@@ -278,9 +331,40 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   }>({
     'gender': 'pie',
     'education': 'bar',
-    'city': 'bar',
-    'age': 'scatter'
+    'city': 'doughnut',
+    'age': 'line'
   });
+  
+  // Ajouter les styles CSS
+  useEffect(() => {
+    // Ajouter les styles CSS
+    const styleElement = document.createElement('style');
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+
+    // Sélectionner les conteneurs de légendes après le rendu des graphiques
+    const applyLegendStyles = () => {
+      const legends = document.querySelectorAll('.chartjs-legend');
+      legends.forEach(legend => {
+        if (!legend.parentElement?.classList.contains('chartjs-legend-container')) {
+          // Créer un conteneur avec défilement pour la légende
+          const container = document.createElement('div');
+          container.classList.add('chartjs-legend-container');
+          // Déplacer la légende dans le conteneur
+          legend.parentElement?.insertBefore(container, legend);
+          container.appendChild(legend);
+        }
+      });
+    };
+
+    // Appliquer les styles après le rendu des graphiques
+    setTimeout(applyLegendStyles, 500);
+
+    // Nettoyer les styles lors du démontage du composant
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
   
   // Effet pour recalculer les statistiques lorsque les réponses filtrées changent
   useEffect(() => {
@@ -381,7 +465,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         return <BarChartIcon />;
     }
   };
-
+  
   // Fonction pour ouvrir la boîte de dialogue avec le graphique spécifié
   const handleOpenDialog = (chartType: string, title: string) => {
     setCurrentChart(chartType);
@@ -439,14 +523,27 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       maintainAspectRatio: fullSize ? false : true,
       plugins: {
         legend: {
-          display: false
+          position: 'bottom' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: {
+              size: fullSize ? 14 : 12
+            },
+            boxWidth: 15
+          },
+          display: true,
+          onClick: preventLegendClickBehavior
         },
         tooltip: {
           callbacks: {
             label: (context: any) => {
-              const age = context.label || '';
+              const label = context.label || '';
               const value = context.raw || 0;
-              return `${value} participant${value > 1 ? 's' : ''} aged ${age}`;
+              const total = values.reduce((a, b) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${label}: ${value} (${percentage}%)`;
             }
           }
         }
@@ -458,103 +555,163 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       case 'scatter':
         // Préparation des données pour le scatter plot
         const scatterDatasets = labels.map((age, index) => ({
-          label: `${age} years`,
-          data: [{
-            x: parseInt(age),
-            y: truncatedAges[age]
-          }],
+      label: `${age} years`,
+      data: [{
+        x: parseInt(age),
+        y: truncatedAges[age]
+      }],
           backgroundColor: backgroundColors[index],
           borderColor: borderColors[index],
-          borderWidth: 2,
-          pointRadius: fullSize ? 10 : 8,
-          pointHoverRadius: fullSize ? 12 : 10,
+      borderWidth: 2,
+      pointRadius: fullSize ? 10 : 8,
+      pointHoverRadius: fullSize ? 12 : 10,
           hoverBackgroundColor: backgroundColors[index].replace('0.6', '0.8'),
           hoverBorderColor: borderColors[index],
-          hoverBorderWidth: 3,
-          fill: false
+      hoverBorderWidth: 3,
+      fill: false
+    }));
+
+    return (
+        <Scatter 
+            data={{ datasets: scatterDatasets }} 
+          options={{
+      responsive: true,
+            maintainAspectRatio: fullSize ? false : true,
+      plugins: {
+        legend: {
+          display: true,
+                  position: 'bottom' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: {
+                    size: fullSize ? 14 : 12
+                    },
+                    boxWidth: 15
+                  }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const age = context.parsed.x;
+              const count = context.parsed.y;
+                    return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+                  }
+                  }
+                }
+              },
+      scales: {
+        x: {
+          type: 'linear' as const,
+          position: 'bottom' as const,
+          title: {
+            display: true,
+            text: 'Age',
+            font: {
+                    size: fullSize ? 16 : 14,
+              weight: 'bold' as const
+            }
+          },
+                  min: 0,
+                  max: Math.max(...labels.map(l => parseInt(l))) + 5,
+          ticks: {
+                    stepSize: 5
+          },
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)'
+          }
+        },
+        y: {
+          type: 'linear' as const,
+          position: 'left' as const,
+          title: {
+            display: true,
+                    text: 'Participants',
+            font: {
+                    size: fullSize ? 16 : 14,
+              weight: 'bold' as const
+            }
+          },
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(102, 126, 234, 0.1)'
+          }
+        }
+              }
+            }}
+          />
+        );
+      case 'line':
+        // Préparer les données pour un graphique en ligne avec légendes individuelles par âge
+        const sortedAges = labels.sort((a, b) => parseInt(a) - parseInt(b));
+        const lineDatasets = sortedAges.map((age, index) => ({
+          label: `${age} ans`,
+          data: sortedAges.map(a => a === age ? truncatedAges[age] : null),
+          backgroundColor: backgroundColors[index % backgroundColors.length],
+          borderColor: borderColors[index % borderColors.length],
+          borderWidth: 2,
+          pointRadius: fullSize ? 6 : 4,
+          pointHoverRadius: fullSize ? 8 : 6,
+          fill: false,
+          tension: 0.1
         }));
 
+        // Ajouter un dataset supplémentaire pour la ligne de tendance
         return (
-          <Scatter 
-            data={{ datasets: scatterDatasets }} 
+          <Line
+            data={{
+              labels: sortedAges,
+              datasets: [
+                // Ligne principale qui relie tous les points
+                {
+                  label: 'Distribution by âge',
+                  data: sortedAges.map(age => truncatedAges[age]),
+                  backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                  borderColor: 'rgba(102, 126, 234, 1)',
+                  borderWidth: 3,
+                  pointRadius: 0, // Points invisibles sur la ligne principale
+                  pointHoverRadius: 0,
+                  fill: true,
+                  tension: 0.4,
+                  order: 1 // Dessiner en premier (en arrière-plan)
+                },
+                // Points individuels pour chaque âge avec légende
+                ...lineDatasets
+              ]
+            }}
             options={{
-              responsive: true,
-              maintainAspectRatio: fullSize ? false : true,
+              ...commonOptions,
               plugins: {
+                ...commonOptions.plugins,
                 legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
                   display: true,
-                  position: 'right' as const,
                   labels: {
-                    padding: 15,
+                    ...commonOptions.plugins.legend.labels,
+                    boxWidth: 10,
                     usePointStyle: true,
-                    pointStyle: 'circle',
-                    font: {
-                      size: fullSize ? 14 : 12
-                    }
+                    filter: (item) => item.text !== 'Distribution par âge' // Cacher la légende de la ligne principale
                   }
                 },
                 tooltip: {
                   callbacks: {
                     label: (context: any) => {
-                      const age = context.parsed.x;
-                      const count = context.parsed.y;
-                      return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+                      const age = context.dataset.label.replace(' ans', '');
+                      const value = truncatedAges[age] || 0;
+                      const total = values.reduce((a, b) => a + b, 0);
+                      const percentage = Math.round((value / total) * 100);
+                      return `${value} participant${value > 1 ? 's' : ''} de ${age} ans (${percentage}%)`;
                     }
                   }
                 }
               },
               scales: {
                 x: {
-                  type: 'linear' as const,
-                  position: 'bottom' as const,
                   title: {
                     display: true,
-                    text: 'Age',
-                    font: {
-                      size: fullSize ? 16 : 14,
-                      weight: 'bold' as const
-                    }
-                  },
-                  min: 0,
-                  max: Math.max(...labels.map(l => parseInt(l))) + 5,
-                  ticks: {
-                    stepSize: 5
-                  },
-                  grid: {
-                    color: 'rgba(102, 126, 234, 0.1)'
-                  }
-                },
-                y: {
-                  type: 'linear' as const,
-                  position: 'left' as const,
-                  title: {
-                    display: true,
-                    text: 'Participants',
-                    font: {
-                      size: fullSize ? 16 : 14,
-                      weight: 'bold' as const
-                    }
-                  },
-                  beginAtZero: true,
-                  grid: {
-                    color: 'rgba(102, 126, 234, 0.1)'
-                  }
-                }
-              }
-            }}
-          />
-        );
-      case 'line':
-        return (
-          <Line
-            data={commonData}
-            options={{
-              ...commonOptions,
-              scales: {
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Age',
+                    text: 'Years',
                     font: {
                       size: fullSize ? 16 : 14,
                       weight: 'bold' as const
@@ -583,30 +740,28 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                     precision: 0
                   }
                 }
-              },
-              elements: {
-                line: {
-                  tension: 0.3,
-                  borderWidth: 3,
-                  fill: true
-                },
-                point: {
-                  radius: 5,
-                  hoverRadius: 7,
-                  hitRadius: 30
-                }
               }
             }}
           />
         );
       case 'bar':
       default:
+        // Préparer les données pour le graphique en barres avec légendes individuelles
+        const barDatasets = labels.map((age, index) => ({
+          label: `${age} ans`,
+          data: labels.map(a => a === age ? truncatedAges[age] : null),
+          backgroundColor: backgroundColors[index],
+          borderColor: borderColors[index],
+          borderWidth: 1,
+          borderRadius: 6,
+          hoverBackgroundColor: backgroundColors[index].replace('0.6', '0.8')
+        }));
+
         return (
           <Bar
-            data={commonData}
+            data={{ datasets: barDatasets, labels: labels }}
             options={{
               ...commonOptions,
-              indexAxis: 'x' as const,
               scales: {
                 x: {
                   title: {
@@ -619,7 +774,8 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   },
                   grid: {
                     display: false
-                  }
+                  },
+                  stacked: true
                 },
                 y: {
                   beginAtZero: true,
@@ -637,11 +793,12 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   },
                   ticks: {
                     precision: 0
-                  }
+                  },
+                  stacked: true
                 }
-              }
-            }}
-          />
+            }
+          }} 
+        />
         );
     }
   };
@@ -674,27 +831,31 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Options communes pour les graphiques
     const commonOptions = {
       responsive: true,
-      maintainAspectRatio: fullSize ? false : true,
-      plugins: {
-        legend: {
-          position: 'right' as const,
-          labels: {
+            maintainAspectRatio: fullSize ? false : true,
+            plugins: {
+              legend: {
+          position: 'bottom' as const,
+                labels: {
             padding: 15,
             usePointStyle: true,
-            font: {
-              size: fullSize ? 14 : 12
-            }
-          }
-        },
-        tooltip: {
-          callbacks: {
+            pointStyle: 'circle',
+                  font: {
+                    size: fullSize ? 14 : 12
+                  },
+            boxWidth: 15
+          },
+          display: true,
+          onClick: preventLegendClickBehavior
+              },
+              tooltip: {
+                callbacks: {
             label: (context: any) => {
-              const label = context.label || '';
+                    const label = context.label || '';
               const value = context.raw || 0;
               const total = values.reduce((a, b) => a + b, 0);
               const percentage = Math.round((value / total) * 100);
-              return `${label}: ${value} (${percentage}%)`;
-            }
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
           }
         }
       }
@@ -713,6 +874,23 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+              plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                usePointStyle: true,
+                    boxWidth: 10
+                  }
+              }
+            },
+            layout: {
+              padding: {
+                  bottom: 20
+                }
               }
             }}
           />
@@ -729,42 +907,62 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+              plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                    usePointStyle: true,
+                    boxWidth: 10
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  bottom: 20
+                }
               }
             }}
           />
         );
       case 'bar':
       default:
+        // Créer un dataset unique avec tous les noms de villes individuellement sur l'axe Y
         return (
           <Bar
             data={{
-              labels,
+              labels: labels,
               datasets: [{
-                label: 'Villes',
+                label: 'Participants by city',
                 data: values,
                 backgroundColor: backgroundColors,
                 borderColor: borderColors,
                 borderWidth: 1,
-                hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
                 borderRadius: 6,
+                hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
                 maxBarThickness: 80
               }]
             }}
             options={{
-              responsive: true,
-              maintainAspectRatio: fullSize ? false : true,
+              ...commonOptions,
               indexAxis: 'y' as const,
               plugins: {
+                ...commonOptions.plugins,
                 legend: {
+                  ...commonOptions.plugins.legend,
                   display: false
                 },
                 tooltip: {
                   callbacks: {
                     label: (context: any) => {
+                      const city = context.label;
                       const value = context.raw || 0;
                       const total = values.reduce((a, b) => a + b, 0);
                       const percentage = Math.round((value / total) * 100);
-                      return `${value} participants (${percentage}%)`;
+                      return `${city}: ${value} participants (${percentage}%)`;
                     }
                   }
                 }
@@ -772,6 +970,14 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               scales: {
                 x: {
                   beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                    font: {
+                      size: fullSize ? 14 : 12,
+                      weight: 'bold' as const
+                    }
+                  },
                   ticks: {
                     precision: 0
                   },
@@ -783,11 +989,11 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 y: {
                   grid: {
                     display: false
-                  }
                 }
               }
-            }}
-          />
+            }
+          }} 
+        />
         );
     }
   };
@@ -897,27 +1103,31 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Options communes pour les graphiques
     const commonOptions = {
       responsive: true,
-      maintainAspectRatio: fullSize ? false : true,
-      plugins: {
-        legend: {
-          position: 'right' as const,
-          labels: {
+            maintainAspectRatio: fullSize ? false : true,
+            plugins: {
+              legend: {
+          position: 'bottom' as const,
+                labels: {
             padding: 15,
             usePointStyle: true,
-            font: {
-              size: fullSize ? 14 : 12
-            }
-          }
-        },
-        tooltip: {
-          callbacks: {
+            pointStyle: 'circle',
+                  font: {
+                    size: fullSize ? 14 : 12
+                  },
+            boxWidth: 15
+          },
+          display: true,
+          onClick: preventLegendClickBehavior
+              },
+              tooltip: {
+                callbacks: {
             label: (context: any) => {
-              const label = context.label || '';
+                    const label = context.label || '';
               const value = context.raw || 0;
               const total = values.reduce((a, b) => a + b, 0);
               const percentage = Math.round((value / total) * 100);
-              return `${label}: ${value} (${percentage}%)`;
-            }
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
           }
         }
       }
@@ -936,6 +1146,23 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+              plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                usePointStyle: true,
+                    boxWidth: 10
+                  }
+              }
+            },
+            layout: {
+              padding: {
+                  bottom: 20
+                }
               }
             }}
           />
@@ -947,11 +1174,28 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             options={{
               ...commonOptions,
               cutout: '50%',
-              animation: {
+                animation: {
                 animateRotate: true,
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+              plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                    usePointStyle: true,
+                    boxWidth: 10
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  bottom: 20
+                }
               }
             }}
           />
@@ -974,27 +1218,37 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               }]
             }}
             options={{
-              responsive: true,
-              maintainAspectRatio: fullSize ? false : true,
+              ...commonOptions,
               indexAxis: 'y' as const,
               plugins: {
+                ...commonOptions.plugins,
                 legend: {
-                  display: false
+                  ...commonOptions.plugins.legend,
+                display: false
                 },
                 tooltip: {
                   callbacks: {
                     label: (context: any) => {
+                      const gender = context.label;
                       const value = context.raw || 0;
                       const total = values.reduce((a, b) => a + b, 0);
                       const percentage = Math.round((value / total) * 100);
-                      return `${value} participants (${percentage}%)`;
+                      return `${gender}: ${value} participants (${percentage}%)`;
                     }
                   }
-                }
-              },
-              scales: {
+              }
+            },
+            scales: {
                 x: {
-                  beginAtZero: true,
+                beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                  font: {
+                      size: fullSize ? 14 : 12,
+                      weight: 'bold' as const
+                    }
+                  },
                   ticks: {
                     precision: 0
                   },
@@ -1004,13 +1258,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   }
                 },
                 y: {
-                  grid: {
-                    display: false
-                  }
+                grid: {
+                  display: false
                 }
               }
-            }}
-          />
+            }
+          }} 
+        />
         );
     }
   };
@@ -1046,14 +1300,18 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       maintainAspectRatio: fullSize ? false : true,
       plugins: {
         legend: {
-          position: 'right' as const,
+          position: 'bottom' as const,
           labels: {
             padding: 15,
             usePointStyle: true,
+            pointStyle: 'circle',
             font: {
               size: fullSize ? 14 : 12
-            }
-          }
+            },
+            boxWidth: 15
+          },
+          display: true,
+          onClick: preventLegendClickBehavior
         },
         tooltip: {
           callbacks: {
@@ -1072,16 +1330,33 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     // Rendu du graphique selon le type sélectionné
     switch (chartTypes.education) {
       case 'pie':
-        return (
+    return (
           <Pie
             data={commonData}
-            options={{
+          options={{
               ...commonOptions,
               animation: {
                 animateRotate: true,
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+            plugins: {
+                ...commonOptions.plugins,
+                legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                    usePointStyle: true,
+                    boxWidth: 10
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  bottom: 20
+                }
               }
             }}
           />
@@ -1098,6 +1373,23 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 animateScale: true,
                 duration: fullSize ? 800 : 500,
                 delay: (ctx) => ctx.dataIndex * 50
+              },
+              plugins: {
+                ...commonOptions.plugins,
+              legend: {
+                  ...commonOptions.plugins.legend,
+                  position: 'bottom',
+                  labels: {
+                    ...commonOptions.plugins.legend.labels,
+                    usePointStyle: true,
+                    boxWidth: 10
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  bottom: 20
+                }
               }
             }}
           />
@@ -1109,7 +1401,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             data={{
               labels,
               datasets: [{
-                label: 'Education Level',
+                label: 'Niveau d\'éducation',
                 data: values,
                 backgroundColor: backgroundColors,
                 borderColor: borderColors,
@@ -1120,27 +1412,37 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               }]
             }}
             options={{
-              responsive: true,
-              maintainAspectRatio: fullSize ? false : true,
+              ...commonOptions,
               indexAxis: 'y' as const,
               plugins: {
+                ...commonOptions.plugins,
                 legend: {
-                  display: false
+                  ...commonOptions.plugins.legend,
+                display: false
                 },
                 tooltip: {
                   callbacks: {
                     label: (context: any) => {
+                      const education = context.label;
                       const value = context.raw || 0;
                       const total = values.reduce((a, b) => a + b, 0);
                       const percentage = Math.round((value / total) * 100);
-                      return `${value} participants (${percentage}%)`;
+                      return `${education}: ${value} participants (${percentage}%)`;
                     }
                   }
-                }
-              },
-              scales: {
+              }
+            },
+            scales: {
                 x: {
-                  beginAtZero: true,
+                beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                  font: {
+                      size: fullSize ? 14 : 12,
+                      weight: 'bold' as const
+                    }
+                  },
                   ticks: {
                     precision: 0
                   },
@@ -1150,13 +1452,13 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                   }
                 },
                 y: {
-                  grid: {
-                    display: false
-                  }
+                grid: {
+                  display: false
                 }
               }
-            }}
-          />
+            }
+          }}
+        />
         );
     }
   };
@@ -1219,6 +1521,15 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
 
   // Fonction pour rendre le contenu du dialogue
   const renderDialogContent = () => {
+    // Obtenir le nombre d'éléments pour chaque catégorie
+    const genderCount = Object.keys(stats.gender).length;
+    const educationCount = Object.keys(stats.education).length;
+    const cityCount = Object.keys(stats.city).length;
+    const ageCount = Object.keys(stats.ageDistribution.reduce((acc, count, age) => {
+      if (count > 0) acc[age] = count;
+      return acc;
+    }, {} as {[key: number]: number})).length;
+
     switch (currentChart) {
       case 'gender':
         return (
@@ -1226,7 +1537,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             <Box sx={{ 
               width: '100%', 
               maxWidth: '800px', 
-              height: '400px', 
+              height: genderCount > 5 ? '600px' : '500px', 
               margin: '0 auto',
               mb: 4
             }}>
@@ -1274,7 +1585,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             <Box sx={{ 
               width: '100%', 
               maxWidth: '800px', 
-              height: '400px', 
+              height: educationCount > 5 ? '600px' : '500px', 
               margin: '0 auto',
               mb: 4
             }}>
@@ -1322,7 +1633,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             <Box sx={{ 
               width: '100%', 
               maxWidth: '800px', 
-              height: '400px', 
+              height: cityCount > 5 ? '600px' : '500px', 
               margin: '0 auto',
               mb: 4
             }}>
@@ -1370,7 +1681,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             <Box sx={{ 
               width: '100%', 
               maxWidth: '800px', 
-              height: '400px', 
+              height: ageCount > 5 ? '600px' : '500px', 
               margin: '0 auto',
               mb: 4
             }}>
@@ -1450,10 +1761,10 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               sx={{ 
                 p: 2, 
                 height: '100%', 
-                borderRadius: 2,
+              borderRadius: 2,
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': {
+              '&:hover': {
                   boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
                   transform: 'translateY(-2px)'
                 }
@@ -1462,8 +1773,8 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             >
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h3">
-                  Gender Distribution
-                </Typography>
+                Gender Distribution
+              </Typography>
                 <Tooltip title="Voir les détails">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
@@ -1486,10 +1797,10 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               sx={{ 
                 p: 2, 
                 height: '100%', 
-                borderRadius: 2,
+              borderRadius: 2,
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': {
+              '&:hover': {
                   boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
                   transform: 'translateY(-2px)'
                 }
@@ -1499,7 +1810,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h3">
                   Education Level
-                </Typography>
+              </Typography>
                 <Tooltip title="Voir les détails">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
@@ -1522,10 +1833,10 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               sx={{ 
                 p: 2, 
                 height: '100%', 
-                borderRadius: 2,
+              borderRadius: 2,
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': {
+              '&:hover': {
                   boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
                   transform: 'translateY(-2px)'
                 }
@@ -1534,8 +1845,8 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             >
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h3">
-                  Age Distribution
-                </Typography>
+                Age Distribution
+              </Typography>
                 <Tooltip title="Voir les détails">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
@@ -1558,10 +1869,10 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
               sx={{ 
                 p: 2, 
                 height: '100%', 
-                borderRadius: 2,
+              borderRadius: 2,
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': {
+              '&:hover': {
                   boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
                   transform: 'translateY(-2px)'
                 }
@@ -1570,9 +1881,9 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             >
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h3">
-                  City Distribution
-                </Typography>
-                <Tooltip title="Voir les détails">
+                City Distribution
+              </Typography>
+                  <Tooltip title="See details">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
                     handleOpenDialog('city', 'City Distribution');
@@ -1615,7 +1926,8 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           '& .MuiDialog-paper': {
             borderRadius: '12px',
             boxShadow: '0 24px 38px rgba(0,0,0,0.14), 0 9px 46px rgba(0,0,0,0.12)',
-            overflow: 'visible'
+            overflow: 'auto',
+            maxHeight: '90vh'
           }
         }}
       >
