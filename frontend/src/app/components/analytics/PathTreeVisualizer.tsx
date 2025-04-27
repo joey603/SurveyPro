@@ -346,8 +346,9 @@ const LinkComponent = ({
   // Link color and thickness
   const linkColor = data?.pathColor || 'rgba(102, 126, 234, 0.7)';
   
-  const strokeWidth = isInSelectedPath ? 3 : 2;
-  const opacity = isInSelectedPath ? 1 : 0.7;
+  // Même épaisseur pour tous les liens, qu'ils soient sélectionnés ou non
+  const strokeWidth = 2;
+  const opacity = 0.7;
   
   // Créer un chemin incurvé pour le lien
   const midX = (sourceX + targetX) / 2;
@@ -364,34 +365,42 @@ const LinkComponent = ({
     targetY
   });
 
+  // Créer un ID unique pour le marqueur de flèche
+  const markerId = `arrow-${id}`;
+
   return (
     <>
+      <defs>
+        <marker
+          id={markerId}
+          markerWidth={12}
+          markerHeight={12}
+          refX={9}
+          refY={6}
+          orient="auto"
+        >
+          <path
+            d="M0,0 L0,12 L9,6 z"
+            fill={linkColor}
+            style={{ opacity }}
+          />
+        </marker>
+      </defs>
+
       <BaseEdge
         id={id}
         path={edgePath}
-          style={{
+        style={{
           ...style,
           stroke: linkColor,
           strokeWidth: strokeWidth,
           opacity: opacity,
           transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          filter: isInSelectedPath ? `drop-shadow(0 0 3px ${linkColor})` : 'none'
+          markerEnd: `url(#${markerId})`
         }}
       />
       
-        {isInSelectedPath && (
-        <BaseEdge
-          id={`${id}-glow`}
-          path={edgePath}
-          style={{
-            stroke: linkColor,
-            strokeWidth: 1,
-            opacity: 0.3,
-            filter: `blur(4px) drop-shadow(0 0 5px ${linkColor})`,
-            transition: 'all 0.4s ease'
-          }}
-        />
-      )}
+      {/* Suppression de l'effet de lueur sur les liens sélectionnés */}
     </>
   );
 };
@@ -408,6 +417,17 @@ const styles = `
   
   .react-flow__node {
     transition: all 0.3s ease;
+  }
+
+  /* Styles pour améliorer la visibilité des flèches */
+  .react-flow__edge path {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .react-flow__edge marker path {
+    fill-opacity: 0.8;
+    stroke: none;
   }
 `;
 
@@ -471,68 +491,17 @@ const scrollStyles = `
   }
 `;
 
-// Ajoutez ce style CSS pour l'effet d'atténuation des liens
+// Simplifier les styles de liens pour éviter tout effet spécial sur sélection
 const linkStyles = `
-  .react-flow__edge.selected .react-flow__edge-path {
-    stroke-opacity: 1;
-    filter: drop-shadow(0 0 3px var(--path-color, rgba(102, 126, 234, 0.5)));
-  }
-  
-  .highlight-path {
-    mask: url(var(--path-mask)) !important;
-  }
-  
-  /* Effet de fondu lorsqu'un lien traverse un nœud qui n'est pas sa source ou sa cible */
-  .react-flow__edge:not(.selected) .react-flow__edge-path {
-    transition: stroke-opacity 0.3s ease, stroke-width 0.3s ease;
-  }
-  
-  /* Crée un effet d'atténuation lorsqu'un lien passe près d'un nœud */
-  .react-flow__node:hover ~ .react-flow__edge:not(.selected) .react-flow__edge-path {
-    stroke-opacity: 0.3;
+  /* Effet simple et uniforme pour tous les liens */
+  .react-flow__edge .react-flow__edge-path {
+    transition: stroke-width 0.2s ease;
   }
   
   /* Amélioration des fonds pour les composants ReactFlow */
   .react-flow__background {
     background-size: 20px 20px !important;
     background-image: radial-gradient(circle at 1px 1px, rgba(220, 230, 250, 0.5) 1px, transparent 0) !important;
-  }
-  
-  .react-flow__controls {
-    background-color: white !important;
-    border-radius: 8px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-    padding: 4px !important;
-  }
-  
-  .react-flow__controls-button {
-    border-radius: 6px !important;
-    border: none !important;
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    color: #667eea !important;
-    transition: all 0.2s ease !important;
-    width: 24px !important;
-    height: 24px !important;
-    margin: 3px !important;
-  }
-  
-  .react-flow__controls-button:hover {
-    background-color: rgba(102, 126, 234, 0.1) !important;
-    transform: scale(1.05) !important;
-  }
-  
-  .react-flow__controls-button svg {
-    fill: #667eea !important;
-    width: 14px !important;
-    height: 14px !important;
-  }
-  
-  /* Minimap personnalisée */
-  .react-flow__minimap {
-    border-radius: 8px !important;
-    overflow: hidden !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-    border: 1px solid rgba(102, 126, 234, 0.15) !important;
   }
 `;
 
