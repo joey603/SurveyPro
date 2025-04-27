@@ -3,33 +3,32 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 
-// Page la plus minimaliste possible pour accélérer le chargement
+// Page ultra-minimaliste pour redirection immédiate
 const OAuthCallbackPage = () => {
   const searchParams = useSearchParams();
   const auth = useAuth();
+  const [redirected, setRedirected] = useState(false);
   
   useEffect(() => {
-    // Redirection automatique ultra-rapide après seulement 500ms
-    const redirectTimer = setTimeout(() => {
-      console.log('Timeout reached, forcing redirect to home page');
-      window.location.href = '/';
-    }, 500);
+    // Fonction pour éviter les appels répétés
+    if (redirected) return;
     
-    const processCallback = async () => {
+    // Redirection forcée immédiate
+    const processTokensOnce = async () => {
       try {
-        console.log('OAuth Callback - Processing tokens');
+        setRedirected(true);
+        console.log('OAuth Callback - Traitement des tokens (une seule fois)');
         
         // Obtenir les tokens depuis l'URL
         const tokensParam = searchParams.get('tokens');
         
         if (tokensParam) {
           try {
-            // Stocker les tokens d'abord, traiter ensuite
+            // Stocker les tokens d'abord
             const tokenData = JSON.parse(decodeURIComponent(tokensParam));
             
-            // Stocker les tokens
             localStorage.setItem('accessToken', tokenData.accessToken);
             localStorage.setItem('refreshToken', tokenData.refreshToken);
             if (tokenData.user) {
@@ -38,32 +37,35 @@ const OAuthCallbackPage = () => {
             
             // Mettre à jour l'authentification
             auth.login(tokenData.accessToken, tokenData.refreshToken);
-            
-            // Rediriger immédiatement
-            console.log('Redirecting to home page');
-            window.location.href = '/';
           } catch (error) {
-            console.error('Error processing tokens:', error);
-            window.location.href = '/';
+            console.error('Erreur lors du traitement des tokens:', error);
           }
-        } else {
-          // Pas de tokens, rediriger vers l'accueil quand même
-          window.location.href = '/';
         }
+        
+        // Redirection immédiate dans tous les cas
+        console.log('Redirection forcée vers la page d\'accueil');
+        window.location.replace('/');
       } catch (error) {
-        console.error('Error:', error);
-        window.location.href = '/';
+        console.error('Erreur:', error);
+        window.location.replace('/');
       }
     };
 
-    // Exécuter le traitement immédiatement
-    processCallback();
+    // Exécuter immédiatement
+    processTokensOnce();
     
-    // Nettoyage
+    // Redirection de secours après 200ms
+    const redirectTimer = setTimeout(() => {
+      if (!redirected) {
+        console.log('Redirection de secours activée');
+        window.location.replace('/');
+      }
+    }, 200);
+    
     return () => clearTimeout(redirectTimer);
-  }, [auth, searchParams]);
+  }, [auth, searchParams, redirected]);
 
-  // UI minimale pour accélérer le chargement
+  // UI minimale
   return (
     <Box
       display="flex"
