@@ -49,6 +49,9 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import CloseIcon from '@mui/icons-material/Close';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import DonutLargeIcon from '@mui/icons-material/DonutLarge';
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 
 // Register necessary Chart.js components
 ChartJS.register(
@@ -269,6 +272,16 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
   const [currentChart, setCurrentChart] = useState<string>('');
   const [currentTitle, setCurrentTitle] = useState<string>('');
   
+  // Nouvel état pour stocker les types de graphiques par catégorie
+  const [chartTypes, setChartTypes] = useState<{ 
+    [key: string]: 'bar' | 'pie' | 'line' | 'doughnut' | 'scatter' 
+  }>({
+    'gender': 'pie',
+    'education': 'bar',
+    'city': 'bar',
+    'age': 'scatter'
+  });
+  
   // Effet pour recalculer les statistiques lorsque les réponses filtrées changent
   useEffect(() => {
     // Recalculer les statistiques ici
@@ -337,6 +350,38 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     };
   };
   
+  // Fonction pour obtenir les types de graphiques disponibles pour une catégorie
+  const getAvailableChartTypes = (category: string): ('bar' | 'pie' | 'line' | 'doughnut' | 'scatter')[] => {
+    switch (category) {
+      case 'age':
+        return ['scatter', 'bar', 'line'];
+      case 'gender':
+      case 'education':
+      case 'city':
+        return ['bar', 'pie', 'doughnut'];
+      default:
+        return ['bar', 'pie'];
+    }
+  };
+  
+  // Fonction pour obtenir l'icône correspondant au type de graphique
+  const getChartIcon = (type: 'bar' | 'pie' | 'line' | 'doughnut' | 'scatter') => {
+    switch (type) {
+      case 'bar':
+        return <BarChartIcon />;
+      case 'pie':
+        return <PieChartIcon />;
+      case 'line':
+        return <ShowChartIcon />;
+      case 'doughnut':
+        return <DonutLargeIcon />;
+      case 'scatter':
+        return <ScatterPlotIcon />;
+      default:
+        return <BarChartIcon />;
+    }
+  };
+
   // Fonction pour ouvrir la boîte de dialogue avec le graphique spécifié
   const handleOpenDialog = (chartType: string, title: string) => {
     setCurrentChart(chartType);
@@ -351,7 +396,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
 
   // Function to render the age chart
   const renderAgeChart = (fullSize: boolean = false) => {
-    // Create data for scatter chart
+    // Create data for age distribution
     const ageDistribution: { [key: string]: number } = {};
     
     // Filter ages that have at least one response
@@ -362,368 +407,389 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     });
     
     // Si ce n'est pas la vue complète et qu'il y a beaucoup d'âges, tronquer
-    let truncatedAges = ageDistribution;
-    let isTruncated = false;
-    let totalAges = Object.keys(ageDistribution).length;
+    const { data: truncatedAges, isTruncated, total } = 
+      truncateData(ageDistribution, fullSize ? 999 : MAX_DISPLAYED_ITEMS);
     
-    if (!fullSize && Object.keys(ageDistribution).length > MAX_DISPLAYED_ITEMS) {
-      const result = truncateData(ageDistribution);
-      truncatedAges = result.data;
-      isTruncated = result.isTruncated;
-    }
-
-    // Sort ages for consistent color assignment
-    const sortedAges = Object.keys(truncatedAges).sort((a, b) => parseInt(a) - parseInt(b));
+    const labels = Object.keys(truncatedAges);
+    const values = Object.values(truncatedAges);
     
-    // Générer des couleurs distinctes pour chaque âge
-    const colors = generateDistinctColors(sortedAges.length);
+    // Générer des couleurs distinctes
+    const colors = generateDistinctColors(labels.length);
+    const backgroundColors = colors.map(color => color.backgroundColor);
+    const borderColors = colors.map(color => color.borderColor);
     
-    const datasets = sortedAges.map((age, index) => ({
-      label: `${age} years`,
-      data: [{
-        x: parseInt(age),
-        y: truncatedAges[age]
-      }],
-      backgroundColor: colors[index].backgroundColor,
-      borderColor: colors[index].borderColor,
-      borderWidth: 2,
-      pointRadius: fullSize ? 10 : 8,
-      pointHoverRadius: fullSize ? 12 : 10,
-      hoverBackgroundColor: colors[index].backgroundColor.replace('0.6', '0.8'),
-      hoverBorderColor: colors[index].borderColor.replace('1)', '1.5)'),
-      hoverBorderWidth: 3,
-      fill: false
-    }));
-
-    const chartData = {
-      datasets
+    // Données communes pour tous les types de graphiques standard
+    const commonData = {
+      labels,
+      datasets: [{
+        label: 'Participants',
+        data: values,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
+        hoverBorderColor: borderColors.map(color => color.replace('1)', '1.3)')),
+        hoverBorderWidth: 3
+      }]
     };
-
-    return (
-      <Box sx={{ 
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)"
-      }}>
-        <Scatter 
-          data={chartData} 
-          options={{
+    
+    // Options communes pour les graphiques
+    const commonOptions = {
       responsive: true,
-            maintainAspectRatio: fullSize ? false : true,
-            animation: {
-              duration: fullSize ? 800 : 500,
-              easing: 'easeOutQuart' as const,
-              delay: (context) => {
-                let delay = 0;
-                if (context.type === 'data' && context.mode === 'default') {
-                  delay = context.dataIndex * 50 + context.datasetIndex * 100;
-                }
-                return delay;
-              }
-            },
+      maintainAspectRatio: fullSize ? false : true,
       plugins: {
         legend: {
-          display: true,
-          position: 'right' as const,
-          labels: {
-            padding: 15,
-            usePointStyle: true,
-            pointStyle: 'circle',
-            font: {
-                    size: fullSize ? 14 : 12
-                  }
-                },
-          onClick: () => {}
+          display: false
         },
         tooltip: {
           callbacks: {
             label: (context: any) => {
-              const age = context.parsed.x;
-              const count = context.parsed.y;
-                    return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+              const age = context.label || '';
+              const value = context.raw || 0;
+              return `${value} participant${value > 1 ? 's' : ''} aged ${age}`;
+            }
+          }
+        }
+      }
+    };
+    
+    // Rendu du graphique selon le type sélectionné
+    switch (chartTypes.age) {
+      case 'scatter':
+        // Préparation des données pour le scatter plot
+        const scatterDatasets = labels.map((age, index) => ({
+          label: `${age} years`,
+          data: [{
+            x: parseInt(age),
+            y: truncatedAges[age]
+          }],
+          backgroundColor: backgroundColors[index],
+          borderColor: borderColors[index],
+          borderWidth: 2,
+          pointRadius: fullSize ? 10 : 8,
+          pointHoverRadius: fullSize ? 12 : 10,
+          hoverBackgroundColor: backgroundColors[index].replace('0.6', '0.8'),
+          hoverBorderColor: borderColors[index],
+          hoverBorderWidth: 3,
+          fill: false
+        }));
+
+        return (
+          <Scatter 
+            data={{ datasets: scatterDatasets }} 
+            options={{
+              responsive: true,
+              maintainAspectRatio: fullSize ? false : true,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'right' as const,
+                  labels: {
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    font: {
+                      size: fullSize ? 14 : 12
+                    }
                   }
                 },
-                titleFont: {
-                  size: fullSize ? 16 : 14,
-                  weight: 'bold' as const
+                tooltip: {
+                  callbacks: {
+                    label: (context: any) => {
+                      const age = context.parsed.x;
+                      const count = context.parsed.y;
+                      return `${count} participant${count > 1 ? 's' : ''} aged ${age}`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  type: 'linear' as const,
+                  position: 'bottom' as const,
+                  title: {
+                    display: true,
+                    text: 'Age',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  min: 0,
+                  max: Math.max(...labels.map(l => parseInt(l))) + 5,
+                  ticks: {
+                    stepSize: 5
+                  },
+                  grid: {
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  }
                 },
-                bodyFont: {
-                  size: fullSize ? 14 : 12
-                },
-                padding: fullSize ? 12 : 8,
-                boxPadding: 5,
-                backgroundColor: 'rgba(50, 50, 50, 0.9)',
-                borderColor: 'rgba(102, 126, 234, 0.6)',
-                borderWidth: 1,
-                caretSize: 8,
-                cornerRadius: 6,
-        }
-      },
-      interaction: {
-        mode: 'nearest' as const,
-        intersect: false
-      },
-      onClick: () => {},
-      scales: {
-        x: {
-          type: 'linear' as const,
-          position: 'bottom' as const,
-          title: {
-            display: true,
-            text: 'Age',
-            font: {
-                    size: fullSize ? 16 : 14,
-              weight: 'bold' as const
-            }
-          },
-          min: 1,
-          max: 100,
-          ticks: {
-            stepSize: 5,
-            callback: function(tickValue: number | string): string | number {
-              return Math.floor(Number(tickValue));
-            }
-          },
-          grid: {
-            color: 'rgba(102, 126, 234, 0.1)'
-          }
-        },
-        y: {
-          type: 'linear' as const,
-          position: 'left' as const,
-          title: {
-            display: true,
-            text: 'Number of participants',
-            font: {
-                    size: fullSize ? 16 : 14,
-              weight: 'bold' as const
-            }
-          },
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1,
-            precision: 0
-          },
-          grid: {
-            color: 'rgba(102, 126, 234, 0.1)'
-          }
-        }
-            },
-            transitions: {
-              active: {
-                animation: {
-                  duration: 400,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              resize: {
-                animation: {
-                  duration: 500,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              show: {
-                animations: {
-                  x: { from: 0 },
-                  y: { from: 0 }
-                }
-              },
-              hide: {
-                animations: {
-                  x: { to: 0 },
-                  y: { to: 0 }
+                y: {
+                  type: 'linear' as const,
+                  position: 'left' as const,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  }
                 }
               }
-            },
-            layout: {
-              padding: {
-                top: fullSize ? 30 : 20,
-                bottom: fullSize ? 30 : 20,
-                left: fullSize ? 20 : 10,
-                right: fullSize ? 20 : 10
+            }}
+          />
+        );
+      case 'line':
+        return (
+          <Line
+            data={commonData}
+            options={{
+              ...commonOptions,
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Age',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  },
+                  ticks: {
+                    precision: 0
+                  }
+                }
               },
-              autoPadding: true
-            }
-          }} 
-        />
-        {isTruncated && !fullSize && (
-          <Box sx={{ 
-            position: 'absolute', 
-            bottom: 10, 
-            left: 0, 
-            width: '100%', 
-            textAlign: 'center',
-            pointerEvents: 'none'
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              {totalAges - Object.keys(truncatedAges).length} more ages hidden. Click to view all.
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
+              elements: {
+                line: {
+                  tension: 0.3,
+                  borderWidth: 3,
+                  fill: true
+                },
+                point: {
+                  radius: 5,
+                  hoverRadius: 7,
+                  hitRadius: 30
+                }
+              }
+            }}
+          />
+        );
+      case 'bar':
+      default:
+        return (
+          <Bar
+            data={commonData}
+            options={{
+              ...commonOptions,
+              indexAxis: 'x' as const,
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Age',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  grid: {
+                    display: false
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Participants',
+                    font: {
+                      size: fullSize ? 16 : 14,
+                      weight: 'bold' as const
+                    }
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  },
+                  ticks: {
+                    precision: 0
+                  }
+                }
+              }
+            }}
+          />
+        );
+    }
   };
   
-  // Fonction pour rendre le graphique des villes
+  // Function to render the city chart
   const renderCityChart = (fullSize: boolean = false) => {
-    // Appliquer la troncature si nécessaire
-    const { data: truncatedCities, isTruncated, total, allData } = truncateData(stats.city);
+    const { data: cityData, isTruncated, total } = truncateData(stats.city, fullSize ? 10 : 5);
+    const labels = Object.keys(cityData);
+    const values = Object.values(cityData);
     
-    // Générer des couleurs distinctes pour chaque ville
-    const colors = generateDistinctColors(Object.keys(fullSize ? stats.city : truncatedCities).length);
+    // Générer des couleurs distinctes
+    const colors = generateDistinctColors(labels.length);
+    const backgroundColors = colors.map(color => color.backgroundColor);
+    const borderColors = colors.map(color => color.borderColor);
     
-    const chartData = {
-      labels: Object.keys(fullSize ? stats.city : truncatedCities),
+    // Données communes pour tous les types de graphique
+    const commonData = {
+      labels,
       datasets: [{
-        data: Object.values(fullSize ? stats.city : truncatedCities),
-        backgroundColor: colors.map(c => c.backgroundColor),
-        borderColor: colors.map(c => c.borderColor),
-        borderWidth: fullSize ? 2 : 1,
-        hoverBackgroundColor: colors.map(c => c.backgroundColor.replace('0.6', '0.8')),
-        hoverBorderColor: colors.map(c => c.borderColor.replace('1)', '1.5)')),
+        data: values,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        hoverOffset: 8,
         hoverBorderWidth: 3,
-        hoverOffset: fullSize ? 15 : 10
+        hoverBorderColor: borderColors.map(color => color.replace('1)', '1.3)')),
       }]
     };
     
-    return (
-      <Box sx={{ 
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)"
-      }}>
-        <Doughnut 
-          data={chartData} 
-          options={{
-            ...pieOptions,
-            maintainAspectRatio: fullSize ? false : true,
-            animation: {
-              duration: fullSize ? 800 : 500,
-              easing: 'easeOutQuart' as const
-            },
-            plugins: {
-              ...pieOptions.plugins,
-              legend: {
-                ...pieOptions.plugins.legend,
-                position: 'right' as const,
-                align: 'center' as const,
-                labels: {
-                  font: {
-                    size: fullSize ? 14 : 12
-                  },
-                  padding: fullSize ? 25 : 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  boxWidth: fullSize ? 15 : 12,
-                  boxHeight: fullSize ? 15 : 12,
+    // Options communes pour les graphiques
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: fullSize ? false : true,
+      plugins: {
+        legend: {
+          position: 'right' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            font: {
+              size: fullSize ? 14 : 12
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.raw || 0;
+              const total = values.reduce((a, b) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    };
+    
+    // Rendu du graphique selon le type sélectionné
+    switch (chartTypes.city) {
+      case 'pie':
+        return (
+          <Pie
+            data={commonData}
+            options={{
+              ...commonOptions,
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
+              }
+            }}
+          />
+        );
+      case 'doughnut':
+        return (
+          <Doughnut
+            data={commonData}
+            options={{
+              ...commonOptions,
+              cutout: '50%',
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
+              }
+            }}
+          />
+        );
+      case 'bar':
+      default:
+        return (
+          <Bar
+            data={{
+              labels,
+              datasets: [{
+                label: 'Villes',
+                data: values,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
+                borderRadius: 6,
+                maxBarThickness: 80
+              }]
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: fullSize ? false : true,
+              indexAxis: 'y' as const,
+              plugins: {
+                legend: {
+                  display: false
                 },
-                onClick: () => {}
+                tooltip: {
+                  callbacks: {
+                    label: (context: any) => {
+                      const value = context.raw || 0;
+                      const total = values.reduce((a, b) => a + b, 0);
+                      const percentage = Math.round((value / total) * 100);
+                      return `${value} participants (${percentage}%)`;
+                    }
+                  }
+                }
               },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const label = context.label || '';
-                    const value = context.formattedValue;
-                    const percentage = (context.parsed / displayedResponses.length * 100).toFixed(1);
-                    return `${label}: ${value} (${percentage}%)`;
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
                   }
                 },
-                titleFont: {
-                  size: fullSize ? 16 : 14,
-                  weight: 'bold' as const
-                },
-                bodyFont: {
-                  size: fullSize ? 14 : 12
-                },
-                padding: fullSize ? 12 : 8,
-                boxPadding: 5,
-                usePointStyle: true,
-                backgroundColor: 'rgba(50, 50, 50, 0.9)',
-                borderColor: 'rgba(102, 126, 234, 0.6)',
-                borderWidth: 1,
-                caretSize: 8,
-                cornerRadius: 6,
-              }
-            },
-            layout: {
-              padding: {
-                top: fullSize ? 30 : 20,
-                bottom: fullSize ? 30 : 20,
-                left: fullSize ? 20 : 10,
-                right: fullSize ? 20 : 10
-              },
-              autoPadding: true
-            },
-            elements: {
-              arc: {
-                borderWidth: fullSize ? 2 : 1,
-                borderColor: '#fff',
-                hoverBorderWidth: 3,
-                hoverBorderColor: '#fff',
-                hoverOffset: fullSize ? 15 : 10,
-                borderAlign: 'center' as const,
-                borderRadius: 1
-              }
-            },
-            transitions: {
-              active: {
-                animation: {
-                  duration: 400,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              resize: {
-                animation: {
-                  duration: 500,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              show: {
-                animations: {
-                  x: { from: 0 },
-                  y: { from: 0 }
-                }
-              },
-              hide: {
-                animations: {
-                  x: { to: 0 },
-                  y: { to: 0 }
+                y: {
+                  grid: {
+                    display: false
+                  }
                 }
               }
-            }
-          }} 
-        />
-        {isTruncated && !fullSize && (
-          <Box sx={{ 
-            position: 'absolute', 
-            bottom: 10, 
-            left: 0, 
-            width: '100%', 
-            textAlign: 'center',
-            pointerEvents: 'none',
-            opacity: 0.8,
-            transition: 'opacity 0.3s ease',
-            '&:hover': {
-              opacity: 1
-            }
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedCities).length} more cities hidden. Click to view all.
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
+            }}
+          />
+        );
+    }
   };
   
   // Fonction pour rendre la liste complète des villes
@@ -803,262 +869,296 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     ? Math.floor(filteredResponses.length * 0.3) 
     : 0;
 
-  // Fonction pour rendre le graphique des genres avec troncature si nécessaire
+  // Function to render the gender chart
   const renderGenderChart = (fullSize: boolean = false) => {
-    // Appliquer la troncature si nécessaire
-    const { data: truncatedGenders, isTruncated, total, allData } = truncateData(stats.gender);
+    const { data: genderData, isTruncated, total } = truncateData(stats.gender, fullSize ? 10 : 5);
+    const labels = Object.keys(genderData);
+    const values = Object.values(genderData);
     
-    const chartData = {
-      labels: Object.keys(fullSize ? stats.gender : truncatedGenders),
+    // Générer des couleurs distinctes
+    const colors = generateDistinctColors(labels.length);
+    const backgroundColors = colors.map(color => color.backgroundColor);
+    const borderColors = colors.map(color => color.borderColor);
+    
+    // Données communes pour tous les types de graphique
+    const commonData = {
+      labels,
       datasets: [{
-        data: Object.values(fullSize ? stats.gender : truncatedGenders),
-        backgroundColor: chartColors.backgrounds,
-        borderColor: chartColors.borders,
-        borderWidth: fullSize ? 2 : 1,
-        hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
-        hoverBorderColor: chartColors.borders.map(color => color.replace('1)', '1.5)')),
-        hoverBorderWidth: 3,
-        hoverOffset: 10,
-      }]
-    };
-    
-    return (
-      <Box sx={{ 
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden'
-      }}>
-        <Pie 
-          data={chartData} 
-          options={{
-            ...pieOptions,
-            maintainAspectRatio: fullSize ? false : true,
-            animation: {
-              duration: fullSize ? 800 : 500,
-              easing: 'easeOutQuart' as const
-            },
-            plugins: {
-              ...pieOptions.plugins,
-              legend: {
-                ...pieOptions.plugins.legend,
-                position: 'right' as const,
-                align: 'center' as const,
-                labels: {
-                  font: {
-                    size: fullSize ? 14 : 12
-                  },
-                  padding: fullSize ? 25 : 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  boxWidth: fullSize ? 15 : 12,
-                  boxHeight: fullSize ? 15 : 12,
-                },
-                onClick: () => {}
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const label = context.label || '';
-                    const value = context.formattedValue;
-                    const percentage = (context.parsed / displayedResponses.length * 100).toFixed(1);
-                    return `${label}: ${value} (${percentage}%)`;
-                  }
-                },
-                titleFont: {
-                  size: fullSize ? 16 : 14,
-                  weight: 'bold' as const
-                },
-                bodyFont: {
-                  size: fullSize ? 14 : 12
-                },
-                padding: fullSize ? 12 : 8,
-                boxPadding: 5,
-                usePointStyle: true,
-                backgroundColor: 'rgba(50, 50, 50, 0.9)',
-                borderColor: 'rgba(102, 126, 234, 0.6)',
-                borderWidth: 1,
-                caretSize: 8,
-                cornerRadius: 6,
-              }
-            },
-            layout: {
-              padding: {
-                top: fullSize ? 30 : 20,
-                bottom: fullSize ? 30 : 20,
-                left: fullSize ? 20 : 10,
-                right: fullSize ? 20 : 10
-              },
-              autoPadding: true
-            },
-            elements: {
-              arc: {
-                borderWidth: fullSize ? 2 : 1,
-                borderColor: '#fff',
-                hoverBorderWidth: 3,
-                hoverBorderColor: '#fff',
-                hoverOffset: fullSize ? 15 : 10,
-                borderAlign: 'center' as const,
-                borderRadius: 1
-              }
-            },
-            transitions: {
-              active: {
-                animation: {
-                  duration: 400,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              resize: {
-                animation: {
-                  duration: 500,
-                  easing: 'easeOutQuart' as const
-                }
-              },
-              show: {
-                animations: {
-                  x: {
-                    from: 0
-                  },
-                  y: {
-                    from: 0
-                  }
-                }
-              },
-              hide: {
-                animations: {
-                  x: {
-                    to: 0
-                  },
-                  y: {
-                    to: 0
-                  }
-                }
-              }
-            }
-          }} 
-        />
-        {isTruncated && !fullSize && (
-          <Box sx={{ 
-            position: 'absolute', 
-            bottom: 10, 
-            left: 0, 
-            width: '100%', 
-            textAlign: 'center',
-            pointerEvents: 'none',
-            opacity: 0.8,
-            transition: 'opacity 0.3s ease',
-            '&:hover': {
-              opacity: 1
-            }
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedGenders).length} more genders hidden. Click to view all.
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
-  };
-  
-  // Fonction pour rendre le graphique des niveaux d'éducation avec troncature
-  const renderEducationChart = (fullSize: boolean = false) => {
-    // Appliquer la troncature si nécessaire
-    const { data: truncatedEducation, isTruncated, total, allData } = truncateData(stats.education);
-    
-    const chartData = {
-      labels: Object.keys(fullSize ? stats.education : truncatedEducation),
-      datasets: [{
-        data: Object.values(fullSize ? stats.education : truncatedEducation),
-        backgroundColor: chartColors.backgrounds,
-        borderColor: chartColors.borders,
+        data: values,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
         borderWidth: 1,
-        hoverBackgroundColor: chartColors.backgrounds.map(color => color.replace('0.6', '0.8')),
-        hoverBorderColor: chartColors.borders,
-        hoverBorderWidth: 2,
+        hoverOffset: 8,
+        hoverBorderWidth: 3,
+        hoverBorderColor: borderColors.map(color => color.replace('1)', '1.3)')),
       }]
     };
     
-    return (
-      <Box sx={{ 
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden'
-      }}>
-        <Bar
-          data={chartData}
-          options={{
-            ...commonChartOptions,
-            maintainAspectRatio: fullSize ? false : true,
-            plugins: {
-              ...commonChartOptions.plugins,
-              title: {
-                ...commonChartOptions.plugins.title,
-                display: false,
-              },
-              legend: {
-                display: false
+    // Options communes pour les graphiques
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: fullSize ? false : true,
+      plugins: {
+        legend: {
+          position: 'right' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            font: {
+              size: fullSize ? 14 : 12
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.raw || 0;
+              const total = values.reduce((a, b) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    };
+    
+    // Rendu du graphique selon le type sélectionné
+    switch (chartTypes.gender) {
+      case 'pie':
+        return (
+          <Pie
+            data={commonData}
+            options={{
+              ...commonOptions,
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
               }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  stepSize: 1,
-                  font: {
-                    size: fullSize ? 14 : 12
-                  }
-                },
-                grid: {
-                  color: 'rgba(102, 126, 234, 0.1)',
-                  display: true
-                },
-                title: {
-                  display: fullSize,
-                  text: 'Number of participants',
-                  font: {
-                    size: fullSize ? 16 : 14,
-                    weight: 'bold' as const
-                  }
-                }
-              },
-              x: {
-                grid: {
+            }}
+          />
+        );
+      case 'doughnut':
+        return (
+          <Doughnut
+            data={commonData}
+            options={{
+              ...commonOptions,
+              cutout: '50%',
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
+              }
+            }}
+          />
+        );
+      case 'bar':
+      default:
+        return (
+          <Bar
+            data={{
+              labels,
+              datasets: [{
+                label: 'Participants',
+                data: values,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
+                borderRadius: 6,
+                maxBarThickness: 80
+              }]
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: fullSize ? false : true,
+              indexAxis: 'y' as const,
+              plugins: {
+                legend: {
                   display: false
                 },
-                ticks: {
-                  font: {
-                    size: fullSize ? 14 : 12
+                tooltip: {
+                  callbacks: {
+                    label: (context: any) => {
+                      const value = context.raw || 0;
+                      const total = values.reduce((a, b) => a + b, 0);
+                      const percentage = Math.round((value / total) * 100);
+                      return `${value} participants (${percentage}%)`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  }
+                },
+                y: {
+                  grid: {
+                    display: false
                   }
                 }
               }
+            }}
+          />
+        );
+    }
+  };
+  
+  // Function to render the education chart
+  const renderEducationChart = (fullSize: boolean = false) => {
+    const { data: educationData, isTruncated, total } = truncateData(stats.education, fullSize ? 10 : 5);
+    const labels = Object.keys(educationData);
+    const values = Object.values(educationData);
+    
+    // Générer des couleurs distinctes
+    const colors = generateDistinctColors(labels.length);
+    const backgroundColors = colors.map(color => color.backgroundColor);
+    const borderColors = colors.map(color => color.borderColor);
+    
+    // Données communes pour tous les types de graphique
+    const commonData = {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        hoverOffset: 8,
+        hoverBorderWidth: 3,
+        hoverBorderColor: borderColors.map(color => color.replace('1)', '1.3)')),
+      }]
+    };
+    
+    // Options communes pour les graphiques
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: fullSize ? false : true,
+      plugins: {
+        legend: {
+          position: 'right' as const,
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            font: {
+              size: fullSize ? 14 : 12
             }
-          }}
-        />
-        {isTruncated && !fullSize && (
-          <Box sx={{ 
-            position: 'absolute', 
-            bottom: 10, 
-            left: 0, 
-            width: '100%', 
-            textAlign: 'center',
-            pointerEvents: 'none'
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              {total - Object.keys(truncatedEducation).length} more education levels hidden. Click to view all.
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.raw || 0;
+              const total = values.reduce((a, b) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    };
+    
+    // Rendu du graphique selon le type sélectionné
+    switch (chartTypes.education) {
+      case 'pie':
+        return (
+          <Pie
+            data={commonData}
+            options={{
+              ...commonOptions,
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
+              }
+            }}
+          />
+        );
+      case 'doughnut':
+        return (
+          <Doughnut
+            data={commonData}
+            options={{
+              ...commonOptions,
+              cutout: '50%',
+              animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: fullSize ? 800 : 500,
+                delay: (ctx) => ctx.dataIndex * 50
+              }
+            }}
+          />
+        );
+      case 'bar':
+      default:
+        return (
+          <Bar
+            data={{
+              labels,
+              datasets: [{
+                label: 'Education Level',
+                data: values,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                hoverBackgroundColor: backgroundColors.map(color => color.replace('0.6', '0.8')),
+                borderRadius: 6,
+                maxBarThickness: 80
+              }]
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: fullSize ? false : true,
+              indexAxis: 'y' as const,
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (context: any) => {
+                      const value = context.raw || 0;
+                      const total = values.reduce((a, b) => a + b, 0);
+                      const percentage = Math.round((value / total) * 100);
+                      return `${value} participants (${percentage}%)`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0
+                  },
+                  grid: {
+                    display: true,
+                    color: 'rgba(102, 126, 234, 0.1)'
+                  }
+                },
+                y: {
+                  grid: {
+                    display: false
+                  }
+                }
+              }
+            }}
+          />
+        );
+    }
   };
   
   // Fonction pour rendre la liste complète des genres
@@ -1117,72 +1217,200 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
     );
   };
 
-  // Fonction pour rendre le contenu de la boîte de dialogue selon le type de graphique
+  // Fonction pour rendre le contenu du dialogue
   const renderDialogContent = () => {
     switch (currentChart) {
-      case 'age':
-        return (
-          <>
-            <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
-              width: '100%', 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              overflow: 'hidden'
-            }}>
-              {renderAgeChart(true)}
-            </Box>
-            {renderFullAgeList()}
-          </>
-        );
-      case 'city':
-        return (
-          <>
-            <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
-              width: '100%', 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              overflow: 'hidden'
-            }}>
-              {renderCityChart(true)}
-            </Box>
-            {renderFullCityList()}
-          </>
-        );
       case 'gender':
         return (
-          <>
+          <Box sx={{ height: '100%', width: '100%', p: 2 }}>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
               width: '100%', 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              overflow: 'hidden'
+              maxWidth: '800px', 
+              height: '400px', 
+              margin: '0 auto',
+              mb: 4
             }}>
               {renderGenderChart(true)}
             </Box>
+            
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                my: 3,
+                justifyContent: 'center',
+                pt: 1
+              }}
+            >
+              {getAvailableChartTypes('gender').map((type) => (
+                <Button
+                  key={type}
+                  onClick={() => setChartTypes(prev => ({ ...prev, 'gender': type }))}
+                  variant={chartTypes['gender'] === type ? 'contained' : 'outlined'}
+                  startIcon={getChartIcon(type)}
+                  sx={{
+                    ...(chartTypes['gender'] === type ? {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                    } : {
+                      color: '#667eea',
+                      borderColor: 'rgba(102, 126, 234, 0.5)',
+                    })
+                  }}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Button>
+              ))}
+            </Stack>
+            
+            <Divider sx={{ my: 3 }} />
+            
             {renderFullGenderList()}
-          </>
+          </Box>
         );
       case 'education':
         return (
-          <>
+          <Box sx={{ height: '100%', width: '100%', p: 2 }}>
             <Box sx={{ 
-              height: "500px", transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)", 
               width: '100%', 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              overflow: 'hidden'
+              maxWidth: '800px', 
+              height: '400px', 
+              margin: '0 auto',
+              mb: 4
             }}>
               {renderEducationChart(true)}
             </Box>
+            
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                my: 3,
+                justifyContent: 'center',
+                pt: 1
+              }}
+            >
+              {getAvailableChartTypes('education').map((type) => (
+                <Button
+                  key={type}
+                  onClick={() => setChartTypes(prev => ({ ...prev, 'education': type }))}
+                  variant={chartTypes['education'] === type ? 'contained' : 'outlined'}
+                  startIcon={getChartIcon(type)}
+                  sx={{
+                    ...(chartTypes['education'] === type ? {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                    } : {
+                      color: '#667eea',
+                      borderColor: 'rgba(102, 126, 234, 0.5)',
+                    })
+                  }}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Button>
+              ))}
+            </Stack>
+            
+            <Divider sx={{ my: 3 }} />
+            
             {renderFullEducationList()}
-          </>
+          </Box>
+        );
+      case 'city':
+        return (
+          <Box sx={{ height: '100%', width: '100%', p: 2 }}>
+            <Box sx={{ 
+              width: '100%', 
+              maxWidth: '800px', 
+              height: '400px', 
+              margin: '0 auto',
+              mb: 4
+            }}>
+              {renderCityChart(true)}
+            </Box>
+            
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                my: 3,
+                justifyContent: 'center',
+                pt: 1
+              }}
+            >
+              {getAvailableChartTypes('city').map((type) => (
+                <Button
+                  key={type}
+                  onClick={() => setChartTypes(prev => ({ ...prev, 'city': type }))}
+                  variant={chartTypes['city'] === type ? 'contained' : 'outlined'}
+                  startIcon={getChartIcon(type)}
+                  sx={{
+                    ...(chartTypes['city'] === type ? {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                    } : {
+                      color: '#667eea',
+                      borderColor: 'rgba(102, 126, 234, 0.5)',
+                    })
+                  }}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Button>
+              ))}
+            </Stack>
+            
+            <Divider sx={{ my: 3 }} />
+            
+            {renderFullCityList()}
+          </Box>
+        );
+      case 'age':
+        return (
+          <Box sx={{ height: '100%', width: '100%', p: 2 }}>
+            <Box sx={{ 
+              width: '100%', 
+              maxWidth: '800px', 
+              height: '400px', 
+              margin: '0 auto',
+              mb: 4
+            }}>
+              {renderAgeChart(true)}
+            </Box>
+            
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                my: 3,
+                justifyContent: 'center',
+                pt: 1
+              }}
+            >
+              {getAvailableChartTypes('age').map((type) => (
+                <Button
+                  key={type}
+                  onClick={() => setChartTypes(prev => ({ ...prev, 'age': type }))}
+                  variant={chartTypes['age'] === type ? 'contained' : 'outlined'}
+                  startIcon={getChartIcon(type)}
+                  sx={{
+                    ...(chartTypes['age'] === type ? {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                    } : {
+                      color: '#667eea',
+                      borderColor: 'rgba(102, 126, 234, 0.5)',
+                    })
+                  }}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Button>
+              ))}
+            </Stack>
+            
+            <Divider sx={{ my: 3 }} />
+            
+            {renderFullAgeList()}
+          </Box>
         );
       default:
         return null;
@@ -1218,51 +1446,34 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           {/* Gender */}
           <Grid item xs={12} md={6}>
             <Paper 
-              elevation={0} 
-              onClick={() => handleOpenDialog('gender', 'Gender Distribution')}
+              elevation={3} 
               sx={{ 
-              p: 3, 
-              height: '400px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+                p: 2, 
+                height: '100%', 
+                borderRadius: 2,
                 cursor: 'pointer',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-              '&:hover': {
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                  borderColor: 'rgba(102, 126, 234, 0.5)'
-                },
-                '&:focus': {
-                  outline: 'none',
-                  boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.3)'
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  transform: 'translateY(-2px)'
                 }
               }}
+              onClick={() => handleOpenDialog('gender', 'Gender Distribution')}
             >
-              <Typography 
-                variant="subtitle1" 
-                gutterBottom 
-                align="center" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#2d3748',
-                  mb: 3
-                }}
-              >
-                Gender Distribution
-              </Typography>
-              <Box sx={{ 
-                height: 'calc(100% - 60px)',
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" component="h3">
+                  Gender Distribution
+                </Typography>
+                <Tooltip title="Voir les détails">
+                  <IconButton size="small" onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDialog('gender', 'Gender Distribution');
+                  }}>
+                    <FullscreenIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box sx={{ height: 220, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {renderGenderChart()}
               </Box>
             </Paper>
@@ -1271,51 +1482,34 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           {/* Education Level */}
           <Grid item xs={12} md={6}>
             <Paper 
-              elevation={0} 
-              onClick={() => handleOpenDialog('education', "Education Level Distribution")}
+              elevation={3} 
               sx={{ 
-              p: 3, 
-              height: '400px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+                p: 2, 
+                height: '100%', 
+                borderRadius: 2,
                 cursor: 'pointer',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-              '&:hover': {
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                  borderColor: 'rgba(102, 126, 234, 0.5)'
-                },
-                '&:focus': {
-                  outline: 'none',
-                  boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.3)'
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  transform: 'translateY(-2px)'
                 }
               }}
+              onClick={() => handleOpenDialog('education', 'Education Level')}
             >
-              <Typography 
-                variant="subtitle1" 
-                gutterBottom 
-                align="center" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#2d3748',
-                  mb: 3
-                }}
-              >
-                Education Level Distribution
-              </Typography>
-              <Box sx={{ 
-                height: 'calc(100% - 60px)',
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" component="h3">
+                  Education Level
+                </Typography>
+                <Tooltip title="Voir les détails">
+                  <IconButton size="small" onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDialog('education', 'Education Level');
+                  }}>
+                    <FullscreenIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box sx={{ height: 220, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {renderEducationChart()}
               </Box>
             </Paper>
@@ -1324,51 +1518,34 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           {/* Age Distribution */}
           <Grid item xs={12} md={6}>
             <Paper 
-              elevation={0} 
-              onClick={() => handleOpenDialog('age', 'Age Distribution')}
+              elevation={3} 
               sx={{ 
-              p: 3, 
-              height: '400px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+                p: 2, 
+                height: '100%', 
+                borderRadius: 2,
                 cursor: 'pointer',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-              '&:hover': {
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                  borderColor: 'rgba(102, 126, 234, 0.5)'
-                },
-                '&:focus': {
-                  outline: 'none',
-                  boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.3)'
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  transform: 'translateY(-2px)'
                 }
               }}
+              onClick={() => handleOpenDialog('age', 'Age Distribution')}
             >
-              <Typography 
-                variant="subtitle1" 
-                gutterBottom 
-                align="center" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#2d3748',
-                  mb: 3
-                }}
-              >
-                Age Distribution
-              </Typography>
-              <Box sx={{ 
-                height: 'calc(100% - 60px)',
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" component="h3">
+                  Age Distribution
+                </Typography>
+                <Tooltip title="Voir les détails">
+                  <IconButton size="small" onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDialog('age', 'Age Distribution');
+                  }}>
+                    <FullscreenIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box sx={{ height: 220, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {renderAgeChart()}
               </Box>
             </Paper>
@@ -1377,51 +1554,34 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
           {/* Cities */}
           <Grid item xs={12} md={6}>
             <Paper 
-              elevation={0} 
-              onClick={() => handleOpenDialog('city', 'City Distribution')}
+              elevation={3} 
               sx={{ 
-              p: 3, 
-              height: '400px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              borderRadius: 2,
-                transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+                p: 2, 
+                height: '100%', 
+                borderRadius: 2,
                 cursor: 'pointer',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-              '&:hover': {
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                  borderColor: 'rgba(102, 126, 234, 0.5)'
-                },
-                '&:focus': {
-                  outline: 'none',
-                  boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.3)'
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  boxShadow: '0 8px 16px rgba(102, 126, 234, 0.15)',
+                  transform: 'translateY(-2px)'
                 }
               }}
+              onClick={() => handleOpenDialog('city', 'City Distribution')}
             >
-              <Typography 
-                variant="subtitle1" 
-                gutterBottom 
-                align="center" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#2d3748',
-                  mb: 3
-                }}
-              >
-                City Distribution
-              </Typography>
-              <Box sx={{ 
-                height: 'calc(100% - 60px)',
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" component="h3">
+                  City Distribution
+                </Typography>
+                <Tooltip title="Voir les détails">
+                  <IconButton size="small" onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDialog('city', 'City Distribution');
+                  }}>
+                    <FullscreenIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box sx={{ height: 220, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {renderCityChart()}
               </Box>
             </Paper>
