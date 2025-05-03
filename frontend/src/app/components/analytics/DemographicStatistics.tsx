@@ -1762,7 +1762,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 <Typography variant="h6" component="h3">
                 Gender Distribution
               </Typography>
-                <Tooltip title="Voir les détails">
+                <Tooltip title="See details">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
                     handleOpenDialog('gender', 'Gender Distribution');
@@ -1798,7 +1798,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 <Typography variant="h6" component="h3">
                   Education Level
               </Typography>
-                <Tooltip title="Voir les détails">
+                <Tooltip title="See details">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
                     handleOpenDialog('education', 'Education Level');
@@ -1834,7 +1834,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                 <Typography variant="h6" component="h3">
                 Age Distribution
               </Typography>
-                <Tooltip title="Voir les détails">
+                <Tooltip title="See details">
                   <IconButton size="small" onClick={(e) => {
                     e.stopPropagation();
                     handleOpenDialog('age', 'Age Distribution');

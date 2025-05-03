@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -52,8 +52,9 @@ interface SurveyResponse {
 
 interface QuestionDetails {
   questionId: string;
-  question: Question;
-  answers: SurveyResponse[];
+  question: string;
+  answers: string[];
+  type: string;
 }
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
@@ -75,7 +76,9 @@ interface SurveyQuestionsProps {
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
   selectedPaths: PathSegment[][];
+  filteredPaths?: PathSegment[][];
   allPaths?: {name: string, path: PathSegment[], group: string}[];
+  isFiltered?: boolean;
 }
 
 export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
@@ -85,23 +88,77 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   getAvailableChartTypes,
   getChartIcon,
   selectedPaths,
+  filteredPaths = [],
   allPaths = []
 }) => {
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
 
+  const isQuestionInPath = (questionId: string): boolean => {
+    const pathsToUse = filteredPaths.length > 0 ? filteredPaths : selectedPaths;
+    return pathsToUse.some(path => 
+      path.some(segment => segment.questionId === questionId)
+    );
+  };
+
+  const getPathPosition = (questionId: string): number => {
+    const pathsToUse = filteredPaths.length > 0 ? filteredPaths : selectedPaths;
+    return pathsToUse.findIndex(path => 
+      path.some(segment => segment.questionId === questionId)
+    );
+  };
+
+  const getPathName = (questionId: string): string | null => {
+    const pathsToUse = filteredPaths.length > 0 ? filteredPaths : selectedPaths;
+    const path = pathsToUse.find(path => 
+      path.some(segment => segment.questionId === questionId)
+    );
+    
+    if (!path) return null;
+    
+    const matchingPath = allPaths.find(p => 
+      p.path.length === path.length && 
+      p.path.every((segment, i) => 
+        segment.questionId === path[i].questionId && 
+        segment.answer === path[i].answer
+      )
+    );
+    
+    return matchingPath?.name || null;
+  };
+
+  const getResponseCount = (questionId: string): number => {
+    const pathsToUse = filteredPaths.length > 0 ? filteredPaths : selectedPaths;
+    return responses.filter(response => 
+      pathsToUse.some(path => 
+        path.some(segment => 
+          segment.questionId === questionId && 
+          response.answers.some(answer => 
+            answer.questionId === segment.questionId && 
+            answer.answer === segment.answer
+          )
+        )
+      )
+    ).length;
+  };
+
   const handleQuestionClick = (questionId: string) => {
     const question = survey.questions.find(q => q.id === questionId);
     if (!question) return;
 
-    const questionAnswers = responses.filter(response => 
-      response.answers.some(answer => answer.questionId === questionId)
-    );
+    const questionAnswers = responses
+      .filter(response => response.answers.some(answer => answer.questionId === questionId))
+      .map(response => {
+        const answer = response.answers.find(a => a.questionId === questionId);
+        return answer ? answer.answer : '';
+      })
+      .filter(answer => answer !== '');
 
     setSelectedQuestion({
       questionId,
-      question,
-      answers: questionAnswers
+      question: question.text,
+      answers: questionAnswers,
+      type: question.type
     });
   };
 
@@ -133,60 +190,59 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     }
   };
 
-  const getResponseCount = (questionId: string): number => {
-    return responses.filter(response => 
-      response.answers.some(answer => answer.questionId === questionId)
-    ).length;
-  };
+  const renderQuestionCard = (question: Question) => {
+    const responseCount = getResponseCount(question.id);
+    const isInPath = isQuestionInPath(question.id);
+    const pathName = getPathName(question.id);
+    const pathPosition = getPathPosition(question.id);
 
-  // Fonction pour vérifier si une question fait partie d'un parcours
-  const isQuestionInPath = (questionId: string): boolean => {
-    if (!selectedPaths || selectedPaths.length === 0) return false;
-    
-    // Vérifier si la question apparaît dans l'un des parcours sélectionnés
-    return selectedPaths.some(path => 
-      path.some(segment => segment.questionId === questionId)
+    return (
+      <Paper
+        key={question.id}
+        elevation={1}
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              {question.text}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {responseCount} responses
+            </Typography>
+          </Box>
+          {isInPath && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Chip 
+                size="small"
+                label={`Step ${pathPosition + 1}`}
+                sx={{ 
+                  bgcolor: '#667eea',
+                  color: 'white'
+                }}
+              />
+              {pathName && (
+                <Chip 
+                  size="small"
+                  label={pathName}
+                  sx={{ 
+                    bgcolor: '#764ba2',
+                    color: 'white'
+                  }}
+                />
+              )}
+            </Box>
+          )}
+        </Box>
+        {/* ... reste du code de rendu ... */}
+      </Paper>
     );
-  };
-
-  // Fonction pour obtenir la position de la question dans le parcours
-  const getPathPosition = (questionId: string): number => {
-    if (!selectedPaths || selectedPaths.length === 0) return -1;
-    
-    // Chercher dans tous les parcours
-    for (const path of selectedPaths) {
-      for (let i = 0; i < path.length; i++) {
-        if (path[i].questionId === questionId) {
-          return i + 1; // Position de base 1
-        }
-      }
-    }
-    return -1;
-  };
-
-  // Fonction pour obtenir le nom du parcours contenant cette question
-  const getPathName = (questionId: string): string | null => {
-    if (!selectedPaths || selectedPaths.length === 0 || !allPaths || allPaths.length === 0) 
-      return null;
-    
-    // Trouver l'index du parcours sélectionné qui contient cette question
-    const selectedPathIndex = selectedPaths.findIndex(path => 
-      path.some(segment => segment.questionId === questionId)
-    );
-    
-    if (selectedPathIndex === -1) return null;
-    
-    // Trouver le parcours correspondant dans allPaths
-    const selectedPath = selectedPaths[selectedPathIndex];
-    const matchingPath = allPaths.find(p => 
-      p.path.length === selectedPath.length && 
-      p.path.every((segment, i) => 
-        segment.questionId === selectedPath[i].questionId && 
-        segment.answer === selectedPath[i].answer
-      )
-    );
-    
-    return matchingPath ? matchingPath.name : `Path ${String.fromCharCode(65 + selectedPathIndex)}`;
   };
 
   return (
@@ -211,7 +267,6 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                   '&:hover': {
                     backgroundColor: 'rgba(102, 126, 234, 0.04)',
                   },
-                  // Ajouter un arrière-plan spécial si la question fait partie d'un parcours
                   ...(isQuestionInPath(question.id) ? {
                     backgroundColor: 'rgba(102, 126, 234, 0.08)',
                     borderLeft: '4px solid #667eea'
@@ -256,12 +311,11 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                           }}
                         />
                         
-                        {/* Ajouter le badge de parcours si la question est dans un parcours */}
                         {isQuestionInPath(question.id) && (
                           <>
                             <Chip 
                               size="small"
-                              label={`Step ${getPathPosition(question.id)}`}
+                              label={`Step ${getPathPosition(question.id) + 1}`}
                               sx={{ 
                                 bgcolor: '#667eea',
                                 color: 'white',

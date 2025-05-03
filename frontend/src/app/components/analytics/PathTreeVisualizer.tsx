@@ -138,20 +138,26 @@ const QuestionNode = ({ data }: NodeProps) => {
   const isFilteredTree = nodeIsFilteredTree === true;
   
   return (
-      <div
-        style={{
+    <div
+      style={{
         padding: '10px',
         borderRadius: '8px',
         background: isInSelectedPath 
           ? `linear-gradient(135deg, ${highlightColor}20, ${highlightColor}10)` 
           : 'white',
         border: `2px solid ${isInSelectedPath ? highlightColor : 'rgba(102, 126, 234, 0.2)'}`,
-          boxShadow: isInSelectedPath 
+        boxShadow: isInSelectedPath 
           ? `0 4px 12px ${highlightColor}30` 
           : '0 2px 8px rgba(0, 0, 0, 0.1)',
         minWidth: '200px',
         maxWidth: '300px',
-        position: 'relative'
+        position: 'relative',
+        zIndex: 2,
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+        backgroundColor: isInSelectedPath 
+          ? `rgba(255, 255, 255, 0.95)` 
+          : 'rgba(255, 255, 255, 0.95)'
       }}
     >
       <Handle type="target" position={Position.Top} />
@@ -195,67 +201,76 @@ const LinkComponent = ({
     targetPosition: Position.Top,
   });
 
+  // Créer un masque pour cacher les parties des liens qui passent derrière les nœuds
+  const maskId = `mask-${id}`;
+  
   return (
-          <path
+    <React.Fragment>
+      <defs>
+        <mask id={maskId}>
+          <rect x="0" y="0" width="100%" height="100%" fill="white" />
+          {/* Masquer la zone du nœud source */}
+          {sourceNode?.position && (
+            <rect
+              x={sourceNode.position.x - 120}
+              y={sourceNode.position.y - 80}
+              width={240}
+              height={160}
+              fill="black"
+            />
+          )}
+          {/* Masquer la zone du nœud cible */}
+          {targetNode?.position && (
+            <rect
+              x={targetNode.position.x - 120}
+              y={targetNode.position.y - 80}
+              width={240}
+              height={160}
+              fill="black"
+            />
+          )}
+        </mask>
+      </defs>
+      <path
         id={id}
-      d={edgePath}
-      stroke={isSelected ? highlightColor : '#667eea'}
-      strokeWidth={isSelected ? 3 : 2}
-      strokeOpacity={isSelected ? 0.8 : 0.5}
-      fill="none"
-      markerEnd="url(#arrowhead)"
+        d={edgePath}
+        stroke={isSelected ? highlightColor : '#667eea'}
+        strokeWidth={isSelected ? 3 : 2}
+        strokeOpacity={isSelected ? 0.8 : 0.5}
+        fill="none"
+        markerEnd="url(#arrowhead)"
+        mask={`url(#${maskId})`}
         style={{
-        transition: 'all 0.3s ease',
-        filter: isSelected ? `drop-shadow(0 0 8px ${highlightColor}40)` : 'none'
-      }}
-    />
+          transition: 'all 0.3s ease',
+          filter: isSelected ? `drop-shadow(0 0 8px ${highlightColor}40)` : 'none'
+        }}
+      />
+    </React.Fragment>
   );
 };
 
 // Ajouter ceci au début du composant ou dans un fichier CSS séparé
 const styles = `
-  .filtering-transition .react-flow__node {
-    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-  }
-  
-  .filtering-transition .react-flow__edge {
-    transition: opacity 0.6s ease, stroke 0.6s ease !important;
-  }
-  
   .react-flow__node {
-    transition: all 0.3s ease;
     z-index: 2;
+    transition: all 0.3s ease;
   }
 
   .react-flow__edge {
     z-index: 1;
   }
 
-  /* Styles pour améliorer la visibilité des flèches */
-  .react-flow__edge path {
+  .react-flow__edge-path {
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
-  .react-flow__edge marker path {
-    fill-opacity: 0.8;
-    stroke: none;
-  }
-
-  /* Définition du marqueur de flèche global */
-  .react-flow__edge-defs {
-    position: absolute;
-    width: 0;
-    height: 0;
-  }
-
-  .react-flow__edge-defs marker {
-    overflow: visible;
-  }
-
-  /* Style spécifique pour les flèches */
   .react-flow__edge .react-flow__edge-path {
-    marker-end: url(#arrowhead);
+    transition: stroke-width 0.2s ease;
+  }
+
+  .react-flow__node.selected {
+    z-index: 3;
   }
 `;
 
