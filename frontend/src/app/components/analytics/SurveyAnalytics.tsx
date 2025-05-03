@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -476,6 +476,35 @@ const HIGHLIGHT_COLORS = [
   '#FF1493', // Rose profond
   '#4682B4', // Bleu acier
   '#00CED1', // Turquoise moyen
+  '#FF69B4', // Rose chaud
+  '#4169E1', // Bleu royal
+  '#2E8B57', // Vert mer
+  '#DAA520', // Or
+  '#4B0082', // Indigo
+  '#FF4500', // Orange rouge
+  '#008080', // Teal
+  '#800080', // Pourpre
+  '#FFD700', // Or
+  '#00FF00', // Vert lime
+  '#FF00FF', // Magenta
+  '#00FFFF', // Cyan
+  '#FFA500', // Orange
+  '#800000', // Marron
+  '#000080', // Bleu marine
+  '#008000', // Vert
+  '#808000', // Olive
+  '#800080', // Violet
+  '#008080', // Teal
+  '#0000FF', // Bleu
+  '#00FF00', // Vert lime
+  '#FFFF00', // Jaune
+  '#00FFFF', // Cyan
+  '#FF00FF', // Magenta
+  '#FF0000', // Rouge
+  '#000000', // Noir
+  '#808080', // Gris
+  '#C0C0C0', // Argent
+  '#FFFFFF', // Blanc
 ];
 
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
@@ -518,6 +547,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   });
   const [isPathFiltered, setIsPathFiltered] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<Filters | undefined>(undefined);
+  const pathNamesRef = useRef<{[key: string]: string}>({});
+  const pathColorsRef = useRef<{[key: string]: string}>({});
 
   // Ajouter en début de composant
   console.log("RENDU DU COMPOSANT - État initial:", {
@@ -595,6 +626,26 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       setActiveTab(1); // Utiliser l'index 1 pour les sondages dynamiques (Answer Filters)
     }
   }, [survey]);
+
+  // Mettre à jour les noms et couleurs des chemins quand selectedPaths change
+  useEffect(() => {
+    selectedPaths.forEach((path, index) => {
+      const pathKey = path.map(segment => `${segment.questionId}-${segment.answer}`).join('|');
+      if (!pathNamesRef.current[pathKey]) {
+        const pathName = allPaths.find(p => 
+          p.path.length === path.length && 
+          p.path.every((segment, i) => 
+            segment.questionId === path[i].questionId && 
+            segment.answer === path[i].answer
+          )
+        )?.name || `Path ${String.fromCharCode(65 + index)}`;
+        pathNamesRef.current[pathKey] = pathName;
+      }
+      if (!pathColorsRef.current[pathKey]) {
+        pathColorsRef.current[pathKey] = HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length];
+      }
+    });
+  }, [selectedPaths, allPaths]);
 
   const analyzeResponses = useCallback((questionId: string) => {
     const answerCounts: { [key: string]: number } = {};
@@ -1641,6 +1692,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                     selectedPaths={selectedPaths}
                     onFilterChange={handlePathFilterChange}
                     onPathsLoad={handlePathsLoad}
+                    pathColors={pathColorsRef.current}
                   />
                 </Box>
               </Grid>
@@ -1692,31 +1744,37 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                           Question type: {question.type}
                         </Typography>
                         
-                        {/* Nouveaux badges pour les parcours associés - Affichés quand associatedPaths a des éléments */}
-                        {associatedPaths.length > 0 && (
+                        {/* Badges pour les chemins sélectionnés */}
+                        {selectedPaths.length > 0 && (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {associatedPaths.map((path, pathIndex) => {
-                              // Trouver le nom du parcours
-                              const pathName = allPaths.find(p => 
-                                p.path.length === path.length && 
-                                p.path.every((segment, i) => 
-                                  segment.questionId === path[i].questionId && 
-                                  segment.answer === path[i].answer
-                                )
-                              )?.name || `Path ${String.fromCharCode(65 + pathIndex)}`;
+                            {selectedPaths.map((path, pathIndex) => {
+                              const isInPath = path.some(segment => segment.questionId === question.id);
+                              if (!isInPath) return null;
+
+                              const pathKey = path.map(segment => `${segment.questionId}-${segment.answer}`).join('|');
+                              const pathName = pathNamesRef.current[pathKey] || `Path ${String.fromCharCode(65 + pathIndex)}`;
+                              const pathColor = pathColorsRef.current[pathKey] || HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
                               
-                              // Couleur du parcours
-                              const pathColor = HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                              const isInFilteredPaths = filteredResponsesByPath.length > 0 
+                                ? filteredResponsesByPath.some(response => 
+                                    response.answers.some(answer => 
+                                      path.some(segment => 
+                                        segment.questionId === answer.questionId && 
+                                        segment.answer === answer.answer
+                                      )
+                                    )
+                                  )
+                                : true;
                               
                               return (
                                 <Chip
-                                  key={pathIndex}
+                                  key={pathKey}
                                   label={pathName}
                                   size="small"
                                   sx={{
-                                    backgroundColor: `${pathColor}20`,
-                                    color: pathColor,
-                                    border: `1px solid ${pathColor}`,
+                                    backgroundColor: isInFilteredPaths ? `${pathColor}20` : 'rgba(0, 0, 0, 0.1)',
+                                    color: isInFilteredPaths ? pathColor : 'rgba(0, 0, 0, 0.3)',
+                                    border: `1px solid ${isInFilteredPaths ? pathColor : 'rgba(0, 0, 0, 0.1)'}`,
                                     '& .MuiChip-label': {
                                       fontWeight: 'medium'
                                     }
