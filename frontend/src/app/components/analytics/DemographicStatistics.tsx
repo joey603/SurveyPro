@@ -663,19 +663,6 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
             data={{
               labels: sortedAges,
               datasets: [
-                // Ligne principale qui relie tous les points
-                {
-                  label: 'Distribution by âge',
-                  data: sortedAges.map(age => truncatedAges[age]),
-                  backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                  borderColor: 'rgba(102, 126, 234, 1)',
-                  borderWidth: 3,
-                  pointRadius: 0, // Points invisibles sur la ligne principale
-                  pointHoverRadius: 0,
-                  fill: true,
-                  tension: 0.4,
-                  order: 1 // Dessiner en premier (en arrière-plan)
-                },
                 // Points individuels pour chaque âge avec légende
                 ...lineDatasets
               ]
