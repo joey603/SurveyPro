@@ -841,7 +841,9 @@ const getRedirectUrl = (req) => {
   });
   
   // Ajouter les URL par défaut en dernier recours - priorité aux URL récentes de surveyflow
-  candidateUrls.push('https://surveyflow-iota.vercel.app'); // Priorité à l'URL principale actuelle
+  candidateUrls.push('https://www.surveyflow.co'); // Nouveau domaine principal
+  candidateUrls.push('https://surveyflow.co'); // Version sans www
+  candidateUrls.push('https://surveyflow-iota.vercel.app'); // Ancien domaine principal
   candidateUrls.push('https://surveyflow-git-main-joeys-projects-2b62a68a.vercel.app');
   candidateUrls.push('https://surveyflow-h48jq3s6z-joeys-projects-2b62a68a.vercel.app');
   candidateUrls.push('https://surveyflow.vercel.app');
@@ -869,7 +871,9 @@ const getRedirectUrl = (req) => {
           parsedUrl.host.includes('surveyflow.io') ||
           parsedUrl.host === 'surveyflow-iota.vercel.app' ||
           parsedUrl.host === 'surveyflow.vercel.app' ||
-          parsedUrl.host === 'surveypro-frontend.vercel.app') {
+          parsedUrl.host === 'surveypro-frontend.vercel.app' ||
+          parsedUrl.host === 'www.surveyflow.co' ||
+          parsedUrl.host === 'surveyflow.co') {
         return true;
       }
       
