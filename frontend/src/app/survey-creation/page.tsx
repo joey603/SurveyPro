@@ -463,19 +463,8 @@ const SurveyCreationPage = () => {
           return newState;
         });
 
-        setNotification({
-          message: 'Media deleted successfully',
-          severity: 'success',
-          open: true
-        });
-
       } catch (error) {
         console.error('Error deleting media:', error);
-        setNotification({
-          message: error instanceof Error ? error.message : 'Error deleting media file',
-          severity: 'error',
-          open: true
-        });
       }
     }
     
@@ -608,12 +597,6 @@ const SurveyCreationPage = () => {
             mediaUrl: mediaUrl // Synchroniser les deux champs
           });
         }
-      });
-
-      setNotification({
-        message: 'Media uploaded successfully',
-        severity: 'success',
-        open: true
       });
 
     } catch (error) {
