@@ -72,45 +72,39 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => {
-      // Filter out non-standard properties (like _editingState) to avoid recursive updates
       const filteredData = { ...newData };
-      // Remove custom props that shouldn't be stored in the node data
       if ('_editingState' in filteredData) {
         delete filteredData._editingState;
       }
       
-      // Apply the changes to the node with nodeId
       const updatedNodes = prevNodes.map(node => 
         node.id === nodeId 
           ? { ...node, data: { ...node.data, ...filteredData } }
           : node
       );
 
-      // If the isEditing state changed, adjust positions
       const editedNode = updatedNodes.find(n => n.id === nodeId);
       if (editedNode && '_editingState' in newData) {
         const isEditing = newData._editingState;
-        const EDITING_HEIGHT_INCREASE = 400; // Vertical space to add when editing
+        const EDITING_HEIGHT_INCREASE = 400;
+        const BASE_SPACING = 150;
         
-        // Function to check if a node is below another node
         const isNodeBelow = (node1: Node, node2: Node) => {
           return node1.position.y > node2.position.y;
         };
         
-        // Function to check if a node is a child of the edited node
         const isChildOfEditedNode = (node: Node) => {
-          return node.id.startsWith(`${editedNode.id}_`);
+          return edges.some(edge => edge.source === editedNode.id && edge.target === node.id);
         };
         
-        // Stocker les positions originales des nœuds enfants lors de l'ouverture de l'édition
-        // et les restaurer lors de la fermeture
-        if (isEditing && editedNode.data.isCritical) {
-          // Stocker les positions actuelles des nœuds enfants dans un attribut temporaire
+        if (isEditing) {
           return updatedNodes.map(node => {
-            const isChild = isChildOfEditedNode(node);
+            if (node.id === nodeId) return node;
             
-            if (isChild) {
-              // Ajouter un attribut pour stocker la position originale
+            const isChild = isChildOfEditedNode(node);
+            const isBelow = isNodeBelow(node, editedNode);
+            
+            if (isBelow) {
               return {
                 ...node,
                 data: {
@@ -122,60 +116,38 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   y: node.position.y + EDITING_HEIGHT_INCREASE
                 }
               };
-            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
-              // Déplacer les autres nœuds vers le bas normalement
-              return {
-                ...node,
-                position: {
-                  ...node.position,
-                  y: node.position.y + EDITING_HEIGHT_INCREASE
-                }
-              };
             }
             return node;
           });
-        } else if (!isEditing && editedNode.data.isCritical) {
-          // Restaurer les positions originales des nœuds enfants
+        } else {
           return updatedNodes.map(node => {
-            const isChild = isChildOfEditedNode(node);
+            if (node.id === nodeId) return node;
             
-            if (isChild && node.data._originalPosition) {
-              // Récupérer la position originale
+            if (node.data._originalPosition) {
               const originalPos = node.data._originalPosition;
-              
-              // Créer une copie des données sans _originalPosition
               const newData = { ...node.data };
               delete newData._originalPosition;
+              
+              const isConnected = edges.some(edge => 
+                (edge.source === nodeId && edge.target === node.id) ||
+                (edge.source === node.id && edge.target === nodeId)
+              );
+              
+              if (isConnected) {
+                return {
+                  ...node,
+                  data: newData,
+                  position: {
+                    ...originalPos,
+                    y: editedNode.position.y + BASE_SPACING
+                  }
+                };
+              }
               
               return {
                 ...node,
                 data: newData,
                 position: originalPos
-              };
-            } else if (node.id !== nodeId && isNodeBelow(node, editedNode) && !isChild) {
-              // Déplacer les autres nœuds vers le haut normalement
-              return {
-                ...node,
-                position: {
-                  ...node.position,
-                  y: node.position.y - EDITING_HEIGHT_INCREASE
-                }
-              };
-            }
-            return node;
-          });
-        } else {
-          // Comportement normal pour les questions non critiques
-          return updatedNodes.map(node => {
-            if (node.id !== nodeId && isNodeBelow(node, editedNode)) {
-              return {
-                ...node,
-                position: {
-                  ...node.position,
-                  y: isEditing 
-                    ? node.position.y + EDITING_HEIGHT_INCREASE 
-                    : node.position.y - EDITING_HEIGHT_INCREASE
-                }
               };
             }
             return node;
@@ -185,7 +157,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       
       return updatedNodes;
     });
-  }, []);
+  }, [edges]);
 
   const createPathsFromNode = useCallback((sourceId: string, options: string[]) => {
     console.log("Creating paths for node:", sourceId, "with options:", options);
@@ -704,7 +676,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           color: 'white',
           padding: '8px 16px',
           borderRadius: '8px',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
         }}
         onClick={() => {
           if (selectedEdge) {
@@ -729,7 +704,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           fill="none" 
           stroke="currentColor" 
           strokeWidth="2"
-          style={{ verticalAlign: 'middle', marginRight: '4px' }}
         >
           <path d="M6 6l12 12M6 18L18 6" />
         </svg>
@@ -1065,6 +1039,190 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     </div>
   );
 
+  const addNewQuestion = () => {
+    const newNodeId = (nodes.length + 1).toString();
+    const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
+
+    // Check if the selected question already has a connection
+    if (selectedNode) {
+      const existingConnection = edges.find(edge => edge.source === selectedNode);
+      if (existingConnection && !selectedNodeData?.data.isCritical) {
+        setNotification({
+          show: true,
+          message: 'This question already has a connection',
+          type: 'warning'
+        });
+        
+        setTimeout(() => {
+          setNotification(prev => ({ ...prev, show: false }));
+        }, 3000);
+        
+        return;
+      }
+    }
+
+    // If the selected question is critical, don't create a connection
+    if (selectedNodeData?.data.isCritical) {
+      setNotification({
+        show: true,
+        message: 'Cannot add connection to a critical question',
+        type: 'warning'
+      });
+      
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
+      return;
+    }
+
+    // Ajouter des styles de transition pour l'animation
+    const addTransitionStyles = () => {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'new-node-transition-styles';
+      styleElement.textContent = `
+        .react-flow__node {
+          transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+        }
+        .react-flow__edge {
+          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+        }
+        .react-flow__edge-path {
+          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Supprimer les styles après l'animation
+      setTimeout(() => {
+        const existingStyle = document.getElementById('new-node-transition-styles');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }, 1000);
+    };
+
+    // Ajouter les styles de transition
+    addTransitionStyles();
+
+    // Calculer la position Y en fonction des nœuds existants
+    let maxY = 0;
+    let editingNodeY = 0;
+    let isEditingMode = false;
+    const BASE_SPACING = 150;
+    const EDITING_SPACING = 400;
+
+    nodes.forEach(node => {
+      if (node.position.y > maxY) {
+        maxY = node.position.y;
+      }
+      // Vérifier si le nœud est en mode édition
+      if (node.data._editingState) {
+        editingNodeY = node.position.y;
+        isEditingMode = true;
+      }
+    });
+
+    // Calculer la position Y de la nouvelle question
+    let newY;
+    if (selectedNode) {
+      const selectedNodeY = nodes.find(n => n.id === selectedNode)?.position.y || 0;
+      if (isEditingMode && selectedNode === nodes.find(n => n.data._editingState)?.id) {
+        // Si le nœud sélectionné est en mode édition, placer la nouvelle question en dessous avec l'espacement d'édition
+        newY = selectedNodeY + EDITING_SPACING;
+      } else {
+        // Sinon, placer la nouvelle question en dessous avec l'espacement normal
+        newY = selectedNodeY + BASE_SPACING;
+      }
+    } else {
+      newY = maxY + BASE_SPACING;
+    }
+
+    const newNode: Node = {
+      id: newNodeId,
+      type: 'questionNode',
+      data: { 
+        id: newNodeId,
+        questionNumber: nodes.length + 1,
+        type: 'text',
+        text: '',
+        options: [],
+        media: '',
+        mediaUrl: '',
+        isCritical: false,
+        onCreatePaths: createPathsFromNode,
+        onChange: (newData: any) => handleNodeChange(newNodeId, newData)
+      },
+      position: { 
+        x: selectedNode 
+          ? nodes.find(n => n.id === selectedNode)?.position.x || 250
+          : 250, 
+        y: newY
+      },
+      style: {
+        opacity: 0 // Commencer avec une opacité de 0 pour l'animation
+      }
+    };
+
+    // Ajouter le nouveau nœud avec animation
+    setNodes(prevNodes => [...prevNodes, newNode]);
+
+    // Animer l'apparition du nœud après un court délai
+    setTimeout(() => {
+      setNodes(prevNodes => 
+        prevNodes.map(node => 
+          node.id === newNodeId 
+            ? { ...node, style: { ...node.style, opacity: 1 } } 
+            : node
+        )
+      );
+    }, 50);
+
+    // Create a connection only if a non-critical question is selected
+    if (selectedNode && !selectedNodeData?.data.isCritical) {
+      const newEdge: Edge = {
+        id: `e${selectedNode}-${newNodeId}`,
+        source: selectedNode,
+        target: newNodeId,
+        type: 'default',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        style: { 
+          strokeWidth: 2,
+          stroke: '#667eea',
+          opacity: 0, // Commencer avec une opacité de 0 pour l'animation
+        },
+      };
+      
+      // Ajouter l'arête avec animation
+      setEdges(prevEdges => [...prevEdges, newEdge]);
+      
+      // Animer l'apparition de l'arête après un court délai
+      setTimeout(() => {
+        setEdges(prevEdges => 
+          prevEdges.map(edge => 
+            edge.id === newEdge.id 
+              ? { ...edge, style: { ...edge.style, opacity: 1 } } 
+              : edge
+          )
+        );
+      }, 100);
+    }
+
+    // Ajuster la vue après l'ajout du nouveau nœud
+    if (reactFlowInstance) {
+      setTimeout(() => {
+        reactFlowInstance.fitView({
+          padding: 0.4,
+          duration: 800,
+          minZoom: 0.1,
+          maxZoom: 1,
+        });
+      }, 300);
+    }
+  };
+
   useEffect(() => {
     onEdgesChange(edges);
   }, [edges, onEdgesChange]);
@@ -1149,158 +1307,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }, 300);
     },
     getNodes: () => nodes,
-    addNewQuestion: () => {
-      const newNodeId = (nodes.length + 1).toString();
-      const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
-
-      // Check if the selected question already has a connection
-      if (selectedNode) {
-        const existingConnection = edges.find(edge => edge.source === selectedNode);
-        if (existingConnection && !selectedNodeData?.data.isCritical) {
-          setNotification({
-            show: true,
-            message: 'This question already has a connection',
-            type: 'warning'
-          });
-          
-          setTimeout(() => {
-            setNotification(prev => ({ ...prev, show: false }));
-          }, 3000);
-          
-          return;
-        }
-      }
-
-      // If the selected question is critical, don't create a connection
-      if (selectedNodeData?.data.isCritical) {
-        setNotification({
-          show: true,
-          message: 'Cannot add connection to a critical question',
-          type: 'warning'
-        });
-        
-        setTimeout(() => {
-          setNotification(prev => ({ ...prev, show: false }));
-        }, 3000);
-        
-        return;
-      }
-
-      // Ajouter des styles de transition pour l'animation
-      const addTransitionStyles = () => {
-        const styleElement = document.createElement('style');
-        styleElement.id = 'new-node-transition-styles';
-        styleElement.textContent = `
-          .react-flow__node {
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
-          }
-          .react-flow__edge {
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
-          }
-          .react-flow__edge-path {
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-          }
-        `;
-        document.head.appendChild(styleElement);
-
-        // Supprimer les styles après l'animation
-        setTimeout(() => {
-          const existingStyle = document.getElementById('new-node-transition-styles');
-          if (existingStyle) {
-            existingStyle.remove();
-          }
-        }, 1000);
-      };
-
-      // Ajouter les styles de transition
-      addTransitionStyles();
-
-      const newNode: Node = {
-        id: newNodeId,
-        type: 'questionNode',
-        data: { 
-          id: newNodeId,
-          questionNumber: nodes.length + 1,
-          type: 'text',
-          text: '',
-          options: [],
-          media: '',
-          mediaUrl: '',
-          isCritical: false,
-          onCreatePaths: createPathsFromNode,
-          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
-        },
-        position: { 
-          x: selectedNode 
-            ? nodes.find(n => n.id === selectedNode)?.position.x || 250
-            : 250, 
-          y: selectedNode 
-            ? (nodes.find(n => n.id === selectedNode)?.position.y || 0) + 150
-            : nodes.length * 150 
-        },
-        style: {
-          opacity: 0 // Commencer avec une opacité de 0 pour l'animation
-        }
-      };
-
-      // Ajouter le nouveau nœud avec animation
-      setNodes(prevNodes => [...prevNodes, newNode]);
-
-      // Animer l'apparition du nœud après un court délai
-      setTimeout(() => {
-        setNodes(prevNodes => 
-          prevNodes.map(node => 
-            node.id === newNodeId 
-              ? { ...node, style: { ...node.style, opacity: 1 } } 
-              : node
-          )
-        );
-      }, 50);
-
-      // Create a connection only if a non-critical question is selected
-      if (selectedNode && !selectedNodeData?.data.isCritical) {
-        const newEdge: Edge = {
-          id: `e${selectedNode}-${newNodeId}`,
-          source: selectedNode,
-          target: newNodeId,
-          type: 'default',
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-          style: { 
-            strokeWidth: 2,
-            stroke: '#667eea',
-            opacity: 0, // Commencer avec une opacité de 0 pour l'animation
-          },
-        };
-        
-        // Ajouter l'arête avec animation
-        setEdges(prevEdges => [...prevEdges, newEdge]);
-        
-        // Animer l'apparition de l'arête après un court délai
-        setTimeout(() => {
-          setEdges(prevEdges => 
-            prevEdges.map(edge => 
-              edge.id === newEdge.id 
-                ? { ...edge, style: { ...edge.style, opacity: 1 } } 
-                : edge
-            )
-          );
-        }, 100);
-      }
-
-      // Ajuster la vue après l'ajout du nouveau nœud
-      if (reactFlowInstance) {
-        setTimeout(() => {
-          reactFlowInstance.fitView({
-            padding: 0.4,
-            duration: 800,
-            minZoom: 0.1,
-            maxZoom: 1,
-          });
-        }, 300);
-      }
-    },
+    addNewQuestion: addNewQuestion,
     setNodes: (newNodes: Node[]) => {
       setNodes(newNodes);
     },
