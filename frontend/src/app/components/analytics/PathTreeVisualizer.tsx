@@ -140,8 +140,8 @@ const QuestionNode = ({ data }: NodeProps) => {
   return (
     <div
       style={{
-        padding: '10px',
-        borderRadius: '8px',
+        padding: '8px',
+        borderRadius: '4px',
         background: isInSelectedPath 
           ? `linear-gradient(135deg, ${highlightColor}20, ${highlightColor}10)` 
           : 'white',
@@ -149,24 +149,43 @@ const QuestionNode = ({ data }: NodeProps) => {
         boxShadow: isInSelectedPath 
           ? `0 4px 12px ${highlightColor}30` 
           : '0 2px 8px rgba(0, 0, 0, 0.1)',
-        minWidth: '200px',
+        minWidth: '240px',
         maxWidth: '300px',
+        minHeight: '80px',
         position: 'relative',
         zIndex: 2,
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
         backgroundColor: isInSelectedPath 
           ? `rgba(255, 255, 255, 0.95)` 
-          : 'rgba(255, 255, 255, 0.95)'
+          : 'rgba(255, 255, 255, 0.95)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%'
       }}
     >
       <Handle type="target" position={Position.Top} />
-      <div style={{ marginBottom: '8px' }}>
+      <div style={{ 
+        marginBottom: '4px',
+        textAlign: 'center',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1
+      }}>
         <Typography variant="body2" style={{ 
           fontWeight: 500,
           color: isInSelectedPath ? highlightColor : 'rgba(0, 0, 0, 0.87)',
           fontSize: '0.9rem',
-          lineHeight: 1.4
+          lineHeight: 1.3,
+          textAlign: 'center',
+          padding: '0 8px',
+          wordBreak: 'break-word',
+          maxWidth: '100%'
         }}>
           {text || 'Question sans texte'}
         </Typography>
@@ -179,6 +198,7 @@ const QuestionNode = ({ data }: NodeProps) => {
 interface CustomEdgeProps extends EdgeProps {
   isSelected?: boolean;
   highlightColor?: string;
+  data?: any;
 }
 
 const LinkComponent = ({ 
@@ -186,7 +206,8 @@ const LinkComponent = ({
   source, 
   target, 
   isSelected,
-  highlightColor
+  highlightColor,
+  data
 }: CustomEdgeProps) => {
   const { getNode } = useReactFlow();
   const sourceNode = getNode(source);
@@ -201,49 +222,33 @@ const LinkComponent = ({
     targetPosition: Position.Top,
   });
 
-  // Créer un masque pour cacher les parties des liens qui passent derrière les nœuds
-  const maskId = `mask-${id}`;
+  // Utiliser la couleur du chemin si disponible dans les données
+  const pathColor = data?.highlightColor || highlightColor || '#667eea';
   
   return (
     <React.Fragment>
       <defs>
-        <mask id={maskId}>
-          <rect x="0" y="0" width="100%" height="100%" fill="white" />
-          {/* Masquer la zone du nœud source */}
-          {sourceNode?.position && (
-            <rect
-              x={sourceNode.position.x - 120}
-              y={sourceNode.position.y - 80}
-              width={240}
-              height={160}
-              fill="black"
-            />
-          )}
-          {/* Masquer la zone du nœud cible */}
-          {targetNode?.position && (
-            <rect
-              x={targetNode.position.x - 120}
-              y={targetNode.position.y - 80}
-              width={240}
-              height={160}
-              fill="black"
-            />
-          )}
-        </mask>
+        <marker
+          id={`arrowhead-${id}`}
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon
+            points="0 0, 10 3.5, 0 7"
+            fill={pathColor}
+          />
+        </marker>
       </defs>
       <path
-        id={id}
+        className="react-flow__edge-path"
         d={edgePath}
-        stroke={isSelected ? highlightColor : '#667eea'}
+        stroke={pathColor}
         strokeWidth={isSelected ? 3 : 2}
-        strokeOpacity={isSelected ? 0.8 : 0.5}
         fill="none"
-        markerEnd="url(#arrowhead)"
-        mask={`url(#${maskId})`}
-        style={{
-          transition: 'all 0.3s ease',
-          filter: isSelected ? `drop-shadow(0 0 8px ${highlightColor}40)` : 'none'
-        }}
+        markerEnd={`url(#arrowhead-${id})`}
       />
     </React.Fragment>
   );
@@ -271,6 +276,33 @@ const styles = `
 
   .react-flow__node.selected {
     z-index: 3;
+  }
+
+  /* Styles pour améliorer la visibilité des flèches */
+  .react-flow__edge path {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .react-flow__edge marker path {
+    fill-opacity: 0.8;
+    stroke: none;
+  }
+
+  /* Définition du marqueur de flèche global */
+  .react-flow__edge-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+
+  .react-flow__edge-defs marker {
+    overflow: visible;
+  }
+
+  /* Style spécifique pour les flèches */
+  .react-flow__edge .react-flow__edge-path {
+    marker-end: url(#arrowhead);
   }
 `;
 
@@ -1919,34 +1951,49 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   // Modifier la fonction handlePathSelection pour stocker les métadonnées des chemins
   const handlePathSelection = (path: PathSegment[]) => {
     // Vérifier si le chemin est déjà sélectionné
+    const pathIndex = selectedPaths.findIndex(
+      p => JSON.stringify(p) === JSON.stringify(path)
+    );
+    
+    console.log("%c=== PathTreeVisualizer Color Debug ===", "color: #764ba2; font-weight: bold; font-size: 14px;");
+    console.log("%cSelected path:", "color: #764ba2; font-weight: bold;", path);
+    console.log("%cCurrent selected paths:", "color: #764ba2; font-weight: bold;", selectedPaths);
+    console.log("%cCurrent path metadata:", "color: #764ba2; font-weight: bold;", pathMetadata);
+    console.log("%cHighlight colors:", "color: #764ba2; font-weight: bold;", HIGHLIGHT_COLORS);
+    
     const pathKey = JSON.stringify(path);
-    const pathIndex = selectedPaths.findIndex(p => JSON.stringify(p) === pathKey);
     
     if (pathIndex >= 0) {
       // Si déjà sélectionné, le supprimer
       const newSelectedPaths = selectedPaths.filter((_, i) => i !== pathIndex);
       setSelectedPaths(newSelectedPaths);
-      
-      // Supprimer également les métadonnées
-      const newPathMetadata = {...pathMetadata};
-      delete newPathMetadata[pathKey];
-      setPathMetadata(newPathMetadata);
+      console.log("%cPath removed. Remaining paths:", "color: #764ba2; font-weight: bold;", newSelectedPaths.length);
     } else {
       // Sinon, l'ajouter
       const newSelectedPaths = [...selectedPaths, path];
       setSelectedPaths(newSelectedPaths);
       
-      // Générer un nom et une couleur pour ce chemin s'il n'en a pas déjà
-      if (!pathMetadata[pathKey]) {
-        const newPathMetadata = {...pathMetadata};
-        const index = selectedPaths.length;
-        newPathMetadata[pathKey] = {
-          name: `Path ${String.fromCharCode(65 + index)}`,
-          color: HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length]
-        };
-        setPathMetadata(newPathMetadata);
+      // Vérifier si ce chemin a déjà une couleur attribuée
+      if (!pathMetadata[pathKey]?.color) {
+        // Si non, trouver la première couleur disponible
+        const usedColors = new Set(Object.values(pathMetadata).map(meta => meta.color));
+        const availableColor = HIGHLIGHT_COLORS.find(color => !usedColors.has(color)) || 
+                             HIGHLIGHT_COLORS[Object.keys(pathMetadata).length % HIGHLIGHT_COLORS.length];
+        
+        console.log("%cNew path added:", "color: #764ba2; font-weight: bold;");
+        console.log("%cPath key:", "color: #764ba2; font-weight: bold;", pathKey);
+        console.log("%cAssigned color:", "color: #764ba2; font-weight: bold;", availableColor);
+        
+        setPathMetadata(prev => ({
+          ...prev,
+          [pathKey]: {
+            ...prev[pathKey],
+            color: availableColor
+          }
+        }));
       }
     }
+    console.log("%c=================================", "color: #764ba2; font-weight: bold; font-size: 14px;");
   };
   
   return (
@@ -2276,96 +2323,99 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                   )
                 );
                 
-                    const pathColorIndex = selectedPathIndex !== -1 
-                      ? selectedPathIndex 
-                      : selectedPaths.length % HIGHLIGHT_COLORS.length;
-                    
-                    const pathColor = selectedPathIndex !== -1 
+                const pathColorIndex = selectedPathIndex !== -1 
+                  ? selectedPathIndex 
+                  : selectedPaths.length % HIGHLIGHT_COLORS.length;
+                
+                const pathColor = selectedPathIndex !== -1 
                   ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length] 
-                      : 'rgba(102, 126, 234, 0.7)';
+                  : 'rgba(102, 126, 234, 0.7)';
                 
                 const backgroundColor = isSelected 
-                      ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
+                  ? `${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}10`
                   : 'background.paper';
                 
                 return (
-                <Box 
-                  key={index}
-                  sx={{
-                        p: 1.5,
-                        mb: 1.5,
-                    border: '1px solid',
-                        borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
-                        borderRadius: '12px',
+                  <Box 
+                    key={index}
+                    sx={{
+                      p: 1.5,
+                      mb: 1.5,
+                      border: '1px solid',
+                      borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: '12px',
                       backgroundColor: backgroundColor,
-                    cursor: 'pointer',
-                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                    '&:hover': {
-                        backgroundColor: isSelected 
+                      cursor: filterApplied ? 'default' : 'pointer',
+                      transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                      '&:hover': {
+                        backgroundColor: filterApplied 
+                          ? backgroundColor 
+                          : isSelected 
                             ? `${HIGHLIGHT_COLORS[pathColorIndex % HIGHLIGHT_COLORS.length]}20`
                             : 'rgba(102, 126, 234, 0.04)',
-                          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
-                          transform: 'scale(1.02)'
-                        },
-                        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        boxShadow: isSelected 
-                          ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
-                          : '0 2px 8px rgba(0, 0, 0, 0.02)'
+                        boxShadow: filterApplied ? 'none' : '0 4px 14px rgba(0, 0, 0, 0.06)',
+                        transform: filterApplied ? 'scale(1)' : 'scale(1.02)'
+                      },
+                      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      boxShadow: isSelected 
+                        ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
+                        : '0 2px 8px rgba(0, 0, 0, 0.02)',
+                      opacity: filterApplied ? 0.8 : 1
                     }}
-                    onClick={() => handlePathSelect(pathItem.path)}
+                    onClick={() => !filterApplied && handlePathSelect(pathItem.path)}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box 
-                          sx={{ 
-                            width: 12, 
-                            height: 12, 
-                            borderRadius: '50%', 
-                            backgroundColor: isSelected 
-                              ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]
-                              : 'rgba(102, 126, 234, 0.4)',
-                            boxShadow: isSelected 
-                              ? `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`
-                              : 'none',
-                            border: '2px solid white'
-                          }} 
-                        />
+                      <Box 
+                        sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          backgroundColor: isSelected 
+                            ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]
+                            : 'rgba(102, 126, 234, 0.4)',
+                          boxShadow: isSelected 
+                            ? `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`
+                            : 'none',
+                          border: '2px solid white'
+                        }} 
+                      />
                       <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
-                    {pathItem.name} ({pathItem.path.length} steps)
-                  </Typography>
+                        {pathItem.name} ({pathItem.path.length} steps)
+                      </Typography>
                     </Box>
                     
-                  <Box sx={{ mt: 1 }}>
-                    {pathItem.path.map((segment, segIdx) => (
-                          <Box key={segIdx} sx={{ 
-                            display: 'flex', 
-                            mb: 0.5, 
-                            fontSize: '0.8rem',
-                            p: 0.5,
-                            borderRadius: '4px',
-                            backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
+                    <Box sx={{ mt: 1 }}>
+                      {pathItem.path.map((segment, segIdx) => (
+                        <Box key={segIdx} sx={{ 
+                          display: 'flex', 
+                          mb: 0.5, 
+                          fontSize: '0.8rem',
+                          p: 0.5,
+                          borderRadius: '4px',
+                          backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
+                        }}>
+                          <Typography variant="caption" sx={{ 
+                            mr: 1,
+                            fontWeight: 'bold', 
+                            color: isSelected ? pathColor : 'text.secondary'
                           }}>
-                            <Typography variant="caption" sx={{ 
-                              mr: 1,
-                              fontWeight: 'bold', 
-                              color: isSelected ? pathColor : 'text.secondary'
-                            }}>
-                          {segIdx + 1}.
-        </Typography>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: '100%'
-                          }}
-                        >
+                            {segIdx + 1}.
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '100%'
+                            }}
+                          >
                             {segment.questionText.substring(0, 40)}
                             {segment.questionText.length > 40 ? '...' : ''}
-                        </Typography>
-                      </Box>
-                    ))}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
-                </Box>
                 );
               })}
             </Box>

@@ -67,6 +67,7 @@ import { AnalysisGroup } from './GroupsList';
 import { PathTreeVisualizer } from './PathTreeVisualizer';
 import { SelectedPathsPanel } from './SelectedPathsPanel';
 import { usePathFilter } from './PathFilterManager';
+import { SurveyQuestions } from './SurveyQuestions';
 
 ChartJS.register(
   CategoryScale,

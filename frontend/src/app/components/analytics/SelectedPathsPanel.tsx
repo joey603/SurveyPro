@@ -13,6 +13,20 @@ import {
 import { PathTreeVisualizer, PathSegment } from './PathTreeVisualizer';
 import { GroupsList as ImportedGroupsList, GroupsListProps, AnalysisGroup } from './GroupsList';
 
+// Définition des couleurs fixes pour chaque lettre de chemin
+const PATH_COLORS: { [key: string]: string } = {
+  'A': '#8A2BE2', // Violet
+  'B': '#1E90FF', // Bleu dodger
+  'C': '#FF6347', // Tomate
+  'D': '#32CD32', // Vert lime
+  'E': '#FF8C00', // Orange foncé
+  'F': '#9932CC', // Orchidée foncée
+  'G': '#20B2AA', // Turquoise
+  'H': '#FF1493', // Rose profond
+  'I': '#4682B4', // Bleu acier
+  'J': '#00CED1', // Turquoise moyen
+};
+
 interface SelectedPathsPanelProps {
   selectedPaths: PathSegment[][];
   onCreateGroup: (name: string, paths: PathSegment[][]) => void;
@@ -38,6 +52,11 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
   const formatPath = (path: PathSegment[]): string => {
     return path.map(segment => segment.questionText).join(' → ');
   };
+
+  const getPathColor = (pathIndex: number): string => {
+    const pathLetter = String.fromCharCode(65 + pathIndex);
+    return PATH_COLORS[pathLetter] || '#667eea';
+  };
   
   return (
     <Box sx={{ mt: 4, width: '100%' }} className="selected-paths-panel">
@@ -60,14 +79,38 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
           {selectedPaths.length > 0 ? (
             <>
               <List dense>
-                {selectedPaths.map((path, index) => (
-                  <ListItem key={index} divider={index < selectedPaths.length - 1}>
-                    <ListItemText
-                      primary={`Path ${index + 1}`}
-                      secondary={formatPath(path)}
-                    />
-                  </ListItem>
-                ))}
+                {selectedPaths.map((path, index) => {
+                  const pathColor = getPathColor(index);
+                  const pathName = `Path ${String.fromCharCode(65 + index)}`;
+                  
+                  return (
+                    <ListItem 
+                      key={index} 
+                      divider={index < selectedPaths.length - 1}
+                      sx={{
+                        borderLeft: `4px solid ${pathColor}`,
+                        backgroundColor: `${pathColor}10`,
+                        mb: 1,
+                        borderRadius: 1
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              color: pathColor,
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {pathName}
+                          </Typography>
+                        }
+                        secondary={formatPath(path)}
+                      />
+                    </ListItem>
+                  );
+                })}
               </List>
               
               <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -111,7 +154,7 @@ export const SelectedPathsPanel: React.FC<SelectedPathsPanelProps> = ({
             </>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              Click on paths in the tree to select them and create an analysis group.
+              No paths selected
             </Typography>
           )}
         </Box>

@@ -79,6 +79,7 @@ interface SurveyQuestionsProps {
   filteredPaths?: PathSegment[][];
   allPaths?: {name: string, path: PathSegment[], group: string}[];
   isFiltered?: boolean;
+  pathMetadata?: { [key: string]: { name: string, color: string } };
 }
 
 export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
@@ -89,7 +90,9 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   getChartIcon,
   selectedPaths,
   filteredPaths = [],
-  allPaths = []
+  allPaths = [],
+  isFiltered = false,
+  pathMetadata = {}
 }) => {
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
   const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
@@ -103,9 +106,13 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
 
   const getPathPosition = (questionId: string): number => {
     const pathsToUse = filteredPaths.length > 0 ? filteredPaths : selectedPaths;
-    return pathsToUse.findIndex(path => 
+    const path = pathsToUse.find(path => 
       path.some(segment => segment.questionId === questionId)
     );
+    
+    if (!path) return -1;
+    
+    return path.findIndex(segment => segment.questionId === questionId);
   };
 
   const getPathName = (questionId: string): string | null => {
@@ -114,17 +121,47 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
       path.some(segment => segment.questionId === questionId)
     );
     
+    console.log('=== SurveyQuestions Path Name Debug ===');
+    console.log('Question ID:', questionId);
+    console.log('Paths to use:', pathsToUse);
+    console.log('Found path:', path);
+    
     if (!path) return null;
     
-    const matchingPath = allPaths.find(p => 
-      p.path.length === path.length && 
-      p.path.every((segment, i) => 
-        segment.questionId === path[i].questionId && 
-        segment.answer === path[i].answer
-      )
+    const pathKey = JSON.stringify(path);
+    console.log('Path key:', pathKey);
+    console.log('Path metadata:', pathMetadata);
+    console.log('Metadata for this path:', pathMetadata[pathKey]);
+    console.log('Name for this path:', pathMetadata[pathKey]?.name);
+    console.log('================================');
+    
+    return pathMetadata[pathKey]?.name || null;
+  };
+
+  const getPathColor = (questionId: string) => {
+    console.log("%c=== SurveyQuestions Color Debug ===", "color: #667eea; font-weight: bold; font-size: 14px;");
+    console.log("%cQuestion ID:", "color: #667eea; font-weight: bold;", questionId);
+    console.log("%cFiltered paths:", "color: #667eea; font-weight: bold;", filteredPaths);
+    console.log("%cSelected paths:", "color: #667eea; font-weight: bold;", selectedPaths);
+    console.log("%cPath metadata:", "color: #667eea; font-weight: bold;", pathMetadata);
+    
+    const path = filteredPaths.find(path => 
+      path.some(segment => segment.questionId === questionId)
+    ) || selectedPaths.find(path => 
+      path.some(segment => segment.questionId === questionId)
     );
     
-    return matchingPath?.name || null;
+    if (path) {
+      const pathKey = JSON.stringify(path);
+      console.log("%cFound path:", "color: #667eea; font-weight: bold;", path);
+      console.log("%cPath key:", "color: #667eea; font-weight: bold;", pathKey);
+      console.log("%cPath metadata:", "color: #667eea; font-weight: bold;", pathMetadata[pathKey]);
+      console.log("%cColor for this path:", "color: #667eea; font-weight: bold;", pathMetadata[pathKey]?.color);
+      return pathMetadata[pathKey]?.color || '#667eea';
+    }
+    
+    console.log("%cNo path found for this question", "color: #667eea; font-weight: bold;");
+    return '#667eea';
   };
 
   const getResponseCount = (questionId: string): number => {
@@ -195,7 +232,16 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     const isInPath = isQuestionInPath(question.id);
     const pathName = getPathName(question.id);
     const pathPosition = getPathPosition(question.id);
+    const pathColor = getPathColor(question.id);
 
+    console.log("%c=== SurveyQuestions Question Card Debug ===", "color: #667eea; font-weight: bold; font-size: 14px;");
+    console.log("%cQuestion:", "color: #667eea; font-weight: bold;", question);
+    console.log("%cIs in path:", "color: #667eea; font-weight: bold;", isInPath);
+    console.log("%cPath name:", "color: #667eea; font-weight: bold;", pathName);
+    console.log("%cPath position:", "color: #667eea; font-weight: bold;", pathPosition);
+    console.log("%cPath color:", "color: #667eea; font-weight: bold;", pathColor);
+    console.log("%c==================================", "color: #667eea; font-weight: bold; font-size: 14px;");
+    
     return (
       <Paper
         key={question.id}
@@ -223,7 +269,7 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                 size="small"
                 label={`Step ${pathPosition + 1}`}
                 sx={{ 
-                  bgcolor: '#667eea',
+                  bgcolor: pathColor || '#667eea',
                   color: 'white'
                 }}
               />
@@ -232,7 +278,7 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                   size="small"
                   label={pathName}
                   sx={{ 
-                    bgcolor: '#764ba2',
+                    bgcolor: pathColor || '#764ba2',
                     color: 'white'
                   }}
                 />
@@ -317,7 +363,7 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                               size="small"
                               label={`Step ${getPathPosition(question.id) + 1}`}
                               sx={{ 
-                                bgcolor: '#667eea',
+                                bgcolor: getPathColor(question.id) || '#667eea',
                                 color: 'white',
                                 fontSize: '0.75rem',
                                 mr: 1
@@ -328,8 +374,8 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                                 size="small"
                                 label={getPathName(question.id)}
                                 sx={{ 
-                                  bgcolor: 'rgba(102, 126, 234, 0.2)',
-                                  color: '#667eea',
+                                  bgcolor: getPathColor(question.id) || '#764ba2',
+                                  color: 'white',
                                   fontSize: '0.75rem'
                                 }}
                               />
