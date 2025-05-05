@@ -1098,7 +1098,9 @@ const SurveyCreationPage = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 8,
+        delay: 0,
+        tolerance: 5
       },
     }),
     useSensor(KeyboardSensor, {
@@ -1723,7 +1725,7 @@ const SurveyCreationPage = () => {
                               pb: 5, // Espace supplémentaire pour la poignée de glissement
                             }}
                           >
-                            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
                               <Controller
                                 name={`questions.${index}.type`}
                                 control={control}
@@ -1733,7 +1735,7 @@ const SurveyCreationPage = () => {
                                     label="Question Type"
                                     {...typeField}
                                     onChange={(e) => handleQuestionTypeChange(index, e.target.value)}
-                                    sx={{ minWidth: 200 }}
+                                    sx={{ minWidth: { xs: '100%', sm: 200 } }}
                                     data-intro={index === 0 ? "question-type" : null}
                                   >
                                     {questionTypes.map((type) => (
@@ -1904,7 +1906,7 @@ const SurveyCreationPage = () => {
                             {/* Media Upload Section */}
                             {field.type !== 'color-picker' && (
                               <Box sx={{ mt: 2 }} data-intro={index === 0 ? "media-upload" : null}>
-                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' } }}>
                                   <Button
                                     component="label"
                                     variant="outlined"
@@ -1921,7 +1923,7 @@ const SurveyCreationPage = () => {
                                         borderColor: '#764ba2',
                                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                       },
-                                      minWidth: '150px',
+                                      minWidth: { xs: '100%', sm: '150px' },
                                     }}
                                   >
                                     {isUploading[field.id] ? 'Uploading...' : 'Upload Media'}
@@ -1937,7 +1939,7 @@ const SurveyCreationPage = () => {
                                       }}
                                     />
                                   </Button>
-                                  <Typography variant="body2" color="text.secondary">
+                                  <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
                                     or
                                   </Typography>
                                   <TextField
@@ -1952,7 +1954,7 @@ const SurveyCreationPage = () => {
                                     size="small"
                                     fullWidth
                                     sx={{
-                                      maxWidth: '400px',
+                                      maxWidth: { xs: '100%', sm: '400px' },
                                       '& .MuiOutlinedInput-root': {
                                         '&:hover fieldset': {
                                           borderColor: '#667eea',
