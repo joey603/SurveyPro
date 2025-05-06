@@ -25,10 +25,16 @@ const VerifyPage = () => {
     setMessage("");
     setError("");
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      const apiUrl = 'https://surveypro-ir3u.onrender.com';
       const response = await axios.post(`${apiUrl}/api/auth/verify-email`, {
         email,
         verificationCode,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
       setMessage(response.data.message);
       setTimeout(() => {
@@ -47,9 +53,15 @@ const VerifyPage = () => {
     setMessage("");
     setError("");
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      const apiUrl = 'https://surveypro-ir3u.onrender.com';
       await axios.post(`${apiUrl}/api/auth/resend-verification`, {
         email,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
       setMessage("A new code has been sent to your email.");
       setResendCooldown(60);
