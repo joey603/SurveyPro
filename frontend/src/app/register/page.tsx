@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { colors } from '../../theme/colors';
@@ -30,6 +30,20 @@ const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
   const router = useRouter();
   const { register } = useAuth();
+
+  // Gestion des paramètres de l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const message = params.get('message');
+
+    if (success === 'true' && message) {
+      setMessage(message);
+    } else if (error === 'true' && message) {
+      setError(message);
+    }
+  }, []);
 
   const validatePassword = (value: string) => {
     if (!value) {
@@ -61,28 +75,27 @@ const RegisterPage: React.FC = () => {
     setError('');
     
     try {
+      // Nettoyer le localStorage
+      localStorage.clear();
+      
+      // Stocker l'origine actuelle dans un cookie pour la redirection
+      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      
       // Récupération de l'URL de l'API à partir des variables d'environnement
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
       
-      const response = await axios.post(`${apiUrl}/api/auth/register`, {
+      // Redirection vers l'endpoint d'inscription avec les données en paramètres
+      const registerData = {
         username,
         email,
-        password,
-      });
+        password
+      };
       
-      if (response.status === 201) {
-        setMessage('Compte créé avec succès. Vous pouvez maintenant vous connecter.');
-        await onRegisterSuccess();
-      }
+      window.location.href = `${apiUrl}/api/auth/register?data=${encodeURIComponent(JSON.stringify(registerData))}`;
+      
     } catch (err: any) {
       console.error('Erreur d\'inscription:', err);
-      
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Erreur lors de l\'inscription. Veuillez réessayer.');
-      }
-    } finally {
+      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
       setLoading(false);
     }
   };
