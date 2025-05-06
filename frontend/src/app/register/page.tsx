@@ -62,7 +62,7 @@ const RegisterPage: React.FC = () => {
     
     try {
       // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://surveypro-ir3u.onrender.com';
       
       const response = await axios.post(`${apiUrl}/api/auth/register`, {
         username,
