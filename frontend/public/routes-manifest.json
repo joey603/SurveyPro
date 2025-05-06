@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "basePath": "",
+  "redirects": [],
+  "rewrites": [],
+  "headers": [],
+  "dynamicRoutes": [],
+  "staticRoutes": [],
+  "dataRoutes": []
+} 

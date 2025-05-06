@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "chmod +x build-vercel.sh && ./build-vercel.sh",
+  "installCommand": "echo 'Installation gérée par le script build-vercel.sh'",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "NEXT_SHARP_PATH": "./node_modules/sharp",
+    "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://surveypro-ir3u.onrender.com/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ]
+} 
