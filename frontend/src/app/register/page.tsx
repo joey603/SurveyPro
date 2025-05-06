@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { colors } from '../../theme/colors';
@@ -30,20 +30,6 @@ const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
   const router = useRouter();
   const { register } = useAuth();
-
-  // Gestion des paramètres de l'URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const error = params.get('error');
-    const message = params.get('message');
-
-    if (success === 'true' && message) {
-      setMessage(message);
-    } else if (error === 'true' && message) {
-      setError(message);
-    }
-  }, []);
 
   const validatePassword = (value: string) => {
     if (!value) {
@@ -75,27 +61,31 @@ const RegisterPage: React.FC = () => {
     setError('');
     
     try {
-      // Nettoyer le localStorage
-      localStorage.clear();
-      
-      // Stocker l'origine actuelle dans un cookie pour la redirection
-      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
-      
       // Récupération de l'URL de l'API à partir des variables d'environnement
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
       
-      // Redirection vers l'endpoint d'inscription avec les données en paramètres
-      const registerData = {
+      const response = await axios.post(`${apiUrl}/api/auth/register`, {
         username,
         email,
-        password
-      };
+        password,
+      });
       
-      window.location.href = `${apiUrl}/api/auth/register?data=${encodeURIComponent(JSON.stringify(registerData))}`;
-      
+      if (response.status === 201) {
+        // Stocker l'email dans le localStorage pour la vérification
+        localStorage.setItem('email', email);
+        
+        // Rediriger vers la page de vérification
+        router.push('/verify');
+      }
     } catch (err: any) {
       console.error('Erreur d\'inscription:', err);
-      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
+      
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erreur lors de l\'inscription. Veuillez réessayer.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -116,16 +106,37 @@ const RegisterPage: React.FC = () => {
 
   const handleGoogleRegister = () => {
     try {
+      console.log('Début de la connexion Google');
+      
       // Nettoyer le localStorage
       localStorage.clear();
+      console.log('localStorage nettoyé');
       
-      // Stocker l'origine actuelle dans un cookie pour la redirection
-      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      // URL de l'API backend pour l'authentification Google
+      const backendUrl = 'https://surveypro-ir3u.onrender.com';
       
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      // Récupérer l'URL d'origine actuelle pour le callback
+      const currentOrigin = window.location.origin;
+      console.log('Current application origin:', currentOrigin);
       
-      window.location.href = `${apiUrl}/api/auth/google`;
+      // Sauvegarder l'origine dans les cookies
+      try {
+        document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
+        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        
+        // Ajouter l'origine à l'URL de redirection
+        const googleAuthUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(currentOrigin)}`;
+        console.log('URL de redirection Google avec origine:', googleAuthUrl);
+        
+        // Redirection directe vers l'URL d'authentification Google
+        window.location.href = googleAuthUrl;
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        // En cas d'erreur, essayer la redirection simple
+        window.location.href = `${backendUrl}/api/auth/google`;
+      }
     } catch (error) {
       console.error('Erreur lors de la connexion Google:', error);
     }
@@ -133,16 +144,37 @@ const RegisterPage: React.FC = () => {
 
   const handleGithubRegister = () => {
     try {
+      console.log('Début de la connexion GitHub');
+      
       // Nettoyer le localStorage
       localStorage.clear();
+      console.log('localStorage nettoyé');
       
-      // Stocker l'origine actuelle dans un cookie pour la redirection
-      document.cookie = `origin=${window.location.origin}; path=/; max-age=3600`;
+      // URL de l'API backend pour l'authentification GitHub
+      const backendUrl = 'https://surveypro-ir3u.onrender.com';
       
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      // Récupérer l'URL d'origine actuelle pour le callback
+      const currentOrigin = window.location.origin;
+      console.log('Current application origin:', currentOrigin);
       
-      window.location.href = `${apiUrl}/api/auth/github`;
+      // Sauvegarder l'origine dans les cookies
+      try {
+        document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
+        document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
+        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        
+        // Ajouter l'origine à l'URL de redirection
+        const githubAuthUrl = `${backendUrl}/api/auth/github?redirect_uri=${encodeURIComponent(currentOrigin)}`;
+        console.log('URL de redirection GitHub avec origine:', githubAuthUrl);
+        
+        // Redirection directe vers l'URL d'authentification GitHub
+        window.location.href = githubAuthUrl;
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        // En cas d'erreur, essayer la redirection simple
+        window.location.href = `${backendUrl}/api/auth/github`;
+      }
     } catch (error) {
       console.error('Erreur lors de la connexion GitHub:', error);
     }

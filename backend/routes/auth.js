@@ -706,50 +706,6 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-router.get('/register', async (req, res) => {
-  try {
-    const { data } = req.query;
-    if (!data) {
-      return res.status(400).json({ message: 'Données d\'inscription manquantes' });
-    }
-
-    const registerData = JSON.parse(decodeURIComponent(data));
-    const { username, email, password } = registerData;
-
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    
-    if (existingUser) {
-      return res.status(400).json({
-        message: existingUser.email === email ? 'Email déjà utilisé' : 'Nom d\'utilisateur déjà utilisé'
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationCode = Math.floor(100000 + Math.random() * 900000);
-
-    const newUser = new User({
-      username,
-      email,
-      password: hashedPassword,
-      verificationCode,
-      isVerified: false
-    });
-    await newUser.save();
-
-    await sendVerificationEmail(email, verificationCode);
-
-    // Récupérer l'URL d'origine pour la redirection
-    const originUrl = getRedirectUrl(req);
-    
-    // Rediriger vers la page de succès
-    res.redirect(`${originUrl}/register?success=true&message=Inscription réussie ! Vérifiez votre e-mail pour activer votre compte.`);
-  } catch (error) {
-    console.error('Erreur lors de l\'inscription:', error);
-    const originUrl = getRedirectUrl(req);
-    res.redirect(`${originUrl}/register?error=true&message=Erreur lors de l\'inscription. Veuillez réessayer.`);
-  }
-});
-
 // Ajouter cette fonction avant les routes
 const sendVerificationEmail = async (email, verificationCode) => {
   const msg = {

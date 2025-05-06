@@ -25,7 +25,8 @@ const VerifyPage = () => {
     setMessage("");
     setError("");
     try {
-      const response = await axios.post("http://localhost:5041/api/auth/verify-email", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      const response = await axios.post(`${apiUrl}/api/auth/verify-email`, {
         email,
         verificationCode,
       });
@@ -46,7 +47,8 @@ const VerifyPage = () => {
     setMessage("");
     setError("");
     try {
-      await axios.post("http://localhost:5041/api/auth/resend-verification", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+      await axios.post(`${apiUrl}/api/auth/resend-verification`, {
         email,
       });
       setMessage("A new code has been sent to your email.");
