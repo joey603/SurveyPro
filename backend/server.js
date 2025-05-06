@@ -54,7 +54,7 @@ const allowedOrigins = [
   'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app',
   'https://www.surveyflow.co',
   'https://surveyflow.co',
-  'https://surveypro-backend.onrender.com'
+  'https://surveypro-ir3u.onrender.com'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
@@ -126,8 +126,20 @@ app.post('/api/share-survey', authMiddleware, shareSurvey);
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connecté à MongoDB'))
-  .catch(err => console.error('Erreur de connexion à MongoDB:', err));
+  .then(() => {
+    console.log('Connecté à MongoDB');
+    
+    // Configuration du port pour Render
+    const PORT = process.env.PORT || 10000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+      console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
+    });
+  })
+  .catch(err => {
+    console.error('Erreur de connexion à MongoDB:', err);
+    process.exit(1); // Arrêter le processus en cas d'erreur de connexion
+  });
 
 // Gestion des erreurs globale
 app.use((err, req, res, next) => {
@@ -137,13 +149,4 @@ app.use((err, req, res, next) => {
     message: 'Something broke!',
     error: err.message
   });
-});
-
-// Configuration du port pour Render
-// Render définit automatiquement PORT, donc cette configuration fonctionnera
-// à la fois en local et sur Render
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
-  console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
 });
