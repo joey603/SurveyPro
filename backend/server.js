@@ -54,14 +54,20 @@ const allowedOrigins = [
   'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app',
   'https://www.surveyflow.co',
   'https://surveyflow.co',
-  'https://surveypro-ir3u.onrender.com'
+  'https://surveypro-ir3u.onrender.com',
+  'https://surveypro-backend.onrender.com'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
 app.use(cors({
   origin: function(origin, callback) {
+    console.log('Requête CORS depuis l\'origine:', origin);
+    
     // Permettre les requêtes sans origine (ex: applications mobiles, curl, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('Requête sans origine, autorisée');
+      return callback(null, true);
+    }
     
     // Autoriser toutes les origines listées, toutes les origines Vercel et localhost
     if (allowedOrigins.indexOf(origin) !== -1 || 
@@ -126,20 +132,8 @@ app.post('/api/share-survey', authMiddleware, shareSurvey);
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Connecté à MongoDB');
-    
-    // Configuration du port pour Render
-    const PORT = process.env.PORT || 10000;
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Serveur démarré sur le port ${PORT}`);
-      console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
-    });
-  })
-  .catch(err => {
-    console.error('Erreur de connexion à MongoDB:', err);
-    process.exit(1); // Arrêter le processus en cas d'erreur de connexion
-  });
+  .then(() => console.log('Connecté à MongoDB'))
+  .catch(err => console.error('Erreur de connexion à MongoDB:', err));
 
 // Gestion des erreurs globale
 app.use((err, req, res, next) => {
@@ -149,4 +143,13 @@ app.use((err, req, res, next) => {
     message: 'Something broke!',
     error: err.message
   });
+});
+
+// Configuration du port pour Render
+// Render définit automatiquement PORT, donc cette configuration fonctionnera
+// à la fois en local et sur Render
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+  console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
 });
