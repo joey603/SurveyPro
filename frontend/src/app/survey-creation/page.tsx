@@ -198,24 +198,40 @@ const SortableQuestionItem = ({
     marginBottom: '16px',
   };
 
+  const dragHandleStyle = {
+    position: 'absolute',
+    bottom: '12px',
+    right: '12px',
+    width: '100px',
+    height: '48px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'grab',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '8px',
+    zIndex: 5,
+    touchAction: 'manipulation',
+    WebkitTapHighlightColor: 'transparent',
+    userSelect: 'none',
+    padding: '12px',
+    transition: 'all 0.2s ease',
+    ':active': {
+      backgroundColor: '#e0e0e0',
+      transform: 'scale(0.98)'
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {children}
       <div
         {...listeners}
-        style={{
-          position: 'absolute',
-          bottom: '12px',
-          right: '12px',
-          width: '100px',
-          height: '24px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'grab',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '4px',
-          zIndex: 5,
+        style={dragHandleStyle}
+        TouchRippleProps={{
+          classes: {
+            child: 'touch-ripple-child',
+          },
         }}
       >
         <svg width="40" height="8" viewBox="0 0 40 8">
