@@ -708,6 +708,10 @@ router.post('/reset-password', async (req, res) => {
 
 // Ajouter cette fonction avant les routes
 const sendVerificationEmail = async (email, verificationCode) => {
+  console.log('Tentative d\'envoi d\'email de vérification à:', email);
+  console.log('Code de vérification:', verificationCode);
+  console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
+  
   const msg = {
     to: email,
     from: process.env.EMAIL_FROM,
@@ -729,10 +733,18 @@ const sendVerificationEmail = async (email, verificationCode) => {
   };
 
   try {
-    await sgMail.send(msg);
+    console.log('Configuration de SendGrid avec la clé API...');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    console.log('Envoi de l\'email...');
+    const response = await sgMail.send(msg);
+    console.log('Email envoyé avec succès:', response);
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw new Error('Error sending verification email');
+    console.error('Erreur détaillée lors de l\'envoi de l\'email:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.body
+    });
+    throw new Error('Erreur lors de l\'envoi de l\'email de vérification');
   }
 };
 
