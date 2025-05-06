@@ -278,6 +278,17 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     newOptions[index] = e.target.value;
                     handleOptionsChange(newOptions);
                   }}
+                  sx={{ 
+                    '& .MuiInputBase-root': {
+                      minHeight: '48px', // Taille minimale recommandée pour les zones tactiles
+                    }
+                  }}
+                  InputProps={{
+                    sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+                  }}
+                  InputLabelProps={{
+                    sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+                  }}
                 />
                 {questionData.isCritical && (
                   <IconButton
@@ -386,14 +397,33 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
   return (
     <div style={{ position: 'relative' }}>
-      <Paper elevation={3} sx={{ p: 2, minWidth: 400, backgroundColor: 'white', borderRadius: 2 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 2, 
+          minWidth: { xs: '280px', sm: '400px' },
+          backgroundColor: 'white', 
+          borderRadius: 2 
+        }}
+      >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
         
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="subtitle1" fontWeight="bold">
+        <Box sx={{ 
+          mb: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1
+        }}>
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
             Question {data.questionNumber} 
           </Typography>
-          <IconButton size="small" onClick={() => setIsEditing(!isEditing)} data-intro="edit-question">
+          <IconButton 
+            size="small" 
+            onClick={() => setIsEditing(!isEditing)} 
+            data-intro="edit-question"
+          >
             <EditIcon />
           </IconButton>
         </Box>
@@ -407,7 +437,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   onChange={handleCriticalChange}
                 />
               }
-              label="Critical Question (creates different paths)"
+              label={
+                <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                  Critical Question (creates different paths)
+                </Typography>
+              }
               sx={{ mb: 2 }}
               data-intro="critical-question"
             />
@@ -426,7 +460,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 },
               }}
             >
-              <Typography>
+              <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes)
                   .find(t => t.value === questionData.type)?.label || 'Select type'}
               </Typography>
@@ -459,6 +493,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     key={type.value}
                     onClick={() => handleTypeSelect(type.value)}
                     selected={type.value === questionData.type}
+                    sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
                   >
                     {type.label}
                   </MenuItem>
@@ -472,7 +507,18 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               label="Question"
               value={questionData.text}
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiInputBase-root': {
+                  minHeight: '48px', // Taille minimale recommandée pour les zones tactiles
+                }
+              }}
+              InputProps={{
+                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+              }}
+              InputLabelProps={{
+                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+              }}
             />
 
             {renderQuestionFields()}
@@ -486,7 +532,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 onChange={handleMediaUpload}
               />
               
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Button
                   component="label"
                   htmlFor={`media-upload-${id}`}
@@ -495,6 +541,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   size="small"
                   disabled={isUploading}
                   data-intro="add-media"
+                  sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
                 >
                   {isUploading ? 'Uploading...' : 'Add Media'}
                 </Button>
@@ -513,20 +560,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               {isUploading && (
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                   <CircularProgress size={20} />
-                  <Typography variant="caption" sx={{ ml: 1 }}>
+                  <Typography variant="caption" sx={{ ml: 1, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                     Uploading media...
                   </Typography>
                 </Box>
               )}
 
               {uploadError && (
-                <Typography color="error" variant="caption">
+                <Typography color="error" variant="caption" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                   {uploadError}
                 </Typography>
               )}
 
               {data.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' } }}>
                   {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                     <img 
                       src={data.mediaUrl} 
@@ -546,10 +593,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           </Box>
         ) : (
           <Box>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
               Type: {questionTypes.find(t => t.value === questionData.type)?.label}
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               {questionData.text || 'No question text'}
             </Typography>
             {questionData.mediaUrl && (
