@@ -1,12 +1,11 @@
-// src/services/api.ts
 import axios from 'axios';
+import { getApiUrl } from './authService';
 
 // Déterminer automatiquement l'URL de base en fonction de l'environnement
 const getBaseUrl = () => {
-  // En production (Vercel), utiliser l'URL du backend déployé ou les rewrites API
+  // En production (Vercel), utiliser l'URL du backend déployé
   if (process.env.NODE_ENV === 'production') {
-    // Si on utilise les rewrites Vercel, on peut utiliser un chemin relatif
-    return '/api';
+    return `${getApiUrl()}/api`;
   }
   // En développement, utiliser localhost
   return 'http://localhost:5041/api';
@@ -28,13 +27,4 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Ajouter un intercepteur pour les réponses pour gérer les erreurs communes
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
-
-export default api;
+export default api; 
