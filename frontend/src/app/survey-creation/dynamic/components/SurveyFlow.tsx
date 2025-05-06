@@ -92,25 +92,37 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      flowContainerRef.current?.requestFullscreen();
+      const element = flowContainerRef.current;
+      if (element) {
+        // Utiliser une approche plus générique pour le mode plein écran
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
+          (element as any).webkitRequestFullscreen();
+        }
+      }
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-        setIsFullscreen(false);
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
       }
+      setIsFullscreen(false);
     }
   };
 
   // Ajouter un écouteur pour détecter la sortie du mode plein écran
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(!!document.fullscreenElement || !!(document as any).webkitFullscreenElement);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, []);
 
@@ -727,8 +739,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
         sx={{
           position: 'absolute',
-          top: '20px',
-          right: isMobile ? '60px' : '20px',
+          top: isMobile ? '80px' : '20px',
+          left: isMobile ? '20px' : 'auto', // Alignement à gauche sur mobile
+          right: isMobile ? 'auto' : '20px', // Pas de position right sur mobile
           zIndex: 1000,
           backgroundColor: '#ff4444',
           color: 'white',
@@ -1410,7 +1423,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               width: '100vw',
               height: '100vh',
               zIndex: 9999,
-              backgroundColor: 'white'
+              backgroundColor: 'white',
+              WebkitOverflowScrolling: 'touch', // Pour le défilement fluide sur iOS
+              overflow: 'auto'
             })
           }}
         >
@@ -1443,7 +1458,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 </svg>
               ) : (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3h3a2 2 0 0 1 2 2v3M21 3h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
                 </svg>
               )}
             </IconButton>

@@ -403,7 +403,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           p: 2, 
           minWidth: { xs: '280px', sm: '400px' },
           backgroundColor: 'white', 
-          borderRadius: 2 
+          borderRadius: 2,
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
@@ -423,6 +425,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             size="small" 
             onClick={() => setIsEditing(!isEditing)} 
             data-intro="edit-question"
+            sx={{
+              minWidth: '48px',
+              minHeight: '48px',
+              padding: '12px',
+            }}
+            TouchRippleProps={{
+              classes: {
+                child: 'touch-ripple-child',
+              },
+            }}
           >
             <EditIcon />
           </IconButton>
@@ -435,6 +447,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <Checkbox
                   checked={questionData.isCritical}
                   onChange={handleCriticalChange}
+                  sx={{
+                    padding: '8px',
+                  }}
+                  TouchRippleProps={{
+                    classes: {
+                      child: 'touch-ripple-child',
+                    },
+                  }}
                 />
               }
               label={
@@ -450,7 +470,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               onClick={handleTypeClick}
               data-intro="question-type-selector"
               sx={{
-                p: 1,
+                p: 2,
                 border: '1px solid rgba(0, 0, 0, 0.23)',
                 borderRadius: 1,
                 cursor: 'pointer',
@@ -458,6 +478,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 '&:hover': {
                   borderColor: 'primary.main',
                 },
+                touchAction: 'manipulation',
               }}
             >
               <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
@@ -493,7 +514,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     key={type.value}
                     onClick={() => handleTypeSelect(type.value)}
                     selected={type.value === questionData.type}
-                    sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+                    sx={{ 
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                      minHeight: '48px',
+                      padding: '12px 16px',
+                    }}
+                    TouchRippleProps={{
+                      classes: {
+                        child: 'touch-ripple-child',
+                      },
+                    }}
                   >
                     {type.label}
                   </MenuItem>
@@ -510,7 +540,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               sx={{ 
                 mb: 2,
                 '& .MuiInputBase-root': {
-                  minHeight: '48px', // Taille minimale recommandée pour les zones tactiles
+                  minHeight: '48px',
                 }
               }}
               InputProps={{
@@ -541,7 +571,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   size="small"
                   disabled={isUploading}
                   data-intro="add-media"
-                  sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                  sx={{ 
+                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                    minHeight: '48px',
+                    padding: '12px 16px',
+                  }}
+                  TouchRippleProps={{
+                    classes: {
+                      child: 'touch-ripple-child',
+                    },
+                  }}
                 >
                   {isUploading ? 'Uploading...' : 'Add Media'}
                 </Button>
@@ -551,6 +590,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     onClick={handleMediaDelete}
                     size="small"
                     color="error"
+                    sx={{
+                      minWidth: '48px',
+                      minHeight: '48px',
+                      padding: '12px',
+                    }}
+                    TouchRippleProps={{
+                      classes: {
+                        child: 'touch-ripple-child',
+                      },
+                    }}
                   >
                     <DeleteIcon />
                   </IconButton>
