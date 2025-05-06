@@ -47,18 +47,10 @@ const RegisterPage: React.FC = () => {
     setPasswordError(validatePassword(value));
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation du mot de passe
-    const passwordValidation = validatePassword(password);
-    if (passwordValidation) {
-      setPasswordError(passwordValidation);
-      return;
-    }
-    
-    setLoading(true);
     setError('');
+    setLoading(true);
     
     try {
       const apiUrl = 'https://surveypro-ir3u.onrender.com';
@@ -72,12 +64,11 @@ const RegisterPage: React.FC = () => {
       }, {
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
-      
+
       console.log('Réponse du serveur:', response.status, response.statusText);
       
       if (response.status === 201) {
@@ -266,7 +257,7 @@ const RegisterPage: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleRegister}>
+          <Box component="form" onSubmit={handleSubmit}>
             <TextField
               label="Username"
               fullWidth
