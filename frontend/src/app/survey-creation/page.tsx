@@ -198,39 +198,46 @@ const SortableQuestionItem = ({
     marginBottom: '16px',
   };
 
-  const dragHandleStyle = {
-    position: 'absolute',
-    bottom: '12px',
-    right: '12px',
-    width: '100px',
-    height: '48px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    cursor: 'grab',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '8px',
-    zIndex: 5,
-    touchAction: 'manipulation',
-    WebkitTapHighlightColor: 'transparent',
-    userSelect: 'none',
-    padding: '12px',
-    transition: 'all 0.2s ease',
-    ':active': {
-      backgroundColor: '#e0e0e0',
-      transform: 'scale(0.98)'
-    }
-  };
-
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {children}
-      <div
+      <Button
         {...listeners}
-        style={dragHandleStyle}
+        sx={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
+          width: '100px',
+          height: '32px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'grab',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px',
+          zIndex: 5,
+          touchAction: 'none',
+          userSelect: 'none',
+          minWidth: 'unset',
+          padding: 0,
+          '&:active': {
+            cursor: 'grabbing',
+            backgroundColor: '#e0e0e0',
+          },
+          '&:hover': {
+            backgroundColor: '#eeeeee',
+          },
+          transition: 'background-color 0.2s ease',
+          '& .MuiTouchRipple-root': {
+            borderRadius: '4px',
+          },
+        }}
         TouchRippleProps={{
           classes: {
-            child: 'touch-ripple-child',
+            child: 'MuiTouchRipple-child',
+            ripple: 'MuiTouchRipple-ripple',
+            rippleVisible: 'MuiTouchRipple-rippleVisible',
+            ripplePulsate: 'MuiTouchRipple-ripplePulsate',
           },
         }}
       >
@@ -242,7 +249,7 @@ const SortableQuestionItem = ({
             <circle cx="34" cy="4" r="2" />
           </g>
         </svg>
-      </div>
+      </Button>
     </div>
   );
 };
