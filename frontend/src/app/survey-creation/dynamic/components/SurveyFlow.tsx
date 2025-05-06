@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -24,6 +24,7 @@ import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import { SurveyFlowRef } from '../types/SurveyFlowTypes';
+import { IconButton, Fab, Button } from '@mui/material';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
@@ -60,6 +61,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const flowContainerRef = useRef<HTMLDivElement>(null);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -69,6 +73,46 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     message: '',
     type: 'info'
   });
+
+  // Ajouter un useEffect pour détecter la taille de l'écran
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    // Vérifier au chargement
+    checkMobile();
+
+    // Ajouter un écouteur d'événements pour les changements de taille
+    window.addEventListener('resize', checkMobile);
+
+    // Nettoyer l'écouteur
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      flowContainerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  // Ajouter un écouteur pour détecter la sortie du mode plein écran
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => {
@@ -134,10 +178,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               );
               
               if (isConnected) {
-                return {
-                  ...node,
-                  data: newData,
-                  position: {
+              return {
+                ...node,
+                data: newData,
+                position: {
                     ...originalPos,
                     y: editedNode.position.y + BASE_SPACING
                   }
@@ -666,20 +710,34 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     if (selectedNode === '1') return null;
 
     return (
-      <div
-        style={{
+      <Button
+        variant="contained"
+        color="error"
+        startIcon={
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2"
+          >
+            <path d="M6 6l12 12M6 18L18 6" />
+          </svg>
+        }
+        sx={{
           position: 'absolute',
           top: '20px',
-          right: '20px',
+          right: isMobile ? '60px' : '20px',
           zIndex: 1000,
           backgroundColor: '#ff4444',
           color: 'white',
           padding: '8px 16px',
           borderRadius: '8px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px'
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          '&:hover': {
+            backgroundColor: '#ff0000',
+          },
         }}
         onClick={() => {
           if (selectedEdge) {
@@ -690,25 +748,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             onDeleteNode(selectedNode);
           }
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#ff0000';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#ff4444';
+        TouchRippleProps={{
+          classes: {
+            child: 'touch-ripple-child',
+          },
         }}
       >
-        <svg 
-          width="18" 
-          height="18" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2"
-        >
-          <path d="M6 6l12 12M6 18L18 6" />
-        </svg>
         Delete {selectedEdge ? 'Connection' : 'Question'}
-      </div>
+      </Button>
     );
   };
 
@@ -1004,52 +1051,66 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   // Add data-intro attribute to reorganize button
   const ReorganizeButton = () => (
-    <div
-      data-intro="reorganize-flow-button"
-      id="reorganize-flow-button"
-      className="reorganize-flow-button"
-      style={{
+    <Button
+      variant="contained"
+      startIcon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 4h16v16H4z" />
+          <path d="M4 12h16M12 4v16" />
+        </svg>
+      }
+      sx={{
         position: 'absolute',
         top: '20px',
         left: '20px',
-        zIndex: 5,
+        zIndex: 1000,
         backgroundColor: '#667eea',
         color: 'white',
         padding: '8px 16px',
         borderRadius: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        '&:hover': {
+          backgroundColor: '#4c5ec4',
+        },
       }}
       onClick={reorganizeFlow}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = '#4c5ec4';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = '#667eea';
+      TouchRippleProps={{
+        classes: {
+          child: 'touch-ripple-child',
+        },
       }}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 4h16v16H4z" />
-        <path d="M4 12h16M12 4v16" />
-      </svg>
       Reorganize Flow
-    </div>
+    </Button>
   );
 
   const addNewQuestion = () => {
-    const newNodeId = (nodes.length + 1).toString();
-    const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
+      const newNodeId = (nodes.length + 1).toString();
+      const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
 
-    // Check if the selected question already has a connection
-    if (selectedNode) {
-      const existingConnection = edges.find(edge => edge.source === selectedNode);
-      if (existingConnection && !selectedNodeData?.data.isCritical) {
+      // Check if the selected question already has a connection
+      if (selectedNode) {
+        const existingConnection = edges.find(edge => edge.source === selectedNode);
+        if (existingConnection && !selectedNodeData?.data.isCritical) {
+          setNotification({
+            show: true,
+            message: 'This question already has a connection',
+            type: 'warning'
+          });
+          
+          setTimeout(() => {
+            setNotification(prev => ({ ...prev, show: false }));
+          }, 3000);
+          
+          return;
+        }
+      }
+
+      // If the selected question is critical, don't create a connection
+      if (selectedNodeData?.data.isCritical) {
         setNotification({
           show: true,
-          message: 'This question already has a connection',
+          message: 'Cannot add connection to a critical question',
           type: 'warning'
         });
         
@@ -1059,51 +1120,35 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         
         return;
       }
-    }
 
-    // If the selected question is critical, don't create a connection
-    if (selectedNodeData?.data.isCritical) {
-      setNotification({
-        show: true,
-        message: 'Cannot add connection to a critical question',
-        type: 'warning'
-      });
-      
-      setTimeout(() => {
-        setNotification(prev => ({ ...prev, show: false }));
-      }, 3000);
-      
-      return;
-    }
+      // Ajouter des styles de transition pour l'animation
+      const addTransitionStyles = () => {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'new-node-transition-styles';
+        styleElement.textContent = `
+          .react-flow__node {
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
+          }
+          .react-flow__edge-path {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+          }
+        `;
+        document.head.appendChild(styleElement);
 
-    // Ajouter des styles de transition pour l'animation
-    const addTransitionStyles = () => {
-      const styleElement = document.createElement('style');
-      styleElement.id = 'new-node-transition-styles';
-      styleElement.textContent = `
-        .react-flow__node {
-          transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
-        }
-        .react-flow__edge {
-          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease !important;
-        }
-        .react-flow__edge-path {
-          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
+        // Supprimer les styles après l'animation
+        setTimeout(() => {
+          const existingStyle = document.getElementById('new-node-transition-styles');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+        }, 1000);
+      };
 
-      // Supprimer les styles après l'animation
-      setTimeout(() => {
-        const existingStyle = document.getElementById('new-node-transition-styles');
-        if (existingStyle) {
-          existingStyle.remove();
-        }
-      }, 1000);
-    };
-
-    // Ajouter les styles de transition
-    addTransitionStyles();
+      // Ajouter les styles de transition
+      addTransitionStyles();
 
     // Calculer la position Y en fonction des nœuds existants
     let maxY = 0;
@@ -1138,89 +1183,89 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       newY = maxY + BASE_SPACING;
     }
 
-    const newNode: Node = {
-      id: newNodeId,
-      type: 'questionNode',
-      data: { 
+      const newNode: Node = {
         id: newNodeId,
-        questionNumber: nodes.length + 1,
-        type: 'text',
-        text: '',
-        options: [],
-        media: '',
-        mediaUrl: '',
-        isCritical: false,
-        onCreatePaths: createPathsFromNode,
-        onChange: (newData: any) => handleNodeChange(newNodeId, newData)
-      },
-      position: { 
-        x: selectedNode 
-          ? nodes.find(n => n.id === selectedNode)?.position.x || 250
-          : 250, 
+        type: 'questionNode',
+        data: { 
+          id: newNodeId,
+          questionNumber: nodes.length + 1,
+          type: 'text',
+          text: '',
+          options: [],
+          media: '',
+          mediaUrl: '',
+          isCritical: false,
+          onCreatePaths: createPathsFromNode,
+          onChange: (newData: any) => handleNodeChange(newNodeId, newData)
+        },
+        position: { 
+          x: selectedNode 
+            ? nodes.find(n => n.id === selectedNode)?.position.x || 250
+            : 250, 
         y: newY
-      },
-      style: {
-        opacity: 0 // Commencer avec une opacité de 0 pour l'animation
-      }
-    };
-
-    // Ajouter le nouveau nœud avec animation
-    setNodes(prevNodes => [...prevNodes, newNode]);
-
-    // Animer l'apparition du nœud après un court délai
-    setTimeout(() => {
-      setNodes(prevNodes => 
-        prevNodes.map(node => 
-          node.id === newNodeId 
-            ? { ...node, style: { ...node.style, opacity: 1 } } 
-            : node
-        )
-      );
-    }, 50);
-
-    // Create a connection only if a non-critical question is selected
-    if (selectedNode && !selectedNodeData?.data.isCritical) {
-      const newEdge: Edge = {
-        id: `e${selectedNode}-${newNodeId}`,
-        source: selectedNode,
-        target: newNodeId,
-        type: 'default',
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
         },
-        style: { 
-          strokeWidth: 2,
-          stroke: '#667eea',
-          opacity: 0, // Commencer avec une opacité de 0 pour l'animation
-        },
+        style: {
+          opacity: 0 // Commencer avec une opacité de 0 pour l'animation
+        }
       };
-      
-      // Ajouter l'arête avec animation
-      setEdges(prevEdges => [...prevEdges, newEdge]);
-      
-      // Animer l'apparition de l'arête après un court délai
+
+      // Ajouter le nouveau nœud avec animation
+      setNodes(prevNodes => [...prevNodes, newNode]);
+
+      // Animer l'apparition du nœud après un court délai
       setTimeout(() => {
-        setEdges(prevEdges => 
-          prevEdges.map(edge => 
-            edge.id === newEdge.id 
-              ? { ...edge, style: { ...edge.style, opacity: 1 } } 
-              : edge
+        setNodes(prevNodes => 
+          prevNodes.map(node => 
+            node.id === newNodeId 
+              ? { ...node, style: { ...node.style, opacity: 1 } } 
+              : node
           )
         );
-      }, 100);
-    }
+      }, 50);
 
-    // Ajuster la vue après l'ajout du nouveau nœud
-    if (reactFlowInstance) {
-      setTimeout(() => {
-        reactFlowInstance.fitView({
-          padding: 0.4,
-          duration: 800,
-          minZoom: 0.1,
-          maxZoom: 1,
-        });
-      }, 300);
-    }
+      // Create a connection only if a non-critical question is selected
+      if (selectedNode && !selectedNodeData?.data.isCritical) {
+        const newEdge: Edge = {
+          id: `e${selectedNode}-${newNodeId}`,
+          source: selectedNode,
+          target: newNodeId,
+          type: 'default',
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          style: { 
+            strokeWidth: 2,
+            stroke: '#667eea',
+            opacity: 0, // Commencer avec une opacité de 0 pour l'animation
+          },
+        };
+        
+        // Ajouter l'arête avec animation
+        setEdges(prevEdges => [...prevEdges, newEdge]);
+        
+        // Animer l'apparition de l'arête après un court délai
+        setTimeout(() => {
+          setEdges(prevEdges => 
+            prevEdges.map(edge => 
+              edge.id === newEdge.id 
+                ? { ...edge, style: { ...edge.style, opacity: 1 } } 
+                : edge
+            )
+          );
+        }, 100);
+      }
+
+      // Ajuster la vue après l'ajout du nouveau nœud
+      if (reactFlowInstance) {
+        setTimeout(() => {
+          reactFlowInstance.fitView({
+            padding: 0.4,
+            duration: 800,
+            minZoom: 0.1,
+            maxZoom: 1,
+          });
+        }, 300);
+      }
   };
 
   useEffect(() => {
@@ -1314,66 +1359,179 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     reorganizeFlow: reorganizeFlow,
   }));
 
+  // Ajouter un composant pour les notifications
+  const NotificationMessage = () => {
+    if (!notification.show) return null;
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 99999,
+          padding: '10px 20px',
+          borderRadius: '8px',
+          backgroundColor: notification.type === 'error' ? '#ff4444' : 
+                         notification.type === 'warning' ? '#ffbb33' : 
+                         notification.type === 'success' ? '#00C851' : '#667eea',
+          color: 'white',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          minWidth: '200px',
+          justifyContent: 'center',
+          animation: 'slideDown 0.3s ease-out',
+          pointerEvents: 'auto',
+        }}
+      >
+        {notification.message}
+      </div>
+    );
+  };
+
   return (
     <>
       <GlobalStyles />
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {notification.show && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 1000,
-              padding: '10px 20px',
-              borderRadius: '4px',
-              backgroundColor: notification.type === 'error' ? '#ff4444' : notification.type === 'success' ? '#66cc66' : '#667eea',
-              color: 'white',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            }}
-          >
-            {notification.message}
-          </div>
-        )}
-        <DeleteButton />
-        <ReorganizeButton />
-        <ReactFlow
-          nodes={nodesWithCallbacks}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChangeCallback}
-          onConnect={onConnect}
-          onEdgeUpdate={onEdgeUpdate}
-          onEdgeClick={onEdgeClick}
-          onNodeClick={onNodeClick}
-          onPaneClick={handlePaneClick}
-          connectionMode={ConnectionMode.Loose}
-          minZoom={0.1}
-          defaultEdgeOptions={{
-            type: 'default',
-            style: {
-              strokeWidth: 2,
-              stroke: '#667eea',
-            },
-          }}
-          fitView
-          onInit={setReactFlowInstance}
-          onMove={(event, viewport) => {
-            setReactFlowInstance((prev) => ({
-              ...prev!,
-              viewportInitialized: true,
-              viewport,
-            } as ReactFlowInstance));
+        <div 
+          ref={flowContainerRef}
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            position: 'relative',
+            transition: 'all 0.3s ease',
+            ...(isFullscreen && {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 9999,
+              backgroundColor: 'white'
+            })
           }}
         >
-          <Background />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+          <NotificationMessage />
+          <DeleteButton />
+          <ReorganizeButton />
+          {isMobile && (
+            <IconButton
+              onClick={toggleFullscreen}
+              sx={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                zIndex: 1000,
+                backgroundColor: 'white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+              TouchRippleProps={{
+                classes: {
+                  child: 'touch-ripple-child',
+                },
+              }}
+            >
+              {isFullscreen ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3h3a2 2 0 0 1 2 2v3M21 3h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                </svg>
+              )}
+            </IconButton>
+          )}
+          {isFullscreen && (
+            <Fab
+              color="primary"
+              aria-label="add question"
+              onClick={addNewQuestion}
+              sx={{
+                position: 'absolute',
+                bottom: 24,
+                right: 24,
+                zIndex: 1000,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                },
+              }}
+              TouchRippleProps={{
+                classes: {
+                  child: 'touch-ripple-child',
+                },
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </Fab>
+          )}
+          <ReactFlow
+            nodes={nodesWithCallbacks}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChangeCallback}
+            onConnect={onConnect}
+            onEdgeUpdate={onEdgeUpdate}
+            onEdgeClick={onEdgeClick}
+            onNodeClick={onNodeClick}
+            onPaneClick={handlePaneClick}
+            connectionMode={ConnectionMode.Loose}
+            minZoom={0.1}
+            defaultEdgeOptions={{
+              type: 'default',
+              style: {
+                strokeWidth: 2,
+                stroke: '#667eea',
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 20,
+                height: 20,
+                color: '#667eea',
+              },
+            }}
+            fitView
+            onInit={setReactFlowInstance}
+            onMove={(event, viewport) => {
+              setReactFlowInstance((prev) => ({
+                ...prev!,
+                viewportInitialized: true,
+                viewport,
+              } as ReactFlowInstance));
+            }}
+          >
+            <Background />
+            <Controls />
+            {!isMobile && <MiniMap />}
+          </ReactFlow>
+        </div>
       </div>
+      <style jsx global>{`
+        @keyframes slideDown {
+          from {
+            transform: translate(-50%, -100%);
+            opacity: 0;
+          }
+          to {
+            transform: translate(-50%, 0);
+            opacity: 1;
+          }
+        }
+        .react-flow__attribution {
+          display: none !important;
+        }
+      `}</style>
     </>
   );
 });
