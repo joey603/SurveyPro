@@ -160,7 +160,23 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         }}
       />
 
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+      <Stack 
+        direction="row" 
+        spacing={2} 
+        alignItems="center" 
+        sx={{ 
+          flexWrap: 'wrap',
+          gap: 1,
+          '& .MuiChip-root': {
+            margin: '0 !important',
+            '@media (max-width: 600px)': {
+              width: '100%',
+              justifyContent: 'center',
+              marginBottom: '8px !important'
+            }
+          }
+        }}
+      >
         <Chip
           icon={<FilterListIcon />}
           label="Date Filter"
