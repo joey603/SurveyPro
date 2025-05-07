@@ -1418,7 +1418,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               zIndex: 9999,
               backgroundColor: 'white',
               WebkitOverflowScrolling: 'touch',
-              overflow: 'auto'
+              overflow: 'auto',
+              isolation: 'isolate'
             })
           }}
         >
@@ -1519,6 +1520,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 viewportInitialized: true,
                 viewport,
               } as ReactFlowInstance));
+            }}
+            style={{
+              position: 'relative',
+              zIndex: 1
             }}
           >
             <Background />
