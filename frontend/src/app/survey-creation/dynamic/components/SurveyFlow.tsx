@@ -703,6 +703,15 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         pointer-events: none;
         transition: all 0.2s ease;
       }
+      .react-flow__node {
+        transition: all 0.3s ease;
+      }
+      .react-flow__controls {
+        transition: all 0.3s ease;
+      }
+      .react-flow__minimap {
+        transition: all 0.3s ease;
+      }
     `}</style>
   );
 
@@ -1004,35 +1013,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     calculateLayout();
     const orderedNodeIds = getOrderedNodes();
-
-    // Ajouter des styles de transition pour l'animation
-    const addTransitionStyles = () => {
-      const styleElement = document.createElement('style');
-      styleElement.id = 'node-transition-styles';
-      styleElement.textContent = `
-        .react-flow__node {
-          transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        }
-        .react-flow__edge {
-          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        }
-        .react-flow__edge-path {
-          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
-
-      // Supprimer les styles après l'animation
-      setTimeout(() => {
-        const existingStyle = document.getElementById('node-transition-styles');
-        if (existingStyle) {
-          existingStyle.remove();
-        }
-      }, 1500);
-    };
-
-    // Ajouter les styles de transition
-    addTransitionStyles();
 
     // Update question numbers and positions
     setNodes(prevNodes => {
@@ -1437,7 +1417,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               height: '100vh',
               zIndex: 9999,
               backgroundColor: 'white',
-              WebkitOverflowScrolling: 'touch', // Pour le défilement fluide sur iOS
+              WebkitOverflowScrolling: 'touch',
               overflow: 'auto'
             })
           }}
@@ -1458,6 +1438,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 '&:hover': {
                   backgroundColor: '#f5f5f5',
                 },
+                transition: 'all 0.3s ease',
               }}
               TouchRippleProps={{
                 classes: {
@@ -1490,6 +1471,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                 },
+                transition: 'all 0.3s ease',
               }}
               TouchRippleProps={{
                 classes: {
@@ -1545,21 +1527,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           </ReactFlow>
         </div>
       </div>
-      <style jsx global>{`
-        @keyframes slideDown {
-          from {
-            transform: translate(-50%, -100%);
-            opacity: 0;
-          }
-          to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-          }
-        }
-        .react-flow__attribution {
-          display: none !important;
-        }
-      `}</style>
     </>
   );
 });
