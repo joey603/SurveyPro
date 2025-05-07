@@ -47,28 +47,29 @@ const RegisterPage: React.FC = () => {
     setPasswordError(validatePassword(value));
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation du mot de passe
-    const passwordValidation = validatePassword(password);
-    if (passwordValidation) {
-      setPasswordError(passwordValidation);
-      return;
-    }
-    
-    setLoading(true);
     setError('');
+    setLoading(true);
     
     try {
-      // Récupération de l'URL de l'API à partir des variables d'environnement
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://surveypro-ir3u.onrender.com';
+      const apiUrl = 'https://surveypro-ir3u.onrender.com';
+      console.log('URL de l\'API:', apiUrl);
+      console.log('Données du formulaire:', { email, password, username });
       
       const response = await axios.post(`${apiUrl}/api/auth/register`, {
-        username,
         email,
         password,
+        username
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
+
+      console.log('Réponse du serveur:', response.status, response.statusText);
       
       if (response.status === 201) {
         // Stocker l'email dans le localStorage pour la vérification
@@ -256,7 +257,7 @@ const RegisterPage: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleRegister}>
+          <Box component="form" onSubmit={handleSubmit}>
             <TextField
               label="Username"
               fullWidth

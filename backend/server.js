@@ -54,7 +54,7 @@ const allowedOrigins = [
   'https://surveyflow-ixdz8kwne-joeys-projects-2b62a68a.vercel.app',
   'https://www.surveyflow.co',
   'https://surveyflow.co',
-  'https://surveypro-backend.onrender.com'
+  'https://surveypro-ir3u.onrender.com'
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
@@ -83,6 +83,18 @@ app.use(cors({
   optionsSuccessStatus: 204,
   maxAge: 86400 // 24 heures en secondes
 }));
+
+// Middleware pour gérer les requêtes OPTIONS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.status(204).end();
+  }
+  next();
+});
 
 // Gérer les requêtes OPTIONS explicitement
 app.options('*', cors());
