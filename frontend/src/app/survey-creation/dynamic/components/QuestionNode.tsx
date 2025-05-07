@@ -406,9 +406,29 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           borderRadius: 2,
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          cursor: 'pointer',
+          transition: 'transform 0.1s ease-in-out',
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+          '& *': {
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }
         }}
       >
-        <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
+        <Handle 
+          type="target" 
+          position={Position.Top} 
+          isConnectable={isConnectable}
+          style={{
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        />
         
         <Box sx={{ 
           mb: 2, 
@@ -416,9 +436,18 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           justifyContent: 'space-between', 
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: 1
+          gap: 1,
+          touchAction: 'manipulation',
         }}>
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+          <Typography 
+            variant="subtitle1" 
+            fontWeight="bold" 
+            sx={{ 
+              fontSize: { xs: '0.9rem', sm: '1rem' },
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
             Question {data.questionNumber} 
           </Typography>
           <IconButton 
@@ -429,6 +458,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               minWidth: '48px',
               minHeight: '48px',
               padding: '12px',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              '&:active': {
+                transform: 'scale(0.95)',
+              }
             }}
             TouchRippleProps={{
               classes: {
@@ -441,7 +475,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         </Box>
 
         {isEditing ? (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ 
+            mt: 2,
+            touchAction: 'manipulation',
+            '& *': {
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+            }
+          }}>
             <FormControlLabel
               control={
                 <Checkbox
@@ -449,6 +490,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   onChange={handleCriticalChange}
                   sx={{
                     padding: '8px',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
                   }}
                   TouchRippleProps={{
                     classes: {
@@ -458,11 +501,19 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 />
               }
               label={
-                <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                <Typography sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
                   Critical Question (creates different paths)
                 </Typography>
               }
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}
               data-intro="critical-question"
             />
 
@@ -475,13 +526,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 borderRadius: 1,
                 cursor: 'pointer',
                 mb: 2,
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
                 '&:hover': {
                   borderColor: 'primary.main',
                 },
-                touchAction: 'manipulation',
+                '&:active': {
+                  transform: 'scale(0.98)',
+                },
+                transition: 'all 0.1s ease-in-out',
               }}
             >
-              <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+              <Typography sx={{ 
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes)
                   .find(t => t.value === questionData.type)?.label || 'Select type'}
               </Typography>
@@ -505,6 +565,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     width: 'auto',
                     mt: 1,
                     zIndex: 10000,
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
                   },
                 },
                 root: {
@@ -512,13 +574,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   style: {
                     position: 'absolute',
                     zIndex: 10000,
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
                   }
                 }
               }}
               disablePortal={false}
               container={document.querySelector('.react-flow') || document.body}
             >
-              <Box sx={{ p: 1 }}>
+              <Box sx={{ 
+                p: 1,
+                touchAction: 'manipulation',
+                '& *': {
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                }
+              }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes).map((type) => (
                   <MenuItem
                     key={type.value}
@@ -528,6 +599,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       fontSize: { xs: '0.8rem', sm: '0.875rem' },
                       minHeight: '48px',
                       padding: '12px 16px',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                      '&:active': {
+                        transform: 'scale(0.98)',
+                      },
+                      transition: 'all 0.1s ease-in-out',
                     }}
                     TouchRippleProps={{
                       classes: {
@@ -551,19 +628,36 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 mb: 2,
                 '& .MuiInputBase-root': {
                   minHeight: '48px',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
                 }
               }}
               InputProps={{
-                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+                sx: { 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                }
               }}
               InputLabelProps={{
-                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+                sx: { 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                }
               }}
             />
 
             {renderQuestionFields()}
 
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ 
+              mt: 2,
+              touchAction: 'manipulation',
+              '& *': {
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }
+            }}>
               <input
                 type="file"
                 id={`media-upload-${id}`}
@@ -572,7 +666,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 onChange={handleMediaUpload}
               />
               
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                flexWrap: 'wrap',
+                touchAction: 'manipulation',
+              }}>
                 <Button
                   component="label"
                   htmlFor={`media-upload-${id}`}
@@ -585,6 +685,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     fontSize: { xs: '0.7rem', sm: '0.875rem' },
                     minHeight: '48px',
                     padding: '12px 16px',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
+                    '&:active': {
+                      transform: 'scale(0.98)',
+                    },
+                    transition: 'all 0.1s ease-in-out',
                   }}
                   TouchRippleProps={{
                     classes: {
@@ -604,6 +710,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       minWidth: '48px',
                       minHeight: '48px',
                       padding: '12px',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                      '&:active': {
+                        transform: 'scale(0.95)',
+                      },
+                      transition: 'all 0.1s ease-in-out',
                     }}
                     TouchRippleProps={{
                       classes: {
@@ -651,15 +763,43 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             </Box>
           </Box>
         ) : (
-          <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
+          <Box sx={{ 
+            touchAction: 'manipulation',
+            '& *': {
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+            }
+          }}>
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
               Type: {questionTypes.find(t => t.value === questionData.type)?.label}
             </Typography>
-            <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
               {questionData.text || 'No question text'}
             </Typography>
             {questionData.mediaUrl && (
-              <Box sx={{ mt: 1, maxWidth: '100%', maxHeight: '150px', overflow: 'hidden' }}>
+              <Box sx={{ 
+                mt: 1, 
+                maxWidth: '100%', 
+                maxHeight: '150px', 
+                overflow: 'hidden',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
                 {questionData.media === 'image' ? (
                   <img
                     src={questionData.mediaUrl}
@@ -668,7 +808,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       maxWidth: '100%',
                       maxHeight: '150px',
                       objectFit: 'contain',
-                      borderRadius: '4px'
+                      borderRadius: '4px',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
                     }}
                   />
                 ) : (
@@ -677,7 +819,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     controls
                     width="100%"
                     height="auto"
-                    style={{ borderRadius: '4px' }}
+                    style={{ 
+                      borderRadius: '4px',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                    }}
                   />
                 )}
               </Box>
@@ -685,12 +831,23 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           </Box>
         )}
 
-        <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} />
+        <Handle 
+          type="source" 
+          position={Position.Bottom} 
+          isConnectable={isConnectable}
+          style={{
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        />
       </Paper>
 
       <style jsx global>{`
         .question-node-popover {
           z-index: 9999 !important;
+        }
+        .touch-ripple-child {
+          opacity: 0.3 !important;
         }
       `}</style>
     </div>
