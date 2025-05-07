@@ -24,7 +24,7 @@ import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import { SurveyFlowRef } from '../types/SurveyFlowTypes';
-import { IconButton, Fab, Button } from '@mui/material';
+import { IconButton, Fab, Button, Box } from '@mui/material';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
@@ -91,18 +91,18 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      const element = flowContainerRef.current;
-      if (element) {
-        if (element.requestFullscreen) {
-          element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          (element as any).webkitRequestFullscreen();
-        } else if ((element as any).webkitEnterFullscreen) {
-          (element as any).webkitEnterFullscreen();
-        }
+    if (!flowContainerRef.current) return;
+
+    if (!document.fullscreenElement && 
+        !(document as any).webkitFullscreenElement && 
+        !(document as any).webkitIsFullScreen) {
+      if (flowContainerRef.current.requestFullscreen) {
+        flowContainerRef.current.requestFullscreen();
+      } else if ((flowContainerRef.current as any).webkitRequestFullscreen) {
+        (flowContainerRef.current as any).webkitRequestFullscreen();
+      } else if ((flowContainerRef.current as any).webkitEnterFullscreen) {
+        (flowContainerRef.current as any).webkitEnterFullscreen();
       }
-      setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
@@ -111,31 +111,44 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       } else if ((document as any).webkitCancelFullscreen) {
         (document as any).webkitCancelFullscreen();
       }
-      setIsFullscreen(false);
     }
   };
 
-  // Ajouter un écouteur pour détecter la sortie du mode plein écran
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const isFullscreenActive = !!(
-        document.fullscreenElement || 
+      const isFullscreen = !!(
+        document.fullscreenElement ||
         (document as any).webkitFullscreenElement ||
         (document as any).webkitIsFullScreen
       );
-      setIsFullscreen(isFullscreenActive);
+      setIsFullscreen(isFullscreen);
     };
 
+    // Ajouter les écouteurs d'événements pour tous les navigateurs
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
     document.addEventListener('webkitendfullscreen', handleFullscreenChange);
+
+    // Gestion spécifique pour iOS
+    const handleOrientationChange = (event: Event) => {
+      if (window.orientation === 0) { // Mode portrait
+        handleFullscreenChange();
+      }
+    };
+
+    if ('standalone' in navigator && (navigator as any).standalone) {
+      window.addEventListener('orientationchange', handleOrientationChange);
+    }
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
       document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
+      if ('standalone' in navigator && (navigator as any).standalone) {
+        window.removeEventListener('orientationchange', handleOrientationChange);
+      }
     };
   }, []);
 
