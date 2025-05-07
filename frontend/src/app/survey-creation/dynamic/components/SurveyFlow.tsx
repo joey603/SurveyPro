@@ -110,8 +110,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         (document as any).webkitExitFullscreen();
       } else if ((document as any).webkitCancelFullscreen) {
         (document as any).webkitCancelFullscreen();
-      } else if ((document as any).webkitCancelFullScreen) {
-        (document as any).webkitCancelFullScreen();
       }
       setIsFullscreen(false);
     }
@@ -123,30 +121,21 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const isFullscreenActive = !!(
         document.fullscreenElement || 
         (document as any).webkitFullscreenElement ||
-        (document as any).webkitIsFullScreen ||
-        (document as any).webkitIsFullscreen
+        (document as any).webkitIsFullScreen
       );
       setIsFullscreen(isFullscreenActive);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setIsFullscreen(false);
-      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
     document.addEventListener('webkitendfullscreen', handleFullscreenChange);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
       document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
