@@ -99,10 +99,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       setIsFullscreen(true);
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
+      if (document.documentElement.exitFullscreen) {
+        document.documentElement.exitFullscreen();
+      } else if ((document.documentElement as any).webkitExitFullscreen) {
+        (document.documentElement as any).webkitExitFullscreen();
+      } else if ((document.documentElement as any).webkitCancelFullscreen) {
+        (document.documentElement as any).webkitCancelFullscreen();
       }
       // Forcer la mise à jour de l'état pour iOS
       setIsFullscreen(false);
