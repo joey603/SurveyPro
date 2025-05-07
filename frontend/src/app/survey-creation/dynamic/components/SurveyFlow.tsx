@@ -126,16 +126,24 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       setIsFullscreen(isFullscreenActive);
     };
 
+    const handleFullscreenError = () => {
+      setIsFullscreen(false);
+    };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
     document.addEventListener('webkitendfullscreen', handleFullscreenChange);
+    document.addEventListener('fullscreenerror', handleFullscreenError);
+    document.addEventListener('webkitfullscreenerror', handleFullscreenError);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
       document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
+      document.removeEventListener('fullscreenerror', handleFullscreenError);
+      document.removeEventListener('webkitfullscreenerror', handleFullscreenError);
     };
   }, []);
 
