@@ -92,15 +92,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      const element = flowContainerRef.current;
-      if (element) {
-        if (element.requestFullscreen) {
-          element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          (element as any).webkitRequestFullscreen();
-        } else if ((element as any).webkitEnterFullscreen) {
-          (element as any).webkitEnterFullscreen();
-        }
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if ((document.documentElement as any).webkitRequestFullscreen) {
+        (document.documentElement as any).webkitRequestFullscreen();
       }
       setIsFullscreen(true);
     } else {
@@ -108,10 +103,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         document.exitFullscreen();
       } else if ((document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
-      } else if ((document as any).webkitCancelFullscreen) {
-        (document as any).webkitCancelFullscreen();
       }
+      // Forcer la mise à jour de l'état pour iOS
       setIsFullscreen(false);
+      // Ajouter un délai pour s'assurer que l'état est mis à jour
+      setTimeout(() => {
+        setIsFullscreen(false);
+      }, 100);
     }
   };
 
