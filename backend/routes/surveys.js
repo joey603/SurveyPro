@@ -6,6 +6,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer"); // For handling file uploads
 const { uploadFileToCloudinary } = require("../cloudinaryConfig");
 const { deleteFileFromCloudinary } = require("../cloudinaryConfig");
+const jwt = require("jsonwebtoken");
 
 const Survey = require("../models/Survey");
 const SurveyAnswer = require("../models/SurveyAnswer");
@@ -34,12 +35,21 @@ router.get("/:id", async (req, res) => {
 
     // Si le sondage est privé
     if (survey.isPrivate) {
-      // Si l'utilisateur est authentifié (peu importe s'il est propriétaire ou non)
-      if (req.user) {
-        return res.json(survey);
+      // Vérifier si l'utilisateur est authentifié
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.split(' ')[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          // Si l'utilisateur est authentifié, lui donner accès
+          return res.json(survey);
+        } catch (error) {
+          console.error('Token verification failed:', error);
+          // Si le token est invalide, continuer avec la vérification du surveyId
+        }
       }
       
-      // Si l'utilisateur n'est pas authentifié mais a le bon surveyId
+      // Si l'utilisateur n'est pas authentifié, vérifier le surveyId
       if (req.query.surveyId === survey._id.toString()) {
         return res.json(survey);
       }
