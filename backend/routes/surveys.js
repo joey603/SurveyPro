@@ -176,12 +176,13 @@ router.get("/private/:id", async (req, res) => {
       return res.status(400).json({ message: 'This is not a private survey' });
     }
 
-    // Vérifier l'ID du sondage dans l'URL
-    if (req.query.surveyId === survey._id.toString()) {
+    // Vérifier le lien privé
+    const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
+    if (req.query.privateLink === privateLink) {
       return res.json(survey);
     }
 
-    return res.status(403).json({ message: 'Invalid survey access' });
+    return res.status(403).json({ message: 'Invalid private link' });
   } catch (error) {
     console.error('Error accessing private survey:', error);
     res.status(500).json({ message: 'Error accessing survey' });

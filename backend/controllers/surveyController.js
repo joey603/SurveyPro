@@ -114,8 +114,9 @@ exports.getSurveyById = async (req, res) => {
         return res.json(survey);
       }
       
-      // Si l'utilisateur accède via l'ID du sondage dans l'URL
-      if (req.query.surveyId === survey._id.toString()) {
+      // Si l'utilisateur n'est pas authentifié mais accède via le lien privé
+      const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
+      if (req.query.privateLink === privateLink) {
         return res.json(survey);
       }
 
