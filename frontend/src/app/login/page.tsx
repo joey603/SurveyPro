@@ -143,14 +143,17 @@ const LoginPage: React.FC = () => {
       
       // Récupérer l'URL de redirection sauvegardée
       const redirectPath = localStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection trouvée:', redirectPath);
       
       // Nettoyer le localStorage
       localStorage.removeItem('redirectAfterLogin');
       
       // Rediriger vers l'URL sauvegardée ou vers la page d'accueil
       if (redirectPath) {
-        router.push(redirectPath);
+        console.log('Redirection vers:', redirectPath);
+        window.location.href = redirectPath;
       } else {
+        console.log('Redirection vers la page d\'accueil');
         router.push('/');
       }
     } catch (error) {
