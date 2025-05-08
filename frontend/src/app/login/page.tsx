@@ -14,7 +14,6 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  Link as MuiLink,
 } from '@mui/material';
 import axios from 'axios';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -118,46 +117,67 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation du formulaire
+    if (!handleFormValidation()) {
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      // Utiliser un chemin relatif en production pour bénéficier des rewrites Vercel
+      const apiPath = process.env.NODE_ENV === 'production' 
+        ? '/api/auth/login' 
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041'}/api/auth/login`;
+      
+      console.log('API Path for login:', apiPath);
+      
+      const response = await axios.post(apiPath, {
         email,
-        password
+        password,
       });
 
-      if (response.data.accessToken) {
-        await onLoginSuccess(response.data.accessToken);
+      if (response.status === 200 && response.data) {
+        setError('');
+        
+        // Stocker le token dans le localStorage et rediriger
+        localStorage.setItem('accessToken', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+        
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+        
+        await onLoginSuccess();
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de la connexion');
+      console.error('Erreur de connexion:', err);
+      
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erreur lors de la connexion. Veuillez réessayer.');
+      }
+      
       setIsLoading(false);
     }
   };
 
-  const onLoginSuccess = async (token: string) => {
+  const onLoginSuccess = async () => {
     try {
-      // Sauvegarder le token
-      localStorage.setItem('token', token);
+      const token = localStorage.getItem('accessToken');
       
-      // Récupérer l'URL de redirection sauvegardée
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée:', redirectPath);
-      
-      // Nettoyer le localStorage
-      localStorage.removeItem('redirectAfterLogin');
-      
-      // Rediriger vers l'URL sauvegardée ou vers la page d'accueil
-      if (redirectPath) {
-        console.log('Redirection vers:', redirectPath);
-        window.location.href = redirectPath;
-      } else {
-        console.log('Redirection vers la page d\'accueil');
-        router.push('/');
+      if (token) {
+        login(token, localStorage.getItem('refreshToken') || '');
       }
+      
+      console.log('Redirection vers la page d\'accueil...');
+      router.push('/');
     } catch (error) {
       console.error('Erreur lors de la redirection:', error);
+      setError('Erreur lors de la redirection.');
       setIsLoading(false);
     }
   };

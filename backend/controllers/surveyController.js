@@ -107,16 +107,15 @@ exports.getSurveyById = async (req, res) => {
       return res.status(404).json({ message: 'Survey not found' });
     }
 
-    // Vérifier si le sondage est privé et si l'utilisateur a le droit d'y accéder
+    // Vérifier si le sondage est privé
     if (survey.isPrivate) {
       // Si l'utilisateur est authentifié et est le propriétaire
       if (req.user && survey.userId.toString() === req.user.id) {
         return res.json(survey);
       }
       
-      // Si l'utilisateur n'est pas authentifié mais accède via le lien privé
-      const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
-      if (req.query.privateLink === privateLink) {
+      // Si l'utilisateur accède via le lien privé (vérification du surveyId dans l'URL)
+      if (req.query.surveyId === survey._id.toString()) {
         return res.json(survey);
       }
 

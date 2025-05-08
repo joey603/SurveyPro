@@ -199,9 +199,8 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      // Sauvegarder l'URL complète avec tous les paramètres
-      const currentUrl = window.location.pathname + window.location.search;
-      console.log('Sauvegarde de l\'URL de redirection:', currentUrl);
+      // Sauvegarder l'URL complète pour la redirection après connexion
+      const currentUrl = window.location.href;
       localStorage.setItem('redirectAfterLogin', currentUrl);
       // Rediriger vers la page de connexion
       router.push('/login');
