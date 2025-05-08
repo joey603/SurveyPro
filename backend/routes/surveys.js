@@ -28,39 +28,68 @@ router.get("/", authMiddleware, getSurveys);
 // Route pour accéder aux sondages (avec ou sans authentification)
 router.get("/:id", async (req, res) => {
   try {
+    console.log('=== Début de la requête pour accéder au sondage ===');
+    console.log('ID du sondage demandé:', req.params.id);
+    console.log('Headers de la requête:', req.headers);
+    console.log('Query params:', req.query);
+
     const survey = await Survey.findById(req.params.id);
+    console.log('Sondage trouvé:', survey ? 'Oui' : 'Non');
+    if (survey) {
+      console.log('Détails du sondage:', {
+        id: survey._id,
+        title: survey.title,
+        isPrivate: survey.isPrivate,
+        userId: survey.userId
+      });
+    }
+
     if (!survey) {
+      console.log('Sondage non trouvé avec l\'ID:', req.params.id);
       return res.status(404).json({ message: 'Survey not found' });
     }
 
     // Si le sondage est privé
     if (survey.isPrivate) {
+      console.log('Sondage privé détecté');
       // Vérifier si l'utilisateur est authentifié
       const authHeader = req.headers.authorization;
+      console.log('Header d\'authentification présent:', !!authHeader);
+      
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
           const token = authHeader.split(' ')[1];
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          console.log('Token décodé:', decoded);
+          console.log('ID de l\'utilisateur connecté:', decoded.id);
+          console.log('ID du propriétaire du sondage:', survey.userId);
           // Si l'utilisateur est authentifié, lui donner accès
           return res.json(survey);
         } catch (error) {
-          console.error('Token verification failed:', error);
+          console.error('Erreur de vérification du token:', error);
           // Si le token est invalide, continuer avec la vérification du surveyId
         }
       }
       
       // Si l'utilisateur n'est pas authentifié, vérifier le surveyId
+      console.log('Vérification du surveyId dans l\'URL');
+      console.log('surveyId dans l\'URL:', req.query.surveyId);
+      console.log('ID du sondage:', survey._id.toString());
+      
       if (req.query.surveyId === survey._id.toString()) {
+        console.log('Accès autorisé via surveyId');
         return res.json(survey);
       }
 
+      console.log('Accès refusé - Aucune méthode d\'accès valide');
       return res.status(403).json({ message: 'Access denied' });
     }
 
     // Pour les sondages publics, permettre l'accès à tous
+    console.log('Sondage public - Accès autorisé');
     return res.json(survey);
   } catch (error) {
-    console.error('Error accessing survey:', error);
+    console.error('Erreur lors de l\'accès au sondage:', error);
     res.status(500).json({ message: 'Error accessing survey' });
   }
 });
