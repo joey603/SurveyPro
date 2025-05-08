@@ -164,4 +164,29 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
     }
   });
 
+// Route pour accéder aux sondages privés sans authentification
+router.get("/private/:id", async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id);
+    if (!survey) {
+      return res.status(404).json({ message: 'Survey not found' });
+    }
+
+    if (!survey.isPrivate) {
+      return res.status(400).json({ message: 'This is not a private survey' });
+    }
+
+    // Vérifier le lien privé
+    const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
+    if (req.query.privateLink === privateLink) {
+      return res.json(survey);
+    }
+
+    return res.status(403).json({ message: 'Invalid private link' });
+  } catch (error) {
+    console.error('Error accessing private survey:', error);
+    res.status(500).json({ message: 'Error accessing survey' });
+  }
+});
+
 module.exports = router;
