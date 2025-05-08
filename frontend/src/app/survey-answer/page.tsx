@@ -201,6 +201,7 @@ const SurveyAnswerPage: React.FC = () => {
     if (sharedSurveyId && !isAuthenticated) {
       // Sauvegarder l'URL complète pour la redirection après connexion
       const currentUrl = window.location.href;
+      console.log('URL actuelle:', currentUrl);
       console.log('Sauvegarde de l\'URL de redirection:', currentUrl);
       localStorage.setItem('redirectAfterLogin', currentUrl);
       // Rediriger vers la page de connexion
@@ -212,7 +213,7 @@ const SurveyAnswerPage: React.FC = () => {
     // Vérifier si l'utilisateur vient de se connecter et a une URL de redirection
     if (isAuthenticated) {
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée:', redirectUrl);
+      console.log('URL de redirection trouvée après connexion:', redirectUrl);
       if (redirectUrl) {
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');

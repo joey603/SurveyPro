@@ -182,6 +182,7 @@ const LoginPage: React.FC = () => {
         localStorage.removeItem('redirectAfterLogin');
         // Rediriger vers l'URL sauvegardée
         console.log('Redirection vers l\'URL sauvegardée:', redirectUrl);
+        // Utiliser window.location.href pour une redirection complète
         window.location.href = redirectUrl;
       } else {
         // Redirection par défaut vers la page d'accueil
