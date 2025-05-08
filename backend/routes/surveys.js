@@ -23,7 +23,37 @@ router.get("/available", authMiddleware, getAllSurveysForAnswering);
 // Autres routes
 router.post("/", authMiddleware, upload.any(), createSurvey);
 router.get("/", authMiddleware, getSurveys);
-router.get("/:id", authMiddleware, getSurveyById);
+
+// Route pour accéder aux sondages (avec ou sans authentification)
+router.get("/:id", async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id);
+    if (!survey) {
+      return res.status(404).json({ message: 'Survey not found' });
+    }
+
+    // Si le sondage est privé
+    if (survey.isPrivate) {
+      // Si l'utilisateur est authentifié (peu importe s'il est propriétaire ou non)
+      if (req.user) {
+        return res.json(survey);
+      }
+      
+      // Si l'utilisateur n'est pas authentifié mais a le bon surveyId
+      if (req.query.surveyId === survey._id.toString()) {
+        return res.json(survey);
+      }
+
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Pour les sondages publics, permettre l'accès à tous
+    return res.json(survey);
+  } catch (error) {
+    console.error('Error accessing survey:', error);
+    res.status(500).json({ message: 'Error accessing survey' });
+  }
+});
 
 router.post("/delete-media", authMiddleware, async (req, res) => {
   try {
