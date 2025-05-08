@@ -92,26 +92,26 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
-      } else if ((document.documentElement as any).webkitRequestFullscreen) {
-        (document.documentElement as any).webkitRequestFullscreen();
+      const element = flowContainerRef.current;
+      if (element) {
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
+          (element as any).webkitRequestFullscreen();
+        } else if ((element as any).webkitEnterFullscreen) {
+          (element as any).webkitEnterFullscreen();
+        }
       }
       setIsFullscreen(true);
     } else {
-      if (document.documentElement.exitFullscreen) {
-        document.documentElement.exitFullscreen();
-      } else if ((document.documentElement as any).webkitExitFullscreen) {
-        (document.documentElement as any).webkitExitFullscreen();
-      } else if ((document.documentElement as any).webkitCancelFullscreen) {
-        (document.documentElement as any).webkitCancelFullscreen();
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).webkitCancelFullscreen) {
+        (document as any).webkitCancelFullscreen();
       }
-      // Forcer la mise à jour de l'état pour iOS
       setIsFullscreen(false);
-      // Ajouter un délai pour s'assurer que l'état est mis à jour
-      setTimeout(() => {
-        setIsFullscreen(false);
-      }, 100);
     }
   };
 
@@ -126,24 +126,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       setIsFullscreen(isFullscreenActive);
     };
 
-    const handleFullscreenError = () => {
-      setIsFullscreen(false);
-    };
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
     document.addEventListener('webkitendfullscreen', handleFullscreenChange);
-    document.addEventListener('fullscreenerror', handleFullscreenError);
-    document.addEventListener('webkitfullscreenerror', handleFullscreenError);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
       document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
-      document.removeEventListener('fullscreenerror', handleFullscreenError);
-      document.removeEventListener('webkitfullscreenerror', handleFullscreenError);
     };
   }, []);
 
@@ -1448,11 +1440,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   backgroundColor: '#f5f5f5',
                 },
                 transition: 'all 0.3s ease',
-                minWidth: '48px',
-                minHeight: '48px',
-                padding: '12px',
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'transparent',
               }}
               TouchRippleProps={{
                 classes: {
