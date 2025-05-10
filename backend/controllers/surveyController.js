@@ -102,31 +102,38 @@ exports.getSurveys = async (req, res) => {
 // Get a survey by ID
 exports.getSurveyById = async (req, res) => {
   try {
-    const survey = await Survey.findById(req.params.id);
+    const survey = await Survey.findById(req.params.id)
+      .select('title description questions demographicEnabled createdAt isPrivate userId')
+      .lean();
+
     if (!survey) {
-      return res.status(404).json({ message: 'Survey not found' });
+      return res.status(404).json({ message: "Survey not found." });
     }
 
     // Vérifier si le sondage est privé
     if (survey.isPrivate) {
-      // Si l'utilisateur est authentifié et est le propriétaire
-      if (req.user && survey.userId.toString() === req.user.id) {
-        return res.json(survey);
+      // Si l'utilisateur n'est pas le propriétaire, vérifier si l'accès est via le lien privé
+      if (survey.userId.toString() !== req.user.id) {
+        // Vérifier si l'accès est via le lien privé
+        const isPrivateLinkAccess = req.query.privateLink === 'true';
+        if (!isPrivateLinkAccess) {
+          return res.status(403).json({ message: "Access denied. This is a private survey." });
+        }
       }
-      
-      // Si l'utilisateur accède via le lien privé (vérification du surveyId dans l'URL)
-      if (req.query.surveyId === survey._id.toString()) {
-        return res.json(survey);
-      }
-
-      return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Pour les sondages publics, permettre l'accès à tous
-    return res.json(survey);
+    // Log pour déboguer
+    console.log('Retrieved survey:', JSON.stringify(survey, null, 2));
+    
+    // Vérifier les médias
+    survey.questions.forEach(question => {
+      console.log('Question media:', question.media);
+    });
+
+    res.status(200).json(survey);
   } catch (error) {
-    console.error('Error in getSurveyById:', error);
-    res.status(500).json({ message: 'Error fetching survey' });
+    console.error("Error fetching survey:", error);
+    res.status(500).json({ message: "Error fetching survey.", error: error.message });
   }
 };
 
@@ -199,17 +206,8 @@ exports.getAllSurveysForAnswering = async (req, res) => {
   try {
     console.log('Début de la recherche des sondages');
     
-    // Création du filtre pour la requête
-    const filter = {
-      $or: [
-        { isPrivate: false },
-        { userId: req.user.id }
-      ]
-    };
-    
-    console.log('Filtre de recherche:', filter);
-    
-    const surveys = await Survey.find(filter)
+    // Récupérer tous les sondages sans filtre sur isPrivate
+    const surveys = await Survey.find()
       .select('_id title description questions demographicEnabled createdAt isPrivate userId')
       .sort({ createdAt: -1 });
     
@@ -220,7 +218,6 @@ exports.getAllSurveysForAnswering = async (req, res) => {
       return res.status(404).json({ 
         message: "Aucun sondage disponible.",
         debug: {
-          filter,
           modelName: Survey.modelName,
           collectionName: Survey.collection.name
         }
