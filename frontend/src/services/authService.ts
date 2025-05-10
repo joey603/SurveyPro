@@ -17,14 +17,12 @@ export const getApiUrl = () => {
 
 export const loginWithGoogle = (redirectUri: string) => {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-  const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-  const googleAuthUrl = `${baseUrl}/api/auth/google?redirect_uri=${encodeURIComponent(frontendUrl + '/oauth-callback')}`;
+  const googleAuthUrl = `${baseUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
   window.location.href = googleAuthUrl;
 };
 
 export const loginWithGithub = (redirectUri: string) => {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-  const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-  const githubAuthUrl = `${baseUrl}/api/auth/github?redirect_uri=${encodeURIComponent(frontendUrl + '/oauth-callback')}`;
+  const githubAuthUrl = `${baseUrl}/api/auth/github?redirect_uri=${encodeURIComponent(redirectUri)}`;
   window.location.href = githubAuthUrl;
 }; 
