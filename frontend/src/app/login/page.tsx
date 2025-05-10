@@ -173,22 +173,8 @@ const LoginPage: React.FC = () => {
         login(token, localStorage.getItem('refreshToken') || '');
       }
       
-      // Vérifier s'il y a une URL de redirection sauvegardée
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée dans onLoginSuccess:', redirectUrl);
-      
-      if (redirectUrl) {
-        // Nettoyer le localStorage
-        localStorage.removeItem('redirectAfterLogin');
-        // Rediriger vers l'URL sauvegardée
-        console.log('Redirection vers l\'URL sauvegardée:', redirectUrl);
-        // Utiliser window.location.href pour une redirection complète
-        window.location.href = redirectUrl;
-      } else {
-        // Redirection par défaut vers la page d'accueil
-        console.log('Redirection vers la page d\'accueil...');
-        router.push('/');
-      }
+      console.log('Redirection vers la page d\'accueil...');
+      router.push('/');
     } catch (error) {
       console.error('Erreur lors de la redirection:', error);
       setError('Erreur lors de la redirection.');

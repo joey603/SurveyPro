@@ -199,11 +199,9 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      // Sauvegarder l'URL complète pour la redirection après connexion
-      const currentUrl = window.location.href;
-      console.log('URL actuelle:', currentUrl);
-      console.log('Sauvegarde de l\'URL de redirection:', currentUrl);
-      localStorage.setItem('redirectAfterLogin', currentUrl);
+      // Sauvegarder uniquement le surveyId et le pathname
+      const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
+      localStorage.setItem('redirectAfterLogin', redirectPath);
       // Rediriger vers la page de connexion
       router.push('/login');
     }
@@ -213,12 +211,10 @@ const SurveyAnswerPage: React.FC = () => {
     // Vérifier si l'utilisateur vient de se connecter et a une URL de redirection
     if (isAuthenticated) {
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée après connexion:', redirectUrl);
       if (redirectUrl) {
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
         // Rediriger vers l'URL sauvegardée
-        console.log('Redirection vers:', redirectUrl);
         window.location.href = redirectUrl;
       }
     }
