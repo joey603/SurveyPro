@@ -27,26 +27,8 @@ const OAuthCallbackContent = () => {
           return;
         }
 
-        const { accessToken, refreshToken, user } = await handleOAuthCallback(tokensParam);
-        
-        if (!user) {
-          router.push('/login');
-          return;
-        }
-
+        const { accessToken, refreshToken } = await handleOAuthCallback(tokensParam);
         await login(accessToken, refreshToken);
-        
-        // Récupérer l'URL de redirection sauvegardée
-        const redirectPath = localStorage.getItem('redirectAfterLogin');
-        if (redirectPath) {
-          // Nettoyer le localStorage
-          localStorage.removeItem('redirectAfterLogin');
-          // Rediriger vers l'URL sauvegardée
-          router.push(redirectPath);
-        } else {
-          // Redirection par défaut vers la racine
-          router.push('/');
-        }
       } catch (error) {
         router.push('/login');
       }

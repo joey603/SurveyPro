@@ -98,7 +98,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const decoded = jwtDecode(accessToken);
       setUser(decoded);
       
-      router.push("/");
+      // Récupérer l'URL de redirection sauvegardée
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
+        // Rediriger vers l'URL sauvegardée
+        router.push(redirectPath);
+      } else {
+        // Redirection par défaut vers la racine
+        router.push('/');
+      }
     } catch (error) {
       console.error('Error in login:', error);
       throw error;
