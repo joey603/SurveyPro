@@ -203,14 +203,25 @@ const SurveyAnswerPage: React.FC = () => {
     console.log('État d\'authentification:', isAuthenticated);
     
     if (sharedSurveyId && !isAuthenticated) {
-      // Sauvegarder l'URL complète
-      const fullUrl = window.location.href;
-      console.log('Sauvegarde de l\'URL complète:', fullUrl);
-      localStorage.setItem('redirectAfterLogin', fullUrl);
+      // Rediriger vers la page de connexion avec le surveyId
+      console.log('Redirection vers la page de connexion avec surveyId');
+      router.push(`/login?surveyId=${sharedSurveyId}`);
+    }
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur vient de se connecter et a un surveyId dans l'URL
+    if (isAuthenticated) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const surveyId = urlParams.get('surveyId');
       
-      // Rediriger vers la page de connexion
-      console.log('Redirection vers la page de connexion');
-      router.push('/login');
+      console.log('SurveyId après connexion:', surveyId);
+      
+      if (surveyId) {
+        // Rediriger vers la page du sondage
+        console.log('Redirection vers le sondage:', surveyId);
+        router.push(`/survey-answer?surveyId=${surveyId}`);
+      }
     }
   }, [isAuthenticated, router]);
 
