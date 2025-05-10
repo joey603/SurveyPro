@@ -14,6 +14,8 @@ import { shareSurvey, respondToSurveyShare } from '@/utils/surveyShareService';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from 'lottie-react';
+import loadingAnimation from '@/assets/Animation loading card survey.json';
 
 interface Question {
   id: string;
@@ -1210,7 +1212,9 @@ const AnalyticsPage: React.FC = () => {
   // Ajoutons une fonction de chargement pour Suspense
   const LoadingFallback = () => (
     <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-      <CircularProgress />
+      <Box sx={{ width: 200, height: 200 }}>
+        <Lottie animationData={loadingAnimation} loop={true} />
+      </Box>
     </Box>
   );
 
@@ -1280,9 +1284,11 @@ const AnalyticsPage: React.FC = () => {
               />
 
               {loading && (
-                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  Loading surveys...
-                </Typography>
+                <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+                  <Box sx={{ width: 200, height: 200 }}>
+                    <Lottie animationData={loadingAnimation} loop={true} />
+                  </Box>
+                </Box>
               )}
 
               {error && (

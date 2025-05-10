@@ -68,6 +68,8 @@ import LockIcon from '@mui/icons-material/Lock';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from 'lottie-react';
+import loadingAnimation from '@/assets/Animation loading card survey.json';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -2149,6 +2151,14 @@ const SurveyAnswerPage: React.FC = () => {
                 </LocalizationProvider>
               )}
             </Box>
+
+            {loading && (
+              <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+                <Box sx={{ width: 200, height: 200 }}>
+                  <Lottie animationData={loadingAnimation} loop={true} />
+                </Box>
+              </Box>
+            )}
 
             {error ? (
               <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
