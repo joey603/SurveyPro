@@ -70,8 +70,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAccessToken(null);
       setUser(null);
       if (!publicRoutes.includes(pathname)) {
-        const currentUrl = window.location.pathname + window.location.search;
-        localStorage.setItem('redirectAfterLogin', currentUrl);
+        if (!localStorage.getItem('redirectAfterLogin')) {
+          const currentUrl = window.location.pathname + window.location.search;
+          localStorage.setItem('redirectAfterLogin', currentUrl);
+        }
         router.push("/login");
       }
     }
@@ -131,15 +133,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Méthodes de connexion OAuth
   const loginWithGoogle = () => {
-    const currentUrl = window.location.pathname + window.location.search;
-    localStorage.setItem('redirectAfterLogin', currentUrl);
+    if (!localStorage.getItem('redirectAfterLogin')) {
+      const currentUrl = window.location.pathname + window.location.search;
+      localStorage.setItem('redirectAfterLogin', currentUrl);
+    }
     const redirectUri = `${window.location.origin}/oauth-callback`;
     googleLogin(redirectUri);
   };
 
   const loginWithGithub = () => {
-    const currentUrl = window.location.pathname + window.location.search;
-    localStorage.setItem('redirectAfterLogin', currentUrl);
+    if (!localStorage.getItem('redirectAfterLogin')) {
+      const currentUrl = window.location.pathname + window.location.search;
+      localStorage.setItem('redirectAfterLogin', currentUrl);
+    }
     const redirectUri = `${window.location.origin}/oauth-callback`;
     githubLogin(redirectUri);
   };
