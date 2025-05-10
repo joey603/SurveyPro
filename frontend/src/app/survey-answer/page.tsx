@@ -219,6 +219,10 @@ const SurveyAnswerPage: React.FC = () => {
         urlParams.delete('surveyId');
         const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '');
         window.history.replaceState({}, '', newUrl);
+        // Supprimer tous les cookies liés à la redirection
+        document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         // Rediriger vers l'URL sauvegardée
         window.location.href = redirectUrl;
       }
