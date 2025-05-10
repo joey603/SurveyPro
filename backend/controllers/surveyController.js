@@ -200,16 +200,27 @@ exports.cleanupUnusedMedia = async (req, res) => {
 
 // Get all surveys available for answering
 exports.getAllSurveysForAnswering = async (req, res) => {
-  console.log('getAllSurveysForAnswering appelé');
+  console.log('=== Début getAllSurveysForAnswering ===');
   console.log('User dans la requête:', req.user);
   
   try {
     console.log('Début de la recherche des sondages');
     
+    // Vérifier que req.user existe
+    if (!req.user || !req.user.id) {
+      console.error('Utilisateur non authentifié');
+      return res.status(401).json({ 
+        message: "Utilisateur non authentifié",
+        error: "Authentication required"
+      });
+    }
+
     // Récupérer tous les sondages sans filtre sur isPrivate
+    console.log('Recherche des sondages dans la base de données...');
     const surveys = await Survey.find()
       .select('_id title description questions demographicEnabled createdAt isPrivate userId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // Utiliser lean() pour de meilleures performances
     
     console.log('Nombre de sondages trouvés:', surveys.length);
     
@@ -224,15 +235,23 @@ exports.getAllSurveysForAnswering = async (req, res) => {
       });
     }
 
+    // Log des premiers sondages pour debug
+    console.log('Exemple de sondages trouvés:', surveys.slice(0, 3).map(s => ({
+      id: s._id,
+      title: s.title,
+      isPrivate: s.isPrivate
+    })));
+
     console.log('Envoi des sondages au client');
-    res.status(200).json(surveys);
+    return res.status(200).json(surveys);
   } catch (error) {
-    console.error("Erreur détaillée:", error);
+    console.error("=== Erreur dans getAllSurveysForAnswering ===");
+    console.error("Message d'erreur:", error.message);
     console.error("Stack trace:", error.stack);
     console.error("Nom du modèle:", Survey.modelName);
     console.error("Nom de la collection:", Survey.collection.name);
     
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: "Erreur lors de la récupération des sondages.",
       error: error.message,
       debug: {

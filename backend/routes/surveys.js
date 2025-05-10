@@ -19,7 +19,19 @@ const storage = multer.diskStorage({});
 const upload = multer({ dest: "uploads/" }); // Destination temporaire des fichiers
 
 // IMPORTANT: Placer la route /available AVANT toutes les autres routes
-router.get("/available", authMiddleware, getAllSurveysForAnswering);
+router.get("/available", authMiddleware, async (req, res, next) => {
+  try {
+    console.log('=== Route /available appelée ===');
+    console.log('Headers:', req.headers);
+    console.log('User:', req.user);
+    
+    // Appeler le contrôleur
+    await getAllSurveysForAnswering(req, res);
+  } catch (error) {
+    console.error('Erreur dans la route /available:', error);
+    next(error);
+  }
+});
 
 // Autres routes
 router.post("/", authMiddleware, upload.any(), createSurvey);
