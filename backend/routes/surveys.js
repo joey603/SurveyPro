@@ -32,6 +32,7 @@ router.get("/:id", async (req, res) => {
     console.log('ID du sondage demandé:', req.params.id);
     console.log('Headers de la requête:', req.headers);
     console.log('Query params:', req.query);
+    console.log('URL complète:', req.originalUrl);
 
     const survey = await Survey.findById(req.params.id);
     console.log('Sondage trouvé:', survey ? 'Oui' : 'Non');
@@ -40,7 +41,8 @@ router.get("/:id", async (req, res) => {
         id: survey._id,
         title: survey.title,
         isPrivate: survey.isPrivate,
-        userId: survey.userId
+        userId: survey.userId,
+        createdAt: survey.createdAt
       });
     }
 
@@ -51,8 +53,19 @@ router.get("/:id", async (req, res) => {
 
     // Si le sondage est privé
     if (survey.isPrivate) {
-      console.log('Sondage privé détecté');
-      // Vérifier si l'utilisateur est authentifié
+      console.log('Sondage privé détecté - Vérification des autorisations');
+      
+      // Vérifier d'abord le surveyId dans l'URL
+      console.log('Vérification du surveyId dans l\'URL');
+      console.log('surveyId dans l\'URL:', req.query.surveyId);
+      console.log('ID du sondage:', survey._id.toString());
+      
+      if (req.query.surveyId === survey._id.toString()) {
+        console.log('Accès autorisé via surveyId');
+        return res.json(survey);
+      }
+
+      // Si pas de surveyId valide, vérifier l'authentification
       const authHeader = req.headers.authorization;
       console.log('Header d\'authentification présent:', !!authHeader);
       
@@ -63,22 +76,13 @@ router.get("/:id", async (req, res) => {
           console.log('Token décodé:', decoded);
           console.log('ID de l\'utilisateur connecté:', decoded.id);
           console.log('ID du propriétaire du sondage:', survey.userId);
+          
           // Si l'utilisateur est authentifié, lui donner accès
+          console.log('Accès autorisé - Utilisateur authentifié');
           return res.json(survey);
         } catch (error) {
           console.error('Erreur de vérification du token:', error);
-          // Si le token est invalide, continuer avec la vérification du surveyId
         }
-      }
-      
-      // Si l'utilisateur n'est pas authentifié, vérifier le surveyId
-      console.log('Vérification du surveyId dans l\'URL');
-      console.log('surveyId dans l\'URL:', req.query.surveyId);
-      console.log('ID du sondage:', survey._id.toString());
-      
-      if (req.query.surveyId === survey._id.toString()) {
-        console.log('Accès autorisé via surveyId');
-        return res.json(survey);
       }
 
       console.log('Accès refusé - Aucune méthode d\'accès valide');
