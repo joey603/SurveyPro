@@ -102,8 +102,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Récupérer l'URL de redirection sauvegardée
       const redirectPath = localStorage.getItem('redirectAfterLogin');
       if (redirectPath) {
-        // Nettoyer le localStorage
+        // Nettoyer le localStorage immédiatement
         localStorage.removeItem('redirectAfterLogin');
+        // Supprimer tous les cookies liés à la redirection
+        document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         // Rediriger vers l'URL sauvegardée
         router.push(redirectPath);
       } else {

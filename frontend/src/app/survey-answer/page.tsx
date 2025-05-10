@@ -212,8 +212,13 @@ const SurveyAnswerPage: React.FC = () => {
     if (isAuthenticated) {
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
       if (redirectUrl) {
-        // Nettoyer le localStorage
+        // Nettoyer le localStorage immédiatement
         localStorage.removeItem('redirectAfterLogin');
+        // Supprimer le paramètre surveyId de l'URL actuelle
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete('surveyId');
+        const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '');
+        window.history.replaceState({}, '', newUrl);
         // Rediriger vers l'URL sauvegardée
         window.location.href = redirectUrl;
       }
