@@ -1,1 +1,0 @@
-// Mettre à jour la configuration CORS pour autoriser les requêtes depuis Vercel 

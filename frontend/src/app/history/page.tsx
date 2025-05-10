@@ -40,6 +40,8 @@ import Tooltip from '@mui/material/Tooltip';
 import Fab from '@mui/material/Fab';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from "lottie-react";
+import loadingAnimation from "@/assets/Animation loading card survey.json";
 
 const DEFAULT_IMAGE = '/placeholder-image.jpg';
 
@@ -595,7 +597,9 @@ const SurveyHistoryPage: React.FC = () => {
   // Ajoutons une fonction de chargement pour Suspense
   const LoadingFallback = () => (
     <Box display="flex" justifyContent="center" alignItems="center" height="100vh" width="100%">
-      <CircularProgress sx={{ color: '#667eea' }} />
+      <Box sx={{ width: 200, height: 200 }}>
+        <Lottie animationData={loadingAnimation} loop={true} />
+      </Box>
     </Box>
   );
 
@@ -1141,14 +1145,18 @@ const SurveyHistoryPage: React.FC = () => {
 
             {isTransitioning ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, width: '100%', gridColumn: '1 / -1', minHeight: '200px' }}>
-                <CircularProgress sx={{ color: '#667eea' }} />
+                <Box sx={{ width: 200, height: 200 }}>
+                  <Lottie animationData={loadingAnimation} loop={true} />
+                </Box>
               </Box>
             ) : (
               <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {viewType === 'responses' ? (
                   loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, width: '100%', gridColumn: '1 / -1' }}>
-                      <CircularProgress sx={{ color: '#667eea' }} />
+                      <Box sx={{ width: 200, height: 200 }}>
+                        <Lottie animationData={loadingAnimation} loop={true} />
+                      </Box>
                     </Box>
                   ) : responses.length === 0 ? (
                     <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'background.paper' }}>

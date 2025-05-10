@@ -504,9 +504,19 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   sx: {
                     width: 'auto',
                     mt: 1,
+                    zIndex: 10000,
                   },
                 },
+                root: {
+                  container: document.querySelector('.react-flow') || document.body,
+                  style: {
+                    position: 'absolute',
+                    zIndex: 10000,
+                  }
+                }
               }}
+              disablePortal={false}
+              container={document.querySelector('.react-flow') || document.body}
             >
               <Box sx={{ p: 1 }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes).map((type) => (

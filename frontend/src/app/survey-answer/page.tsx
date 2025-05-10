@@ -68,6 +68,8 @@ import LockIcon from '@mui/icons-material/Lock';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from 'lottie-react';
+import loadingAnimation from '@/assets/Animation loading card survey.json';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -212,17 +214,8 @@ const SurveyAnswerPage: React.FC = () => {
     if (isAuthenticated) {
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
       if (redirectUrl) {
-        // Nettoyer le localStorage immédiatement
+        // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
-        // Supprimer le paramètre surveyId de l'URL actuelle
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.delete('surveyId');
-        const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '');
-        window.history.replaceState({}, '', newUrl);
-        // Supprimer tous les cookies liés à la redirection
-        document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         // Rediriger vers l'URL sauvegardée
         window.location.href = redirectUrl;
       }
@@ -2158,6 +2151,14 @@ const SurveyAnswerPage: React.FC = () => {
                 </LocalizationProvider>
               )}
             </Box>
+
+            {loading && (
+              <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+                <Box sx={{ width: 200, height: 200 }}>
+                  <Lottie animationData={loadingAnimation} loop={true} />
+                </Box>
+              </Box>
+            )}
 
             {error ? (
               <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
