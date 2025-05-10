@@ -25,80 +25,72 @@ router.get("/available", authMiddleware, getAllSurveysForAnswering);
 router.post("/", authMiddleware, upload.any(), createSurvey);
 router.get("/", authMiddleware, getSurveys);
 
-// Route pour accéder à un sondage spécifique
+// Route pour accéder aux sondages (avec ou sans authentification)
 router.get("/:id", async (req, res) => {
   try {
-    console.log('Début de la requête pour accéder au sondage');
+    console.log('=== Début de la requête pour accéder au sondage ===');
     console.log('ID du sondage demandé:', req.params.id);
     console.log('Headers de la requête:', req.headers);
-    console.log('Paramètres de la requête:', req.query);
+    console.log('Query params:', req.query);
 
     const survey = await Survey.findById(req.params.id);
     console.log('Sondage trouvé:', survey ? 'Oui' : 'Non');
     if (survey) {
       console.log('Détails du sondage:', {
         id: survey._id,
+        title: survey.title,
         isPrivate: survey.isPrivate,
         userId: survey.userId
       });
     }
 
     if (!survey) {
-      console.log('Sondage non trouvé');
+      console.log('Sondage non trouvé avec l\'ID:', req.params.id);
       return res.status(404).json({ message: 'Survey not found' });
     }
 
-    // Vérifier si l'utilisateur est authentifié
-    const authHeader = req.headers.authorization;
-    console.log('Header d\'authentification présent:', !!authHeader);
-
-    let user = null;
-    if (authHeader) {
-      try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        user = decoded;
-        console.log('Token décodé avec succès:', user);
-      } catch (error) {
-        console.log('Erreur de vérification du token:', error.message);
-      }
-    }
-
-    // Vérifier si le sondage est privé
+    // Si le sondage est privé
     if (survey.isPrivate) {
       console.log('Sondage privé détecté');
+      // Vérifier si l'utilisateur est authentifié
+      const authHeader = req.headers.authorization;
+      console.log('Header d\'authentification présent:', !!authHeader);
       
-      // Si l'utilisateur est authentifié, vérifier s'il est le propriétaire
-      if (user) {
-        console.log('Vérification de l\'ID utilisateur:', user.id);
-        console.log('Vérification de l\'ID du sondage:', survey.userId.toString());
-        if (user.id === survey.userId.toString()) {
-          console.log('Accès accordé: utilisateur est le propriétaire');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.split(' ')[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          console.log('Token décodé:', decoded);
+          console.log('ID de l\'utilisateur connecté:', decoded.id);
+          console.log('ID du propriétaire du sondage:', survey.userId);
+          // Si l'utilisateur est authentifié, lui donner accès
           return res.json(survey);
+        } catch (error) {
+          console.error('Erreur de vérification du token:', error);
+          // Si le token est invalide, continuer avec la vérification du surveyId
         }
       }
-
-      // Vérifier le lien privé
-      const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
-      console.log('Vérification du lien privé');
-      console.log('Lien privé attendu:', privateLink);
-      console.log('Lien privé reçu:', req.query.privateLink);
-
-      if (req.query.privateLink === privateLink) {
-        console.log('Accès accordé: lien privé valide');
+      
+      // Si l'utilisateur n'est pas authentifié, vérifier le surveyId
+      console.log('Vérification du surveyId dans l\'URL');
+      console.log('surveyId dans l\'URL:', req.query.surveyId);
+      console.log('ID du sondage:', survey._id.toString());
+      
+      if (req.query.surveyId === survey._id.toString()) {
+        console.log('Accès autorisé via surveyId');
         return res.json(survey);
       }
 
-      console.log('Accès refusé: aucune méthode d\'accès valide trouvée');
+      console.log('Accès refusé - Aucune méthode d\'accès valide');
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Si le sondage est public, l'accès est autorisé
-    console.log('Accès accordé: sondage public');
+    // Pour les sondages publics, permettre l'accès à tous
+    console.log('Sondage public - Accès autorisé');
     return res.json(survey);
   } catch (error) {
     console.error('Erreur lors de l\'accès au sondage:', error);
-    res.status(500).json({ message: 'Error accessing survey', error: error.message });
+    res.status(500).json({ message: 'Error accessing survey' });
   }
 });
 
@@ -244,24 +236,46 @@ router.post("/upload-media", upload.single("file"), async (req, res) => {
 // Route pour accéder aux sondages privés sans authentification
 router.get("/private/:id", async (req, res) => {
   try {
+    console.log('=== Accès à un sondage privé ===');
+    console.log('ID du sondage demandé:', req.params.id);
+    console.log('Headers de la requête:', req.headers);
+    console.log('Query params:', req.query);
+
     const survey = await Survey.findById(req.params.id);
+    console.log('Sondage trouvé:', survey ? 'Oui' : 'Non');
+    if (survey) {
+      console.log('Détails du sondage:', {
+        id: survey._id,
+        title: survey.title,
+        isPrivate: survey.isPrivate,
+        userId: survey.userId
+      });
+    }
+
     if (!survey) {
+      console.log('Sondage non trouvé avec l\'ID:', req.params.id);
       return res.status(404).json({ message: 'Survey not found' });
     }
 
     if (!survey.isPrivate) {
+      console.log('Tentative d\'accès à un sondage non privé via la route privée');
       return res.status(400).json({ message: 'This is not a private survey' });
     }
 
     // Vérifier le lien privé
     const privateLink = `${process.env.FRONTEND_URL}/survey-answer?surveyId=${survey._id}`;
+    console.log('Lien privé attendu:', privateLink);
+    console.log('Lien privé reçu:', req.query.privateLink);
+
     if (req.query.privateLink === privateLink) {
+      console.log('Accès autorisé via lien privé valide');
       return res.json(survey);
     }
 
+    console.log('Accès refusé - Lien privé invalide');
     return res.status(403).json({ message: 'Invalid private link' });
   } catch (error) {
-    console.error('Error accessing private survey:', error);
+    console.error('Erreur lors de l\'accès au sondage privé:', error);
     res.status(500).json({ message: 'Error accessing survey' });
   }
 });
