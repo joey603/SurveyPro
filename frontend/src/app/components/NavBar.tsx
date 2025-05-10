@@ -48,7 +48,9 @@ const NavBar = () => {
   // Liste des routes où la navbar ne doit pas apparaître
   const noNavbarRoutes = ['/login', '/register'];
   
-  if (noNavbarRoutes.includes(pathname)) {
+  // Vérification du type de pathname
+  const currentPath = pathname || '';
+  if (noNavbarRoutes.includes(currentPath)) {
     return null;
   }
 
@@ -213,51 +215,47 @@ const NavBar = () => {
     );
   };
 
-  // Ajouter ce composant pour le bouton Analytics avec dropdown
-  const AnalyticsButton = () => {
-    const pathname = usePathname();
-
-    return (
-      <Button
-        component={Link}
-        href="/analytics"
-        sx={{
-          color: pathname === '/analytics' ? '#667eea' : '#64748b',
-          mx: 1,
-          py: 1.5,
-          px: 2.5,
-          borderRadius: '12px',
-          textTransform: 'none',
-          fontSize: '0.95rem',
-          fontWeight: pathname === '/analytics' ? 600 : 500,
-          position: 'relative',
-          overflow: 'hidden',
-          backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+  // Remplacer le composant AnalyticsButton par un simple bouton
+  const AnalyticsButton = () => (
+    <Button
+      component={Link}
+      href="/analytics"
+      sx={{
+        color: pathname === '/analytics' ? '#667eea' : '#64748b',
+        mx: 1,
+        py: 1.5,
+        px: 2.5,
+        borderRadius: '12px',
+        textTransform: 'none',
+        fontSize: '0.95rem',
+        fontWeight: pathname === '/analytics' ? 600 : 500,
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+        transition: NAVBAR_STYLES.transitions.default,
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(102, 126, 234, 0.1)',
+          transform: 'translateY(100%)',
           transition: NAVBAR_STYLES.transitions.default,
+        },
+        '&:hover': {
+          color: '#667eea',
+          transform: 'translateY(-2px)',
           '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(102, 126, 234, 0.1)',
-            transform: 'translateY(100%)',
-            transition: NAVBAR_STYLES.transitions.default,
+            transform: 'translateY(0)',
           },
-          '&:hover': {
-            color: '#667eea',
-            transform: 'translateY(-2px)',
-            '&::before': {
-              transform: 'translateY(0)',
-            },
-          },
-        }}
-      >
-        Advanced Analytics
-      </Button>
-    );
-  };
+        },
+      }}
+    >
+      Analytics
+    </Button>
+  );
 
   return (
     <AppBar
@@ -419,7 +417,7 @@ const NavBar = () => {
               <>
                 <ListItem>
                   <ListItemText 
-                    primary="New Survey"
+                    primary="NEW SURVEY"
                     primaryTypographyProps={{
                       sx: {
                         color: '#64748b',
@@ -487,18 +485,6 @@ const NavBar = () => {
                     />
                   </Button>
                 </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Analytics"
-                    primaryTypographyProps={{
-                      sx: {
-                        color: '#64748b',
-                        fontWeight: 600,
-                        pl: 2,
-                      }
-                    }}
-                  />
-                </ListItem>
                 <ListItem disablePadding>
                   <Button
                     component={Link}
@@ -507,7 +493,6 @@ const NavBar = () => {
                     sx={{
                       py: 2,
                       px: 3,
-                      pl: 6,
                       justifyContent: 'flex-start',
                       color: pathname === '/analytics' ? '#667eea' : '#64748b',
                       backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
@@ -519,7 +504,7 @@ const NavBar = () => {
                     }}
                   >
                     <ListItemText 
-                      primary="Advanced Analytics"
+                      primary="Analytics"
                       primaryTypographyProps={{
                         sx: {
                           fontWeight: pathname === '/analytics' ? 600 : 500,
