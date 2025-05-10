@@ -167,18 +167,20 @@ const LoginPage: React.FC = () => {
 
   const onLoginSuccess = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      
-      if (token) {
-        login(token, localStorage.getItem('refreshToken') || '');
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
+        // Rediriger vers l'URL sauvegardée
+        router.push(redirectPath);
+      } else {
+        // Redirection par défaut vers la racine
+        router.push('/');
       }
-      
-      console.log('Redirection vers la page d\'accueil...');
-      router.push('/');
     } catch (error) {
-      console.error('Erreur lors de la redirection:', error);
-      setError('Erreur lors de la redirection.');
-      setIsLoading(false);
+      console.error('Erreur de redirection:', error);
+      // En cas d'erreur, rediriger vers la racine
+      router.push('/');
     }
   };
 

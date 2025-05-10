@@ -54,6 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAccessToken(null);
       setUser(null);
       if (!publicRoutes.includes(pathname)) {
+        const currentUrl = window.location.pathname + window.location.search;
+        localStorage.setItem('redirectAfterLogin', currentUrl);
         router.push("/login");
       }
     }
