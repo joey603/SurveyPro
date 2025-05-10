@@ -5,6 +5,21 @@ import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { loginWithGoogle as googleLogin, loginWithGithub as githubLogin } from "@/services/authService";
 
+// Fonction pour traiter les tokens OAuth
+const handleOAuthCallback = async (tokensParam: string) => {
+  try {
+    const tokenData = JSON.parse(decodeURIComponent(tokensParam));
+    return {
+      accessToken: tokenData.accessToken,
+      refreshToken: tokenData.refreshToken,
+      user: tokenData.user
+    };
+  } catch (error) {
+    console.error('Erreur lors du traitement des tokens OAuth:', error);
+    throw error;
+  }
+};
+
 interface AuthContextType {
   accessToken: string | null;
   user: any;
@@ -14,6 +29,7 @@ interface AuthContextType {
   register: (accessToken: string, refreshToken: string) => void;
   loginWithGoogle: () => void;
   loginWithGithub: () => void;
+  handleOAuthCallback: (tokensParam: string) => Promise<{ accessToken: string; refreshToken: string; user: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -105,10 +121,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Méthodes de connexion OAuth
   const loginWithGoogle = () => {
+    const currentUrl = window.location.pathname + window.location.search;
+    localStorage.setItem('redirectAfterLogin', currentUrl);
     googleLogin();
   };
 
   const loginWithGithub = () => {
+    const currentUrl = window.location.pathname + window.location.search;
+    localStorage.setItem('redirectAfterLogin', currentUrl);
     githubLogin();
   };
 
@@ -117,15 +137,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      login, 
-      logout, 
-      register,
+    <AuthContext.Provider value={{
       accessToken,
       user,
+      isAuthenticated,
+      login,
+      logout,
+      register,
       loginWithGoogle,
-      loginWithGithub
+      loginWithGithub,
+      handleOAuthCallback
     }}>
       {children}
     </AuthContext.Provider>

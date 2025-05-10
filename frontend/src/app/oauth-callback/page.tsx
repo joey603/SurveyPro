@@ -1,82 +1,69 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
-// Page ultra-minimaliste pour redirection immédiate
-const OAuthCallbackPage = () => {
-  const searchParams = useSearchParams();
-  const auth = useAuth();
-  const [redirected, setRedirected] = useState(false);
-  
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+    <CircularProgress />
+  </Box>
+);
+
+const OAuthCallbackContent = () => {
+  const router = useRouter();
+  const { login, handleOAuthCallback } = useAuth();
+
   useEffect(() => {
-    // Fonction pour éviter les appels répétés
-    if (redirected) return;
-    
-    // Redirection forcée immédiate
-    const processTokensOnce = async () => {
+    const handleCallback = async () => {
       try {
-        setRedirected(true);
-        console.log('OAuth Callback - Traitement des tokens (une seule fois)');
+        const params = new URLSearchParams(window.location.search);
+        const tokensParam = params.get('tokens');
+        const errorParam = params.get('error');
         
-        // Obtenir les tokens depuis l'URL
-        const tokensParam = searchParams.get('tokens');
-        
-        if (tokensParam) {
-          try {
-            // Stocker les tokens d'abord
-            const tokenData = JSON.parse(decodeURIComponent(tokensParam));
-            
-            localStorage.setItem('accessToken', tokenData.accessToken);
-            localStorage.setItem('refreshToken', tokenData.refreshToken);
-            if (tokenData.user) {
-              localStorage.setItem('user', JSON.stringify(tokenData.user));
-            }
-            
-            // Mettre à jour l'authentification
-            auth.login(tokenData.accessToken, tokenData.refreshToken);
-          } catch (error) {
-            console.error('Erreur lors du traitement des tokens:', error);
-          }
+        if (errorParam === 'existing_user' || !tokensParam) {
+          router.push('/login');
+          return;
         }
+
+        const { accessToken, refreshToken, user } = await handleOAuthCallback(tokensParam);
         
-        // Redirection immédiate dans tous les cas
-        console.log('Redirection forcée vers la page d\'accueil');
-        window.location.replace('/');
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        await login(accessToken, refreshToken);
+        
+        // Récupérer l'URL de redirection sauvegardée
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          // Nettoyer le localStorage
+          localStorage.removeItem('redirectAfterLogin');
+          // Rediriger vers l'URL sauvegardée
+          router.push(redirectPath);
+        } else {
+          // Redirection par défaut vers la racine
+          router.push('/');
+        }
       } catch (error) {
-        console.error('Erreur:', error);
-        window.location.replace('/');
+        router.push('/login');
       }
     };
 
-    // Exécuter immédiatement
-    processTokensOnce();
-    
-    // Redirection de secours après 200ms
-    const redirectTimer = setTimeout(() => {
-      if (!redirected) {
-        console.log('Redirection de secours activée');
-        window.location.replace('/');
-      }
-    }, 200);
-    
-    return () => clearTimeout(redirectTimer);
-  }, [auth, searchParams, redirected]);
+    handleCallback();
+  }, []);
 
-  // UI minimale
+  return null;
+};
+
+const OAuthCallback = () => {
   return (
-    <Box
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      height="100vh"
-      bgcolor="#f5f5f5"
-    >
-      <CircularProgress size={40} />
-    </Box>
+    <Suspense fallback={<LoadingFallback />}>
+      <OAuthCallbackContent />
+    </Suspense>
   );
 };
 
-export default OAuthCallbackPage; 
+export default OAuthCallback; 
