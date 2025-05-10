@@ -123,13 +123,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginWithGoogle = () => {
     const currentUrl = window.location.pathname + window.location.search;
     localStorage.setItem('redirectAfterLogin', currentUrl);
-    googleLogin();
+    const redirectUri = `${window.location.origin}/oauth-callback`;
+    googleLogin(redirectUri);
   };
 
   const loginWithGithub = () => {
     const currentUrl = window.location.pathname + window.location.search;
     localStorage.setItem('redirectAfterLogin', currentUrl);
-    githubLogin();
+    const redirectUri = `${window.location.origin}/oauth-callback`;
+    githubLogin(redirectUri);
   };
 
   if (isLoading) {

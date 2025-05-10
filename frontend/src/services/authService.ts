@@ -13,4 +13,16 @@ export const getApiUrl = () => {
 
   // En développement, utiliser l'API locale
   return 'http://localhost:5041';
+};
+
+export const loginWithGoogle = (redirectUri: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+  const googleAuthUrl = `${baseUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  window.location.href = googleAuthUrl;
+};
+
+export const loginWithGithub = (redirectUri: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+  const githubAuthUrl = `${baseUrl}/api/auth/github?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  window.location.href = githubAuthUrl;
 }; 
