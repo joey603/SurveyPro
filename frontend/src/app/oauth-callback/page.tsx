@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
@@ -14,28 +14,62 @@ const LoadingFallback = () => (
 const OAuthCallbackContent = () => {
   const router = useRouter();
   const { login, handleOAuthCallback } = useAuth();
+  const searchParams = useSearchParams();
+  const [redirected, setRedirected] = useState(false);
 
   useEffect(() => {
-    const handleCallback = async () => {
+    // Fonction pour éviter les appels répétés
+    if (redirected) return;
+    
+    // Redirection forcée immédiate
+    const processTokensOnce = async () => {
       try {
-        const params = new URLSearchParams(window.location.search);
-        const tokensParam = params.get('tokens');
-        const errorParam = params.get('error');
+        setRedirected(true);
+        console.log('OAuth Callback - Traitement des tokens (une seule fois)');
         
-        if (errorParam === 'existing_user' || !tokensParam) {
-          router.push('/login');
-          return;
-        }
+        // Obtenir les tokens depuis l'URL
+        const tokensParam = searchParams.get('tokens');
+        
+        if (tokensParam) {
+          try {
+            // Stocker les tokens d'abord
+            const tokenData = JSON.parse(decodeURIComponent(tokensParam));
+            
+            localStorage.setItem('accessToken', tokenData.accessToken);
+            localStorage.setItem('refreshToken', tokenData.refreshToken);
+            if (tokenData.user) {
+              localStorage.setItem('user', JSON.stringify(tokenData.user));
+            }
+            
+            // Mettre à jour l'authentification
+            await login(tokenData.accessToken, tokenData.refreshToken);
 
-        const { accessToken, refreshToken } = await handleOAuthCallback(tokensParam);
-        await login(accessToken, refreshToken);
+            // Récupérer l'URL de redirection sauvegardée
+            const redirectUrl = localStorage.getItem('redirectAfterLogin');
+            if (redirectUrl) {
+              // Nettoyer le localStorage
+              localStorage.removeItem('redirectAfterLogin');
+              // Rediriger vers l'URL sauvegardée
+              window.location.replace(redirectUrl);
+              return;
+            }
+          } catch (error) {
+            console.error('Erreur lors du traitement des tokens:', error);
+          }
+        }
+        
+        // Redirection par défaut si pas d'URL de redirection sauvegardée
+        console.log('Redirection vers la page d\'accueil');
+        window.location.replace('/');
       } catch (error) {
-        router.push('/login');
+        console.error('Erreur:', error);
+        window.location.replace('/');
       }
     };
 
-    handleCallback();
-  }, []);
+    // Exécuter immédiatement
+    processTokensOnce();
+  }, [searchParams, login, redirected]);
 
   return null;
 };

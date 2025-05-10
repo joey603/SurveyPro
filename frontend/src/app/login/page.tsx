@@ -188,9 +188,11 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Début de la connexion Google');
       
-      // Nettoyer le localStorage
-      localStorage.clear();
-      console.log('localStorage nettoyé');
+      // Sauvegarder l'URL de redirection actuelle si elle existe
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        console.log('URL de redirection sauvegardée:', redirectPath);
+      }
       
       // URL de l'API backend pour l'authentification Google
       const backendUrl = 'https://surveypro-ir3u.onrender.com';
@@ -226,9 +228,11 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Début de la connexion GitHub');
       
-      // Nettoyer le localStorage
-      localStorage.clear();
-      console.log('localStorage nettoyé');
+      // Sauvegarder l'URL de redirection actuelle si elle existe
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        console.log('URL de redirection sauvegardée:', redirectPath);
+      }
       
       // URL de l'API backend pour l'authentification GitHub
       const backendUrl = 'https://surveypro-ir3u.onrender.com';
