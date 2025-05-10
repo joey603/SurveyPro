@@ -260,25 +260,27 @@ exports.deleteMedia = async (req, res) => {
 
 // Get all dynamic surveys available for answering
 exports.getAllDynamicSurveysForAnswering = async (req, res) => {
-  console.log('getAllDynamicSurveysForAnswering appelé');
+  console.log('=== Début getAllDynamicSurveysForAnswering ===');
   console.log('User dans la requête:', req.user);
   
   try {
     console.log('Début de la recherche des sondages dynamiques');
     
-    // Création du filtre pour la requête
-    const filter = {
-      $or: [
-        { isPrivate: false },
-        { userId: req.user.id }
-      ]
-    };
-    
-    console.log('Filtre de recherche:', filter);
-    
-    const surveys = await DynamicSurvey.find(filter)
+    // Vérifier que req.user existe
+    if (!req.user || !req.user.id) {
+      console.error('Utilisateur non authentifié');
+      return res.status(401).json({ 
+        message: "Utilisateur non authentifié",
+        error: "Authentication required"
+      });
+    }
+
+    // Récupérer tous les sondages sans filtre sur isPrivate
+    console.log('Recherche des sondages dynamiques dans la base de données...');
+    const surveys = await DynamicSurvey.find()
       .select('title description demographicEnabled nodes edges createdAt isPrivate userId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // Utiliser lean() pour de meilleures performances
     
     console.log('Nombre de sondages dynamiques trouvés:', surveys.length);
     
@@ -287,22 +289,29 @@ exports.getAllDynamicSurveysForAnswering = async (req, res) => {
       return res.status(404).json({ 
         message: "Aucun sondage dynamique disponible.",
         debug: {
-          filter,
           modelName: DynamicSurvey.modelName,
           collectionName: DynamicSurvey.collection.name
         }
       });
     }
 
+    // Log des premiers sondages pour debug
+    console.log('Exemple de sondages dynamiques trouvés:', surveys.slice(0, 3).map(s => ({
+      id: s._id,
+      title: s.title,
+      isPrivate: s.isPrivate
+    })));
+
     console.log('Envoi des sondages dynamiques au client');
-    res.status(200).json(surveys);
+    return res.status(200).json(surveys);
   } catch (error) {
-    console.error("Erreur détaillée:", error);
+    console.error("=== Erreur dans getAllDynamicSurveysForAnswering ===");
+    console.error("Message d'erreur:", error.message);
     console.error("Stack trace:", error.stack);
     console.error("Nom du modèle:", DynamicSurvey.modelName);
     console.error("Nom de la collection:", DynamicSurvey.collection.name);
     
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: "Erreur lors de la récupération des sondages dynamiques.",
       error: error.message,
       debug: {

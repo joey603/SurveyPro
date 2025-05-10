@@ -18,7 +18,19 @@ const storage = multer.diskStorage({});
 const upload = multer({ dest: "uploads/" });
 
 // IMPORTANT: Placer la route /available AVANT toutes les autres routes
-router.get("/available", authMiddleware, getAllDynamicSurveysForAnswering);
+router.get("/available", authMiddleware, async (req, res, next) => {
+  try {
+    console.log('=== Route /available pour sondages dynamiques appelée ===');
+    console.log('Headers:', req.headers);
+    console.log('User:', req.user);
+    
+    // Appeler le contrôleur
+    await getAllDynamicSurveysForAnswering(req, res);
+  } catch (error) {
+    console.error('Erreur dans la route /available pour sondages dynamiques:', error);
+    next(error);
+  }
+});
 
 // Routes pour les sondages dynamiques
 router.post("/", authMiddleware, createDynamicSurvey);
