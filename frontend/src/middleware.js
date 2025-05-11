@@ -24,11 +24,10 @@ export default function middleware(req) {
       // Créer la réponse de redirection
       const response = NextResponse.redirect(url);
       
-      // Ajouter un cookie pour indiquer la redirection
+      // Ajouter un cookie pour indiquer la redirection (sans httpOnly)
       response.cookies.set('redirectAfterLogin', `${req.nextUrl.origin}${pathname}`, {
         path: '/',
         maxAge: 3600, // 1 heure
-        httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
       });

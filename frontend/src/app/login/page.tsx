@@ -183,10 +183,13 @@ const LoginPage: React.FC = () => {
   const onLoginSuccess = async () => {
     try {
       // Récupérer l'URL de redirection depuis les cookies
-      const cookies = document.cookie.split(';');
-      const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
-      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+      console.log('🍪 Login - Tous les cookies:', cookies);
       
+      const redirectCookie = cookies.find(cookie => cookie.startsWith('redirectAfterLogin='));
+      console.log('🔍 Login - Cookie de redirection trouvé:', redirectCookie);
+      
+      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
       console.log('🔄 Login - URL de redirection trouvée dans cookie:', redirectPath);
       
       if (redirectPath) {
