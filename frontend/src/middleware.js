@@ -2,8 +2,22 @@ import { NextResponse } from 'next/server';
 
 // Middleware qui s'exécute avant le rendu de chaque page
 export default function middleware(req) {
-  // Laisser passer toutes les requêtes sans modification,
-  // mais s'assure que l'application est rendue côté client
+  const { pathname } = req.nextUrl;
+  
+  // Vérifier si l'utilisateur est sur un sondage privé
+  if (pathname.startsWith('/survey-answer/')) {
+    // Vérifier si l'utilisateur est connecté (via le token dans les cookies)
+    const token = req.cookies.get('token');
+    
+    if (!token) {
+      // Si non connecté, rediriger vers la page de connexion avec l'URL de retour
+      const url = req.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(url);
+    }
+  }
+  
   return NextResponse.next();
 }
 

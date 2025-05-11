@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../utils/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { colors } from '../../theme/colors';
 import {
   TextField,
@@ -62,6 +62,15 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, loginWithGoogle, loginWithGithub } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Récupérer l'URL de callback au chargement de la page
+  useEffect(() => {
+    const callbackUrl = searchParams.get('callbackUrl');
+    if (callbackUrl) {
+      localStorage.setItem('redirectAfterLogin', callbackUrl);
+    }
+  }, [searchParams]);
 
   // Exécuter le test des endpoints au chargement de la page
   useEffect(() => {
