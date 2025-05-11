@@ -13,13 +13,16 @@ export default function middleware(req) {
       // Si non connecté, rediriger vers la page de connexion avec l'URL de retour
       const url = req.nextUrl.clone();
       url.pathname = '/login';
-      url.searchParams.set('callbackUrl', pathname);
+      
+      // Stocker l'URL complète dans le paramètre de recherche
+      const fullUrl = `${req.nextUrl.origin}${pathname}`;
+      url.searchParams.set('callbackUrl', fullUrl);
       
       // Créer la réponse de redirection
       const response = NextResponse.redirect(url);
       
       // Stocker l'URL de redirection dans un cookie
-      response.cookies.set('redirectAfterLogin', pathname, {
+      response.cookies.set('redirectAfterLogin', fullUrl, {
         path: '/',
         maxAge: 3600, // 1 heure
         sameSite: 'lax'

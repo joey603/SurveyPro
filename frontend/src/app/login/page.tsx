@@ -84,9 +84,8 @@ const LoginPage: React.FC = () => {
     if (finalRedirectUrl) {
       try {
         // Stocker l'URL complète dans le localStorage
-        const fullCallbackUrl = `${window.location.origin}${finalRedirectUrl}`;
-        localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
-        console.log('URL de redirection sauvegardée:', fullCallbackUrl);
+        localStorage.setItem('redirectAfterLogin', finalRedirectUrl);
+        console.log('URL de redirection sauvegardée:', finalRedirectUrl);
         
         // Supprimer le cookie de redirection
         document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
