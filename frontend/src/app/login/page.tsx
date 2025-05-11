@@ -69,12 +69,22 @@ const LoginPage: React.FC = () => {
     const callbackUrl = searchParams.get('callbackUrl');
     console.log('=== DÉBUT DU PROCESSUS DE REDIRECTION ===');
     console.log('URL de callback reçue:', callbackUrl);
+    console.log('URL complète:', window.location.href);
+    console.log('Paramètres de recherche:', window.location.search);
     
     if (callbackUrl) {
-      // Stocker l'URL complète dans le localStorage
-      const fullCallbackUrl = `${window.location.origin}${callbackUrl}`;
-      localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
-      console.log('URL de redirection sauvegardée:', fullCallbackUrl);
+      try {
+        // Décoder l'URL si elle est encodée
+        const decodedUrl = decodeURIComponent(callbackUrl);
+        console.log('URL décodée:', decodedUrl);
+        
+        // Stocker l'URL complète dans le localStorage
+        const fullCallbackUrl = `${window.location.origin}${decodedUrl}`;
+        localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
+        console.log('URL de redirection sauvegardée:', fullCallbackUrl);
+      } catch (error) {
+        console.error('Erreur lors du décodage de l\'URL:', error);
+      }
     }
   }, [searchParams]);
 

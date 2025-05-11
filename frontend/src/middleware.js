@@ -14,9 +14,19 @@ export default function middleware(req) {
       // Si non connecté, rediriger vers la page de connexion avec l'URL de retour
       const url = req.nextUrl.clone();
       url.pathname = '/login';
-      url.searchParams.set('callbackUrl', pathname);
       
-      return NextResponse.redirect(url);
+      // S'assurer que l'URL est correctement encodée
+      const encodedPath = encodeURIComponent(pathname);
+      url.searchParams.set('callbackUrl', encodedPath);
+      
+      // Créer la réponse de redirection
+      const response = NextResponse.redirect(url);
+      
+      // Ajouter des headers pour le débogage
+      response.headers.set('x-redirect-path', pathname);
+      response.headers.set('x-redirect-url', url.toString());
+      
+      return response;
     }
   }
   
