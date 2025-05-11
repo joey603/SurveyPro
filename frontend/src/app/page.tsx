@@ -64,6 +64,10 @@ const Home = () => {
     return () => observers.forEach((observer) => observer.disconnect());
   }, []);
 
+  useEffect(() => {
+    console.log("Test log pour déclencher un commit");
+  }, []);
+
   const features = [
     {
       icon: (
