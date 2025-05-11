@@ -21,9 +21,18 @@ export default function middleware(req) {
       url.searchParams.set('callbackUrl', pathname);
       console.log('🔄 Middleware - URL de redirection:', url.toString());
       
-      // Ajouter un header pour indiquer la redirection
+      // Créer la réponse de redirection
       const response = NextResponse.redirect(url);
-      response.headers.set('x-redirect-reason', 'auth-required');
+      
+      // Ajouter un cookie pour indiquer la redirection
+      response.cookies.set('redirectAfterLogin', `${req.nextUrl.origin}${pathname}`, {
+        path: '/',
+        maxAge: 3600, // 1 heure
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+      
       return response;
     }
   }

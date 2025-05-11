@@ -71,10 +71,10 @@ const LoginPage: React.FC = () => {
     
     if (callbackUrl) {
       console.log('💾 Login - Sauvegarde de l\'URL de redirection:', callbackUrl);
-      // Stocker l'URL complète pour la redirection
+      // Stocker l'URL complète dans un cookie
       const fullCallbackUrl = `${window.location.origin}${callbackUrl}`;
-      localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
-      console.log('💾 Login - URL complète sauvegardée:', fullCallbackUrl);
+      document.cookie = `redirectAfterLogin=${fullCallbackUrl}; path=/; max-age=3600`;
+      console.log('💾 Login - URL complète sauvegardée dans cookie:', fullCallbackUrl);
     }
   }, [searchParams]);
 
@@ -182,13 +182,17 @@ const LoginPage: React.FC = () => {
 
   const onLoginSuccess = async () => {
     try {
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      console.log('🔄 Login - URL de redirection trouvée:', redirectPath);
+      // Récupérer l'URL de redirection depuis les cookies
+      const cookies = document.cookie.split(';');
+      const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
+      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+      
+      console.log('🔄 Login - URL de redirection trouvée dans cookie:', redirectPath);
       
       if (redirectPath) {
         console.log('🚀 Login - Redirection vers:', redirectPath);
-        // Nettoyer le localStorage
-        localStorage.removeItem('redirectAfterLogin');
+        // Supprimer le cookie
+        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         
         // Attendre un court instant pour s'assurer que le token est bien enregistré
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -209,10 +213,13 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Début de la connexion Google');
       
-      // Sauvegarder l'URL de redirection actuelle si elle existe
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      // Récupérer l'URL de redirection depuis les cookies
+      const cookies = document.cookie.split(';');
+      const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
+      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+      
       if (redirectPath) {
-        console.log('URL de redirection sauvegardée:', redirectPath);
+        console.log('URL de redirection sauvegardée dans cookie:', redirectPath);
       }
       
       // URL de l'API backend pour l'authentification Google
@@ -249,10 +256,13 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Début de la connexion GitHub');
       
-      // Sauvegarder l'URL de redirection actuelle si elle existe
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      // Récupérer l'URL de redirection depuis les cookies
+      const cookies = document.cookie.split(';');
+      const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
+      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+      
       if (redirectPath) {
-        console.log('URL de redirection sauvegardée:', redirectPath);
+        console.log('URL de redirection sauvegardée dans cookie:', redirectPath);
       }
       
       // URL de l'API backend pour l'authentification GitHub
