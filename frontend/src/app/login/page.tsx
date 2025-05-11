@@ -67,14 +67,14 @@ const LoginPage: React.FC = () => {
   // Récupérer l'URL de callback au chargement de la page
   useEffect(() => {
     const callbackUrl = searchParams.get('callbackUrl');
-    console.log('🔍 Login - callbackUrl reçu:', callbackUrl);
+    console.log('=== DÉBUT DU PROCESSUS DE REDIRECTION ===');
+    console.log('URL de callback reçue:', callbackUrl);
     
     if (callbackUrl) {
-      console.log('💾 Login - Sauvegarde de l\'URL de redirection:', callbackUrl);
-      // Stocker l'URL complète dans un cookie
+      // Stocker l'URL complète dans le localStorage
       const fullCallbackUrl = `${window.location.origin}${callbackUrl}`;
-      document.cookie = `redirectAfterLogin=${fullCallbackUrl}; path=/; max-age=3600`;
-      console.log('💾 Login - URL complète sauvegardée dans cookie:', fullCallbackUrl);
+      localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
+      console.log('URL de redirection sauvegardée:', fullCallbackUrl);
     }
   }, [searchParams]);
 
@@ -142,6 +142,7 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
+      console.log('=== DÉBUT DE LA CONNEXION ===');
       // Utiliser un chemin relatif en production pour bénéficier des rewrites Vercel
       const apiPath = process.env.NODE_ENV === 'production' 
         ? '/api/auth/login' 
@@ -155,6 +156,7 @@ const LoginPage: React.FC = () => {
       });
 
       if (response.status === 200 && response.data) {
+        console.log('Connexion réussie, stockage du token');
         setError('');
         
         // Stocker le token dans le localStorage et rediriger
@@ -182,20 +184,14 @@ const LoginPage: React.FC = () => {
 
   const onLoginSuccess = async () => {
     try {
-      // Récupérer l'URL de redirection depuis les cookies
-      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-      console.log('🍪 Login - Tous les cookies:', cookies);
-      
-      const redirectCookie = cookies.find(cookie => cookie.startsWith('redirectAfterLogin='));
-      console.log('🔍 Login - Cookie de redirection trouvé:', redirectCookie);
-      
-      const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
-      console.log('🔄 Login - URL de redirection trouvée dans cookie:', redirectPath);
+      console.log('=== DÉBUT DE LA REDIRECTION APRÈS CONNEXION ===');
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection trouvée:', redirectPath);
       
       if (redirectPath) {
-        console.log('🚀 Login - Redirection vers:', redirectPath);
-        // Supprimer le cookie
-        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        console.log('Redirection vers:', redirectPath);
+        // Nettoyer le localStorage
+        localStorage.removeItem('redirectAfterLogin');
         
         // Attendre un court instant pour s'assurer que le token est bien enregistré
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -203,11 +199,11 @@ const LoginPage: React.FC = () => {
         // Rediriger vers l'URL sauvegardée
         window.location.href = redirectPath;
       } else {
-        console.log('🏠 Login - Pas d\'URL de redirection, retour à l\'accueil');
+        console.log('Pas d\'URL de redirection, retour à l\'accueil');
         router.push('/');
       }
     } catch (error) {
-      console.error('❌ Login - Erreur de redirection:', error);
+      console.error('Erreur de redirection:', error);
       router.push('/');
     }
   };
