@@ -1,43 +1,44 @@
 import { NextResponse } from 'next/server';
 
 // Middleware qui s'exécute avant le rendu de chaque page
-export default function middleware(req) {
-  const { pathname } = req.nextUrl;
-  
-  // Vérifier si l'utilisateur est sur un sondage privé
-  if (pathname.startsWith('/survey-answer/')) {
-    // Vérifier si l'utilisateur est connecté via le cookie accessToken
-    const accessToken = req.cookies.get('accessToken')?.value;
-    
-    if (!accessToken) {
-      // Si non connecté, rediriger vers la page de connexion avec l'URL de retour
-      const url = req.nextUrl.clone();
-      url.pathname = '/login';
+export function middleware(request) {
+  // Vérifier si l'utilisateur est sur une enquête privée
+  if (request.nextUrl.pathname.startsWith('/survey-answer')) {
+    const surveyId = request.nextUrl.searchParams.get('surveyId');
+    if (surveyId) {
+      // Vérifier si l'utilisateur est authentifié via le cookie
+      const accessToken = request.cookies.get('accessToken');
       
-      // Stocker l'URL complète dans le paramètre de recherche
-      const fullUrl = `${req.nextUrl.origin}${pathname}`;
-      url.searchParams.set('callbackUrl', fullUrl);
-      
-      // Créer la réponse de redirection
-      const response = NextResponse.redirect(url);
-      
-      // Stocker l'URL de redirection dans un cookie
-      response.cookies.set('redirectAfterLogin', fullUrl, {
-        path: '/',
-        maxAge: 3600, // 1 heure
-        sameSite: 'lax'
-      });
-      
-      return response;
+      if (!accessToken) {
+        // Construire l'URL de redirection avec l'URL complète
+        const fullUrl = request.url;
+        console.log('Middleware - URL complète à sauvegarder:', fullUrl);
+        
+        // Rediriger vers la page de connexion avec l'URL complète
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('callbackUrl', fullUrl);
+        
+        // Stocker l'URL complète dans un cookie
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.set('redirectAfterLogin', fullUrl, {
+          path: '/',
+          maxAge: 3600, // 1 heure
+          secure: true,
+          sameSite: 'lax'
+        });
+        
+        return response;
+      }
     }
   }
-  
+
   return NextResponse.next();
 }
 
 // Configurer le middleware pour s'exécuter sur toutes les routes
 export const config = {
   matcher: [
+    '/survey-answer/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)

@@ -75,7 +75,7 @@ const LoginPage: React.FC = () => {
     // Récupérer l'URL de redirection depuis les cookies
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
     const redirectCookie = cookies.find(cookie => cookie.startsWith('redirectAfterLogin='));
-    const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+    const redirectPath = redirectCookie ? decodeURIComponent(redirectCookie.split('=')[1]) : null;
     console.log('URL de redirection depuis cookie:', redirectPath);
     
     // Utiliser l'URL de redirection du cookie ou du paramètre d'URL
