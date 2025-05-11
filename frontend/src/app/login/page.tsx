@@ -169,9 +169,16 @@ const LoginPage: React.FC = () => {
         console.log('Connexion réussie, stockage du token');
         setError('');
         
-        // Stocker le token dans le localStorage et rediriger
-        localStorage.setItem('accessToken', response.data.accessToken);
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+        // Stocker le token dans le localStorage et les cookies
+        const { accessToken, refreshToken } = response.data;
+        
+        // Stocker dans le localStorage
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        
+        // Stocker dans les cookies
+        document.cookie = `accessToken=${accessToken}; path=/; max-age=3600; secure; samesite=lax`;
+        document.cookie = `refreshToken=${refreshToken}; path=/; max-age=86400; secure; samesite=lax`;
         
         if (response.data.user) {
           localStorage.setItem('user', JSON.stringify(response.data.user));
