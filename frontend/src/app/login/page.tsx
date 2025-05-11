@@ -67,7 +67,9 @@ const LoginPage: React.FC = () => {
   // Récupérer l'URL de callback au chargement de la page
   useEffect(() => {
     const callbackUrl = searchParams.get('callbackUrl');
+    console.log('🔍 Login - callbackUrl reçu:', callbackUrl);
     if (callbackUrl) {
+      console.log('💾 Login - Sauvegarde de l\'URL de redirection:', callbackUrl);
       localStorage.setItem('redirectAfterLogin', callbackUrl);
     }
   }, [searchParams]);
@@ -177,17 +179,21 @@ const LoginPage: React.FC = () => {
   const onLoginSuccess = async () => {
     try {
       const redirectPath = localStorage.getItem('redirectAfterLogin');
+      console.log('🔄 Login - URL de redirection trouvée:', redirectPath);
+      
       if (redirectPath) {
+        console.log('🚀 Login - Redirection vers:', redirectPath);
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
         // Rediriger vers l'URL sauvegardée
         router.push(redirectPath);
       } else {
+        console.log('🏠 Login - Pas d\'URL de redirection, retour à l\'accueil');
         // Redirection par défaut vers la racine
         router.push('/');
       }
     } catch (error) {
-      console.error('Erreur de redirection:', error);
+      console.error('❌ Login - Erreur de redirection:', error);
       // En cas d'erreur, rediriger vers la racine
       router.push('/');
     }
