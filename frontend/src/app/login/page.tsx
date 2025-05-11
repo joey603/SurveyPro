@@ -72,18 +72,26 @@ const LoginPage: React.FC = () => {
     console.log('URL complète:', window.location.href);
     console.log('Paramètres de recherche:', window.location.search);
     
-    if (callbackUrl) {
+    // Récupérer l'URL de redirection depuis les cookies
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    const redirectCookie = cookies.find(cookie => cookie.startsWith('redirectAfterLogin='));
+    const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
+    console.log('URL de redirection depuis cookie:', redirectPath);
+    
+    // Utiliser l'URL de redirection du cookie ou du paramètre d'URL
+    const finalRedirectUrl = redirectPath || callbackUrl;
+    
+    if (finalRedirectUrl) {
       try {
-        // Décoder l'URL si elle est encodée
-        const decodedUrl = decodeURIComponent(callbackUrl);
-        console.log('URL décodée:', decodedUrl);
-        
         // Stocker l'URL complète dans le localStorage
-        const fullCallbackUrl = `${window.location.origin}${decodedUrl}`;
+        const fullCallbackUrl = `${window.location.origin}${finalRedirectUrl}`;
         localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
         console.log('URL de redirection sauvegardée:', fullCallbackUrl);
+        
+        // Supprimer le cookie de redirection
+        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       } catch (error) {
-        console.error('Erreur lors du décodage de l\'URL:', error);
+        console.error('Erreur lors du traitement de l\'URL de redirection:', error);
       }
     }
   }, [searchParams]);
