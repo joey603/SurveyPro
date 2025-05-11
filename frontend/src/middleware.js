@@ -9,9 +9,9 @@ export default function middleware(req) {
   if (pathname.startsWith('/survey-answer/')) {
     console.log('📝 Middleware - Détection d\'un sondage privé');
     
-    // Vérifier si l'utilisateur est connecté (via le token dans les cookies)
-    const token = req.cookies.get('token');
-    console.log('🔑 Middleware - Token présent:', !!token);
+    // Vérifier si l'utilisateur est connecté via le header Authorization
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
     if (!token) {
       console.log('⚠️ Middleware - Utilisateur non connecté, redirection vers login');
@@ -20,7 +20,11 @@ export default function middleware(req) {
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
       console.log('🔄 Middleware - URL de redirection:', url.toString());
-      return NextResponse.redirect(url);
+      
+      // Ajouter un header pour indiquer la redirection
+      const response = NextResponse.redirect(url);
+      response.headers.set('x-redirect-reason', 'auth-required');
+      return response;
     }
   }
   

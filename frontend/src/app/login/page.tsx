@@ -68,9 +68,13 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const callbackUrl = searchParams.get('callbackUrl');
     console.log('🔍 Login - callbackUrl reçu:', callbackUrl);
+    
     if (callbackUrl) {
       console.log('💾 Login - Sauvegarde de l\'URL de redirection:', callbackUrl);
-      localStorage.setItem('redirectAfterLogin', callbackUrl);
+      // Stocker l'URL complète pour la redirection
+      const fullCallbackUrl = `${window.location.origin}${callbackUrl}`;
+      localStorage.setItem('redirectAfterLogin', fullCallbackUrl);
+      console.log('💾 Login - URL complète sauvegardée:', fullCallbackUrl);
     }
   }, [searchParams]);
 
@@ -185,16 +189,18 @@ const LoginPage: React.FC = () => {
         console.log('🚀 Login - Redirection vers:', redirectPath);
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
+        
+        // Attendre un court instant pour s'assurer que le token est bien enregistré
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Rediriger vers l'URL sauvegardée
-        router.push(redirectPath);
+        window.location.href = redirectPath;
       } else {
         console.log('🏠 Login - Pas d\'URL de redirection, retour à l\'accueil');
-        // Redirection par défaut vers la racine
         router.push('/');
       }
     } catch (error) {
       console.error('❌ Login - Erreur de redirection:', error);
-      // En cas d'erreur, rediriger vers la racine
       router.push('/');
     }
   };
