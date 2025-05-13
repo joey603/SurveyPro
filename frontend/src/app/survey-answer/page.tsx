@@ -139,6 +139,7 @@ interface FormData {
 type FieldPath = `answers.${string}` | keyof FormData | `demographic.${keyof FormData['demographic']}`;
 
 const SurveyAnswerPage: React.FC = () => {
+  console.log(`[SurveyAnswerPage] Page chargée - ${new Date().toISOString()}`);
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [urlToRedirect, setUrlToRedirect] = useState<string | null>(null);
