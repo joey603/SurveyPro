@@ -254,7 +254,7 @@ const NavBar = () => {
           },
         }}
       >
-        Advanced Analytics
+        Analytics
       </Button>
     );
   };
@@ -419,7 +419,7 @@ const NavBar = () => {
               <>
                 <ListItem>
                   <ListItemText 
-                    primary="New Survey"
+                    primary="NEW SURVEY"
                     primaryTypographyProps={{
                       sx: {
                         color: '#64748b',
@@ -487,18 +487,6 @@ const NavBar = () => {
                     />
                   </Button>
                 </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Analytics"
-                    primaryTypographyProps={{
-                      sx: {
-                        color: '#64748b',
-                        fontWeight: 600,
-                        pl: 2,
-                      }
-                    }}
-                  />
-                </ListItem>
                 <ListItem disablePadding>
                   <Button
                     component={Link}
@@ -519,7 +507,7 @@ const NavBar = () => {
                     }}
                   >
                     <ListItemText 
-                      primary="Advanced Analytics"
+                      primary="Analytics"
                       primaryTypographyProps={{
                         sx: {
                           fontWeight: pathname === '/analytics' ? 600 : 500,
