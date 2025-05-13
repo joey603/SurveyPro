@@ -68,6 +68,8 @@ import LockIcon from '@mui/icons-material/Lock';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from 'lottie-react';
+import loadingCardAnimation from '@/assets/Animation loading card survey.json';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
 
@@ -2160,6 +2162,14 @@ const SurveyAnswerPage: React.FC = () => {
               <Typography color="error" sx={{ textAlign: 'center', my: 4 }}>
                 {error}
               </Typography>
+            ) : loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                <Lottie
+                  animationData={loadingCardAnimation}
+                  style={{ width: 200, height: 200 }}
+                  loop={true}
+                />
+              </Box>
             ) : (
               <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {filteredSurveys.map((survey) => (
