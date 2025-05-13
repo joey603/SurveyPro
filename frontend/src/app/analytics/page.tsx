@@ -14,6 +14,8 @@ import { shareSurvey, respondToSurveyShare } from '@/utils/surveyShareService';
 import SchoolIcon from '@mui/icons-material/School';
 import 'intro.js/introjs.css';
 import introJs from 'intro.js';
+import Lottie from 'lottie-react';
+import loadingCardAnimation from '@/assets/Animation loading card survey.json';
 
 interface Question {
   id: string;
@@ -1280,9 +1282,13 @@ const AnalyticsPage: React.FC = () => {
               />
 
               {loading && (
-                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  Loading surveys...
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                  <Lottie
+                    animationData={loadingCardAnimation}
+                    style={{ width: 200, height: 200 }}
+                    loop={true}
+                  />
+                </Box>
               )}
 
               {error && (
