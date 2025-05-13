@@ -70,6 +70,7 @@ const NavBar = () => {
         { name: 'Register', path: '/register' },
       ]
     : [
+        { name: 'Analytics', path: '/analytics' },
         { name: 'Explore', path: '/survey-answer' },
         { name: 'Activity Log', path: '/history' },
         { name: 'Settings', path: '/settings' },
@@ -213,52 +214,6 @@ const NavBar = () => {
     );
   };
 
-  // Ajouter ce composant pour le bouton Analytics avec dropdown
-  const AnalyticsButton = () => {
-    const pathname = usePathname();
-
-    return (
-      <Button
-        component={Link}
-        href="/analytics"
-        sx={{
-          color: pathname === '/analytics' ? '#667eea' : '#64748b',
-          mx: 1,
-          py: 1.5,
-          px: 2.5,
-          borderRadius: '12px',
-          textTransform: 'none',
-          fontSize: '0.95rem',
-          fontWeight: pathname === '/analytics' ? 600 : 500,
-          position: 'relative',
-          overflow: 'hidden',
-          backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
-          transition: NAVBAR_STYLES.transitions.default,
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(102, 126, 234, 0.1)',
-            transform: 'translateY(100%)',
-            transition: NAVBAR_STYLES.transitions.default,
-          },
-          '&:hover': {
-            color: '#667eea',
-            transform: 'translateY(-2px)',
-            '&::before': {
-              transform: 'translateY(0)',
-            },
-          },
-        }}
-      >
-        Analytics
-      </Button>
-    );
-  };
-
   return (
     <AppBar
       position="sticky"
@@ -327,7 +282,6 @@ const NavBar = () => {
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {isAuthenticated && <NewSurveyButton />}
-              {isAuthenticated && <AnalyticsButton />}
               {navItems.map((item) => (
                 <NavButton key={item.name} {...item} />
               ))}
@@ -482,35 +436,6 @@ const NavBar = () => {
                       primaryTypographyProps={{
                         sx: {
                           fontWeight: pathname === '/survey-creation/dynamic' ? 600 : 500,
-                        }
-                      }}
-                    />
-                  </Button>
-                </ListItem>
-                <ListItem disablePadding>
-                  <Button
-                    component={Link}
-                    href="/analytics"
-                    fullWidth
-                    sx={{
-                      py: 2,
-                      px: 3,
-                      pl: 6,
-                      justifyContent: 'flex-start',
-                      color: pathname === '/analytics' ? '#667eea' : '#64748b',
-                      backgroundColor: pathname === '/analytics' ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
-                      transition: NAVBAR_STYLES.transitions.default,
-                      '&:hover': {
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        transform: 'translateX(8px)',
-                      },
-                    }}
-                  >
-                    <ListItemText 
-                      primary="Analytics"
-                      primaryTypographyProps={{
-                        sx: {
-                          fontWeight: pathname === '/analytics' ? 600 : 500,
                         }
                       }}
                     />
