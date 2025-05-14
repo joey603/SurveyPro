@@ -440,6 +440,22 @@ export const deleteSurveyShare = async (shareId: string, token: string) => {
   }
 };
 
+// Nouvelle fonction pour supprimer un sondage statique
+export const deleteSurvey = async (surveyId: string, token: string) => {
+  try {
+    console.log('Suppression du sondage statique:', surveyId);
+    const response = await axios.delete(`${API_URL}/surveys/${surveyId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting static survey:', error);
+    throw error;
+  }
+};
+
 export const fetchAnsweredSurveys = async (token: string) => {
   try {
     // Récupérer les réponses aux sondages classiques

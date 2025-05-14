@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Box, Typography, Paper, Snackbar, Alert, IconButton, Grid, Fab, Tooltip, CircularProgress } from '@mui/material';
-import { getSurveyAnswers, fetchSurveys, fetchPendingShares } from '@/utils/surveyService';
+import { getSurveyAnswers, fetchSurveys, fetchPendingShares, deleteSurvey } from '@/utils/surveyService';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchAndFilter from '../components/analytics/SearchAndFilter';
 import { AnalyticsCard } from '../components/analytics/AnalyticsCard';
@@ -191,14 +191,10 @@ const AnalyticsPage: React.FC = () => {
       // Déterminer si c'est un sondage dynamique
       const isDynamic = Boolean(surveyToDelete.isDynamic);
       
-      // Pour debug: afficher l'API_URL configurée
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
-      
       console.log('Suppression du sondage:', { 
         id: surveyId, 
         isDynamic, 
-        titre: surveyToDelete.title,
-        apiBaseUrl
+        titre: surveyToDelete.title
       });
       
       // Utiliser le service approprié selon le type de sondage
@@ -207,25 +203,8 @@ const AnalyticsPage: React.FC = () => {
         const { dynamicSurveyService } = await import('@/utils/dynamicSurveyService');
         await dynamicSurveyService.deleteDynamicSurvey(surveyId, token);
       } else {
-        // Construction correcte de l'endpoint API
-        // S'assurer que l'URL contient '/api' 
-        let apiEndpoint = `${apiBaseUrl}/api/surveys/${surveyId}`;
-        
-        console.log('Utilisation de l\'API endpoint:', apiEndpoint);
-        
-        const response = await fetch(apiEndpoint, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-        
-        // Vérifier si la réponse est OK (statut 200-299)
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} ${response.statusText}. Details: ${errorText}`);
-        }
+        // Utiliser le service de sondages statiques
+        await deleteSurvey(surveyId, token);
       }
       
       // Mettre à jour l'interface utilisateur
