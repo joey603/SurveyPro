@@ -246,28 +246,43 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     
-    // Utiliser les mêmes constantes que dans reorganizeFlow pour la cohérence
+    // Utiliser exactement les mêmes constantes que dans reorganizeFlow
     const BASE_VERTICAL_SPACING = 200;
+    const HORIZONTAL_SPACING = 450;
     const EXTRA_SPACING_FOR_CRITICAL = 50;
     const EXTRA_SPACING_FOR_IMAGE = 50;
+    const EXTRA_SPACING_FOR_NESTED = 120;
     const BASE_NODE_HEIGHT = 100;
     
-    // Calculer l'espacement vertical de manière similaire à reorganizeFlow
-    let verticalSpacing = BASE_VERTICAL_SPACING;
+    // Calculer l'espacement vertical en appliquant exactement la même logique que reorganizeFlow
+    // Initialiser l'espacement de base
+    let baseSpacing;
     
-    // Si la question est critique, ajouter l'espacement pour les questions critiques
-    // mais réduire légèrement l'espacement pour les enfants directs comme dans reorganizeFlow
-    if (sourceNode.data.isCritical) {
-      verticalSpacing = BASE_VERTICAL_SPACING + 30; // Même logique que "parentIsCritical && !isCurrentNodeCritical" dans calculateVerticalSpacing
+    // Vérifier si le nœud source est critique
+    const isSourceCritical = sourceNode.data.isCritical || false;
+    
+    // Cas où le nœud parent est critique (ajout direct d'enfants à un nœud critique)
+    if (isSourceCritical) {
+      // Utiliser exactement la même logique que dans calculateVerticalSpacing pour "parentIsCritical && !isCurrentNodeCritical"
+      baseSpacing = Math.max(BASE_VERTICAL_SPACING + 30, BASE_NODE_HEIGHT + 30);
+      
+      // Ajouter l'espacement supplémentaire pour les questions critiques
+      baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
+    } 
+    // Cas standard (non critique)
+    else {
+      baseSpacing = Math.max(BASE_VERTICAL_SPACING, BASE_NODE_HEIGHT + 50);
     }
     
     // Ajouter un espacement supplémentaire si la question a une image
     if (sourceNode.data.mediaUrl && sourceNode.data.mediaUrl.length > 0) {
-      verticalSpacing += EXTRA_SPACING_FOR_IMAGE;
+      baseSpacing += EXTRA_SPACING_FOR_IMAGE;
     }
     
-    // Espacement horizontal plus large pour les questions critiques
-    const horizontalSpacing = 800;
+    // Calculer l'espacement horizontal réel comme dans reorganizeFlow
+    // Si le nœud est critique ou a plusieurs options, on utilise un espacement horizontal complet
+    const shouldBranch = isSourceCritical || options.length > 1;
+    const horizontalSpacing = shouldBranch ? HORIZONTAL_SPACING : 0;
 
     // Calculate the total width and starting position
     const totalWidth = (options.length - 1) * horizontalSpacing;
@@ -278,7 +293,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const normalizedOption = option.trim().toLowerCase().replace(/\s+/g, '_');
       const newNodeId = `${sourceId}_${normalizedOption}`;
       
-      // Calculate the absolute X position for each node
+      // Calculate the absolute X position for each node, en cohérence avec reorganizeFlow
       const xPosition = options.length === 1 
         ? sourceNode.position.x // If there's only one node, center it
         : startX + (index * horizontalSpacing);
@@ -300,10 +315,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         },
         position: { 
           x: xPosition,
-          y: sourceNode.position.y + verticalSpacing,
+          y: sourceNode.position.y + baseSpacing,
         },
         style: {
-          width: 350, // Fixed width for all nodes
+          width: 450, // Utiliser la même largeur que dans reorganizeFlow (ligne 1081)
         }
       };
       newNodes.push(newNode);
