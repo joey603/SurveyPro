@@ -140,6 +140,7 @@ const Home = () => {
         sx={{
           p: 4,
           height: '100%',
+          width: '100%',
           backgroundColor: 'white',
           borderRadius: 2,
           transition: 'all 0.3s ease-in-out',
@@ -198,7 +199,7 @@ const Home = () => {
     );
 
     return (
-      <Grid item xs={12} md={6} key={index}>
+      <Grid item xs={12} md={6} key={index} sx={{ minHeight: '350px', position: 'relative' }}>
         <Fade 
           in={isLeadershipVisible} 
           timeout={1000}
@@ -207,10 +208,8 @@ const Home = () => {
               ? `${leader.delay}ms`
               : '0ms',
           }}
-          mountOnEnter
-          unmountOnExit
         >
-          <Box>{content}</Box>
+          <Box sx={{ height: '100%', width: '100%' }}>{content}</Box>
         </Fade>
       </Grid>
     );
@@ -303,7 +302,7 @@ const Home = () => {
       <Container ref={featuresRef} maxWidth="lg" sx={{ py: 8 }}>
         <Grid container spacing={4}>
           {features.map((feature, index) => (
-            <Grid item xs={12} md={4} key={index}>
+            <Grid item xs={12} md={4} key={index} sx={{ minHeight: '400px', position: 'relative' }}>
               <Fade 
                 in={isFeaturesVisible}
                 timeout={feature.delay}
@@ -312,8 +311,6 @@ const Home = () => {
                     ? `${feature.delay}ms`
                     : '0ms',
                 }}
-                mountOnEnter
-                unmountOnExit
               >
                 <Paper
                   elevation={0}
@@ -325,6 +322,7 @@ const Home = () => {
                   sx={{
                     p: 4,
                     height: '100%',
+                    width: '100%',
                     backgroundColor: 'white',
                     borderRadius: 2,
                     transition: 'all 0.3s ease-in-out',
