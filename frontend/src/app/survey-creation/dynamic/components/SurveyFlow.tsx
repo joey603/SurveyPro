@@ -245,11 +245,29 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    // Augmentation de l'espacement vertical si la question est critique
-    const baseVerticalSpacing = 300;
-    const criticalVerticalSpacing = 450; // Augmenté pour les questions critiques
-    const verticalSpacing = sourceNode.data.isCritical ? criticalVerticalSpacing : baseVerticalSpacing;
-    const horizontalSpacing = 800; // Increased to 800px for a much wider spacing
+    
+    // Utiliser les mêmes constantes que dans reorganizeFlow pour la cohérence
+    const BASE_VERTICAL_SPACING = 200;
+    const EXTRA_SPACING_FOR_CRITICAL = 50;
+    const EXTRA_SPACING_FOR_IMAGE = 50;
+    const BASE_NODE_HEIGHT = 100;
+    
+    // Calculer l'espacement vertical de manière similaire à reorganizeFlow
+    let verticalSpacing = BASE_VERTICAL_SPACING;
+    
+    // Si la question est critique, ajouter l'espacement pour les questions critiques
+    // mais réduire légèrement l'espacement pour les enfants directs comme dans reorganizeFlow
+    if (sourceNode.data.isCritical) {
+      verticalSpacing = BASE_VERTICAL_SPACING + 30; // Même logique que "parentIsCritical && !isCurrentNodeCritical" dans calculateVerticalSpacing
+    }
+    
+    // Ajouter un espacement supplémentaire si la question a une image
+    if (sourceNode.data.mediaUrl && sourceNode.data.mediaUrl.length > 0) {
+      verticalSpacing += EXTRA_SPACING_FOR_IMAGE;
+    }
+    
+    // Espacement horizontal plus large pour les questions critiques
+    const horizontalSpacing = 800;
 
     // Calculate the total width and starting position
     const totalWidth = (options.length - 1) * horizontalSpacing;
@@ -1183,8 +1201,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     let maxY = 0;
     let editingNodeY = 0;
     let isEditingMode = false;
-    const BASE_SPACING = 150;
-    const EDITING_SPACING = 400;
+    const BASE_SPACING = 200; // Correspond à BASE_VERTICAL_SPACING dans reorganizeFlow
+    const EDITING_SPACING = 400; // Maintenu pour le mode édition
 
     nodes.forEach(node => {
       if (node.position.y > maxY) {
