@@ -199,20 +199,19 @@ const Home = () => {
 
     return (
       <Grid item xs={12} md={6} key={index}>
-        <Box sx={{ position: 'relative' }}>
-          <Fade in={isLeadershipVisible} timeout={1000}>
-            <Box>
-              <Slide
-                direction="up"
-                in={isLeadershipVisible}
-                timeout={1000}
-                container={containerRef.current}
-              >
-                <Box>{content}</Box>
-              </Slide>
-            </Box>
-          </Fade>
-        </Box>
+        <Fade 
+          in={isLeadershipVisible} 
+          timeout={1000}
+          style={{
+            transitionDelay: isLeadershipVisible
+              ? `${leader.delay}ms`
+              : '0ms',
+          }}
+          mountOnEnter
+          unmountOnExit
+        >
+          <Box>{content}</Box>
+        </Fade>
       </Grid>
     );
   };
