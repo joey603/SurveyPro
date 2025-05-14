@@ -305,8 +305,7 @@ const Home = () => {
         <Grid container spacing={4}>
           {features.map((feature, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Slide
-                direction="up"
+              <Fade 
                 in={isFeaturesVisible}
                 timeout={feature.delay}
                 style={{
@@ -314,6 +313,8 @@ const Home = () => {
                     ? `${feature.delay}ms`
                     : '0ms',
                 }}
+                mountOnEnter
+                unmountOnExit
               >
                 <Paper
                   elevation={0}
@@ -355,7 +356,7 @@ const Home = () => {
                     </Typography>
                   </Box>
                 </Paper>
-              </Slide>
+              </Fade>
             </Grid>
           ))}
         </Grid>
