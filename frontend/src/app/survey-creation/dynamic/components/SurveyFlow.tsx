@@ -790,13 +790,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   };
 
   const reorganizeFlow = useCallback(() => {
-    const BASE_VERTICAL_SPACING = 150;
+    const BASE_VERTICAL_SPACING = 200;
     const HORIZONTAL_SPACING = 450;
     const START_Y = 50;
     const IMAGE_HEIGHT = 200;
     const BASE_NODE_HEIGHT = 100;
     const EXTRA_SPACING_FOR_IMAGE = 50;
-    const EXTRA_SPACING_FOR_CRITICAL = 100;
+    const EXTRA_SPACING_FOR_CRITICAL = 50;
     const EXTRA_SPACING_FOR_NESTED = 120; // Espacement pour les nœuds imbriqués (C)
     
     const containerWidth = 1200;
@@ -876,10 +876,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         baseSpacing = Math.max(BASE_VERTICAL_SPACING + EXTRA_SPACING_FOR_NESTED, 
                              (maxCurrentHeight + maxNextHeight) / 2 + 70);
       }
-      // Si ni le nœud courant ni son parent ne sont critiques, utiliser un espacement réduit
+      // Si ni le nœud courant ni son parent ne sont critiques, utiliser un espacement plus large
       else if (!isCurrentNodeCritical && !parentIsCritical) {
-        baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 30);
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       } 
+      // Cas où le parent est critique - réduire légèrement l'espacement
+      else if (parentIsCritical && !isCurrentNodeCritical) {
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 30, (maxCurrentHeight + maxNextHeight) / 2 + 30);
+      }
       // Sinon, utiliser l'espacement standard
       else {
         baseSpacing = Math.max(BASE_VERTICAL_SPACING + 50, (maxCurrentHeight + maxNextHeight) / 2 + 50);
