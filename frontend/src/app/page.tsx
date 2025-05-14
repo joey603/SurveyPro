@@ -44,7 +44,7 @@ const Home = () => {
         ([entry]) => {
           setVisibility(entry.isIntersecting);
         },
-        { threshold: 0.1 }
+        { threshold: 0.1, rootMargin: '0px 0px -10% 0px' }
       );
     };
 
@@ -199,19 +199,20 @@ const Home = () => {
 
     return (
       <Grid item xs={12} md={6} key={index}>
-        <Fade 
-          in={isLeadershipVisible} 
-          timeout={1000}
-          style={{
-            transitionDelay: isLeadershipVisible
-              ? `${leader.delay}ms`
-              : '0ms',
-          }}
-          mountOnEnter
-          unmountOnExit
-        >
-          <Box>{content}</Box>
-        </Fade>
+        <Box sx={{ minHeight: '350px', height: '100%' }}>
+          <Fade 
+            in={isLeadershipVisible} 
+            timeout={1000}
+            style={{
+              transitionDelay: isLeadershipVisible
+                ? `${leader.delay}ms`
+                : '0ms',
+              opacity: 0
+            }}
+          >
+            <Box>{content}</Box>
+          </Fade>
+        </Box>
       </Grid>
     );
   };
@@ -304,58 +305,59 @@ const Home = () => {
         <Grid container spacing={4}>
           {features.map((feature, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Fade 
-                in={isFeaturesVisible}
-                timeout={feature.delay}
-                style={{
-                  transitionDelay: isFeaturesVisible
-                    ? `${feature.delay}ms`
-                    : '0ms',
-                }}
-                mountOnEnter
-                unmountOnExit
-              >
-                <Paper
-                  elevation={0}
-                  onClick={() =>
-                    isAuthenticated
-                      ? router.push(feature.link)
-                      : router.push('/login')
-                  }
-                  sx={{
-                    p: 4,
-                    height: '100%',
-                    backgroundColor: 'white',
-                    borderRadius: 2,
-                    transition: 'all 0.3s ease-in-out',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    },
+              <Box sx={{ height: '100%', minHeight: '400px' }}>
+                <Fade 
+                  in={isFeaturesVisible}
+                  timeout={feature.delay}
+                  style={{
+                    transitionDelay: isFeaturesVisible
+                      ? `${feature.delay}ms`
+                      : '0ms',
+                    opacity: 0
                   }}
                 >
-                  <Box
+                  <Paper
+                    elevation={0}
+                    onClick={() =>
+                      isAuthenticated
+                        ? router.push(feature.link)
+                        : router.push('/login')
+                    }
                     sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      textAlign: 'center',
+                      p: 4,
+                      height: '100%',
+                      backgroundColor: 'white',
+                      borderRadius: 2,
+                      transition: 'all 0.3s ease-in-out',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                      },
                     }}
                   >
-                    {feature.icon}
-                    <Typography
-                      variant="h5"
-                      sx={{ mt: 2, mb: 1, color: '#1a237e' }}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                      }}
                     >
-                      {feature.title}
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {feature.description}
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Fade>
+                      {feature.icon}
+                      <Typography
+                        variant="h5"
+                        sx={{ mt: 2, mb: 1, color: '#1a237e' }}
+                      >
+                        {feature.title}
+                      </Typography>
+                      <Typography color="text.secondary">
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Fade>
+              </Box>
             </Grid>
           ))}
         </Grid>
