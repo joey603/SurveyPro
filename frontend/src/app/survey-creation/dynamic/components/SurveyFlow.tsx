@@ -156,7 +156,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       if (editedNode && '_editingState' in newData) {
         const isEditing = newData._editingState;
         const EDITING_HEIGHT_INCREASE = 400;
-        const BASE_SPACING = 150;
+        
+        // Utiliser les mêmes constantes que dans reorganizeFlow pour la cohérence
+        const BASE_VERTICAL_SPACING = 200;
+        const EXTRA_SPACING_FOR_CRITICAL = 50;
+        const EXTRA_SPACING_FOR_IMAGE = 50;
+        const BASE_NODE_HEIGHT = 100;
         
         const isNodeBelow = (node1: Node, node2: Node) => {
           return node1.position.y > node2.position.y;
@@ -164,6 +169,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         
         const isChildOfEditedNode = (node: Node) => {
           return edges.some(edge => edge.source === editedNode.id && edge.target === node.id);
+        };
+        
+        const isParentOfEditedNode = (node: Node) => {
+          return edges.some(edge => edge.source === node.id && edge.target === editedNode.id);
         };
         
         if (isEditing) {
@@ -197,18 +206,31 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               const newData = { ...node.data };
               delete newData._originalPosition;
               
-              const isConnected = edges.some(edge => 
-                (edge.source === nodeId && edge.target === node.id) ||
-                (edge.source === node.id && edge.target === nodeId)
-              );
+              const isDirectChild = isChildOfEditedNode(node);
+              const isDirectParent = isParentOfEditedNode(node);
               
-              if (isConnected) {
-              return {
-                ...node,
-                data: newData,
-                position: {
+              // Si c'est un enfant direct, appliquer la même logique que reorganizeFlow
+              if (isDirectChild) {
+                // Calculer l'espacement comme dans reorganizeFlow
+                let baseSpacing = BASE_VERTICAL_SPACING;
+                
+                // Si le nœud édité est critique, ajuster l'espacement
+                if (editedNode.data.isCritical) {
+                  baseSpacing = BASE_VERTICAL_SPACING + 30;
+                  baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
+                }
+                
+                // Ajouter un espacement supplémentaire si la question a une image
+                if (editedNode.data.mediaUrl && editedNode.data.mediaUrl.length > 0) {
+                  baseSpacing += EXTRA_SPACING_FOR_IMAGE;
+                }
+                
+                return {
+                  ...node,
+                  data: newData,
+                  position: {
                     ...originalPos,
-                    y: editedNode.position.y + BASE_SPACING
+                    y: editedNode.position.y + baseSpacing
                   }
                 };
               }
