@@ -192,7 +192,7 @@ const AnalyticsPage: React.FC = () => {
       const isDynamic = Boolean(surveyToDelete.isDynamic);
       
       // Pour debug: afficher l'API_URL configurée
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
       
       console.log('Suppression du sondage:', { 
         id: surveyId, 
@@ -207,14 +207,9 @@ const AnalyticsPage: React.FC = () => {
         const { dynamicSurveyService } = await import('@/utils/dynamicSurveyService');
         await dynamicSurveyService.deleteDynamicSurvey(surveyId, token);
       } else {
+        // Construction correcte de l'endpoint API
         // S'assurer que l'URL contient '/api' 
-        let apiEndpoint = `${apiBaseUrl}/surveys/${surveyId}`;
-        
-        // Vérifier si l'URL contient déjà "/api"
-        if (!apiEndpoint.includes('/api/')) {
-          // Remplacer l'URL pour assurer la présence de "/api/"
-          apiEndpoint = `http://localhost:5041/api/surveys/${surveyId}`;
-        }
+        let apiEndpoint = `${apiBaseUrl}/api/surveys/${surveyId}`;
         
         console.log('Utilisation de l\'API endpoint:', apiEndpoint);
         
