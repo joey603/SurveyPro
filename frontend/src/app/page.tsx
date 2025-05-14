@@ -527,6 +527,7 @@ const Home = () => {
                 onClick={() => window.open('https://www.sce.ac.il', '_blank')}
                 sx={{
                   p: 4,
+                  pt: { xs: 8, md: 4 },
                   backgroundColor: 'white',
                   borderRadius: 2,
                   transition: 'all 0.3s ease-in-out',
@@ -541,7 +542,18 @@ const Home = () => {
                   position: 'relative',
                 }}
               >
-                <Box sx={{ position: 'absolute', top: 20, right: 20, width: 120, height: 60 }}>
+                <Box 
+                  sx={{ 
+                    position: 'absolute',
+                    top: { xs: 15, md: 20 },
+                    right: { xs: '50%', md: 20 },
+                    transform: { xs: 'translateX(50%)', md: 'none' },
+                    width: 120, 
+                    height: 60,
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }}
+                >
                   <Image
                     src="/images/SamiSH-logo_2.webp"
                     alt="SCE Logo"
@@ -551,7 +563,7 @@ const Home = () => {
                   />
                 </Box>
               
-                <Typography variant="h5" sx={{ mb: 2, color: '#1a237e', fontWeight: 500 }}>
+                <Typography variant="h5" sx={{ mb: 2, mt: { xs: 4, md: 0 }, color: '#1a237e', fontWeight: 500 }}>
                   Academic Project in Collaboration with SCE
                 </Typography>
                 
