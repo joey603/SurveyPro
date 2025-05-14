@@ -24,7 +24,7 @@ import 'reactflow/dist/style.css';
 import QuestionNode from './QuestionNode';
 import { dynamicSurveyService } from '@/utils/dynamicSurveyService';
 import { SurveyFlowRef } from '../types/SurveyFlowTypes';
-import { IconButton, Fab, Button } from '@mui/material';
+import { IconButton, Fab, Button, Tooltip } from '@mui/material';
 
 interface SurveyFlowProps {
   onAddNode: () => void;
@@ -752,9 +752,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
         sx={{
           position: 'absolute',
-          top: isMobile ? '80px' : '20px',
-          left: isMobile ? '20px' : 'auto', // Alignement à gauche sur mobile
-          right: isMobile ? 'auto' : '20px', // Pas de position right sur mobile
+          top: '70px',
+          left: '20px',
           zIndex: 1000,
           backgroundColor: '#ff4444',
           color: 'white',
@@ -1445,25 +1444,31 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           <NotificationMessage />
           <DeleteButton />
           <ReorganizeButton />
-          {isMobile && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              zIndex: 10000,
+            }}
+            className="custom-tooltip-container"
+          >
             <IconButton
               onClick={toggleFullscreen}
               sx={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                zIndex: 1000,
                 backgroundColor: 'white',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 '&:hover': {
                   backgroundColor: '#f5f5f5',
                 },
+                position: 'relative',
               }}
               TouchRippleProps={{
                 classes: {
                   child: 'touch-ripple-child',
                 },
               }}
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
               {isFullscreen ? (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1475,7 +1480,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 </svg>
               )}
             </IconButton>
-          )}
+            <div className="custom-tooltip">
+              {isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            </div>
+          </div>
           {isFullscreen && (
             <Fab
               color="primary"
@@ -1558,6 +1566,52 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
         .react-flow__attribution {
           display: none !important;
+        }
+        
+        /* Styles pour l'infobulle personnalisée */
+        .custom-tooltip-container {
+          position: relative;
+        }
+        
+        .custom-tooltip {
+          position: absolute;
+          right: 48px;
+          top: 50%;
+          transform: translateY(-50%);
+          background-color: rgba(97, 97, 97, 0.92);
+          color: white;
+          padding: 8px 10px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+          font-weight: 500;
+          line-height: 1.4em;
+          white-space: nowrap;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.2s, visibility 0.2s;
+          z-index: 30000;
+          visibility: hidden;
+          max-width: 300px;
+          box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+          letter-spacing: 0.03em;
+        }
+        
+        .custom-tooltip::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          right: -8px;
+          transform: translateY(-50%);
+          border-width: 8px 0 8px 8px;
+          border-style: solid;
+          border-color: transparent transparent transparent rgba(97, 97, 97, 0.92);
+        }
+        
+        .custom-tooltip-container:hover .custom-tooltip {
+          opacity: 1;
+          visibility: visible;
+          transition-delay: 0.4s;
         }
       `}</style>
     </>
