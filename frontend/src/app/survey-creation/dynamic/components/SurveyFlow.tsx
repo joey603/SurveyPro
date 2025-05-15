@@ -293,40 +293,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           return updatedNodes.map(node => {
             if (node.id === nodeId) return node;
             
+            // Si le nœud a une position originale sauvegardée, la restaurer sans recalcul
             if (node.data._originalPosition) {
               const originalPos = node.data._originalPosition;
               const newData = { ...node.data };
               delete newData._originalPosition;
               
-              const isDirectChild = isChildOfEditedNode(node);
-              const isDirectParent = isParentOfEditedNode(node);
-              
-              // Si c'est un enfant direct, appliquer la même logique que reorganizeFlow
-              if (isDirectChild) {
-                // Calculer l'espacement comme dans reorganizeFlow
-                let baseSpacing = BASE_VERTICAL_SPACING;
-                
-                // Si le nœud édité est critique, ajuster l'espacement
-                if (editedNode.data.isCritical) {
-                  baseSpacing = BASE_VERTICAL_SPACING + 30;
-                  baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
-                }
-                
-                // Ajouter un espacement supplémentaire si la question a une image
-                if (editedNode.data.mediaUrl && editedNode.data.mediaUrl.length > 0) {
-                  baseSpacing += EXTRA_SPACING_FOR_IMAGE;
-                }
-                
-                return {
-                  ...node,
-                  data: newData,
-                  position: {
-                    ...originalPos,
-                    y: editedNode.position.y + baseSpacing
-                  }
-                };
-              }
-              
+              // Restaurer exactement la position d'origine, sans recalcul
               return {
                 ...node,
                 data: newData,
