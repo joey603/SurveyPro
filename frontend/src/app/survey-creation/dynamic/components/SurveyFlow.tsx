@@ -170,6 +170,62 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           return xDiff < 100;
         };
         
+        // Vérifier si un nœud fait partie de la branche (sous-arbre) d'un nœud donné
+        const isInSubtree = (nodeToCheck: Node, rootNode: Node): boolean => {
+          // Fonction récursive interne pour parcourir l'arbre
+          const traverseTree = (currentNodeId: string, visited = new Set<string>()): boolean => {
+            if (visited.has(currentNodeId)) return false;
+            visited.add(currentNodeId);
+            
+            // Si nous avons trouvé le nœud que nous cherchons
+            if (currentNodeId === nodeToCheck.id) return true;
+            
+            // Chercher parmi tous les enfants directs de ce nœud
+            const childEdges = edges.filter(edge => edge.source === currentNodeId);
+            for (const edge of childEdges) {
+              if (traverseTree(edge.target, visited)) {
+                return true;
+              }
+            }
+            
+            return false;
+          };
+          
+          // Commencer la recherche à partir du nœud racine
+          return traverseTree(rootNode.id);
+        };
+        
+        // Vérifier si un nœud est un descendant d'un autre nœud (dans n'importe quelle branche)
+        const isDescendantOf = (childNode: Node, parentNode: Node): boolean => {
+          // Construire un graphe pour le parcours efficace
+          const graph = new Map<string, string[]>();
+          
+          // Remplir le graphe avec les relations parent-enfant
+          edges.forEach(edge => {
+            if (!graph.has(edge.source)) {
+              graph.set(edge.source, []);
+            }
+            graph.get(edge.source)?.push(edge.target);
+          });
+          
+          // Parcours en profondeur pour trouver si childNode est descendant de parentNode
+          const dfs = (nodeId: string, visited = new Set<string>()): boolean => {
+            if (nodeId === childNode.id) return true;
+            if (visited.has(nodeId)) return false;
+            
+            visited.add(nodeId);
+            const children = graph.get(nodeId) || [];
+            
+            for (const child of children) {
+              if (dfs(child, visited)) return true;
+            }
+            
+            return false;
+          };
+          
+          return dfs(parentNode.id);
+        };
+        
         const isNodeBelow = (node1: Node, node2: Node) => {
           return node1.position.y > node2.position.y;
         };
@@ -182,25 +238,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           return edges.some(edge => edge.source === node.id && edge.target === editedNode.id);
         };
         
-        const isDescendantOfEditedNode = (node: Node, visited = new Set<string>()) => {
-          if (visited.has(node.id)) return false;
-          visited.add(node.id);
-          
-          // Vérifier si c'est un enfant direct
-          if (isChildOfEditedNode(node)) return true;
-          
-          // Vérifier récursivement pour les enfants directs
-          const childEdges = edges.filter(edge => edge.source === editedNode.id);
-          for (const edge of childEdges) {
-            const childNode = updatedNodes.find(n => n.id === edge.target);
-            if (childNode && isDescendantOfEditedNode(childNode, new Set(visited))) {
-              return true;
-            }
-          }
-          
-          return false;
-        };
-        
         if (isEditing) {
           return updatedNodes.map(node => {
             if (node.id === nodeId) return node;
@@ -210,10 +247,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             const isSameColumn = isInSameColumn(node, editedNode);
             const isEditedNodeCritical = editedNode.data.isCritical;
             
+            // Utiliser la nouvelle fonction plus fiable pour déterminer si le nœud
+            // est dans le sous-arbre du nœud édité
+            const isDescendant = isDescendantOf(node, editedNode);
+            
             // Déplacer vers le bas:
-            // 1. Si la question éditée est critique: toutes les questions en dessous
+            // 1. Si la question éditée est critique: toutes les questions dans son sous-arbre (ses descendants)
             // 2. Sinon: uniquement les questions dans la même colonne ou les enfants directs
-            if ((isEditedNodeCritical && isBelow) || (isBelow && isSameColumn) || isChild) {
+            if ((isEditedNodeCritical && isDescendant) || (!isEditedNodeCritical && ((isBelow && isSameColumn) || isChild))) {
               return {
                 ...node,
                 data: {
