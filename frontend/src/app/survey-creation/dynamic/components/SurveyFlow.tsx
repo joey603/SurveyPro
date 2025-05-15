@@ -1310,7 +1310,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     let maxY = 0;
     let editingNodeY = 0;
     let isEditingMode = false;
-    const BASE_SPACING = 200; // Correspond à BASE_VERTICAL_SPACING dans reorganizeFlow
+    const BASE_SPACING = 300; // Correspond à BASE_VERTICAL_SPACING dans reorganizeFlow
     const EDITING_SPACING = 400; // Maintenu pour le mode édition
 
     nodes.forEach(node => {
