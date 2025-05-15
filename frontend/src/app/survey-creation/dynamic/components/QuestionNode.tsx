@@ -77,9 +77,44 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [mediaTracker, setMediaTracker] = useState<Record<string, string>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Use a ref to track previous editing state
   const prevEditingRef = useRef(false);
+
+  // Vérifier si on est en mode fullscreen
+  useEffect(() => {
+    const checkFullscreen = () => {
+      const isFullscreenMode = document.fullscreenElement || 
+                              (document as any).webkitFullscreenElement ||
+                              (document as any).mozFullScreenElement ||
+                              (document as any).msFullscreenElement;
+      setIsFullscreen(!!isFullscreenMode);
+    };
+    
+    checkFullscreen();
+    
+    // Écouter les changements de mode fullscreen
+    document.addEventListener('fullscreenchange', checkFullscreen);
+    document.addEventListener('webkitfullscreenchange', checkFullscreen);
+    document.addEventListener('mozfullscreenchange', checkFullscreen);
+    document.addEventListener('MSFullscreenChange', checkFullscreen);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', checkFullscreen);
+      document.removeEventListener('webkitfullscreenchange', checkFullscreen);
+      document.removeEventListener('mozfullscreenchange', checkFullscreen);
+      document.removeEventListener('MSFullscreenChange', checkFullscreen);
+    };
+  }, []);
+  
+  // Fonction pour obtenir le conteneur pour le portail
+  const getPopoverContainer = () => {
+    if (isFullscreen) {
+      return document.getElementById('fullscreen-popover-container') || undefined;
+    }
+    return undefined;
+  };
 
   // Synchroniser l'état local avec les props
   useEffect(() => {
@@ -479,12 +514,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   borderColor: 'primary.main',
                 },
                 touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: '48px',
               }}
             >
               <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes)
                   .find(t => t.value === questionData.type)?.label || 'Select type'}
               </Typography>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </Box>
 
             <Popover
@@ -504,9 +547,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   sx: {
                     width: 'auto',
                     mt: 1,
+                    zIndex: 10001,
                   },
                 },
               }}
+              className="question-node-popover"
+              container={getPopoverContainer()}
+              style={{ zIndex: 20001 }}
             >
               <Box sx={{ p: 1 }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes).map((type) => (
@@ -680,7 +727,29 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
       <style jsx global>{`
         .question-node-popover {
-          z-index: 9999 !important;
+          z-index: 10001 !important;
+        }
+        .MuiPopover-root {
+          z-index: 10001 !important;
+        }
+        
+        /* Ajouts pour corriger l'affichage en mode fullscreen */
+        .MuiPopover-root.question-node-popover {
+          position: absolute !important;
+        }
+        .MuiPopover-root.question-node-popover .MuiPopover-paper {
+          transform-origin: top left !important;
+          position: absolute !important;
+          z-index: 20001 !important;
+        }
+        
+        /* Pour empêcher les bugs de scrolling sur iOS */
+        #fullscreen-popover-container .MuiPopover-root {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
         }
       `}</style>
     </div>

@@ -321,9 +321,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               // et on supprime _truePosition
               if (!hasOtherNodeInEditMode && truePos) {
                 delete newData._truePosition;
-                return {
-                  ...node,
-                  data: newData,
+              return {
+                ...node,
+                data: newData,
                   position: truePos // Utiliser la position réelle d'origine
                 };
               }
@@ -1064,7 +1064,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       // Cas où le parent est critique - réduire légèrement l'espacement
       else if (parentIsCritical && !isCurrentNodeCritical) {
         baseSpacing = Math.max(BASE_VERTICAL_SPACING + 30, (maxCurrentHeight + maxNextHeight) / 2 + 50);
-      }
+      } 
       // Sinon, utiliser l'espacement standard
       else {
         baseSpacing = Math.max(BASE_VERTICAL_SPACING + 50, (maxCurrentHeight + maxNextHeight) / 2 + 50);
@@ -1621,19 +1621,34 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               height: '100vh',
               zIndex: 9999,
               backgroundColor: 'white',
-              WebkitOverflowScrolling: 'touch', // Pour le défilement fluide sur iOS
-              overflow: 'auto'
+              WebkitOverflowScrolling: 'touch',
+              overflow: 'visible',
+              transformStyle: 'preserve-3d',
+              isolation: 'isolate',
             })
           }}
         >
           <NotificationMessage />
           <DeleteButton />
           <ReorganizeButton />
+          {/* Conteneur pour les popover en mode fullscreen */}
+          <div 
+            id="fullscreen-popover-container" 
+            style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              width: '100%', 
+              height: '100%', 
+              pointerEvents: 'none',
+              zIndex: 20000
+            }}
+          ></div>
           <div
             style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
               zIndex: 10000,
             }}
             className="custom-tooltip-container"
@@ -1751,6 +1766,24 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         }
         .react-flow__attribution {
           display: none !important;
+        }
+        
+        /* Styles pour les popover MUI en fullscreen */
+        .MuiPopover-root {
+          z-index: 10001 !important;
+          pointer-events: auto !important;
+        }
+
+        /* Style pour les listes déroulantes en fullscreen */
+        .MuiMenu-paper, 
+        .MuiPopover-paper {
+          z-index: 10002 !important;
+          pointer-events: auto !important;
+        }
+        
+        /* Conteneur pour les popover en fullscreen */
+        #fullscreen-popover-container > div {
+          pointer-events: auto !important;
         }
         
         /* Styles pour l'infobulle personnalisée */
