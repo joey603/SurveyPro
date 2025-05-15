@@ -208,11 +208,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             const isChild = isChildOfEditedNode(node);
             const isBelow = isNodeBelow(node, editedNode);
             const isSameColumn = isInSameColumn(node, editedNode);
+            const isEditedNodeCritical = editedNode.data.isCritical;
             
-            // Déplacer vers le bas uniquement les nœuds qui sont:
-            // 1. Directement en dessous dans la même colonne, ou
-            // 2. Des enfants directs du nœud édité
-            if ((isBelow && isSameColumn) || isChild) {
+            // Déplacer vers le bas:
+            // 1. Si la question éditée est critique: toutes les questions en dessous
+            // 2. Sinon: uniquement les questions dans la même colonne ou les enfants directs
+            if ((isEditedNodeCritical && isBelow) || (isBelow && isSameColumn) || isChild) {
               return {
                 ...node,
                 data: {
