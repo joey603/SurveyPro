@@ -239,6 +239,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         };
         
         if (isEditing) {
+          // Quand on ouvre en mode édition, conserver les positions réelles originales
+          // sans les positions _editingState temporaires qui pourraient être présentes
           return updatedNodes.map(node => {
             if (node.id === nodeId) return node;
             
@@ -268,18 +270,23 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               isDescendantOf(node, criticalChild)
             );
             
-            // Déplacer vers le bas dans les cas suivants:
-            // 1. Si la question éditée est critique: tous ses descendants
-            // 2. Si la question éditée a des enfants critiques: tous les descendants de ces enfants critiques
-            // 3. Pour les questions non-critiques: tous leurs descendants (similaire aux questions critiques)
-            if ((isEditedNodeCritical && isDescendant) || 
-                (hasCriticalChildren && isDescendantOfCriticalChild) ||
-                (!isEditedNodeCritical && isDescendant)) {
+            // Nœuds affectés qui doivent être déplacés
+            const shouldMove = (isEditedNodeCritical && isDescendant) || 
+                            (hasCriticalChildren && isDescendantOfCriticalChild) ||
+                            (!isEditedNodeCritical && isDescendant);
+            
+            if (shouldMove) {
+              // Si le nœud a déjà une position originale sauvegardée (une autre question est déjà en édition),
+              // nous la conservons telle quelle. Sinon, nous sauvegardons la position actuelle.
+              const truePosition = node.data._truePosition || node.position;
+              
+              // Sauvegarder à la fois la vraie position d'origine et la position actuelle
               return {
                 ...node,
                 data: {
                   ...node.data,
-                  _originalPosition: { ...node.position }
+                  _originalPosition: { ...node.position }, // Position actuelle (qui peut déjà être décalée)
+                  _truePosition: truePosition, // Position réelle d'origine
                 },
                 position: {
                   ...node.position,
@@ -290,20 +297,42 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             return node;
           });
         } else {
+          // Quand on ferme le mode édition, on examine si c'est la dernière question en mode édition
+          // Si oui, on restaure les positions réelles d'origine, sinon on restaure juste les positions avant l'édition
+          
+          // Vérifier s'il reste des questions en mode édition
+          const hasOtherNodeInEditMode = updatedNodes.some(n => 
+            n.id !== nodeId && n.data && n.data._editingState
+          );
+          
           return updatedNodes.map(node => {
             if (node.id === nodeId) return node;
             
-            // Si le nœud a une position originale sauvegardée, la restaurer sans recalcul
+            // Si le nœud a une position originale sauvegardée, la restaurer
             if (node.data._originalPosition) {
               const originalPos = node.data._originalPosition;
+              const truePos = node.data._truePosition;
               const newData = { ...node.data };
+              
+              // Nettoyer les données temporaires
               delete newData._originalPosition;
               
-              // Restaurer exactement la position d'origine, sans recalcul
+              // Si c'est la dernière question en édition, on restaure la position réelle d'origine
+              // et on supprime _truePosition
+              if (!hasOtherNodeInEditMode && truePos) {
+                delete newData._truePosition;
+                return {
+                  ...node,
+                  data: newData,
+                  position: truePos // Utiliser la position réelle d'origine
+                };
+              }
+              
+              // Sinon, on restaure juste la position avant l'édition de cette question spécifique
               return {
                 ...node,
                 data: newData,
-                position: originalPos
+                position: originalPos // Restaurer la position avant l'édition
               };
             }
             return node;
