@@ -922,22 +922,29 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       const isDescendant = descentInfo.result;
       const descentDepth = descentInfo.depth;
       
+      // Vérifier si le parent est un enfant d'une question critique (cas B)
+      // Si oui, son parent est une question critique
+      const parentDescentInfo = parentId ? isDescendantOfCritical(parentId) : { result: false, depth: 0 };
+      const isParentDescendantOfCritical = parentDescentInfo.result;
+      const parentDescentDepth = parentDescentInfo.depth;
+      
       // Calculer l'espacement vertical de base en fonction du contexte
       let baseSpacing;
       
-      // Cas spécial: nœud C (petit-enfant d'un nœud critique)
-      if (isDescendant && descentDepth >= 2) {
-        // Pour le cas C → augmenter significativement l'espacement
-        baseSpacing = Math.max(BASE_VERTICAL_SPACING + EXTRA_SPACING_FOR_NESTED, 
-                             (maxCurrentHeight + maxNextHeight) / 2 + 70);
+      // Cas où le parent est un descendant d'une question critique (B, C, D, etc.)
+      // et le nœud actuel n'est pas critique lui-même
+      if (isParentDescendantOfCritical && !isCurrentNodeCritical && parentDescentDepth >= 1) {
+        // Appliquer le même espacement standardisé pour tous les descendants
+        // à partir du niveau C et au-delà
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 80, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       }
-      // Si ni le nœud courant ni son parent ne sont critiques, utiliser un espacement plus large
-      else if (!isCurrentNodeCritical && !parentIsCritical) {
+      // Si ni le nœud courant ni son parent ne sont critiques ou descendants de critiques
+      else if (!isCurrentNodeCritical && !parentIsCritical && !isParentDescendantOfCritical) {
         baseSpacing = Math.max(BASE_VERTICAL_SPACING, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       } 
       // Cas où le parent est critique - réduire légèrement l'espacement
       else if (parentIsCritical && !isCurrentNodeCritical) {
-        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 30, (maxCurrentHeight + maxNextHeight) / 2 + 30);
+        baseSpacing = Math.max(BASE_VERTICAL_SPACING + 30, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       }
       // Sinon, utiliser l'espacement standard
       else {
@@ -949,8 +956,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         baseSpacing += EXTRA_SPACING_FOR_IMAGE;
       }
       
-      // Add extra spacing for critical questions
-      if (parentIsCritical) {
+      // Add extra spacing for critical questions, mais pas si le parent est déjà un descendant d'une question critique
+      if (parentIsCritical && !isParentDescendantOfCritical) {
         baseSpacing += EXTRA_SPACING_FOR_CRITICAL;
       }
       
