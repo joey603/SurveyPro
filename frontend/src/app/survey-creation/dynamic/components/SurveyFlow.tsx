@@ -760,7 +760,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             ...style,
             strokeDasharray: isSelected ? '5,5' : 'none',
             stroke: isCritical ? '#667eea' : (isSelected ? '#ff4444' : style.stroke),
-            strokeWidth: isSelected ? '3' : style.strokeWidth,
+            strokeWidth: isSelected ? '4' : '3',
             cursor: isCritical ? 'not-allowed' : 'pointer',
           }}
           className="react-flow__edge-path"
@@ -770,7 +770,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         <path
           d={edgePath}
           fill="none"
-          strokeWidth="20"
+          strokeWidth="35"
           stroke="transparent"
           className="react-flow__edge-interaction"
           style={{
@@ -780,16 +780,20 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         {label && (
           <g transform={`translate(${labelX},${labelY})`}>
             <rect
-              x="-20"
-              y="-10"
-              width="40"
-              height="20"
-              rx="5"
-              ry="5"
+              x="-30"
+              y="-15"
+              width="60"
+              height="30"
+              rx="8"
+              ry="8"
               style={labelBgStyle}
             />
             <text
-              style={labelStyle}
+              style={{
+                ...labelStyle,
+                fontSize: '14px',
+                fontWeight: 'bold',
+              }}
               dominantBaseline="middle"
               textAnchor="middle"
               fill="#000"
@@ -817,11 +821,27 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       .react-flow__edge-interaction:hover + .react-flow__edge-path:not([style*="not-allowed"]) {
         stroke: #ff4444;
-        stroke-width: 3px;
+        stroke-width: 4px;
       }
       .react-flow__edge-path {
         pointer-events: none;
         transition: all 0.2s ease;
+      }
+      .react-flow__handle {
+        width: 12px !important;
+        height: 12px !important;
+        border-radius: 6px !important;
+      }
+      .react-flow__handle:hover {
+        background-color: #ff4444 !important;
+        border-color: #aa2222 !important;
+        box-shadow: 0 0 6px 2px rgba(255, 68, 68, 0.5) !important;
+        transform: scale(1.2) !important;
+        transition: all 0.2s ease !important;
+      }
+      .react-flow__handle {
+        opacity: 0.8 !important;
+        border-width: 2px !important;
       }
     `}</style>
   );
