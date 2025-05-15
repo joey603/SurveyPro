@@ -271,10 +271,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             // Déplacer vers le bas dans les cas suivants:
             // 1. Si la question éditée est critique: tous ses descendants
             // 2. Si la question éditée a des enfants critiques: tous les descendants de ces enfants critiques
-            // 3. Pour les questions non-critiques sans enfants critiques: uniquement celles dans la même colonne ou enfants directs
+            // 3. Pour les questions non-critiques: tous leurs descendants (similaire aux questions critiques)
             if ((isEditedNodeCritical && isDescendant) || 
                 (hasCriticalChildren && isDescendantOfCriticalChild) ||
-                (!isEditedNodeCritical && !hasCriticalChildren && ((isBelow && isSameColumn) || isChild))) {
+                (!isEditedNodeCritical && isDescendant)) {
               return {
                 ...node,
                 data: {
