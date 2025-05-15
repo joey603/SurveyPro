@@ -251,10 +251,30 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             // est dans le sous-arbre du nœud édité
             const isDescendant = isDescendantOf(node, editedNode);
             
-            // Déplacer vers le bas:
-            // 1. Si la question éditée est critique: toutes les questions dans son sous-arbre (ses descendants)
-            // 2. Sinon: uniquement les questions dans la même colonne ou les enfants directs
-            if ((isEditedNodeCritical && isDescendant) || (!isEditedNodeCritical && ((isBelow && isSameColumn) || isChild))) {
+            // Vérifier si la question éditée a des enfants critiques
+            const childEdges = edges.filter(edge => edge.source === editedNode.id);
+            const hasCriticalChildren = childEdges.some(edge => {
+              const childNode = updatedNodes.find(n => n.id === edge.target);
+              return childNode?.data.isCritical;
+            });
+            
+            // Trouver les enfants critiques directs de la question éditée
+            const criticalChildren = childEdges
+              .map(edge => updatedNodes.find(n => n.id === edge.target))
+              .filter(node => node && node.data.isCritical) as Node[];
+            
+            // Vérifier si le nœud est un descendant d'un enfant critique de la question éditée
+            const isDescendantOfCriticalChild = criticalChildren.some(criticalChild => 
+              isDescendantOf(node, criticalChild)
+            );
+            
+            // Déplacer vers le bas dans les cas suivants:
+            // 1. Si la question éditée est critique: tous ses descendants
+            // 2. Si la question éditée a des enfants critiques: tous les descendants de ces enfants critiques
+            // 3. Pour les questions non-critiques sans enfants critiques: uniquement celles dans la même colonne ou enfants directs
+            if ((isEditedNodeCritical && isDescendant) || 
+                (hasCriticalChildren && isDescendantOfCriticalChild) ||
+                (!isEditedNodeCritical && !hasCriticalChildren && ((isBelow && isSameColumn) || isChild))) {
               return {
                 ...node,
                 data: {
