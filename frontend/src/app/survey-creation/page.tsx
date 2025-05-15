@@ -100,7 +100,6 @@ const isValidMediaURL = (url: string): boolean => {
 };
 
 const questionTypes = [
-  { value: 'multiple-choice', label: 'Multiple Choice' },
   { value: 'text', label: 'Open-ended' },
   { value: 'dropdown', label: 'Dropdown' },
   { value: 'yes-no', label: 'Yes/No' },

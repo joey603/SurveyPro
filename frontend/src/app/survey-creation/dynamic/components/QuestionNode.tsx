@@ -52,10 +52,9 @@ interface QuestionNodeProps {
 }
 
 const questionTypes = [
-  { value: 'text', label: 'Open-ended' },
+  { value: 'text', label: 'Text' },
   { value: 'yes-no', label: 'Yes/No' },
   { value: 'dropdown', label: 'Dropdown' },
-  { value: 'multiple-choice', label: 'Multiple Choice' },
   { value: 'slider', label: 'Slider' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'date', label: 'Date Picker' },
@@ -536,24 +535,36 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               onClose={handleTypeClose}
               anchorOrigin={{
                 vertical: 'bottom',
-                horizontal: 'left',
+                horizontal: 'center',
               }}
               transformOrigin={{
                 vertical: 'top',
-                horizontal: 'left',
+                horizontal: 'center',
               }}
               slotProps={{
                 paper: {
                   sx: {
                     width: 'auto',
+                    minWidth: '200px',
                     mt: 1,
                     zIndex: 10001,
+                    position: 'absolute',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    borderRadius: '8px',
                   },
                 },
+                root: {
+                  sx: {
+                    zIndex: 30000,
+                    position: 'fixed',
+                  }
+                }
               }}
               className="question-node-popover"
               container={getPopoverContainer()}
-              style={{ zIndex: 20001 }}
+              keepMounted
+              disablePortal={false}
+              style={{ zIndex: 30000 }}
             >
               <Box sx={{ p: 1 }}>
                 {(questionData.isCritical ? criticalQuestionTypes : questionTypes).map((type) => (
@@ -727,29 +738,49 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
       <style jsx global>{`
         .question-node-popover {
-          z-index: 10001 !important;
+          z-index: 30000 !important;
+          position: fixed !important;
         }
         .MuiPopover-root {
-          z-index: 10001 !important;
+          z-index: 30000 !important;
+          position: fixed !important;
         }
         
-        /* Ajouts pour corriger l'affichage en mode fullscreen */
-        .MuiPopover-root.question-node-popover {
-          position: absolute !important;
+        /* Amélioration du positionnement de la liste déroulante */
+        .MuiPopover-paper {
+          margin-top: 8px !important;
+          min-width: 150px !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+          border-radius: 8px !important;
+          overflow: visible !important;
         }
-        .MuiPopover-root.question-node-popover .MuiPopover-paper {
-          transform-origin: top left !important;
-          position: absolute !important;
-          z-index: 20001 !important;
+        
+        /* Style pour les options de la liste */
+        .MuiMenuItem-root {
+          padding: 12px 16px !important;
+          min-height: 48px !important;
+        }
+        
+        /* Force les popover à être toujours au-dessus des autres éléments */
+        .MuiPopover-root .MuiPopover-paper,
+        .question-node-popover .MuiPopover-paper {
+          z-index: 30001 !important;
         }
         
         /* Pour empêcher les bugs de scrolling sur iOS */
         #fullscreen-popover-container .MuiPopover-root {
-          position: absolute !important;
+          position: fixed !important;
           top: 0 !important;
           left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
           width: 100% !important;
           height: 100% !important;
+        }
+        
+        /* S'assurer que le popover est visible par dessus tout */
+        .react-flow__node-questionNode {
+          isolation: isolate;
         }
       `}</style>
     </div>

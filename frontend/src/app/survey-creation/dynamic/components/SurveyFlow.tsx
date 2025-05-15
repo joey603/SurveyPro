@@ -1635,13 +1635,15 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           <div 
             id="fullscreen-popover-container" 
             style={{ 
-              position: 'absolute', 
+              position: 'fixed', 
               top: 0, 
               left: 0, 
+              right: 0,
+              bottom: 0,
               width: '100%', 
               height: '100%', 
               pointerEvents: 'none',
-              zIndex: 20000
+              zIndex: 30000
             }}
           ></div>
           <div
@@ -1770,14 +1772,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         
         /* Styles pour les popover MUI en fullscreen */
         .MuiPopover-root {
-          z-index: 10001 !important;
+          z-index: 30000 !important;
           pointer-events: auto !important;
         }
 
         /* Style pour les listes déroulantes en fullscreen */
         .MuiMenu-paper, 
         .MuiPopover-paper {
-          z-index: 10002 !important;
+          z-index: 30001 !important;
           pointer-events: auto !important;
         }
         
