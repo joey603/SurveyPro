@@ -163,6 +163,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         const EXTRA_SPACING_FOR_IMAGE = 50;
         const BASE_NODE_HEIGHT = 100;
         
+        // Vérifier si un nœud est dans la même branche/colonne que le nœud édité
+        const isInSameColumn = (node: Node, editedNode: Node) => {
+          // On considère qu'un nœud est dans la même colonne s'il est dans un intervalle de +/- 100px en X
+          const xDiff = Math.abs(node.position.x - editedNode.position.x);
+          return xDiff < 100;
+        };
+        
         const isNodeBelow = (node1: Node, node2: Node) => {
           return node1.position.y > node2.position.y;
         };
@@ -175,14 +182,37 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           return edges.some(edge => edge.source === node.id && edge.target === editedNode.id);
         };
         
+        const isDescendantOfEditedNode = (node: Node, visited = new Set<string>()) => {
+          if (visited.has(node.id)) return false;
+          visited.add(node.id);
+          
+          // Vérifier si c'est un enfant direct
+          if (isChildOfEditedNode(node)) return true;
+          
+          // Vérifier récursivement pour les enfants directs
+          const childEdges = edges.filter(edge => edge.source === editedNode.id);
+          for (const edge of childEdges) {
+            const childNode = updatedNodes.find(n => n.id === edge.target);
+            if (childNode && isDescendantOfEditedNode(childNode, new Set(visited))) {
+              return true;
+            }
+          }
+          
+          return false;
+        };
+        
         if (isEditing) {
           return updatedNodes.map(node => {
             if (node.id === nodeId) return node;
             
             const isChild = isChildOfEditedNode(node);
             const isBelow = isNodeBelow(node, editedNode);
+            const isSameColumn = isInSameColumn(node, editedNode);
             
-            if (isBelow) {
+            // Déplacer vers le bas uniquement les nœuds qui sont:
+            // 1. Directement en dessous dans la même colonne, ou
+            // 2. Des enfants directs du nœud édité
+            if ((isBelow && isSameColumn) || isChild) {
               return {
                 ...node,
                 data: {
