@@ -880,6 +880,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const parentEdge = edges.find(edge => edge.target === node.id);
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
+    const isNodeInEditMode = node.data && node.data._editingState;
 
     return {
       ...node,
@@ -893,6 +894,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...node.style,
         border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
         width: 450,
+        // Augmenter significativement le z-index si le nœud est en mode édition
+        zIndex: isNodeInEditMode ? 1000 : (node.id === selectedNode ? 100 : undefined),
+        // Ajouter une ombre plus prononcée en mode édition pour mettre en évidence le nœud
+        boxShadow: isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined,
       }
     };
   });
