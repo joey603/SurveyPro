@@ -82,6 +82,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const prevEditingRef = useRef(false);
   // Référence pour le bouton d'édition
   const editButtonRef = useRef<HTMLButtonElement>(null);
+  // Référence pour la case à cocher Critical Question
+  const criticalCheckboxRef = useRef<HTMLDivElement>(null);
 
   // Vérifier si on est en mode fullscreen
   useEffect(() => {
@@ -408,7 +410,45 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
-  // Gestionnaire d'événements tactiles natif pour iOS
+  // Fonction pour changer l'état critique avec un événement direct
+  const toggleCritical = () => {
+    const newCriticalState = !questionData.isCritical;
+    console.log("Toggling critical state to:", newCriticalState);
+    
+    let newType = newCriticalState ? 'yes-no' : 'text';
+    let newOptions: string[] = [];
+    
+    // Définir les options par défaut selon le type de question
+    if (newCriticalState) {
+      if (newType === 'yes-no') {
+        newOptions = ['Yes', 'No'];
+      } else if (newType === 'dropdown') {
+        newOptions = ['Option 1', 'Option 2', 'Option 3'];
+      }
+    }
+    
+    const newData = { 
+      ...questionData, 
+      isCritical: newCriticalState,
+      type: newType,
+      options: newOptions
+    };
+    
+    updateNodeData(newData);
+    
+    // Créer les chemins après la mise à jour des données
+    if (data.onCreatePaths) {
+      if (newCriticalState) {
+        console.log("Creating paths for critical question");
+        data.onCreatePaths(data.id, newOptions.length > 0 ? newOptions : ['Yes', 'No']);
+      } else {
+        console.log("Removing paths");
+        data.onCreatePaths(data.id, []);
+      }
+    }
+  };
+
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'édition
   useEffect(() => {
     const button = editButtonRef.current;
     if (!button) return;
@@ -432,6 +472,31 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
   }, [isEditing]); // Dépendance à isEditing pour recréer le gestionnaire quand l'état change
+
+  // Gestionnaire d'événements tactiles natif pour iOS - pour la case à cocher Critical Question
+  useEffect(() => {
+    const checkbox = criticalCheckboxRef.current;
+    if (!checkbox) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Bascule l'état critique avec un minuscule délai pour éviter le "double fire" sur iOS
+      setTimeout(() => {
+        toggleCritical();
+      }, 10);
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    checkbox.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      checkbox.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [questionData.isCritical]); // Dépendance à l'état critique pour recréer le gestionnaire quand l'état change
 
   // Fonction pour les navigateurs non tactiles
   const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -504,18 +569,32 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Box sx={{ mt: 2 }}>
             <FormControlLabel
               control={
-                <Checkbox
-                  checked={questionData.isCritical}
-                  onChange={handleCriticalChange}
-                  sx={{
-                    padding: '8px',
+                <div 
+                  ref={criticalCheckboxRef}
+                  style={{
+                    display: 'inline-flex',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    touchAction: 'none',
+                    WebkitTapHighlightColor: 'transparent',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
                   }}
-                  TouchRippleProps={{
-                    classes: {
-                      child: 'touch-ripple-child',
-                    },
-                  }}
-                />
+                >
+                  <Checkbox
+                    checked={questionData.isCritical}
+                    onChange={handleCriticalChange}
+                    sx={{
+                      padding: '8px',
+                    }}
+                    TouchRippleProps={{
+                      classes: {
+                        child: 'touch-ripple-child',
+                      },
+                    }}
+                  />
+                </div>
               }
               label={
                 <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
