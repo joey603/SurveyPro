@@ -398,6 +398,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           borderRadius: 2,
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          transition: 'transform 0.1s ease-in-out, box-shadow 0.2s ease',
+          '&:active': {
+            transform: 'scale(0.98)',
+          }
         }}
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
@@ -702,6 +706,46 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         .MuiPopover-root {
           z-index: 30000 !important;
           position: fixed !important;
+        }
+        
+        /* Améliorer la réactivité tactile sur iOS */
+        @supports (-webkit-touch-callout: none) {
+          .react-flow__node {
+            -webkit-tap-highlight-color: transparent !important;
+            touch-action: manipulation !important;
+          }
+          
+          /* Optimiser les contrôles d'édition pour le toucher */
+          .MuiIconButton-root, 
+          .MuiButton-root,
+          .MuiFormControlLabel-root,
+          .MuiCheckbox-root {
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            min-height: 44px !important;
+          }
+          
+          /* Feedback visuel immédiat au toucher */
+          .MuiIconButton-root:active, 
+          .MuiButton-root:active {
+            transform: scale(0.95) !important;
+            transition: transform 0.1s ease !important;
+            opacity: 0.9 !important;
+          }
+        }
+        
+        /* Amélioration pour l'option d'édition */
+        .react-flow__node [data-intro="edit-question"] {
+          touch-action: manipulation !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
+        
+        /* Amélioration des positionnements pour le toucher mobile */
+        @media (max-width: 768px) {
+          .MuiIconButton-root {
+            min-width: 44px !important;
+            min-height: 44px !important;
+          }
         }
         
         /* Amélioration du positionnement de la liste déroulante */

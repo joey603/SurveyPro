@@ -677,9 +677,55 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
+    // Éviter les doubles clics/touches
+    if (selectedNode === node.id) return;
+    
     setSelectedNode(node.id);
     setSelectedEdge(null);
-  }, []);
+  }, [selectedNode]);
+
+  // Ajouter un gestionnaire tactile spécifique pour les nœuds sur appareils mobiles
+  useEffect(() => {
+    // Fonction pour détecter le toucher sur un nœud
+    const handleNodeTouch = (event: TouchEvent) => {
+      // Détecter si on est sur iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (!isIOS) return; // Appliquer uniquement sur iOS
+      
+      // Trouver l'élément node le plus proche
+      const target = event.target as HTMLElement;
+      const nodeElement = target.closest('.react-flow__node') as HTMLElement | null;
+      
+      if (nodeElement) {
+        // Empêcher le comportement par défaut pour éviter le délai
+        event.preventDefault();
+        
+        // Obtenir l'ID du nœud à partir de l'attribut data
+        const nodeId = nodeElement.getAttribute('data-id');
+        
+        if (nodeId && nodeId !== selectedNode) {
+          setSelectedNode(nodeId);
+          setSelectedEdge(null);
+          
+          // Ajouter un effet visuel pour confirmer la sélection
+          nodeElement.style.transition = 'all 0.1s ease';
+          nodeElement.style.transform = 'scale(0.98)';
+          
+          setTimeout(() => {
+            nodeElement.style.transform = 'scale(1)';
+          }, 100);
+        }
+      }
+    };
+    
+    // Ajouter l'écouteur d'événements
+    document.addEventListener('touchstart', handleNodeTouch, { passive: false });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleNodeTouch);
+    };
+  }, [selectedNode]);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
     // Prevent deleting question 1
@@ -1006,6 +1052,43 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       .react-flow__handle {
         opacity: 0.8 !important;
         border-width: 2px !important;
+      }
+      .react-flow__node {
+        cursor: pointer;
+        transition: transform 0.5s ease, opacity 0.5s ease !important;
+      }
+      .react-flow__edge {
+        transition: opacity 0.5s ease !important;
+      }
+      
+      /* Améliorer la réactivité tactile sur iOS */
+      @supports (-webkit-touch-callout: none) {
+        .react-flow__node {
+          -webkit-tap-highlight-color: transparent !important;
+          touch-action: manipulation !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -webkit-touch-callout: none !important;
+        }
+        
+        /* Feedback visuel au toucher */
+        .react-flow__node:active {
+          transform: scale(0.98) !important;
+          transition: transform 0.1s ease !important;
+        }
+      }
+      
+      /* Augmenter la zone tactile pour les petits éléments */
+      @media (max-width: 768px) {
+        .react-flow__handle {
+          min-width: 20px !important;
+          min-height: 20px !important;
+          transform: translate(-50%, -50%) scale(1.5) !important;
+        }
+        
+        .react-flow__handle:active {
+          transform: translate(-50%, -50%) scale(1.8) !important;
+        }
       }
     `}</style>
   );
