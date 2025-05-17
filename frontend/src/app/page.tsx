@@ -46,7 +46,9 @@ const Home = () => {
     const createObserver = (setVisibility: (visible: boolean) => void) => {
       return new IntersectionObserver(
         ([entry]) => {
-          setVisibility(entry.isIntersecting);
+          if (entry.isIntersecting) {
+            setVisibility(true); // Une fois visible, reste à true
+          }
         },
         { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
       );
