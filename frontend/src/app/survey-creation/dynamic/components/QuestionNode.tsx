@@ -518,7 +518,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
-    // Exactement la même implémentation que pour le bouton d'édition
     const button = addMediaButtonRef.current;
     if (!button) return;
 
@@ -528,22 +527,48 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       
+      // Détection spécifique d'iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
       // Ouvrir directement le dialogue de sélection de fichier
       const fileInput = document.getElementById(`media-upload-${id}`);
       if (fileInput) {
-        // Sur iOS, créer un délai très court avant d'appeler click()
-        setTimeout(() => {
+        // Sur iOS, utiliser un délai plus long (100ms) avant d'appeler click()
+        if (isIOS) {
+          // Ajouter une classe visuelle pendant le délai
+          button.classList.add('ios-touch-active');
+          
+          // Délai plus long pour iOS
+          setTimeout(() => {
+            (fileInput as HTMLInputElement).click();
+            button.classList.remove('ios-touch-active');
+          }, 100);
+        } else {
+          // Pour les autres navigateurs, click immédiat
           (fileInput as HTMLInputElement).click();
-        }, 10);
+        }
       }
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
+    
+    // Ajouter des événements supplémentaires pour bloquer tous les événements iOS qui pourraient interférer
+    button.addEventListener('touchend', (e) => { 
+      e.preventDefault(); 
+      e.stopPropagation();
+    }, { passive: false });
+    
+    button.addEventListener('touchcancel', (e) => { 
+      e.preventDefault(); 
+      e.stopPropagation();
+    }, { passive: false });
 
     // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
+      button.removeEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); });
+      button.removeEventListener('touchcancel', (e) => { e.preventDefault(); e.stopPropagation(); });
     };
   }, [id]); // Ajouter id comme dépendance puisqu'il est utilisé dans le gestionnaire
 
@@ -960,6 +985,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         .MuiPopover-root {
           z-index: 30000 !important;
           position: fixed !important;
+        }
+        
+        /* Style pour le bouton Add Media lorsqu'il est appuyé sur iOS */
+        .ios-touch-active {
+          opacity: 0.7 !important;
+          background-color: #f0f7ff !important;
+          transform: scale(0.97) !important;
         }
         
         /* Amélioration du positionnement de la liste déroulante */
