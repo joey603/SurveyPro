@@ -84,6 +84,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const editButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour la case à cocher Critical Question
   const criticalCheckboxRef = useRef<HTMLDivElement>(null);
+  // Référence pour le bouton Add Media
+  const addMediaButtonRef = useRef<HTMLLabelElement>(null);
+  // Référence pour le bouton Delete Media
+  const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
 
   // Vérifier si on est en mode fullscreen
   useEffect(() => {
@@ -510,6 +514,58 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton Add Media
+  useEffect(() => {
+    const button = addMediaButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      
+      // Simuler un clic sur l'élément input caché
+      const inputElement = document.getElementById(`media-upload-${id}`);
+      if (inputElement) {
+        inputElement.click();
+      }
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, []); // Pas de dépendance car nous voulons juste attacher l'événement une fois
+
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton Delete Media
+  useEffect(() => {
+    const button = deleteMediaButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Appeler la fonction de suppression de média avec un minuscule délai pour éviter le "double fire" sur iOS
+      setTimeout(() => {
+        handleMediaDelete();
+      }, 10);
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [data.mediaUrl]); // Dépendance à data.mediaUrl pour recréer le gestionnaire quand le média change
+
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
@@ -738,53 +794,63 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  component="label"
+                <label
+                  ref={addMediaButtonRef}
                   htmlFor={`media-upload-${id}`}
-                  startIcon={<AddPhotoAlternateIcon />}
-                  variant="outlined"
-                  size="small"
-                  disabled={isUploading}
-                  data-intro="add-media"
-                  sx={{ 
-                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                    minHeight: '48px',
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     padding: '12px 16px',
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+                    fontSize: '0.875rem',
+                    minHeight: '48px',
+                    border: '1px solid rgba(25, 118, 210, 0.5)',
+                    borderRadius: '4px',
+                    color: '#1976d2',
+                    backgroundColor: 'transparent',
                     cursor: 'pointer',
+                    touchAction: 'none',
+                    WebkitTapHighlightColor: 'transparent',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
+                    pointerEvents: isUploading ? 'none' : 'auto',
+                    opacity: isUploading ? 0.5 : 1,
                   }}
-                  TouchRippleProps={{
-                    classes: {
-                      child: 'touch-ripple-child',
-                    },
-                    center: true,
-                  }}
+                  data-intro="add-media"
                 >
+                  <AddPhotoAlternateIcon style={{ marginRight: '8px' }} />
                   {isUploading ? 'Uploading...' : 'Add Media'}
-                </Button>
+                </label>
                 
                 {data.mediaUrl && (
-                  <IconButton 
+                  <button 
+                    ref={deleteMediaButtonRef}
+                    type="button"
                     onClick={handleMediaDelete}
-                    size="small"
-                    color="error"
-                    sx={{
-                      minWidth: '48px',
-                      minHeight: '48px',
-                      padding: '12px',
-                    }}
-                    TouchRippleProps={{
-                      classes: {
-                        child: 'touch-ripple-child',
-                      },
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: '#f44336',
+                      WebkitAppearance: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'none',
+                      outline: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
                     }}
                   >
                     <DeleteIcon />
-                  </IconButton>
+                  </button>
                 )}
               </Box>
 
