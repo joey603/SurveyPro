@@ -458,10 +458,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Bascule l'état d'édition avec un minuscule délai pour éviter le "double fire" sur iOS
-      setTimeout(() => {
-        setIsEditing(!isEditing);
-      }, 10);
+      // Bascule l'état d'édition immédiatement
+      setIsEditing(!isEditing);
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
