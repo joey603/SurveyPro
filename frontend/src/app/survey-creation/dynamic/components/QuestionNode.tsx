@@ -521,56 +521,91 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     const button = addMediaButtonRef.current;
     if (!button) return;
 
+    // Drapeau pour éviter les déclenchements multiples
+    let touchProcessed = false;
+
     const handleTouchStart = (e: TouchEvent) => {
+      // Si un toucher est déjà en cours de traitement, ignorer
+      if (touchProcessed) return;
+      
+      // Marquer comme traité
+      touchProcessed = true;
+      
       // Prévient le comportement par défaut qui peut causer un délai
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       
-      // Détection spécifique d'iOS
+      // Détection spécifique d'iOS et version
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      // Ouvrir directement le dialogue de sélection de fichier
-      const fileInput = document.getElementById(`media-upload-${id}`);
-      if (fileInput) {
-        // Sur iOS, utiliser un délai plus long (100ms) avant d'appeler click()
-        if (isIOS) {
-          // Ajouter une classe visuelle pendant le délai
-          button.classList.add('ios-touch-active');
+      // Feedback visuel immédiat
+      button.style.opacity = '0.7';
+      button.style.backgroundColor = '#f0f7ff';
+      button.style.transform = 'scale(0.97)';
+      
+      // Fonction pour ouvrir le sélecteur de fichier
+      const openFileSelector = () => {
+        const fileInput = document.getElementById(`media-upload-${id}`);
+        if (fileInput) {
+          // Créer un nouvel élément input pour éviter les problèmes de cache iOS
+          const newInput = document.createElement('input');
+          newInput.type = 'file';
+          newInput.id = `media-upload-${id}`;
+          newInput.accept = 'image/*,video/*';
+          newInput.style.display = 'none';
+          newInput.onchange = (event) => {
+            handleMediaUpload(event as React.ChangeEvent<HTMLInputElement>);
+          };
           
-          // Délai plus long pour iOS
-          setTimeout(() => {
-            (fileInput as HTMLInputElement).click();
-            button.classList.remove('ios-touch-active');
-          }, 100);
-        } else {
-          // Pour les autres navigateurs, click immédiat
-          (fileInput as HTMLInputElement).click();
+          // Remplacer l'ancien input
+          const parent = fileInput.parentNode;
+          if (parent) {
+            parent.replaceChild(newInput, fileInput);
+            
+            // Cliquer sur le nouvel input
+            newInput.click();
+          }
         }
-      }
+        
+        // Réinitialiser le style du bouton
+        setTimeout(() => {
+          button.style.opacity = '';
+          button.style.backgroundColor = '';
+          button.style.transform = '';
+          
+          // Réinitialiser le drapeau après un certain temps
+          setTimeout(() => {
+            touchProcessed = false;
+          }, 500);
+        }, 300);
+      };
+
+      // Déclenchement immédiat pour iOS
+      openFileSelector();
     };
 
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    // Gestionnaire pour le toucher
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
     
-    // Ajouter des événements supplémentaires pour bloquer tous les événements iOS qui pourraient interférer
-    button.addEventListener('touchend', (e) => { 
-      e.preventDefault(); 
+    // Bloquer tous les autres événements tactiles
+    const preventAll = (e: Event) => {
+      e.preventDefault();
       e.stopPropagation();
-    }, { passive: false });
+    };
     
-    button.addEventListener('touchcancel', (e) => { 
-      e.preventDefault(); 
-      e.stopPropagation();
-    }, { passive: false });
+    button.addEventListener('touchend', preventAll, { passive: false });
+    button.addEventListener('touchcancel', preventAll, { passive: false });
+    button.addEventListener('touchmove', preventAll, { passive: false });
 
     // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
-      button.removeEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); });
-      button.removeEventListener('touchcancel', (e) => { e.preventDefault(); e.stopPropagation(); });
+      button.removeEventListener('touchend', preventAll);
+      button.removeEventListener('touchcancel', preventAll);
+      button.removeEventListener('touchmove', preventAll);
     };
-  }, [id]); // Ajouter id comme dépendance puisqu'il est utilisé dans le gestionnaire
+  }, [id, handleMediaUpload]); // Ajouter handleMediaUpload comme dépendance
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
