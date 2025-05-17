@@ -85,7 +85,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Référence pour la case à cocher Critical Question
   const criticalCheckboxRef = useRef<HTMLDivElement>(null);
   // Référence pour le bouton Add Media
-  const addMediaButtonRef = useRef<HTMLLabelElement>(null);
+  const addMediaButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton Delete Media
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -525,11 +525,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       
-      // Simuler un clic sur l'élément input caché
-      const inputElement = document.getElementById(`media-upload-${id}`);
-      if (inputElement) {
-        inputElement.click();
-      }
+      // Applique un petit délai pour éviter le "double fire" sur iOS
+      setTimeout(() => {
+        // Simuler un clic sur l'élément input caché
+        const inputElement = document.getElementById(`media-upload-${id}`);
+        if (inputElement) {
+          inputElement.click();
+        }
+      }, 10);
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -794,9 +797,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <label
+                <button
+                  type="button"
                   ref={addMediaButtonRef}
-                  htmlFor={`media-upload-${id}`}
+                  onClick={() => {
+                    const inputElement = document.getElementById(`media-upload-${id}`);
+                    if (inputElement) {
+                      inputElement.click();
+                    }
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -818,10 +827,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     opacity: isUploading ? 0.5 : 1,
                   }}
                   data-intro="add-media"
+                  disabled={isUploading}
                 >
                   <AddPhotoAlternateIcon style={{ marginRight: '8px' }} />
                   {isUploading ? 'Uploading...' : 'Add Media'}
-                </label>
+                </button>
                 
                 {data.mediaUrl && (
                   <button 
