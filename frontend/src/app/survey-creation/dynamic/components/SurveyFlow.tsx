@@ -104,12 +104,38 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       setIsFullscreen(true);
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      } else if ((document as any).webkitCancelFullscreen) {
-        (document as any).webkitCancelFullscreen();
+      // Détecter iOS spécifiquement
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // Sur iOS, essayer plusieurs méthodes pour quitter le plein écran
+        if ((document as any).webkitCancelFullScreen) {
+          (document as any).webkitCancelFullScreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen();
+        } else {
+          // Forcer la sortie du mode plein écran sur iOS en remplaçant manuellement l'état
+          setIsFullscreen(false);
+          
+          // Force le rafraîchissement du conteneur
+          if (flowContainerRef.current) {
+            flowContainerRef.current.style.position = 'relative';
+            flowContainerRef.current.style.top = 'auto';
+            flowContainerRef.current.style.left = 'auto';
+            flowContainerRef.current.style.width = '100%';
+            flowContainerRef.current.style.height = '100%';
+            flowContainerRef.current.style.zIndex = 'auto';
+          }
+        }
+      } else {
+        // Méthodes standard pour les autres navigateurs
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen();
+        } else if ((document as any).webkitCancelFullscreen) {
+          (document as any).webkitCancelFullscreen();
+        }
       }
       setIsFullscreen(false);
     }
@@ -123,6 +149,21 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         (document as any).webkitFullscreenElement ||
         (document as any).webkitIsFullScreen
       );
+      
+      // Condition spécifique pour iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS && !isFullscreenActive && isFullscreen) {
+        // Forcer la mise à jour des styles du conteneur sur iOS en sortant du mode plein écran
+        if (flowContainerRef.current) {
+          flowContainerRef.current.style.position = 'relative';
+          flowContainerRef.current.style.top = 'auto';
+          flowContainerRef.current.style.left = 'auto';
+          flowContainerRef.current.style.width = '100%';
+          flowContainerRef.current.style.height = '100%';
+          flowContainerRef.current.style.zIndex = 'auto';
+        }
+      }
+      
       setIsFullscreen(isFullscreenActive);
     };
 
@@ -137,7 +178,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
       document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
     };
-  }, []);
+  }, [isFullscreen]);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => {
@@ -1664,6 +1705,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   backgroundColor: '#f5f5f5',
                 },
                 position: 'relative',
+                // Ajuster la taille pour les appareils iOS
+                width: { xs: '44px', sm: '40px' },
+                height: { xs: '44px', sm: '40px' },
+                minWidth: { xs: '44px', sm: '40px' },
+                minHeight: { xs: '44px', sm: '40px' },
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(0,0,0,0.1)'
               }}
               TouchRippleProps={{
                 classes: {
@@ -1687,30 +1739,59 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             </div>
           </div>
           {isFullscreen && (
-            <Fab
-              color="primary"
-              aria-label="add question"
-              onClick={addNewQuestion}
-              sx={{
-                position: 'absolute',
-                bottom: 24,
-                right: 24,
-                zIndex: 1000,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                },
-              }}
-              TouchRippleProps={{
-                classes: {
-                  child: 'touch-ripple-child',
-                },
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </Fab>
+            <>
+              {/* Bouton d'urgence invisible mais tactile pour iOS */}
+              <div 
+                onClick={() => {
+                  // Si on est sur iOS, fournir une zone tactile plus grande pour sortir du mode plein écran
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                  if (isIOS && isFullscreen) {
+                    setIsFullscreen(false);
+                    if (flowContainerRef.current) {
+                      flowContainerRef.current.style.position = 'relative';
+                      flowContainerRef.current.style.top = 'auto';
+                      flowContainerRef.current.style.left = 'auto';
+                      flowContainerRef.current.style.width = '100%';
+                      flowContainerRef.current.style.height = '100%';
+                      flowContainerRef.current.style.zIndex = 'auto';
+                    }
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  width: '48px',
+                  height: '48px',
+                  zIndex: 9999,
+                  opacity: 0, // Invisible mais cliquable
+                }}
+              />
+              <Fab
+                color="primary"
+                aria-label="add question"
+                onClick={addNewQuestion}
+                sx={{
+                  position: 'absolute',
+                  bottom: 24,
+                  right: 24,
+                  zIndex: 1000,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                }}
+                TouchRippleProps={{
+                  classes: {
+                    child: 'touch-ripple-child',
+                  },
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </Fab>
+            </>
           )}
           <ReactFlow
             nodes={nodesWithCallbacks}
@@ -1791,6 +1872,28 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         /* Styles pour l'infobulle personnalisée */
         .custom-tooltip-container {
           position: relative;
+        }
+        
+        /* Augmenter la zone tactile pour les appareils mobiles */
+        @media (max-width: 768px) {
+          .custom-tooltip-container button {
+            position: relative;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          .custom-tooltip-container button::after {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            z-index: 1;
+          }
         }
         
         .custom-tooltip {
