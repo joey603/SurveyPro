@@ -798,6 +798,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 if (isIOS) {
                   // Empêcher tout délai tactile sur iOS
                   e.preventDefault();
+                  e.stopPropagation();
+                  // Appeler directement la fonction
                   handleTypeClick(e as any);
                 }
               }}
@@ -817,6 +819,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 minHeight: '48px',
+                minWidth: '44px',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 WebkitTouchCallout: 'none',
@@ -897,14 +900,39 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               label="Question"
               value={questionData.text}
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
+              onTouchStart={(e) => {
+                // Empêcher les événements de propagation qui pourraient causer des délais
+                const target = e.currentTarget;
+                setTimeout(() => {
+                  if (target && target.querySelector('input')) {
+                    (target.querySelector('input') as HTMLInputElement).focus();
+                  }
+                }, 50);
+              }}
               sx={{ 
                 mb: 2,
                 '& .MuiInputBase-root': {
                   minHeight: '48px',
+                },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '4px',
+                  cursor: 'text',
+                  touchAction: 'manipulation',
+                  WebkitAppearance: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  '&:focus-within': {
+                    boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
+                  }
                 }
               }}
               InputProps={{
-                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
+                sx: { 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  minHeight: '48px', 
+                  padding: '0 14px', 
+                  cursor: 'text', 
+                  touchAction: 'manipulation'
+                }
               }}
               InputLabelProps={{
                 sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
@@ -1161,6 +1189,37 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           .MuiButton-root {
             min-height: 44px !important;
           }
+        }
+        
+        /* Optimisations tactiles pour les champs de saisie */
+        .MuiInputBase-root, 
+        .MuiOutlinedInput-root {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        .MuiInputBase-input {
+          touch-action: manipulation !important;
+          cursor: text !important;
+        }
+        
+        /* Optimisations pour le sélecteur de type */
+        [data-intro="question-type-selector"] {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        [data-intro="question-type-selector"]:active {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Optimisations pour les popover */
+        .MuiPopover-root,
+        .question-node-popover {
+          -webkit-tap-highlight-color: transparent !important;
+          touch-action: manipulation !important;
         }
       `}</style>
     </div>
