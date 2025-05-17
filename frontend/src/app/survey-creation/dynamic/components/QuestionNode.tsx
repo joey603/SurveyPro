@@ -519,28 +519,36 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     const button = addMediaButtonRef.current;
     if (!button) return;
 
+    // Créer un input file dynamiquement pour éviter les problèmes de déclenchement iOS
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,video/*';
+    fileInput.style.display = 'none';
+    fileInput.id = `dynamic-media-upload-${id}`;
+    document.body.appendChild(fileInput);
+    
+    // Ajouter un gestionnaire d'événement au input file
+    fileInput.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.files && input.files.length > 0) {
+        handleMediaUpload({ target: { files: input.files } } as any);
+      }
+    });
+
     const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
       e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       
-      // Applique un petit délai pour éviter le "double fire" sur iOS
-      setTimeout(() => {
-        // Simuler un clic sur l'élément input caché
-        const inputElement = document.getElementById(`media-upload-${id}`);
-        if (inputElement) {
-          inputElement.click();
-        }
-      }, 10);
+      // Déclencher directement l'input file sans délai
+      fileInput.click();
     };
 
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
 
     // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
+      document.body.removeChild(fileInput);
     };
   }, []); // Pas de dépendance car nous voulons juste attacher l'événement une fois
 
@@ -800,12 +808,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   ref={addMediaButtonRef}
-                  onClick={() => {
-                    const inputElement = document.getElementById(`media-upload-${id}`);
-                    if (inputElement) {
-                      inputElement.click();
-                    }
-                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -825,9 +827,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitTouchCallout: 'none',
                     pointerEvents: isUploading ? 'none' : 'auto',
                     opacity: isUploading ? 0.5 : 1,
+                    WebkitAppearance: 'none', // Supprimer l'apparence par défaut sur iOS
+                    outline: 'none',
                   }}
                   data-intro="add-media"
                   disabled={isUploading}
+                  aria-label="Ajouter un média"
                 >
                   <AddPhotoAlternateIcon style={{ marginRight: '8px' }} />
                   {isUploading ? 'Uploading...' : 'Add Media'}
