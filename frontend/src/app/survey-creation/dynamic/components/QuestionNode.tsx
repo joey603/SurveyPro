@@ -398,7 +398,17 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           borderRadius: 2,
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          transition: 'transform 0.1s ease-out, box-shadow 0.2s ease-out',
+          '&:active': {
+            transform: 'scale(0.98)',
+            transition: 'transform 0.05s linear',
+          },
+          // Désactiver les comportements tactiles par défaut qui pourraient causer des délais
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
         }}
+        className="question-node-paper"
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
         
@@ -739,6 +749,32 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         /* S'assurer que le popover est visible par dessus tout */
         .react-flow__node-questionNode {
           isolation: isolate;
+        }
+        
+        /* Optimisations tactiles pour les cartes de questions */
+        .question-node-paper {
+          touch-action: manipulation !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
+        
+        /* Optimisations spécifiques iOS */
+        @supports (-webkit-touch-callout: none) {
+          .question-node-paper {
+            cursor: pointer !important;
+            -webkit-touch-callout: none !important;
+          }
+          
+          /* Améliorer la réactivité des boutons */
+          .question-node-paper button {
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+          }
+          
+          /* Supprimer le délai de 300ms sur iOS */
+          .question-node-paper * {
+            touch-action: manipulation !important;
+          }
         }
       `}</style>
     </div>
