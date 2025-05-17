@@ -68,7 +68,6 @@ const criticalQuestionTypes = [
 const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [questionData, setQuestionData] = useState({
     ...data,
     isCritical: data.isCritical || false,
@@ -407,19 +406,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
-  // Fonction pour gérer le changement d'état d'édition avec prévention des doubles touches
-  const handleEditToggle = () => {
-    // Éviter les doubles clics/touches pendant une transition
-    if (isTransitioning) return;
-    
-    // Indiquer qu'une transition est en cours
-    setIsTransitioning(true);
-    
-    // Réinitialiser l'état de transition après un court délai
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 600); // Délai légèrement supérieur à la durée des animations CSS
-    
+  // Simplifier la logique en supprimant la fonction handleEditToggle
+  
+  // Une version plus simple inspirée du bouton fullscreen qui fonctionne
+  const simpleEditToggle = (e: React.MouseEvent | React.TouchEvent) => {
+    if (e.type === 'touchstart') {
+      // Pour les événements tactiles, prévenir le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+    }
+    // Basculer l'état d'édition directement
     setIsEditing(!isEditing);
   };
 
@@ -450,36 +445,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             Question {data.questionNumber} 
           </Typography>
           <IconButton 
-            size="small" 
-            onClick={handleEditToggle}
-            onTouchStart={(e) => {
-              // Optimiser la réponse tactile sur iOS
-              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-              if (isIOS) {
-                // Empêcher tout délai tactile sur iOS
-                e.preventDefault();
-                if (!isTransitioning) {
-                  handleEditToggle();
-                }
-              }
-            }}
+            size="small"
+            // Utiliser directement setIsEditing comme dans le design original
+            onClick={(e) => simpleEditToggle(e)}
+            // Ajouter l'événement onTouchStart directement
+            onTouchStart={(e) => simpleEditToggle(e)}
             data-intro="edit-question"
             sx={{
               minWidth: '48px',
               minHeight: '48px',
               padding: '12px',
+              // Conserver uniquement les styles essentiels pour la réactivité tactile
               touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'rgba(0,0,0,0)',
-              cursor: 'pointer',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none',
+              WebkitTapHighlightColor: 'transparent',
             }}
             TouchRippleProps={{
               classes: {
                 child: 'touch-ripple-child',
               },
-              center: true, // Centre l'effet ripple pour une meilleure réactivité visuelle
+              center: true,
             }}
           >
             <EditIcon />
