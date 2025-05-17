@@ -73,6 +73,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     message: '',
     type: 'info'
   });
+  const [showEmergencyExit, setShowEmergencyExit] = useState(false);
 
   // Ajouter un useEffect pour détecter la taille de l'écran
   useEffect(() => {
@@ -91,7 +92,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const toggleFullscreen = () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      // Entrer en mode plein écran
       const element = flowContainerRef.current;
       if (element) {
         if (element.requestFullscreen) {
@@ -104,28 +108,79 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       }
       setIsFullscreen(true);
     } else {
-      // Détecter iOS spécifiquement
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      
+      // Sortir du mode plein écran
       if (isIOS) {
-        // Sur iOS, essayer plusieurs méthodes pour quitter le plein écran
-        if ((document as any).webkitCancelFullScreen) {
-          (document as any).webkitCancelFullScreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          (document as any).webkitExitFullscreen();
-        } else {
-          // Forcer la sortie du mode plein écran sur iOS en remplaçant manuellement l'état
+        // Implémentation iOS spécifique
+        try {
+          // Essayer toutes les méthodes possibles pour quitter le plein écran
+          if ((document as any).webkitCancelFullScreen) {
+            (document as any).webkitCancelFullScreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            (document as any).webkitExitFullscreen();
+          }
+          
+          // En parallèle, forcer le changement d'état et de style
           setIsFullscreen(false);
           
-          // Force le rafraîchissement du conteneur
+          // Forcer la mise à jour des styles du conteneur
           if (flowContainerRef.current) {
-            flowContainerRef.current.style.position = 'relative';
-            flowContainerRef.current.style.top = 'auto';
-            flowContainerRef.current.style.left = 'auto';
-            flowContainerRef.current.style.width = '100%';
-            flowContainerRef.current.style.height = '100%';
-            flowContainerRef.current.style.zIndex = 'auto';
+            // Technique plus agressive : Commencer par éliminer tous les styles de plein écran
+            const container = flowContainerRef.current;
+            
+            // Éliminer explicitement tous les styles de plein écran
+            container.style.position = 'relative';
+            container.style.top = 'auto';
+            container.style.left = 'auto';
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.zIndex = 'auto';
+            container.style.transform = 'none';
+            container.style.transformOrigin = 'center center';
+            container.style.transition = 'none';
+            
+            // Forcer un reflow pour que les changements prennent effet immédiatement
+            void container.offsetHeight;
+            
+            // Astuce iOS : masquer puis réafficher pour forcer une mise à jour de la vue
+            container.style.display = 'none';
+            setTimeout(() => {
+              if (container) {
+                container.style.display = 'block';
+              }
+            }, 10);
           }
+          
+          // Technique alternative: ajouter un gestionnaire qui surveille régulièrement
+          // l'état du plein écran et force la sortie si nécessaire
+          const checkFullscreenInterval = setInterval(() => {
+            const isStillFullscreen = document.fullscreenElement || 
+                                     (document as any).webkitFullscreenElement || 
+                                     (document as any).webkitIsFullScreen;
+            
+            if (!isStillFullscreen) {
+              clearInterval(checkFullscreenInterval);
+            } else {
+              // Si toujours en plein écran, réessayer de quitter
+              setIsFullscreen(false);
+              if ((document as any).webkitCancelFullScreen) {
+                (document as any).webkitCancelFullScreen();
+              } else if ((document as any).webkitExitFullscreen) {
+                (document as any).webkitExitFullscreen();
+              }
+              
+              if (flowContainerRef.current) {
+                flowContainerRef.current.style.position = 'relative';
+              }
+            }
+          }, 100);
+          
+          // Arrêter l'intervalle après 2 secondes au maximum
+          setTimeout(() => {
+            clearInterval(checkFullscreenInterval);
+          }, 2000);
+          
+        } catch (error) {
+          console.error('Erreur lors de la sortie du mode plein écran:', error);
         }
       } else {
         // Méthodes standard pour les autres navigateurs
@@ -136,10 +191,67 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         } else if ((document as any).webkitCancelFullscreen) {
           (document as any).webkitCancelFullscreen();
         }
+        setIsFullscreen(false);
       }
-      setIsFullscreen(false);
     }
   };
+
+  // Fonction pour sortir du mode plein écran de façon forcée sur iOS
+  const forceExitFullscreen = useCallback(() => {
+    if (flowContainerRef.current) {
+      const container = flowContainerRef.current;
+      
+      // Réinitialiser tous les styles liés au plein écran
+      container.style.position = 'relative';
+      container.style.top = 'auto';
+      container.style.left = 'auto';
+      container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.zIndex = 'auto';
+      container.style.transform = 'none';
+      
+      // Force le reflow du DOM
+      void container.offsetHeight;
+      
+      // La technique de l'élément display:none
+      container.style.display = 'none';
+      setTimeout(() => {
+        if (container) {
+          container.style.display = 'block';
+        }
+      }, 10);
+    }
+    
+    setIsFullscreen(false);
+    setShowEmergencyExit(false);
+  }, []);
+
+  // Utiliser un effet pour montrer le bouton d'urgence si nous restons coincés en plein écran sur iOS
+  useEffect(() => {
+    if (isFullscreen) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // Montrer le bouton d'urgence après un délai si nous sommes toujours en plein écran
+        const timer = setTimeout(() => {
+          // Vérifier si nous sommes toujours en plein écran
+          const isStillFullscreen = !!(
+            document.fullscreenElement || 
+            (document as any).webkitFullscreenElement ||
+            (document as any).webkitIsFullScreen
+          );
+          
+          if (isStillFullscreen || isFullscreen) {
+            setShowEmergencyExit(true);
+          }
+        }, 3000); // 3 secondes de délai
+        
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowEmergencyExit(false);
+    }
+  }, [isFullscreen]);
 
   // Ajouter un écouteur pour détecter la sortie du mode plein écran
   useEffect(() => {
@@ -152,19 +264,42 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       
       // Condition spécifique pour iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS && !isFullscreenActive && isFullscreen) {
-        // Forcer la mise à jour des styles du conteneur sur iOS en sortant du mode plein écran
-        if (flowContainerRef.current) {
-          flowContainerRef.current.style.position = 'relative';
-          flowContainerRef.current.style.top = 'auto';
-          flowContainerRef.current.style.left = 'auto';
-          flowContainerRef.current.style.width = '100%';
-          flowContainerRef.current.style.height = '100%';
-          flowContainerRef.current.style.zIndex = 'auto';
+      if (isIOS) {
+        if (!isFullscreenActive && isFullscreen) {
+          // Forcer la mise à jour des styles du conteneur sur iOS en sortant du mode plein écran
+          if (flowContainerRef.current) {
+            const container = flowContainerRef.current;
+            
+            // Forcer la mise à jour des styles conteneur avec un délai pour s'assurer que cela fonctionne
+            const applyNormalStyles = () => {
+              if (container) {
+                container.style.position = 'relative';
+                container.style.top = 'auto';
+                container.style.left = 'auto';
+                container.style.width = '100%';
+                container.style.height = '100%';
+                container.style.zIndex = 'auto';
+                container.style.transform = 'none';
+                // Forcer un reflow DOM
+                void container.offsetHeight;
+              }
+              setIsFullscreen(false);
+            };
+            
+            // Appliquer immédiatement et avec un petit délai pour s'assurer que ça prend effet
+            applyNormalStyles();
+            setTimeout(applyNormalStyles, 50);
+            setTimeout(applyNormalStyles, 200);
+          }
+        } else if (isFullscreenActive && !isFullscreen) {
+          // Si le navigateur dit que nous sommes en plein écran mais notre état dit non,
+          // mettre à jour notre état pour refléter la réalité
+          setIsFullscreen(true);
         }
+      } else {
+        // Pour les navigateurs non-iOS, suivre simplement l'état du navigateur
+        setIsFullscreen(isFullscreenActive);
       }
-      
-      setIsFullscreen(isFullscreenActive);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -1697,7 +1832,28 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             className="custom-tooltip-container"
           >
             <IconButton
-              onClick={toggleFullscreen}
+              onClick={() => {
+                toggleFullscreen();
+                
+                // Pour iOS, ajouter une solution de secours pour sortir du mode plein écran
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                if (isIOS && isFullscreen) {
+                  // Si nous sommes déjà en plein écran sur iOS, ajouter une vérification différée
+                  // pour s'assurer que nous sommes bien sortis du mode plein écran
+                  setTimeout(() => {
+                    const isStillFullscreen = !!(
+                      document.fullscreenElement || 
+                      (document as any).webkitFullscreenElement ||
+                      (document as any).webkitIsFullScreen
+                    );
+                    
+                    if (isStillFullscreen) {
+                      // Si nous sommes toujours en plein écran, forcer la sortie
+                      forceExitFullscreen();
+                    }
+                  }, 300);
+                }
+              }}
               sx={{
                 backgroundColor: 'white',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
@@ -1746,15 +1902,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   // Si on est sur iOS, fournir une zone tactile plus grande pour sortir du mode plein écran
                   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
                   if (isIOS && isFullscreen) {
-                    setIsFullscreen(false);
-                    if (flowContainerRef.current) {
-                      flowContainerRef.current.style.position = 'relative';
-                      flowContainerRef.current.style.top = 'auto';
-                      flowContainerRef.current.style.left = 'auto';
-                      flowContainerRef.current.style.width = '100%';
-                      flowContainerRef.current.style.height = '100%';
-                      flowContainerRef.current.style.zIndex = 'auto';
-                    }
+                    forceExitFullscreen();
                   }
                 }}
                 style={{
@@ -1767,6 +1915,29 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   opacity: 0, // Invisible mais cliquable
                 }}
               />
+              
+              {/* Bouton d'urgence visible qui apparaît si nous détectons que nous sommes coincés en plein écran */}
+              {showEmergencyExit && (
+                <Button
+                  onClick={forceExitFullscreen}
+                  variant="contained"
+                  color="error"
+                  sx={{
+                    position: 'fixed',
+                    top: '70px',
+                    right: '20px',
+                    zIndex: 10000,
+                    fontSize: '14px',
+                    padding: '10px 15px',
+                    minWidth: '150px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    animation: 'pulse 1.5s infinite',
+                  }}
+                >
+                  Quitter Plein Écran
+                </Button>
+              )}
+              
               <Fab
                 color="primary"
                 aria-label="add question"
@@ -1847,6 +2018,22 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             opacity: 1;
           }
         }
+        
+        @keyframes pulse {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+          }
+          70% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+          }
+        }
+        
         .react-flow__attribution {
           display: none !important;
         }
