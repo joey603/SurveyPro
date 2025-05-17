@@ -100,6 +100,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const toggleFullscreen = () => {
+    // Ajouter un petit délai pour éviter les doubles appuis sur iOS
+    if (new Date().getTime() - (window as any).lastFullscreenToggle < 500) {
+      return; // Ignorer les clics trop rapprochés (moins de 500ms)
+    }
+    (window as any).lastFullscreenToggle = new Date().getTime();
+    
     // Détecter spécifiquement les iPhones (pas les iPads)
     const isIPhoneOnly = /iPhone/.test(navigator.userAgent) && !(window as any).MSStream;
     
@@ -260,107 +266,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       document.removeEventListener('touchstart', handleTouchStart);
     };
   }, [fakeFullscreen]);
-
-  // Ajoutons une solution pour le problème de double tap sur iOS
-  useEffect(() => {
-    // Détection des appareils iOS (iPhone et iPad)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    
-    if (!isIOS) return; // Appliquer uniquement sur iOS
-
-    // Le problème du double tap sur iOS est souvent lié à l'événement "click" qui est retardé
-    // Nous allons appliquer un correctif global pour les événements tactiles
-    
-    const handleFastClick = () => {
-      // Ce style force iOS à ne pas attendre pour les événements de clic
-      const style = document.createElement('style');
-      style.innerHTML = `
-        * {
-          cursor: pointer !important;
-          -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
-          touch-action: manipulation !important;
-        }
-        
-        .react-flow__node, 
-        .react-flow__handle,
-        .react-flow__edge,
-        .react-flow__edge-interaction {
-          touch-action: manipulation !important;
-        }
-        
-        /* Améliorer la taille des zones tactiles */
-        .react-flow__handle {
-          min-width: 12px !important;
-          min-height: 12px !important;
-          width: 12px !important;
-          height: 12px !important;
-        }
-        
-        .react-flow__handle::after {
-          content: '';
-          position: absolute;
-          top: -10px;
-          left: -10px;
-          right: -10px;
-          bottom: -10px;
-          z-index: -1;
-        }
-        
-        /* Assurer une meilleure réactivité des boutons */
-        button, [role="button"], .MuiButtonBase-root {
-          touch-action: manipulation !important;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      // Ajout d'un script pour désactiver le délai de 300ms sur iOS
-      const script = document.createElement('script');
-      script.innerHTML = `
-        // Désactiver le délai de 300ms sur iOS
-        document.addEventListener("touchstart", function() {}, {passive: true});
-      `;
-      document.head.appendChild(script);
-    };
-    
-    handleFastClick();
-    
-    // Si nous sommes en mode plein écran (normal ou faux), nous écoutons les événements touch plus directement
-    if (isFullscreen || fakeFullscreen) {
-      const container = flowContainerRef.current;
-      if (container) {
-        // Fonction pour convertir les événements touch en événements souris
-        const touchToMouseHandler = (e: TouchEvent) => {
-          // Cela annule le comportement de "double tap" iOS en créant un événement 
-          // de clic immédiatement après le toucher
-          if (e.touches.length === 1) {
-            e.preventDefault();
-            
-            // Récupérer la position du toucher
-            const touch = e.touches[0];
-            const target = touch.target as Element;
-            
-            // Simuler un clic à cet endroit
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-              clientX: touch.clientX,
-              clientY: touch.clientY
-            });
-            
-            target.dispatchEvent(clickEvent);
-          }
-        };
-        
-        // Nous utilisons la capture pour obtenir l'événement avant le comportement par défaut
-        container.addEventListener('touchstart', touchToMouseHandler, { passive: false });
-        
-        return () => {
-          container.removeEventListener('touchstart', touchToMouseHandler);
-        };
-      }
-    }
-  }, [isFullscreen, fakeFullscreen]);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => {
@@ -765,8 +670,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
-    setSelectedNode(node.id);
-    setSelectedEdge(null);
+    event.preventDefault(); // Empêcher tout comportement par défaut
+    
+    // Appliquer un petit délai pour éviter les événements fantômes sur iOS
+    setTimeout(() => {
+      setSelectedNode(node.id);
+      setSelectedEdge(null);
+    }, 10);
   }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
@@ -972,12 +882,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.stopPropagation();
+    event.preventDefault(); // Empêcher tout comportement par défaut
+    
     // Check if the edge is connected to a critical question
     const sourceNode = nodes.find(node => node.id === edge.source);
     if (sourceNode?.data?.isCritical) return;
     
-    setSelectedEdge(edge.id);
-    setSelectedNode(null);
+    // Appliquer un petit délai pour éviter les événements fantômes sur iOS
+    setTimeout(() => {
+      setSelectedEdge(edge.id);
+      setSelectedNode(null);
+    }, 10);
   }, [nodes]);
 
   const CustomEdge = ({
@@ -1094,51 +1009,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       .react-flow__handle {
         opacity: 0.8 !important;
         border-width: 2px !important;
-      }
-      
-      /* Améliorations pour iOS - utiliser { html, body, * } pour cibler plus de sélecteurs */
-      html, body, * {
-        -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
-        touch-action: manipulation !important;
-      }
-      
-      /* Éliminer le délai de clic sur iOS */
-      a, button, input, textarea, select, .react-flow__node {
-        touch-action: manipulation !important;
-        cursor: pointer !important;
-      }
-      
-      /* Améliorer la taille des zones tactiles */
-      .react-flow__node .MuiIconButton-root,
-      .react-flow__node .MuiButtonBase-root {
-        min-width: 44px !important;
-        min-height: 44px !important;
-        padding: 12px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
-      
-      /* Augmenter la zone interactive des poignées */
-      .react-flow__handle {
-        position: relative !important;
-      }
-      
-      .react-flow__handle::after {
-        content: '' !important;
-        position: absolute !important;
-        top: -15px !important;
-        left: -15px !important;
-        right: -15px !important;
-        bottom: -15px !important;
-        z-index: -1 !important;
-      }
-      
-      /* Améliorations pour l'édition des nœuds */
-      .react-flow__node input,
-      .react-flow__node textarea,
-      .react-flow__node select {
-        font-size: 16px !important; /* Prévient le zoom auto iOS */
       }
     `}</style>
   );
@@ -1881,8 +1751,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             height: '100%',
             position: 'relative',
             transition: 'all 0.3s ease',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation',
             ...(isFullscreen && {
               position: 'fixed',
               top: 0,
