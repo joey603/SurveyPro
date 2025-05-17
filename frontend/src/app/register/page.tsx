@@ -240,6 +240,27 @@ const RegisterPage: React.FC = () => {
       >
         <Container maxWidth="sm">
           <Typography
+            variant="h2"
+            sx={{ 
+              fontWeight: 800, 
+              mb: 1, 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              display: 'inline-block'
+            }}
+          >
+            Surveyflow
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{ mb: 4, color: colors.text.secondary }}
+          >
+            The ultimate platform to create professional surveys in just a few clicks
+          </Typography>
+
+          <Typography
             variant="h4"
             sx={{ fontWeight: 700, mb: 4, color: colors.text.primary }}
           >
