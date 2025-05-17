@@ -510,6 +510,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
+  // Fonction pour déclencher le sélecteur de fichier
+  const handleMediaTrigger = useCallback(() => {
+    const fileInput = document.getElementById(`media-upload-${id}`);
+    if (fileInput) fileInput.click();
+  }, [id]);
+
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
     const button = addMediaButtonRef.current;
@@ -521,10 +527,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       // Déclenche un clic sur l'input caché pour ouvrir le sélecteur de fichier
-      const fileInput = document.getElementById(`media-upload-${id}`);
-      if (fileInput) {
-        fileInput.click();
-      }
+      handleMediaTrigger();
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -534,7 +537,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [id]);
+  }, [handleMediaTrigger]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -796,10 +799,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   ref={addMediaButtonRef}
-                  onClick={() => {
-                    const fileInput = document.getElementById(`media-upload-${id}`);
-                    if (fileInput) fileInput.click();
-                  }}
+                  onClick={handleMediaTrigger}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
