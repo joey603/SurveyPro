@@ -63,7 +63,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fakeFullscreen, setFakeFullscreen] = useState(false);
   const flowContainerRef = useRef<HTMLDivElement>(null);
+  const originalContainerStyleRef = useRef<{
+    position: string;
+    top: string;
+    left: string;
+    width: string;
+    height: string;
+    zIndex: string;
+  } | null>(null);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -90,115 +99,78 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Ajouter une fonction pour simuler le mode plein écran avec CSS
-  const applyFullscreenStyles = (enterFullscreen: boolean) => {
-    if (!flowContainerRef.current) return;
-    
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    
-    if (enterFullscreen) {
-      // Stocker les styles originaux dans un attribut data
-      flowContainerRef.current.dataset.originalPosition = flowContainerRef.current.style.position || '';
-      flowContainerRef.current.dataset.originalTop = flowContainerRef.current.style.top || '';
-      flowContainerRef.current.dataset.originalLeft = flowContainerRef.current.style.left || '';
-      flowContainerRef.current.dataset.originalWidth = flowContainerRef.current.style.width || '';
-      flowContainerRef.current.dataset.originalHeight = flowContainerRef.current.style.height || '';
-      flowContainerRef.current.dataset.originalZIndex = flowContainerRef.current.style.zIndex || '';
-      
-      // Appliquer des styles de plein écran
-      flowContainerRef.current.style.position = 'fixed';
-      flowContainerRef.current.style.top = '0';
-      flowContainerRef.current.style.left = '0';
-      flowContainerRef.current.style.width = '100vw';
-      flowContainerRef.current.style.height = '100vh';
-      flowContainerRef.current.style.zIndex = '9999';
-      flowContainerRef.current.style.backgroundColor = 'white';
-      flowContainerRef.current.style.overflow = 'visible';
-      
-      // Empêcher le défilement de la page
-      document.body.style.overflow = 'hidden';
-      
-      // Faire défiler vers le haut
-      window.scrollTo(0, 0);
-    } else {
-      // Restaurer les styles d'origine
-      if (flowContainerRef.current.dataset.originalPosition) {
-        flowContainerRef.current.style.position = flowContainerRef.current.dataset.originalPosition;
-      } else {
-        flowContainerRef.current.style.position = 'relative';
-      }
-      
-      if (flowContainerRef.current.dataset.originalTop) {
-        flowContainerRef.current.style.top = flowContainerRef.current.dataset.originalTop;
-      } else {
-        flowContainerRef.current.style.top = 'auto';
-      }
-      
-      if (flowContainerRef.current.dataset.originalLeft) {
-        flowContainerRef.current.style.left = flowContainerRef.current.dataset.originalLeft;
-      } else {
-        flowContainerRef.current.style.left = 'auto';
-      }
-      
-      if (flowContainerRef.current.dataset.originalWidth) {
-        flowContainerRef.current.style.width = flowContainerRef.current.dataset.originalWidth;
-      } else {
-        flowContainerRef.current.style.width = '100%';
-      }
-      
-      if (flowContainerRef.current.dataset.originalHeight) {
-        flowContainerRef.current.style.height = flowContainerRef.current.dataset.originalHeight;
-      } else {
-        flowContainerRef.current.style.height = '100%';
-      }
-      
-      if (flowContainerRef.current.dataset.originalZIndex) {
-        flowContainerRef.current.style.zIndex = flowContainerRef.current.dataset.originalZIndex;
-      } else {
-        flowContainerRef.current.style.zIndex = 'auto';
-      }
-      
-      flowContainerRef.current.style.backgroundColor = '';
-      flowContainerRef.current.style.overflow = '';
-      
-      // Réactiver le défilement de la page
-      document.body.style.overflow = '';
-    }
-  };
-
   const toggleFullscreen = () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    // Détecter spécifiquement les iPhones (pas les iPads)
+    const isIPhoneOnly = /iPhone/.test(navigator.userAgent) && !(window as any).MSStream;
     
-    if (!isFullscreen) {
-      // Entrer en mode plein écran
-      if (isIOS) {
-        // Sur iOS, utiliser notre simulation de plein écran
-        applyFullscreenStyles(true);
-        setIsFullscreen(true);
+    if (isIPhoneOnly) {
+      // Pour iPhone, utiliser une approche de "faux plein écran" qui est plus fiable
+      if (!fakeFullscreen) {
+        // Sauvegarder les styles originaux avant d'entrer en mode plein écran
+        if (flowContainerRef.current) {
+          const computedStyle = window.getComputedStyle(flowContainerRef.current);
+          originalContainerStyleRef.current = {
+            position: computedStyle.position,
+            top: computedStyle.top,
+            left: computedStyle.left,
+            width: computedStyle.width,
+            height: computedStyle.height,
+            zIndex: computedStyle.zIndex
+          };
+          
+          // Appliquer le "faux plein écran"
+          flowContainerRef.current.style.position = 'fixed';
+          flowContainerRef.current.style.top = '0';
+          flowContainerRef.current.style.left = '0';
+          flowContainerRef.current.style.width = '100vw';
+          flowContainerRef.current.style.height = '100vh';
+          flowContainerRef.current.style.zIndex = '9999';
+          
+          // Masquer le défilement du corps
+          document.body.style.overflow = 'hidden';
+          setFakeFullscreen(true);
+          setIsFullscreen(true);
+        }
       } else {
-        // Sur les autres plateformes, utiliser l'API native
+        // Restaurer les styles originaux
+        if (flowContainerRef.current && originalContainerStyleRef.current) {
+          flowContainerRef.current.style.position = originalContainerStyleRef.current.position;
+          flowContainerRef.current.style.top = originalContainerStyleRef.current.top;
+          flowContainerRef.current.style.left = originalContainerStyleRef.current.left;
+          flowContainerRef.current.style.width = originalContainerStyleRef.current.width;
+          flowContainerRef.current.style.height = originalContainerStyleRef.current.height;
+          flowContainerRef.current.style.zIndex = originalContainerStyleRef.current.zIndex;
+          
+          // Restaurer le défilement du corps
+          document.body.style.overflow = '';
+          setFakeFullscreen(false);
+          setIsFullscreen(false);
+        }
+      }
+    } else {
+      // Utiliser l'API fullscreen standard pour les autres appareils
+      if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
         const element = flowContainerRef.current;
         if (element) {
           if (element.requestFullscreen) {
             element.requestFullscreen();
           } else if ((element as any).webkitRequestFullscreen) {
             (element as any).webkitRequestFullscreen();
+          } else if ((element as any).webkitEnterFullscreen) {
+            (element as any).webkitEnterFullscreen();
           }
         }
-      }
-    } else {
-      // Sortir du mode plein écran
-      if (isIOS) {
-        // Sur iOS, désactiver notre simulation de plein écran
-        applyFullscreenStyles(false);
-        setIsFullscreen(false);
+        setIsFullscreen(true);
       } else {
-        // Sur les autres plateformes, utiliser l'API native
+        // Méthodes standard pour quitter le plein écran
         if (document.exitFullscreen) {
           document.exitFullscreen();
         } else if ((document as any).webkitExitFullscreen) {
           (document as any).webkitExitFullscreen();
+        } else if ((document as any).webkitCancelFullscreen) {
+          (document as any).webkitCancelFullscreen();
         }
+        setIsFullscreen(false);
       }
     }
   };
@@ -206,27 +178,88 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   // Ajouter un écouteur pour détecter la sortie du mode plein écran
   useEffect(() => {
     const handleFullscreenChange = () => {
+      // Ne pas interférer avec le mode fakeFullscreen sur iPhone
+      const isIPhoneOnly = /iPhone/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIPhoneOnly && fakeFullscreen) {
+        return;
+      }
+
       const isFullscreenActive = !!(
         document.fullscreenElement || 
         (document as any).webkitFullscreenElement ||
         (document as any).webkitIsFullScreen
       );
       
-      // Ne mettre à jour l'état que si nous ne sommes pas sur iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (!isIOS) {
-        setIsFullscreen(isFullscreenActive);
+      // Condition pour les autres appareils iOS (iPad)
+      const isIOSNotIPhone = /iPad|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOSNotIPhone && !isFullscreenActive && isFullscreen) {
+        // Forcer la mise à jour des styles du conteneur sur iOS en sortant du mode plein écran
+        if (flowContainerRef.current) {
+          flowContainerRef.current.style.position = 'relative';
+          flowContainerRef.current.style.top = 'auto';
+          flowContainerRef.current.style.left = 'auto';
+          flowContainerRef.current.style.width = '100%';
+          flowContainerRef.current.style.height = '100%';
+          flowContainerRef.current.style.zIndex = 'auto';
+        }
       }
+      
+      setIsFullscreen(isFullscreenActive);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
+    document.addEventListener('webkitendfullscreen', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitbeginfullscreen', handleFullscreenChange);
+      document.removeEventListener('webkitendfullscreen', handleFullscreenChange);
     };
-  }, []);
+  }, [isFullscreen, fakeFullscreen]);
+
+  // Ajouter des écouteurs d'événements pour les gestes iOS
+  useEffect(() => {
+    const isIPhoneOnly = /iPhone/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    if (!isIPhoneOnly) return; // Appliquer uniquement sur iPhone
+    
+    // Capturer les gestes de balayage qui pourraient interférer avec notre faux mode plein écran
+    const handleTouchStart = (e: TouchEvent) => {
+      if (fakeFullscreen) {
+        // Si nous sommes dans le mode faux plein écran, prévenir le comportement par défaut
+        // uniquement pour les gestes qui commencent près des bords de l'écran
+        const touch = e.touches[0];
+        const x = touch.clientX;
+        const y = touch.clientY;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // Détecter les gestes depuis les bords de l'écran (qui pourraient être des gestes système)
+        const edgeThreshold = 20; // pixels depuis le bord
+        const isFromEdge = 
+          x < edgeThreshold || 
+          x > screenWidth - edgeThreshold || 
+          y < edgeThreshold || 
+          y > screenHeight - edgeThreshold;
+        
+        if (isFromEdge) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    // Ajouter l'écouteur uniquement si le faux plein écran est actif
+    if (fakeFullscreen) {
+      document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    }
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [fakeFullscreen]);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
     setNodes(prevNodes => {
@@ -1763,7 +1796,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 alignItems: 'center',
                 justifyContent: 'center',
                 touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'rgba(0,0,0,0.1)'
+                WebkitTapHighlightColor: 'rgba(0,0,0,0.1)',
+                // Assurer que l'apparence reste la même pour le mode faux plein écran
+                ...(fakeFullscreen && {
+                  zIndex: 10001,
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
+                  transition: 'transform 0.2s ease'
+                })
               }}
               TouchRippleProps={{
                 classes: {
