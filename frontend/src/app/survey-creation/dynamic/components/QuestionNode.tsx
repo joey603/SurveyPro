@@ -406,18 +406,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
-  // Simplifier la logique en supprimant la fonction handleEditToggle
-  
-  // Une version plus simple inspirée du bouton fullscreen qui fonctionne
-  const simpleEditToggle = (e: React.MouseEvent | React.TouchEvent) => {
-    if (e.type === 'touchstart') {
-      // Pour les événements tactiles, prévenir le comportement par défaut qui peut causer un délai
-      e.preventDefault();
-    }
-    // Basculer l'état d'édition directement
-    setIsEditing(!isEditing);
-  };
-
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
@@ -444,30 +432,24 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
             Question {data.questionNumber} 
           </Typography>
-          <IconButton 
-            size="small"
-            // Utiliser directement setIsEditing comme dans le design original
-            onClick={(e) => simpleEditToggle(e)}
-            // Ajouter l'événement onTouchStart directement
-            onTouchStart={(e) => simpleEditToggle(e)}
-            data-intro="edit-question"
-            sx={{
-              minWidth: '48px',
-              minHeight: '48px',
-              padding: '12px',
-              // Conserver uniquement les styles essentiels pour la réactivité tactile
-              touchAction: 'manipulation',
+          <div 
+            onClick={() => setIsEditing(!isEditing)}
+            style={{
+              width: '48px',
+              height: '48px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              borderRadius: '50%',
+              backgroundColor: 'white',
               WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
-            TouchRippleProps={{
-              classes: {
-                child: 'touch-ripple-child',
-              },
-              center: true,
-            }}
+            data-intro="edit-question"
           >
             <EditIcon />
-          </IconButton>
+          </div>
         </Box>
 
         {isEditing ? (
