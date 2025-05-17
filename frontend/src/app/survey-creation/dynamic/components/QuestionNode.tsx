@@ -408,8 +408,40 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
-  // Fonction simple pour activer/désactiver le mode édition immédiatement
-  const toggleEditMode = () => {
+  // Gestionnaire d'événements tactiles natif pour iOS
+  useEffect(() => {
+    const button = editButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Bascule l'état d'édition avec un minuscule délai pour éviter le "double fire" sur iOS
+      setTimeout(() => {
+        setIsEditing(!isEditing);
+      }, 10);
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [isEditing]); // Dépendance à isEditing pour recréer le gestionnaire quand l'état change
+
+  // Fonction pour les navigateurs non tactiles
+  const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // iOS simule des clics après les événements tactiles, donc nous devons éviter ce comportement
+    if (e.nativeEvent.type === 'click' && window.TouchEvent && e.nativeEvent instanceof MouseEvent) {
+      // Vérifie si c'est un clic simulé après un événement tactile
+      if ((e.nativeEvent as any).isTrusted === false || (e.nativeEvent as any)._reactName === 'onClick') {
+        return; // Ignore les clics simulés sur les appareils tactiles
+      }
+    }
     setIsEditing(!isEditing);
   };
 
@@ -456,7 +488,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               padding: 0,
               WebkitAppearance: 'none',
               WebkitTapHighlightColor: 'transparent',
-              touchAction: 'manipulation',
+              touchAction: 'none', // "none" pour éviter tout comportement tactile du navigateur
+              outline: 'none', // Supprime le contour de focus
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
             }}
             data-intro="edit-question"
           >
