@@ -83,11 +83,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Référence pour le bouton d'édition
   const editButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour la case à cocher Critical Question
-  const criticalCheckboxRef = useRef<HTMLDivElement>(null);
-  // Référence pour le bouton Add Media
-  const addMediaButtonRef = useRef<HTMLButtonElement>(null);
-  // Référence pour le bouton Delete Media
-  const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
+  const criticalCheckboxRef = useRef<HTMLButtonElement>(null);
 
   // Vérifier si on est en mode fullscreen
   useEffect(() => {
@@ -487,10 +483,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Bascule l'état critique avec un minuscule délai pour éviter le "double fire" sur iOS
-      setTimeout(() => {
-        toggleCritical();
-      }, 10);
+      // Bascule l'état critique immédiatement
+      toggleCritical();
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -513,69 +507,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
     setIsEditing(!isEditing);
   };
-
-  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton Add Media
-  useEffect(() => {
-    const button = addMediaButtonRef.current;
-    if (!button) return;
-
-    // Créer un input file dynamiquement pour éviter les problèmes de déclenchement iOS
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*,video/*';
-    fileInput.style.display = 'none';
-    fileInput.id = `dynamic-media-upload-${id}`;
-    document.body.appendChild(fileInput);
-    
-    // Ajouter un gestionnaire d'événement au input file
-    fileInput.addEventListener('change', (event) => {
-      const input = event.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        handleMediaUpload({ target: { files: input.files } } as any);
-      }
-    });
-
-    const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Déclencher directement l'input file sans délai
-      fileInput.click();
-    };
-
-    button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-    // Nettoyage
-    return () => {
-      button.removeEventListener('touchstart', handleTouchStart);
-      document.body.removeChild(fileInput);
-    };
-  }, []); // Pas de dépendance car nous voulons juste attacher l'événement une fois
-
-  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton Delete Media
-  useEffect(() => {
-    const button = deleteMediaButtonRef.current;
-    if (!button) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
-      e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
-      e.stopPropagation();
-      // Appeler la fonction de suppression de média avec un minuscule délai pour éviter le "double fire" sur iOS
-      setTimeout(() => {
-        handleMediaDelete();
-      }, 10);
-    };
-
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-    button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-    // Nettoyage
-    return () => {
-      button.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [data.mediaUrl]); // Dépendance à data.mediaUrl pour recréer le gestionnaire quand le média change
 
   return (
     <div style={{ position: 'relative' }}>
@@ -636,32 +567,38 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Box sx={{ mt: 2 }}>
             <FormControlLabel
               control={
-                <div 
+                <button 
+                  type="button"
                   ref={criticalCheckboxRef}
+                  onClick={toggleCritical}
                   style={{
-                    display: 'inline-flex',
-                    position: 'relative',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    background: 'white',
                     cursor: 'pointer',
-                    touchAction: 'none',
+                    padding: 0,
+                    WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'none',
+                    outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
                   }}
+                  data-intro="critical-checkbox"
                 >
                   <Checkbox
                     checked={questionData.isCritical}
-                    onChange={handleCriticalChange}
                     sx={{
                       padding: '8px',
-                    }}
-                    TouchRippleProps={{
-                      classes: {
-                        child: 'touch-ripple-child',
-                      },
+                      pointerEvents: 'none', // Désactive les événements directement sur le Checkbox
                     }}
                   />
-                </div>
+                </button>
               }
               label={
                 <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
@@ -805,67 +742,53 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  ref={addMediaButtonRef}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '12px 16px',
-                    fontSize: '0.875rem',
+                <Button
+                  component="label"
+                  htmlFor={`media-upload-${id}`}
+                  startIcon={<AddPhotoAlternateIcon />}
+                  variant="outlined"
+                  size="small"
+                  disabled={isUploading}
+                  data-intro="add-media"
+                  sx={{ 
+                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
                     minHeight: '48px',
-                    border: '1px solid rgba(25, 118, 210, 0.5)',
-                    borderRadius: '4px',
-                    color: '#1976d2',
-                    backgroundColor: 'transparent',
+                    padding: '12px 16px',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'rgba(0,0,0,0)',
                     cursor: 'pointer',
-                    touchAction: 'none',
-                    WebkitTapHighlightColor: 'transparent',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
-                    pointerEvents: isUploading ? 'none' : 'auto',
-                    opacity: isUploading ? 0.5 : 1,
-                    WebkitAppearance: 'none', // Supprimer l'apparence par défaut sur iOS
-                    outline: 'none',
                   }}
-                  data-intro="add-media"
-                  disabled={isUploading}
-                  aria-label="Ajouter un média"
+                  TouchRippleProps={{
+                    classes: {
+                      child: 'touch-ripple-child',
+                    },
+                    center: true,
+                  }}
                 >
-                  <AddPhotoAlternateIcon style={{ marginRight: '8px' }} />
                   {isUploading ? 'Uploading...' : 'Add Media'}
-                </button>
+                </Button>
                 
                 {data.mediaUrl && (
-                  <button 
-                    ref={deleteMediaButtonRef}
-                    type="button"
+                  <IconButton 
                     onClick={handleMediaDelete}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      backgroundColor: 'transparent',
-                      borderRadius: '50%',
-                      cursor: 'pointer',
-                      padding: 0,
-                      color: '#f44336',
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'none',
-                      outline: 'none',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
+                    size="small"
+                    color="error"
+                    sx={{
+                      minWidth: '48px',
+                      minHeight: '48px',
+                      padding: '12px',
+                    }}
+                    TouchRippleProps={{
+                      classes: {
+                        child: 'touch-ripple-child',
+                      },
                     }}
                   >
                     <DeleteIcon />
-                  </button>
+                  </IconButton>
                 )}
               </Box>
 
