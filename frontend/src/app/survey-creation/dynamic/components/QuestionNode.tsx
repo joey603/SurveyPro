@@ -510,34 +510,30 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
-  // Fonction pour déclencher le sélecteur de fichier directement
-  const triggerMediaSelection = () => {
+  // Fonction directe pour la sélection de média (sans useCallback)
+  const triggerMediaDialog = () => {
     const fileInput = document.getElementById(`media-upload-${id}`);
     if (fileInput) fileInput.click();
   };
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
+    // Exactement la même implémentation que pour le bouton d'édition
     const button = addMediaButtonRef.current;
     if (!button) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
       e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Déclenche directement la sélection de fichier
-      triggerMediaSelection();
+      triggerMediaDialog();
     };
 
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
 
-    // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [id]); // Dépendance uniquement à id, comme pour le bouton d'édition
+  }, []); // Aucune dépendance pour maximiser la stabilité
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -799,15 +795,18 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   ref={addMediaButtonRef}
-                  onClick={triggerMediaSelection}
+                  onClick={triggerMediaDialog}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '8px',
                     minHeight: '48px',
+                    height: 'auto',
+                    width: 'auto',
                     padding: '12px 16px',
-                    border: '1px solid #1976d2',
+                    border: 'none',
                     borderRadius: '4px',
                     background: 'white',
                     color: '#1976d2',
@@ -821,6 +820,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
                     opacity: isUploading ? 0.7 : 1,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   }}
                   data-intro="add-media"
                 >
