@@ -510,7 +510,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
-  // Fonction directe pour la sélection de média (sans useCallback)
+  // Fonction directe pour la sélection de média (pour les navigateurs non tactiles)
   const triggerMediaDialog = () => {
     const fileInput = document.getElementById(`media-upload-${id}`);
     if (fileInput) fileInput.click();
@@ -518,22 +518,26 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
-    // Exactement la même implémentation que pour le bouton d'édition
     const button = addMediaButtonRef.current;
     if (!button) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
       e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
+      // Déclenche directement l'ouverture du dialogue de sélection de média
       triggerMediaDialog();
     };
 
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
 
+    // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, []); // Aucune dépendance pour maximiser la stabilité
+  }, [id, triggerMediaDialog]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
