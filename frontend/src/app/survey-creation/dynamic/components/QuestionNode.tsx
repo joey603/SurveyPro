@@ -511,10 +511,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   };
 
   // Fonction directe pour la sélection de média (pour les navigateurs non tactiles)
-  const triggerMediaDialog = () => {
+  const triggerMediaDialog = useCallback(() => {
     const fileInput = document.getElementById(`media-upload-${id}`);
     if (fileInput) fileInput.click();
-  };
+  }, [id]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
@@ -605,8 +605,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               padding: 0,
               WebkitAppearance: 'none',
               WebkitTapHighlightColor: 'transparent',
-              touchAction: 'none', // "none" pour éviter tout comportement tactile du navigateur
-              outline: 'none', // Supprime le contour de focus
+              touchAction: 'manipulation',
+              outline: 'none',
               userSelect: 'none',
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
@@ -637,7 +637,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     padding: 0,
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'none',
+                    touchAction: 'manipulation',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -818,7 +818,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'none',
+                    touchAction: 'manipulation',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -851,7 +851,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       padding: 0,
                       WebkitAppearance: 'none',
                       WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'none',
+                      touchAction: 'manipulation',
                       outline: 'none',
                       userSelect: 'none',
                       WebkitUserSelect: 'none',
