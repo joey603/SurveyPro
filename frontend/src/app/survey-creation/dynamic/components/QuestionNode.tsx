@@ -510,14 +510,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
-  // Fonction directe pour la sélection de média (pour les navigateurs non tactiles)
-  const triggerMediaDialog = useCallback(() => {
+  // Fonction directe pour la sélection de média (sans useCallback)
+  const triggerMediaDialog = () => {
     const fileInput = document.getElementById(`media-upload-${id}`);
     if (fileInput) fileInput.click();
-  }, [id]);
+  };
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
+    // Exactement la même implémentation que pour le bouton d'édition
     const button = addMediaButtonRef.current;
     if (!button) return;
 
@@ -526,7 +527,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Déclenche directement l'ouverture du dialogue de sélection de média
+      // Ouvre directement la boîte de dialogue de sélection de média
       triggerMediaDialog();
     };
 
@@ -537,7 +538,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [id, triggerMediaDialog]);
+  }, [triggerMediaDialog]); // Dépendance à triggerMediaDialog pour recréer le gestionnaire si nécessaire
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -605,8 +606,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               padding: 0,
               WebkitAppearance: 'none',
               WebkitTapHighlightColor: 'transparent',
-              touchAction: 'manipulation',
-              outline: 'none',
+              touchAction: 'none', // "none" pour éviter tout comportement tactile du navigateur
+              outline: 'none', // Supprime le contour de focus
               userSelect: 'none',
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
@@ -637,7 +638,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     padding: 0,
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'manipulation',
+                    touchAction: 'none',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -818,7 +819,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'manipulation',
+                    touchAction: 'none',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -851,7 +852,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       padding: 0,
                       WebkitAppearance: 'none',
                       WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'manipulation',
+                      touchAction: 'none',
                       outline: 'none',
                       userSelect: 'none',
                       WebkitUserSelect: 'none',
