@@ -205,31 +205,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const handleTypeSelect = (type: string) => {
     console.log("Type selected:", type);
     
-    // Vérifier si le dernier clic était récent pour éviter les doubles clics
-    if (new Date().getTime() - ((window as any).lastTypeSelect || 0) < 500) {
-      return; // Ignorer les clics trop rapprochés (moins de 500ms)
-    }
-    (window as any).lastTypeSelect = new Date().getTime();
+    const newData = { ...questionData, type };
     
-    // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-    setTimeout(() => {
-      const newData = { ...questionData, type };
-      
-      if (questionData.isCritical && data.onCreatePaths) {
-        if (type === 'yes-no') {
-          console.log("Creating Yes/No paths");
-          data.onCreatePaths(data.id, ['Yes', 'No']);
-        } else if (type === 'dropdown') {
-          const defaultOptions = ['Option 1', 'Option 2', 'Option 3'];
-          newData.options = defaultOptions;
-          console.log("Creating dropdown paths:", defaultOptions);
-          data.onCreatePaths(data.id, defaultOptions);
-        }
+    if (questionData.isCritical && data.onCreatePaths) {
+      if (type === 'yes-no') {
+        console.log("Creating Yes/No paths");
+        data.onCreatePaths(data.id, ['Yes', 'No']);
+      } else if (type === 'dropdown') {
+        const defaultOptions = ['Option 1', 'Option 2', 'Option 3'];
+        newData.options = defaultOptions;
+        console.log("Creating dropdown paths:", defaultOptions);
+        data.onCreatePaths(data.id, defaultOptions);
       }
-      
-      updateNodeData(newData);
-      handleTypeClose();
-    }, 10);
+    }
+    
+    updateNodeData(newData);
+    handleTypeClose();
   };
 
   const handleOptionsChange = (newOptions: string[]) => {
@@ -335,25 +326,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 />
                 <IconButton
                   size="small"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Vérifier si le dernier clic était récent pour éviter les doubles clics
-                    const buttonIndex = index;
-                    const lastClickTime = ((window as any).lastOptionDeleteTime || {})[buttonIndex] || 0;
-                    if (new Date().getTime() - lastClickTime < 500) {
-                      return; // Ignorer les clics trop rapprochés (moins de 500ms)
-                    }
-                    
-                    if (!(window as any).lastOptionDeleteTime) {
-                      (window as any).lastOptionDeleteTime = {};
-                    }
-                    (window as any).lastOptionDeleteTime[buttonIndex] = new Date().getTime();
-                    
-                    // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-                    setTimeout(() => {
-                      const newOptions = questionData.options.filter((_, i) => i !== index);
-                      handleOptionsChange(newOptions);
-                    }, 10);
+                  onClick={() => {
+                    const newOptions = questionData.options.filter((_, i) => i !== index);
+                    handleOptionsChange(newOptions);
                   }}
                   sx={{ color: '#ff4444' }}
                 >
@@ -363,19 +338,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             ))}
             <Button
               size="small"
-              onClick={(e) => {
-                e.preventDefault();
-                // Vérifier si le dernier clic était récent pour éviter les doubles clics
-                if (new Date().getTime() - ((window as any).lastAddOptionTime || 0) < 500) {
-                  return; // Ignorer les clics trop rapprochés (moins de 500ms)
-                }
-                (window as any).lastAddOptionTime = new Date().getTime();
-                
-                // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-                setTimeout(() => {
-                  const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
-                  handleOptionsChange(newOptions);
-                }, 10);
+              onClick={() => {
+                const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
+                handleOptionsChange(newOptions);
               }}
             >
               Add Option
@@ -450,19 +415,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           </Typography>
           <IconButton 
             size="small" 
-            onClick={(e) => {
-              e.preventDefault();
-              // Vérifier si le dernier clic était récent pour éviter les doubles clics
-              if (new Date().getTime() - ((window as any).lastEditToggle || 0) < 500) {
-                return; // Ignorer les clics trop rapprochés (moins de 500ms)
-              }
-              (window as any).lastEditToggle = new Date().getTime();
-              
-              // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-              setTimeout(() => {
-                setIsEditing(!isEditing);
-              }, 10);
-            }} 
+            onClick={() => setIsEditing(!isEditing)} 
             data-intro="edit-question"
             sx={{
               minWidth: '48px',
@@ -485,19 +438,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               control={
                 <Checkbox
                   checked={questionData.isCritical}
-                  onChange={(e) => {
-                    e.preventDefault();
-                    // Vérifier si le dernier clic était récent pour éviter les doubles clics
-                    if (new Date().getTime() - ((window as any).lastCriticalToggle || 0) < 500) {
-                      return; // Ignorer les clics trop rapprochés (moins de 500ms)
-                    }
-                    (window as any).lastCriticalToggle = new Date().getTime();
-                    
-                    // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-                    setTimeout(() => {
-                      handleCriticalChange(e);
-                    }, 10);
-                  }}
+                  onChange={handleCriticalChange}
                   sx={{
                     padding: '8px',
                   }}
@@ -518,19 +459,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             />
 
             <Box
-              onClick={(e) => {
-                e.preventDefault();
-                // Vérifier si le dernier clic était récent pour éviter les doubles clics
-                if (new Date().getTime() - ((window as any).lastTypeToggle || 0) < 500) {
-                  return; // Ignorer les clics trop rapprochés (moins de 500ms)
-                }
-                (window as any).lastTypeToggle = new Date().getTime();
-                
-                // Ajouter un petit délai pour éviter les événements fantômes sur iOS
-                setTimeout(() => {
-                  handleTypeClick(e);
-                }, 10);
-              }}
+              onClick={handleTypeClick}
               data-intro="question-type-selector"
               sx={{
                 p: 2,

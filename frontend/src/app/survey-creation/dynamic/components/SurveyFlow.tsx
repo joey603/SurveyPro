@@ -64,6 +64,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fakeFullscreen, setFakeFullscreen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const flowContainerRef = useRef<HTMLDivElement>(null);
   const originalContainerStyleRef = useRef<{
     position: string;
@@ -100,17 +101,23 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, []);
 
   const toggleFullscreen = () => {
-    // Ajouter un petit délai pour éviter les doubles appuis sur iOS
-    if (new Date().getTime() - (window as any).lastFullscreenToggle < 500) {
-      return; // Ignorer les clics trop rapprochés (moins de 500ms)
-    }
-    (window as any).lastFullscreenToggle = new Date().getTime();
+    // Éviter les doubles clics/touches pendant une transition
+    if (isTransitioning) return;
     
-    // Détecter spécifiquement les iPhones (pas les iPads)
+    // Indiquer qu'une transition est en cours
+    setIsTransitioning(true);
+    
+    // Réinitialiser l'état de transition après un court délai
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 600); // Délai légèrement supérieur à la durée des animations CSS
+    
+    // Détecter spécifiquement les appareils iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isIPhoneOnly = /iPhone/.test(navigator.userAgent) && !(window as any).MSStream;
     
-    if (isIPhoneOnly) {
-      // Pour iPhone, utiliser une approche de "faux plein écran" qui est plus fiable
+    if (isIOS) {
+      // Pour les appareils iOS, utiliser l'approche de "faux plein écran" qui est plus fiable
       if (!fakeFullscreen) {
         // Sauvegarder les styles originaux avant d'entrer en mode plein écran
         if (flowContainerRef.current) {
@@ -670,13 +677,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
-    event.preventDefault(); // Empêcher tout comportement par défaut
-    
-    // Appliquer un petit délai pour éviter les événements fantômes sur iOS
-    setTimeout(() => {
-      setSelectedNode(node.id);
-      setSelectedEdge(null);
-    }, 10);
+    setSelectedNode(node.id);
+    setSelectedEdge(null);
   }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
@@ -882,17 +884,12 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.stopPropagation();
-    event.preventDefault(); // Empêcher tout comportement par défaut
-    
     // Check if the edge is connected to a critical question
     const sourceNode = nodes.find(node => node.id === edge.source);
     if (sourceNode?.data?.isCritical) return;
     
-    // Appliquer un petit délai pour éviter les événements fantômes sur iOS
-    setTimeout(() => {
-      setSelectedEdge(edge.id);
-      setSelectedNode(null);
-    }, 10);
+    setSelectedEdge(edge.id);
+    setSelectedNode(null);
   }, [nodes]);
 
   const CustomEdge = ({
@@ -1795,6 +1792,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           >
             <IconButton
               onClick={toggleFullscreen}
+              onTouchStart={(e) => {
+                // Optimiser la réponse tactile sur iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                if (isIOS) {
+                  // Empêcher tout délai tactile sur iOS
+                  e.preventDefault();
+                  if (!isTransitioning) {
+                    toggleFullscreen();
+                  }
+                }
+              }}
               sx={{
                 backgroundColor: 'white',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
@@ -1819,12 +1827,19 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   transform: 'scale(1.1)',
                   boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
                   transition: 'transform 0.2s ease'
-                })
+                }),
+                // Styles pour améliorer la réactivité tactile
+                cursor: 'pointer',
+                outlineOffset: 4,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none'
               }}
               TouchRippleProps={{
                 classes: {
                   child: 'touch-ripple-child',
                 },
+                center: true, // Centre l'effet de ripple pour une meilleure réponse visuelle
               }}
               aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
@@ -1960,6 +1975,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+            touch-action: manipulation !important;
           }
           
           .custom-tooltip-container button::after {
@@ -1970,6 +1987,22 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             right: -10px;
             bottom: -10px;
             z-index: 1;
+          }
+          
+          /* Éliminer le délai tactile sur iOS */
+          .custom-tooltip-container button:active {
+            opacity: 0.9;
+            transform: scale(0.95);
+            transition: all 0.05s linear !important;
+          }
+        }
+        
+        /* Styles iOS spécifiques pour les boutons */
+        @supports (-webkit-touch-callout: none) {
+          .custom-tooltip-container button {
+            /* Styles spécifiques à iOS */
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
           }
         }
         
