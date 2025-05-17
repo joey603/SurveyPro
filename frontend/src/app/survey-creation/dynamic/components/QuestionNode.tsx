@@ -380,7 +380,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   };
 
-  const updateNodeData = (newData: typeof questionData) => {
+  const updateNodeData = useCallback((newData: typeof questionData) => {
     setQuestionData(newData);
     // Propagate changes to parent node
     if (data.onChange) {
@@ -389,7 +389,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         ...newData
       });
     }
-  };
+  }, [data]);
 
   // Notify parent when editing state changes - only when it actually changes
   useEffect(() => {
@@ -411,7 +411,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   }, [isEditing, data]);
 
   // Fonction pour changer l'état critique avec un événement direct
-  const toggleCritical = () => {
+  const toggleCritical = useCallback(() => {
     const newCriticalState = !questionData.isCritical;
     console.log("Toggling critical state to:", newCriticalState);
     
@@ -446,8 +446,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         data.onCreatePaths(data.id, []);
       }
     }
-  };
-
+  }, [questionData, data, updateNodeData]);
+  
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'édition
   useEffect(() => {
     const button = editButtonRef.current;
@@ -470,7 +470,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
   }, [isEditing]); // Dépendance à isEditing pour recréer le gestionnaire quand l'état change
-
+  
   // Gestionnaire d'événements tactiles natif pour iOS - pour la case à cocher Critical Question
   useEffect(() => {
     const checkbox = criticalCheckboxRef.current;
@@ -492,7 +492,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       checkbox.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [questionData.isCritical]); // Dépendance à l'état critique pour recréer le gestionnaire quand l'état change
+  }, [toggleCritical]);
 
   // Fonction pour les navigateurs non tactiles
   const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
