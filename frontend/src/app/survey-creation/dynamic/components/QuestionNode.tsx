@@ -524,6 +524,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     // Drapeau pour éviter les déclenchements multiples
     let touchProcessed = false;
 
+    // Original fileInput element
+    const originalInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+
     const handleTouchStart = (e: TouchEvent) => {
       // Si un toucher est déjà en cours de traitement, ignorer
       if (touchProcessed) return;
@@ -536,36 +539,80 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
       
-      // Détection spécifique d'iOS et version
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      
       // Feedback visuel immédiat
       button.style.opacity = '0.7';
       button.style.backgroundColor = '#f0f7ff';
       button.style.transform = 'scale(0.97)';
       
-      // Fonction pour ouvrir le sélecteur de fichier
-      const openFileSelector = () => {
-        const fileInput = document.getElementById(`media-upload-${id}`);
-        if (fileInput) {
-          // Créer un nouvel élément input pour éviter les problèmes de cache iOS
-          const newInput = document.createElement('input');
-          newInput.type = 'file';
-          newInput.id = `media-upload-${id}`;
-          newInput.accept = 'image/*,video/*';
-          newInput.style.display = 'none';
-          newInput.onchange = (event) => {
-            handleMediaUpload(event as React.ChangeEvent<HTMLInputElement>);
-          };
-          
-          // Remplacer l'ancien input
-          const parent = fileInput.parentNode;
-          if (parent) {
-            parent.replaceChild(newInput, fileInput);
+      // Solution spécifique pour iOS Safari
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // Créer un élément input temporaire qui sera automatiquement cliqué
+        const tempInput = document.createElement('input');
+        tempInput.type = 'file';
+        tempInput.accept = 'image/*,video/*';
+        tempInput.style.position = 'absolute';
+        tempInput.style.top = '-1000px';
+        tempInput.style.opacity = '0';
+        
+        // Ajouter un gestionnaire d'événement change
+        tempInput.addEventListener('change', (evt) => {
+          // Transférer les fichiers sélectionnés à l'input original
+          if (evt.target instanceof HTMLInputElement && evt.target.files && evt.target.files.length > 0) {
+            // Simuler un événement de changement sur l'input original
+            const dataTransfer = new DataTransfer();
+            Array.from(evt.target.files).forEach(file => {
+              dataTransfer.items.add(file);
+            });
             
-            // Cliquer sur le nouvel input
-            newInput.click();
+            if (originalInput) {
+              originalInput.files = dataTransfer.files;
+              
+              // Déclencher manuellement l'événement onChange
+              const changeEvent = new Event('change', { bubbles: true });
+              originalInput.dispatchEvent(changeEvent);
+              
+              // Appeler directement le gestionnaire si l'événement ne fonctionne pas
+              if (handleMediaUpload && originalInput.files.length > 0) {
+                // Créer un faux événement avec la propriété currentTarget
+                const fakeEvent = {
+                  currentTarget: originalInput,
+                  target: originalInput,
+                  preventDefault: () => {},
+                  stopPropagation: () => {}
+                } as unknown as React.ChangeEvent<HTMLInputElement>;
+                
+                handleMediaUpload(fakeEvent);
+              }
+            }
           }
+          
+          // Supprimer l'élément temporaire
+          document.body.removeChild(tempInput);
+        });
+        
+        // Ajouter au DOM
+        document.body.appendChild(tempInput);
+        
+        // Cliquer sur l'input temporaire
+        setTimeout(() => {
+          tempInput.click();
+          
+          // Réinitialiser le style
+          setTimeout(() => {
+            button.style.opacity = '';
+            button.style.backgroundColor = '';
+            button.style.transform = '';
+            
+            // Réinitialiser le drapeau
+            touchProcessed = false;
+          }, 300);
+        }, 50);
+      } else {
+        // Pour les autres navigateurs, cliquer simplement sur l'input
+        if (originalInput) {
+          originalInput.click();
         }
         
         // Réinitialiser le style du bouton
@@ -574,21 +621,34 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           button.style.backgroundColor = '';
           button.style.transform = '';
           
-          // Réinitialiser le drapeau après un certain temps
-          setTimeout(() => {
-            touchProcessed = false;
-          }, 500);
+          // Réinitialiser le drapeau
+          touchProcessed = false;
         }, 300);
-      };
+      }
+    };
 
-      // Déclenchement immédiat pour iOS
-      openFileSelector();
+    // Gestionnaire pour les clics standard
+    const handleClick = (e: MouseEvent) => {
+      // Optimisation pour éviter les clics simulés sur iOS
+      if (window.TouchEvent && e instanceof MouseEvent && 'ontouchstart' in window) {
+        // Si c'est probablement un événement simulé
+        if ((e as any).clientY === 0 && (e as any).clientX === 0) {
+          return;
+        }
+      }
+      
+      if (originalInput) {
+        originalInput.click();
+      }
     };
 
     // Gestionnaire pour le toucher
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
     
-    // Bloquer tous les autres événements tactiles
+    // Gestionnaire pour le clic standard (pour les non-mobiles)
+    button.addEventListener('click', handleClick);
+    
+    // Bloquer certains événements tactiles
     const preventAll = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
@@ -596,16 +656,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     
     button.addEventListener('touchend', preventAll, { passive: false });
     button.addEventListener('touchcancel', preventAll, { passive: false });
-    button.addEventListener('touchmove', preventAll, { passive: false });
 
     // Nettoyage
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
+      button.removeEventListener('click', handleClick);
       button.removeEventListener('touchend', preventAll);
       button.removeEventListener('touchcancel', preventAll);
-      button.removeEventListener('touchmove', preventAll);
     };
-  }, [id, handleMediaUpload]); // Ajouter handleMediaUpload comme dépendance
+  }, [id]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -868,14 +927,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   type="button"
                   ref={addMediaButtonRef}
                   onClick={(e) => {
-                    // iOS simule des clics après les événements tactiles, donc nous devons éviter ce comportement
-                    if (e.nativeEvent.type === 'click' && window.TouchEvent && e.nativeEvent instanceof MouseEvent) {
-                      // Vérifie si c'est un clic simulé après un événement tactile
-                      if ((e.nativeEvent as any).isTrusted === false || (e.nativeEvent as any)._reactName === 'onClick') {
-                        return; // Ignore les clics simulés sur les appareils tactiles
-                      }
+                    // Pour les clics non-tactiles
+                    const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+                    if (fileInput) {
+                      fileInput.click();
                     }
-                    triggerMediaDialog();
                   }}
                   disabled={isUploading}
                   style={{
