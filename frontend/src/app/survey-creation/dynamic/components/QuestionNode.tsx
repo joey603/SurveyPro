@@ -324,16 +324,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                 />
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      const newOptions = questionData.options.filter((_, i) => i !== index);
-                      handleOptionsChange(newOptions);
-                    }}
-                    sx={{ color: '#ff4444' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newOptions = questionData.options.filter((_, i) => i !== index);
+                    handleOptionsChange(newOptions);
+                  }}
+                  sx={{ color: '#ff4444' }}
+                >
+                  <DeleteIcon />
+                </IconButton>
               </Box>
             ))}
             <Button
@@ -349,49 +349,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         );
 
       case 'yes-no':
-        return (
-          <RadioGroup row>
-            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-            <FormControlLabel value="no" control={<Radio />} label="No" />
-          </RadioGroup>
-        );
-
       case 'slider':
-        return (
-          <Slider
-            defaultValue={50}
-            valueLabelDisplay="auto"
-            step={1}
-            marks
-            min={0}
-            max={100}
-          />
-        );
-
       case 'rating':
-        return (
-          <Rating />
-        );
-
       case 'date':
-        return (
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Select Date"
-              value={questionData.selectedDate}
-              onChange={(newValue) => {
-                if (data.onChange) {
-                  data.onChange({
-                    ...data,
-                    selectedDate: newValue
-                  });
-                }
-              }}
-              renderInput={(params) => <TextField {...params} />}
-            />
-          </LocalizationProvider>
-        );
-
       default:
         return null;
     }
