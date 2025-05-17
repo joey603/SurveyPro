@@ -324,7 +324,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                 />
-                {questionData.isCritical && (
                   <IconButton
                     size="small"
                     onClick={() => {
@@ -335,7 +334,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   >
                     <DeleteIcon />
                   </IconButton>
-                )}
               </Box>
             ))}
             <Button
