@@ -387,6 +387,42 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
+  // Amélioration de la réactivité tactile sur iOS
+  useEffect(() => {
+    // Détection des appareils iOS (iPhone et iPad)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    if (!isIOS) return; // Appliquer uniquement sur iOS
+    
+    // Amélioration de la réactivité des clics sur iOS
+    const applyFastTouch = () => {
+      // Trouver l'élément DOM du nœud actuel
+      const nodeElement = document.querySelector(`[data-id="${id}"]`);
+      if (!nodeElement) return;
+      
+      // Améliorer la réactivité des boutons et des éléments cliquables
+      const clickables = nodeElement.querySelectorAll('button, [role="button"], .MuiIconButton-root, .MuiButtonBase-root');
+      
+      clickables.forEach(element => {
+        // Rendre les éléments plus réactifs en ajoutant des attributs spécifiques
+        element.setAttribute('touch-action', 'manipulation');
+        
+        // Ajouter un gestionnaire d'événements tactile direct pour les boutons
+        element.addEventListener('touchstart', (e) => {
+          // Empêcher le comportement de double-tap en déclenchant immédiatement l'action
+          if (!isEditing) {
+            e.preventDefault();
+            (element as HTMLElement).click();
+          }
+        }, { passive: false });
+      });
+    };
+    
+    // Appliquer après le premier rendu et également lorsque l'état d'édition change
+    const timer = setTimeout(applyFastTouch, 100);
+    return () => clearTimeout(timer);
+  }, [id, isEditing]);
+
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
