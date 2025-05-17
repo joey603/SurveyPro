@@ -510,11 +510,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     setIsEditing(!isEditing);
   };
 
-  // Fonction pour déclencher le sélecteur de fichier
-  const handleMediaTrigger = useCallback(() => {
+  // Fonction pour déclencher le sélecteur de fichier directement
+  const triggerMediaSelection = () => {
     const fileInput = document.getElementById(`media-upload-${id}`);
     if (fileInput) fileInput.click();
-  }, [id]);
+  };
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout de média
   useEffect(() => {
@@ -526,8 +526,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Déclenche un clic sur l'input caché pour ouvrir le sélecteur de fichier
-      handleMediaTrigger();
+      // Déclenche directement la sélection de fichier
+      triggerMediaSelection();
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -537,7 +537,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [handleMediaTrigger]);
+  }, [id]); // Dépendance uniquement à id, comme pour le bouton d'édition
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -799,7 +799,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   ref={addMediaButtonRef}
-                  onClick={handleMediaTrigger}
+                  onClick={triggerMediaSelection}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
@@ -1023,4 +1023,4 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   );
 };
 
-export default QuestionNode; 
+export default QuestionNode;
