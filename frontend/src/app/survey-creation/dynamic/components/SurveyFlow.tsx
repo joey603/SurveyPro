@@ -677,55 +677,33 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
-    // Éviter les doubles clics/touches
-    if (selectedNode === node.id) return;
+    
+    // Solution pour le problème de double tap sur iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    // Marquer l'élément comme déjà sélectionné pour les événements tactiles iOS
+    if (isIOS) {
+      // Trouver l'élément DOM de la carte de question
+      const nodeElement = (event.target as HTMLElement).closest('.react-flow__node');
+      if (nodeElement) {
+        // Forcer le focus sur cet élément
+        (nodeElement as HTMLElement).focus();
+        
+        // Appliquer immédiatement le style de sélection
+        const existingNodes = document.querySelectorAll('.react-flow__node');
+        existingNodes.forEach(n => {
+          (n as HTMLElement).style.border = '';
+          (n as HTMLElement).style.boxShadow = '';
+        });
+        
+        (nodeElement as HTMLElement).style.border = '2px solid #ff4444';
+        (nodeElement as HTMLElement).style.boxShadow = '0 0 8px rgba(255, 68, 68, 0.5)';
+      }
+    }
     
     setSelectedNode(node.id);
     setSelectedEdge(null);
-  }, [selectedNode]);
-
-  // Ajouter un gestionnaire tactile spécifique pour les nœuds sur appareils mobiles
-  useEffect(() => {
-    // Fonction pour détecter le toucher sur un nœud
-    const handleNodeTouch = (event: TouchEvent) => {
-      // Détecter si on est sur iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      
-      if (!isIOS) return; // Appliquer uniquement sur iOS
-      
-      // Trouver l'élément node le plus proche
-      const target = event.target as HTMLElement;
-      const nodeElement = target.closest('.react-flow__node') as HTMLElement | null;
-      
-      if (nodeElement) {
-        // Empêcher le comportement par défaut pour éviter le délai
-        event.preventDefault();
-        
-        // Obtenir l'ID du nœud à partir de l'attribut data
-        const nodeId = nodeElement.getAttribute('data-id');
-        
-        if (nodeId && nodeId !== selectedNode) {
-          setSelectedNode(nodeId);
-          setSelectedEdge(null);
-          
-          // Ajouter un effet visuel pour confirmer la sélection
-          nodeElement.style.transition = 'all 0.1s ease';
-          nodeElement.style.transform = 'scale(0.98)';
-          
-          setTimeout(() => {
-            nodeElement.style.transform = 'scale(1)';
-          }, 100);
-        }
-      }
-    };
-    
-    // Ajouter l'écouteur d'événements
-    document.addEventListener('touchstart', handleNodeTouch, { passive: false });
-    
-    return () => {
-      document.removeEventListener('touchstart', handleNodeTouch);
-    };
-  }, [selectedNode]);
+  }, []);
 
   const onDeleteNode = useCallback(async (nodeId: string) => {
     // Prevent deleting question 1
@@ -1053,41 +1031,31 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         opacity: 0.8 !important;
         border-width: 2px !important;
       }
+      
+      /* Optimisations pour le toucher des noeuds */
       .react-flow__node {
-        cursor: pointer;
-        transition: transform 0.5s ease, opacity 0.5s ease !important;
-      }
-      .react-flow__edge {
-        transition: opacity 0.5s ease !important;
+        -webkit-tap-highlight-color: rgba(255, 68, 68, 0.2) !important;
+        touch-action: manipulation !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -webkit-touch-callout: none !important;
       }
       
-      /* Améliorer la réactivité tactile sur iOS */
+      .react-flow__node:active {
+        transform: scale(0.98) !important;
+        transition: transform 0.1s ease-out !important;
+      }
+      
+      /* Styles spécifiques pour iOS */
       @supports (-webkit-touch-callout: none) {
         .react-flow__node {
-          -webkit-tap-highlight-color: transparent !important;
-          touch-action: manipulation !important;
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -webkit-touch-callout: none !important;
+          cursor: pointer !important;
         }
         
-        /* Feedback visuel au toucher */
-        .react-flow__node:active {
-          transform: scale(0.98) !important;
-          transition: transform 0.1s ease !important;
-        }
-      }
-      
-      /* Augmenter la zone tactile pour les petits éléments */
-      @media (max-width: 768px) {
-        .react-flow__handle {
-          min-width: 20px !important;
-          min-height: 20px !important;
-          transform: translate(-50%, -50%) scale(1.5) !important;
-        }
-        
-        .react-flow__handle:active {
-          transform: translate(-50%, -50%) scale(1.8) !important;
+        /* Rendre l'interaction plus réactive sur iOS */
+        .react-flow__node.selected {
+          border: 2px solid #ff4444 !important;
+          box-shadow: 0 0 8px rgba(255, 68, 68, 0.5) !important;
         }
       }
     `}</style>
@@ -1099,6 +1067,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
     const isNodeInEditMode = node.data && node.data._editingState;
+    const isNodeSelected = node.id === selectedNode;
 
     return {
       ...node,
@@ -1116,7 +1085,14 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         zIndex: isNodeInEditMode ? 1000 : (node.id === selectedNode ? 100 : undefined),
         // Ajouter une ombre plus prononcée en mode édition pour mettre en évidence le nœud
         boxShadow: isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined,
-      }
+        // Style actif pour la sélection sur iOS
+        ...(isNodeSelected && { 
+          border: '2px solid #ff4444', 
+          boxShadow: '0 0 8px rgba(255, 68, 68, 0.5)'
+        })
+      },
+      // Ajouter une classe spéciale pour les nœuds sélectionnés
+      className: isNodeSelected ? 'selected' : ''
     };
   });
 
@@ -1820,6 +1796,53 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     );
   };
 
+  // Ajouter des écouteurs pour les nœuds quand ils changent
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if (!isIOS) return;
+    
+    // Attendre que le DOM se mette à jour après un changement de nœuds
+    const timeoutId = setTimeout(() => {
+      const nodeElements = document.querySelectorAll('.react-flow__node');
+      nodeElements.forEach(node => {
+        // Nettoyer les anciens écouteurs potentiels pour éviter les doublons
+        node.removeEventListener('touchstart', handleNodeTouch);
+        
+        // Ajouter un nouvel écouteur
+        node.addEventListener('touchstart', handleNodeTouch, { passive: false });
+      });
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [nodes.length]); // Réexécuter quand le nombre de nœuds change
+  
+  // Fonction pour gérer les touchstarts sur les nœuds
+  const handleNodeTouch = (e: TouchEvent) => {
+    e.preventDefault();
+    
+    // Trouver l'ID du nœud
+    const node = (e.currentTarget as HTMLElement);
+    const nodeId = node.getAttribute('data-id');
+    if (!nodeId) return;
+    
+    // Réinitialiser tous les styles
+    const allNodes = document.querySelectorAll('.react-flow__node');
+    allNodes.forEach(n => {
+      (n as HTMLElement).classList.remove('selected');
+      (n as HTMLElement).style.border = '';
+      (n as HTMLElement).style.boxShadow = '';
+    });
+    
+    // Appliquer le style au nœud touché
+    node.classList.add('selected');
+    node.style.border = '2px solid #ff4444';
+    node.style.boxShadow = '0 0 8px rgba(255, 68, 68, 0.5)';
+    
+    // Mettre à jour l'état React
+    setSelectedNode(nodeId);
+    setSelectedEdge(null);
+  };
+
   return (
     <>
       <GlobalStyles />
@@ -1996,7 +2019,44 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
               },
             }}
             fitView
-            onInit={setReactFlowInstance}
+            onInit={(instance) => {
+              setReactFlowInstance(instance);
+              
+              // Optimisation pour les interactions tactiles iOS
+              setTimeout(() => {
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                if (isIOS) {
+                  // Ajouter des gestionnaires d'événements tactiles spécifiques
+                  const nodes = document.querySelectorAll('.react-flow__node');
+                  nodes.forEach(node => {
+                    // Utiliser touchstart au lieu de click pour une réponse plus rapide
+                    node.addEventListener('touchstart', (e) => {
+                      // Prévenir les comportements par défaut qui peuvent causer un délai
+                      e.preventDefault();
+                      
+                      // Trouver l'ID du nœud
+                      const nodeId = node.getAttribute('data-id');
+                      if (nodeId) {
+                        // Appliquer immédiatement le style avant même la mise à jour React
+                        nodes.forEach(n => {
+                          (n as HTMLElement).classList.remove('selected');
+                          (n as HTMLElement).style.border = '';
+                          (n as HTMLElement).style.boxShadow = '';
+                        });
+                        
+                        (node as HTMLElement).classList.add('selected');
+                        (node as HTMLElement).style.border = '2px solid #ff4444';
+                        (node as HTMLElement).style.boxShadow = '0 0 8px rgba(255, 68, 68, 0.5)';
+                        
+                        // Mettre à jour l'état React
+                        setSelectedNode(nodeId);
+                        setSelectedEdge(null);
+                      }
+                    }, { passive: false });
+                  });
+                }
+              }, 500); // Attendre que tous les nœuds soient rendus
+            }}
             onMove={(event, viewport) => {
               setReactFlowInstance((prev) => ({
                 ...prev!,
