@@ -677,31 +677,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
-    
-    // Détection des appareils tactiles
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    // Optimisation spécifique pour les appareils iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    
-    // Pour les appareils tactiles, spécialement iOS, on améliore la réactivité
-    if (isTouchDevice || isIOS) {
-      // Force l'activation immédiate en évitant tout délai
-      setSelectedNode(node.id);
-      setSelectedEdge(null);
-      
-      // Effet visuel pour donner un retour immédiat
-      const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
-      if (nodeElement) {
-        nodeElement.classList.add('node-tap-effect');
-        setTimeout(() => {
-          nodeElement.classList.remove('node-tap-effect');
-        }, 300);
-      }
-      return;
-    }
-    
-    // Comportement standard pour les dispositifs non tactiles
     setSelectedNode(node.id);
     setSelectedEdge(null);
   }, []);
@@ -1031,40 +1006,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       .react-flow__handle {
         opacity: 0.8 !important;
         border-width: 2px !important;
-      }
-      
-      /* Effet visuel pour le tap sur les nœuds */
-      @keyframes nodeSelected {
-        0% { box-shadow: 0 0 0 rgba(255, 68, 68, 0); }
-        50% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
-        100% { box-shadow: 0 0 0 rgba(255, 68, 68, 0); }
-      }
-      
-      .node-tap-effect {
-        animation: nodeSelected 0.3s ease forwards;
-      }
-      
-      /* Optimisations tactiles pour les nœuds */
-      .react-flow__node {
-        touch-action: manipulation !important;
-        -webkit-tap-highlight-color: transparent !important;
-        transition: transform 0.1s ease-out !important;
-      }
-      
-      /* Optimisations spécifiques pour iOS */
-      @supports (-webkit-touch-callout: none) {
-        .react-flow__node {
-          cursor: pointer !important;
-          -webkit-touch-callout: none !important;
-          user-select: none !important;
-          -webkit-user-select: none !important;
-        }
-      }
-      
-      /* Feedback visuel réactif au tap */
-      .react-flow__node:active {
-        transform: scale(0.98) !important;
-        transition: transform 0.05s linear !important;
       }
     `}</style>
   );

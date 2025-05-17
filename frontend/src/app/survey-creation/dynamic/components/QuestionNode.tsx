@@ -68,6 +68,7 @@ const criticalQuestionTypes = [
 const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [questionData, setQuestionData] = useState({
     ...data,
     isCritical: data.isCritical || false,
@@ -342,6 +343,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
                 handleOptionsChange(newOptions);
               }}
+              onTouchStart={(e) => {
+                // Optimiser la réponse tactile sur iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                if (isIOS) {
+                  // Empêcher tout délai tactile sur iOS
+                  e.preventDefault();
+                  const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
+                  handleOptionsChange(newOptions);
+                }
+              }}
+              sx={{
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                minHeight: { xs: '44px', sm: '36px' },
+              }}
             >
               Add Option
             </Button>
@@ -387,6 +407,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
+  // Fonction pour gérer le changement d'état d'édition avec prévention des doubles touches
+  const handleEditToggle = () => {
+    // Éviter les doubles clics/touches pendant une transition
+    if (isTransitioning) return;
+    
+    // Indiquer qu'une transition est en cours
+    setIsTransitioning(true);
+    
+    // Réinitialiser l'état de transition après un court délai
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 600); // Délai légèrement supérieur à la durée des animations CSS
+    
+    setIsEditing(!isEditing);
+  };
+
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
@@ -398,17 +434,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           borderRadius: 2,
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
-          transition: 'transform 0.1s ease-out, box-shadow 0.2s ease-out',
-          '&:active': {
-            transform: 'scale(0.98)',
-            transition: 'transform 0.05s linear',
-          },
-          // Désactiver les comportements tactiles par défaut qui pourraient causer des délais
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-          WebkitTouchCallout: 'none',
         }}
-        className="question-node-paper"
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
         
@@ -425,17 +451,35 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           </Typography>
           <IconButton 
             size="small" 
-            onClick={() => setIsEditing(!isEditing)} 
+            onClick={handleEditToggle}
+            onTouchStart={(e) => {
+              // Optimiser la réponse tactile sur iOS
+              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+              if (isIOS) {
+                // Empêcher tout délai tactile sur iOS
+                e.preventDefault();
+                if (!isTransitioning) {
+                  handleEditToggle();
+                }
+              }
+            }}
             data-intro="edit-question"
             sx={{
               minWidth: '48px',
               minHeight: '48px',
               padding: '12px',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
             }}
             TouchRippleProps={{
               classes: {
                 child: 'touch-ripple-child',
               },
+              center: true, // Centre l'effet ripple pour une meilleure réactivité visuelle
             }}
           >
             <EditIcon />
@@ -470,6 +514,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
             <Box
               onClick={handleTypeClick}
+              onTouchStart={(e) => {
+                // Optimiser la réponse tactile sur iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+                if (isIOS) {
+                  // Empêcher tout délai tactile sur iOS
+                  e.preventDefault();
+                  handleTypeClick(e as any);
+                }
+              }}
               data-intro="question-type-selector"
               sx={{
                 p: 2,
@@ -486,6 +539,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 minHeight: '48px',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
               }}
             >
               <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
@@ -601,11 +657,18 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     fontSize: { xs: '0.7rem', sm: '0.875rem' },
                     minHeight: '48px',
                     padding: '12px 16px',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
                   }}
                   TouchRippleProps={{
                     classes: {
                       child: 'touch-ripple-child',
                     },
+                    center: true,
                   }}
                 >
                   {isUploading ? 'Uploading...' : 'Add Media'}
@@ -751,29 +814,32 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           isolation: isolate;
         }
         
-        /* Optimisations tactiles pour les cartes de questions */
-        .question-node-paper {
-          touch-action: manipulation !important;
-          -webkit-tap-highlight-color: transparent !important;
-        }
-        
-        /* Optimisations spécifiques iOS */
+        /* Optimisation tactile pour appareils iOS */
         @supports (-webkit-touch-callout: none) {
-          .question-node-paper {
-            cursor: pointer !important;
-            -webkit-touch-callout: none !important;
-          }
-          
-          /* Améliorer la réactivité des boutons */
-          .question-node-paper button {
-            touch-action: manipulation !important;
+          .MuiIconButton-root, 
+          .MuiButton-root {
             -webkit-tap-highlight-color: transparent !important;
             -webkit-touch-callout: none !important;
+            touch-action: manipulation !important;
           }
           
-          /* Supprimer le délai de 300ms sur iOS */
-          .question-node-paper * {
-            touch-action: manipulation !important;
+          .MuiIconButton-root:active,
+          .MuiButton-root:active {
+            opacity: 0.9;
+            transform: scale(0.97);
+            transition: transform 0.05s linear !important;
+          }
+        }
+        
+        /* Amélioration des zones tactiles sur mobile */
+        @media (max-width: 768px) {
+          .MuiIconButton-root {
+            min-width: 44px !important;
+            min-height: 44px !important;
+          }
+          
+          .MuiButton-root {
+            min-height: 44px !important;
           }
         }
       `}</style>
