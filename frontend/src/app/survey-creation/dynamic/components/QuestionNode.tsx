@@ -527,8 +527,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Ouvre directement la boîte de dialogue de sélection de média
-      triggerMediaDialog();
+      
+      // Ouvrir directement le dialogue de sélection de fichier
+      const fileInput = document.getElementById(`media-upload-${id}`);
+      if (fileInput) {
+        // Sur iOS, créer un délai très court avant d'appeler click()
+        setTimeout(() => {
+          (fileInput as HTMLInputElement).click();
+        }, 10);
+      }
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -538,7 +545,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [triggerMediaDialog]); // Dépendance à triggerMediaDialog pour recréer le gestionnaire si nécessaire
+  }, [id]); // Ajouter id comme dépendance puisqu'il est utilisé dans le gestionnaire
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -800,7 +807,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   ref={addMediaButtonRef}
-                  onClick={triggerMediaDialog}
+                  onClick={(e) => {
+                    // iOS simule des clics après les événements tactiles, donc nous devons éviter ce comportement
+                    if (e.nativeEvent.type === 'click' && window.TouchEvent && e.nativeEvent instanceof MouseEvent) {
+                      // Vérifie si c'est un clic simulé après un événement tactile
+                      if ((e.nativeEvent as any).isTrusted === false || (e.nativeEvent as any)._reactName === 'onClick') {
+                        return; // Ignore les clics simulés sur les appareils tactiles
+                      }
+                    }
+                    triggerMediaDialog();
+                  }}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
