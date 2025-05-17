@@ -80,6 +80,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   
   // Use a ref to track previous editing state
   const prevEditingRef = useRef(false);
+  // Référence pour le bouton d'édition
+  const editButtonRef = useRef<HTMLButtonElement>(null);
 
   // Vérifier si on est en mode fullscreen
   useEffect(() => {
@@ -406,6 +408,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
+  // Fonction simple pour activer/désactiver le mode édition immédiatement
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing);
+  };
+
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
@@ -432,24 +439,29 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
             Question {data.questionNumber} 
           </Typography>
-          <div 
-            onClick={() => setIsEditing(!isEditing)}
+          <button
+            type="button"
+            ref={editButtonRef}
+            onClick={toggleEditMode}
             style={{
               width: '48px',
               height: '48px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              border: 'none',
+              background: 'white',
               borderRadius: '50%',
-              backgroundColor: 'white',
+              cursor: 'pointer',
+              padding: 0,
+              WebkitAppearance: 'none',
               WebkitTapHighlightColor: 'transparent',
               touchAction: 'manipulation',
             }}
             data-intro="edit-question"
           >
             <EditIcon />
-          </div>
+          </button>
         </Box>
 
         {isEditing ? (
@@ -794,6 +806,18 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             opacity: 0.9;
             transform: scale(0.97);
             transition: transform 0.05s linear !important;
+          }
+          
+          /* Style spécifique pour le bouton d'édition */
+          button[data-intro="edit-question"] {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            touch-action: manipulation !important;
+          }
+          
+          button[data-intro="edit-question"]:active {
+            opacity: 0.8;
+            transform: scale(0.95);
           }
         }
         
