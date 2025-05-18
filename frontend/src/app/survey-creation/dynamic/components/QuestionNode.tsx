@@ -809,8 +809,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             <Box
               ref={(el) => {
                 if (el) {
-                  // Attacher un listener natif directement sur l'élément
-                  const attachedListener = (el as any)._touchListenerAttached;
+                  // Attacher un listener natif directement sur l'élément HTML
+                  const htmlEl = el as unknown as HTMLDivElement;
+                  const attachedListener = (htmlEl as any)._touchListenerAttached;
                   if (!attachedListener) {
                     const handleDirectTouch = (event: TouchEvent) => {
                       event.preventDefault();
@@ -818,20 +819,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       // Détecter iOS spécifiquement
                       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                       // Ajouter un retour visuel immédiat
-                      el.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+                      htmlEl.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
                       // Forcer l'ouverture du popover immédiatement
                       setTimeout(() => {
-                        setAnchorEl(el);
+                        setAnchorEl(htmlEl);
                         // Restaurer l'apparence
                         setTimeout(() => {
-                          el.style.backgroundColor = '';
+                          htmlEl.style.backgroundColor = '';
                         }, 300);
                       }, isIOS ? 10 : 0);
                     };
                     // Ajouter l'écouteur d'événement
-                    el.addEventListener('touchstart', handleDirectTouch, { passive: false });
+                    htmlEl.addEventListener('touchstart', handleDirectTouch, { passive: false });
                     // Marquer comme attaché
-                    (el as any)._touchListenerAttached = true;
+                    (htmlEl as any)._touchListenerAttached = true;
                   }
                 }
               }}
@@ -938,31 +939,62 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               label="Question"
               value={questionData.text}
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
-              ref={(el) => {
-                if (el) {
-                  // Attacher un listener natif uniquement sur iOS
-                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                  if (isIOS) {
-                    const attachedListener = (el as any)._touchListenerAttached;
-                    if (!attachedListener) {
-                      const handleDirectTouch = (event: TouchEvent) => {
-                        // Ne pas empêcher l'événement par défaut car nous voulons le focus natif
-                        // Trouver l'élément input
-                        const input = el.querySelector('input');
-                        if (input) {
-                          // Forcer le focus après un petit délai
-                          setTimeout(() => {
-                            (input as HTMLInputElement).focus();
-                          }, 50);
-                        }
-                      };
-                      // Ajouter l'écouteur d'événement
-                      el.addEventListener('touchstart', handleDirectTouch, { passive: true });
-                      // Marquer comme attaché
-                      (el as any)._touchListenerAttached = true;
+              inputRef={(inputEl) => {
+                // Capturer la référence de l'élément input directement
+                if (inputEl) {
+                  // Stocker la référence pour pouvoir l'utiliser dans les gestionnaires d'événements
+                  (window as any).questionInputRef = inputEl;
+                }
+              }}
+              InputProps={{
+                ref: (el) => {
+                  if (el) {
+                    // Obtenir le conteneur racine du TextField comme élément DOM
+                    const rootEl = el.querySelector('.MuiInputBase-root') as HTMLDivElement;
+                    if (rootEl) {
+                      const attachedListener = (rootEl as any)._touchListenerAttached;
+                      if (!attachedListener) {
+                        const handleDirectTouch = (event: TouchEvent) => {
+                          // Empêcher la propagation mais pas le comportement par défaut
+                          event.stopPropagation();
+                          
+                          // Ajouter un retour visuel
+                          rootEl.style.borderColor = 'rgba(25, 118, 210, 0.6)';
+                          
+                          // Obtenir l'élément input et forcer le focus
+                          const inputEl = (window as any).questionInputRef;
+                          if (inputEl) {
+                            // Forcer le focus et l'activation du clavier virtuel
+                            setTimeout(() => {
+                              inputEl.focus();
+                              inputEl.click();
+                              
+                              // Restaurer l'apparence
+                              setTimeout(() => {
+                                rootEl.style.borderColor = '';
+                              }, 300);
+                            }, 10);
+                          }
+                        };
+                        
+                        // Ajouter l'écouteur d'événement
+                        rootEl.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                        // Marquer comme attaché
+                        (rootEl as any)._touchListenerAttached = true;
+                      }
                     }
                   }
+                },
+                sx: { 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  minHeight: '48px', 
+                  padding: '0 14px', 
+                  cursor: 'text', 
+                  touchAction: 'manipulation'
                 }
+              }}
+              InputLabelProps={{
+                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
               }}
               sx={{ 
                 mb: 2,
@@ -979,18 +1011,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
                   }
                 }
-              }}
-              InputProps={{
-                sx: { 
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                  minHeight: '48px', 
-                  padding: '0 14px', 
-                  cursor: 'text', 
-                  touchAction: 'manipulation'
-                }
-              }}
-              InputLabelProps={{
-                sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
               }}
             />
 
