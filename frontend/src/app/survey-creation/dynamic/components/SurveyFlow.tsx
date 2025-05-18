@@ -1844,6 +1844,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                   }
                 }
               }}
+              data-intro="fullscreen-button"
+              id="fullscreen-button"
+              className="fullscreen-button"
               sx={{
                 backgroundColor: 'white',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',

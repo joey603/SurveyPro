@@ -1077,6 +1077,11 @@ export default function DynamicSurveyCreation() {
         position: 'right'
       },
       {
+        element: '#fullscreen-button-placeholder',
+        intro: "The Fullscreen button allows you to expand the survey editor to take up the entire screen, giving you more space to work. Click it again to exit fullscreen mode.",
+        position: 'left'
+      },
+      {
         element: '[data-intro="reset"]',
         intro: "The Reset button allows you to start over by removing all questions. Warning: this action cannot be undone!",
         position: 'top'
@@ -1323,9 +1328,8 @@ export default function DynamicSurveyCreation() {
           console.log("Bouton Reorganize Flow trouvé:", reorganizeButton);
           
           if (reorganizeButton) {
-            // Positionner le placeholder au-dessus du bouton Reorganize Flow
+            // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
             const rect = reorganizeButton.getBoundingClientRect();
-            console.log("Rectangle du bouton:", rect);
             reorganizePlaceholder.style.position = 'absolute';
             reorganizePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
             reorganizePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
@@ -1339,14 +1343,59 @@ export default function DynamicSurveyCreation() {
             // Mettre en évidence visuellement le bouton
             (reorganizeButton as HTMLElement).style.transition = 'all 0.3s';
             (reorganizeButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
-            (reorganizeButton as HTMLElement).style.zIndex = '10001';
             
             // Réinitialiser après quelques secondes
             setTimeout(() => {
               (reorganizeButton as HTMLElement).style.boxShadow = '';
-            }, 3000);
-          } else {
-            console.error("Bouton Reorganize Flow non trouvé malgré les multiples tentatives!");
+            }, 2000);
+          }
+        }
+        
+        // Pour l'étape du bouton Fullscreen
+        if (currentStepData.element === '#fullscreen-button-placeholder') {
+          // Trouver le bouton directement par son attribut data-intro
+          console.log("Recherche du bouton Fullscreen...");
+          const allButtons = document.querySelectorAll('[data-intro]');
+          console.log("Tous les éléments avec data-intro:", Array.from(allButtons).map(el => ({ attr: el.getAttribute('data-intro'), id: el.id })));
+          
+          // Essayer plusieurs méthodes de sélection
+          let fullscreenButton = document.querySelector('[data-intro="fullscreen-button"]');
+          
+          // Si la première méthode échoue, essayer avec la classe
+          if (!fullscreenButton) {
+            console.log("Première méthode échouée, essai avec la classe...");
+            fullscreenButton = document.querySelector('.fullscreen-button');
+          }
+          
+          // Si les deux méthodes échouent, essayer avec l'ID
+          if (!fullscreenButton) {
+            console.log("Deuxième méthode échouée, essai avec l'ID...");
+            fullscreenButton = document.getElementById('fullscreen-button');
+          }
+          
+          console.log("Bouton Fullscreen trouvé:", fullscreenButton);
+          
+          if (fullscreenButton) {
+            // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
+            const rect = fullscreenButton.getBoundingClientRect();
+            fullscreenPlaceholder.style.position = 'absolute';
+            fullscreenPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
+            fullscreenPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
+            fullscreenPlaceholder.style.width = rect.width + 'px';
+            fullscreenPlaceholder.style.height = rect.height + 'px';
+            fullscreenPlaceholder.style.zIndex = '9999';
+            
+            // Forcer intro.js à rafraîchir sa position
+            intro.refresh();
+            
+            // Mettre en évidence visuellement le bouton
+            (fullscreenButton as HTMLElement).style.transition = 'all 0.3s';
+            (fullscreenButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+            
+            // Réinitialiser après quelques secondes
+            setTimeout(() => {
+              (fullscreenButton as HTMLElement).style.boxShadow = '';
+            }, 2000);
           }
         }
       }
@@ -1361,16 +1410,6 @@ export default function DynamicSurveyCreation() {
     criticalPlaceholder.style.opacity = '0';
     document.body.appendChild(criticalPlaceholder);
     
-    // Créer un placeholder pour le bouton Reorganize Flow
-    const reorganizePlaceholder = document.createElement('div');
-    reorganizePlaceholder.id = 'reorganize-flow-placeholder';
-    reorganizePlaceholder.style.position = 'absolute';
-    reorganizePlaceholder.style.width = '1px';
-    reorganizePlaceholder.style.height = '1px';
-    reorganizePlaceholder.style.opacity = '0';
-    document.body.appendChild(reorganizePlaceholder);
-    
-    // Créer un placeholder pour le sélecteur de type de question
     const questionTypePlaceholder = document.createElement('div');
     questionTypePlaceholder.id = 'question-type-selector-placeholder';
     questionTypePlaceholder.style.position = 'absolute';
@@ -1379,7 +1418,6 @@ export default function DynamicSurveyCreation() {
     questionTypePlaceholder.style.opacity = '0';
     document.body.appendChild(questionTypePlaceholder);
     
-    // Créer un placeholder pour le bouton d'ajout de média
     const addMediaPlaceholder = document.createElement('div');
     addMediaPlaceholder.id = 'add-media-placeholder';
     addMediaPlaceholder.style.position = 'absolute';
@@ -1387,6 +1425,22 @@ export default function DynamicSurveyCreation() {
     addMediaPlaceholder.style.height = '1px';
     addMediaPlaceholder.style.opacity = '0';
     document.body.appendChild(addMediaPlaceholder);
+    
+    const reorganizePlaceholder = document.createElement('div');
+    reorganizePlaceholder.id = 'reorganize-flow-placeholder';
+    reorganizePlaceholder.style.position = 'absolute';
+    reorganizePlaceholder.style.width = '1px';
+    reorganizePlaceholder.style.height = '1px';
+    reorganizePlaceholder.style.opacity = '0';
+    document.body.appendChild(reorganizePlaceholder);
+    
+    const fullscreenPlaceholder = document.createElement('div');
+    fullscreenPlaceholder.id = 'fullscreen-button-placeholder';
+    fullscreenPlaceholder.style.position = 'absolute';
+    fullscreenPlaceholder.style.width = '1px';
+    fullscreenPlaceholder.style.height = '1px';
+    fullscreenPlaceholder.style.opacity = '0';
+    document.body.appendChild(fullscreenPlaceholder);
     
     // Nettoyer à la sortie
     intro.onexit(function() {
@@ -1405,6 +1459,9 @@ export default function DynamicSurveyCreation() {
       }
       if (document.body.contains(addMediaPlaceholder)) {
         document.body.removeChild(addMediaPlaceholder);
+      }
+      if (document.body.contains(fullscreenPlaceholder)) {
+        document.body.removeChild(fullscreenPlaceholder);
       }
     });
     
