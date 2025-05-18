@@ -1081,45 +1081,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               )}
 
               {data.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' }, position: 'relative' }}>
-                  {/* Bouton de suppression positionné en haut à droite du média */}
-                  <button 
-                    type="button"
-                    ref={deleteMediaButtonRef}
-                    onClick={() => {
-                      // Sélectionner la carte
-                      selectCard();
-                      handleMediaDelete();
-                    }}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #f44336',
-                      borderRadius: '50%',
-                      background: 'white',
-                      color: '#f44336',
-                      cursor: 'pointer',
-                      padding: 0,
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'none',
-                      outline: 'none',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '-10px',
-                      zIndex: 10,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    }}
-                  >
-                    <DeleteIcon style={{ fontSize: '16px' }} />
-                  </button>
-                  
+                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' }, position: 'relative', display: 'flex', alignItems: 'center', gap: 1 }}>
                   {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                     <img 
                       src={data.mediaUrl} 
@@ -1133,6 +1095,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       style={{ width: '100%', borderRadius: '4px' }}
                     />
                   )}
+                  
+                  {/* Bouton de suppression à droite du média (comme pour les options) */}
+                  <IconButton
+                    size="small"
+                    ref={deleteMediaButtonRef}
+                    onClick={() => {
+                      // Sélectionner la carte
+                      selectCard();
+                      handleMediaDelete();
+                    }}
+                    sx={{ 
+                      color: '#ff4444',
+                      width: '36px',
+                      height: '36px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </Box>
               )}
             </Box>
