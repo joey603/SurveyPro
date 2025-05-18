@@ -89,6 +89,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const addMediaButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton de suppression de média
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
+  // Référence pour le bouton d'ajout d'option
+  const addOptionButtonRef = useRef<HTMLButtonElement>(null);
 
   // Détection iOS une seule fois au chargement du composant
   const isIOS = typeof navigator !== 'undefined' ? /iPad|iPhone|iPod/.test(navigator.userAgent) : false;
@@ -349,36 +351,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               </Box>
             ))}
             <button
-              ref={(el) => {
-                if (el) {
-                  // Attacher un listener natif directement sur l'élément HTML
-                  const buttonEl = el as HTMLButtonElement;
-                  const attachedListener = (buttonEl as any)._touchListenerAttached;
-                  if (!attachedListener) {
-                    const handleDirectTouch = (event: TouchEvent) => {
-                      // Prévient le comportement par défaut qui peut causer un délai
-                      event.preventDefault();
-                      // Force l'arrêt de la propagation de l'événement
-                      event.stopPropagation();
-                      // Sélectionner la carte
-                      selectCard();
-                      // Ajouter un retour visuel immédiat
-                      buttonEl.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
-                      // Ajouter une nouvelle option immédiatement
-                      const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
-                      handleOptionsChange(newOptions);
-                      // Restaurer l'apparence
-                      setTimeout(() => {
-                        buttonEl.style.backgroundColor = '';
-                      }, 300);
-                    };
-                    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-                    buttonEl.addEventListener('touchstart', handleDirectTouch, { passive: false });
-                    // Marquer comme attaché
-                    (buttonEl as any)._touchListenerAttached = true;
-                  }
-                }
-              }}
+              ref={addOptionButtonRef}
               onClick={() => {
                 // S'exécute uniquement pour les vrais clics (non simulés)
                 if (!(window as any).touchDetected) {
@@ -564,6 +537,38 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       checkbox.removeEventListener('touchstart', handleTouchStart);
     };
   }, [toggleCritical, selectCard]);
+
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout d'option
+  useEffect(() => {
+    const button = addOptionButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Sélectionner la carte
+      selectCard();
+      // Ajouter un retour visuel immédiat
+      button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+      // Ajouter une nouvelle option
+      const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
+      handleOptionsChange(newOptions);
+      // Restaurer l'apparence
+      setTimeout(() => {
+        button.style.backgroundColor = '';
+      }, 300);
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [questionData.options, handleOptionsChange, selectCard]);
 
   // Fonction pour les navigateurs non tactiles
   const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
