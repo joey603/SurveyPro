@@ -1823,7 +1823,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 position: 'absolute',
                 top: '20px',
                 right: '20px',
-              zIndex: 10000,
+              zIndex: 5,
             }}
             className="custom-tooltip-container"
           >
@@ -1860,7 +1860,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
                 WebkitTapHighlightColor: 'rgba(0,0,0,0.1)',
                 // Assurer que l'apparence reste la même pour le mode faux plein écran
                 ...(fakeFullscreen && {
-                  zIndex: 10001,
+                  zIndex: 6,
                   transform: 'scale(1.1)',
                   boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
                   transition: 'transform 0.2s ease'
