@@ -1141,30 +1141,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               {questionData.text || 'No question text'}
             </Typography>
-            {questionData.mediaUrl && (
-              <Box sx={{ mt: 1, maxWidth: '100%', maxHeight: '150px', overflow: 'hidden' }}>
-                {questionData.media === 'image' ? (
-                  <img
-                    src={questionData.mediaUrl}
-                    alt="Question media"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '150px',
-                      objectFit: 'contain',
-                      borderRadius: '4px'
-                    }}
-                  />
-                ) : (
-                  <ReactPlayer
-                    url={questionData.mediaUrl}
-                    controls
-                    width="100%"
-                    height="auto"
-                    style={{ borderRadius: '4px' }}
-                  />
-                )}
-              </Box>
-            )}
+            {/* Médias cachés en mode édition fermé pour une interface plus épurée */}
           </Box>
         )}
 
