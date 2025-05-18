@@ -469,7 +469,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       nodeElement.dispatchEvent(event);
     }
   }, [id]);
-
+  
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'édition
   useEffect(() => {
     const button = editButtonRef.current;
@@ -577,10 +577,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         document.documentElement.classList.add('ios-device');
       }
     };
-    
+
     // Écouter le premier événement tactile
     document.addEventListener('touchstart', markTouchDevice, { once: true });
-    
+
     return () => {
       document.removeEventListener('touchstart', markTouchDevice);
     };
@@ -999,6 +999,57 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     input.click();
                   }}
                   disabled={isUploading}
+                  data-intro="add-media"
+                  ref={(el) => {
+                    if (el) {
+                      // Attacher un listener natif uniquement pour les appareils iOS
+                      if (isIOS) {
+                        const htmlEl = el as unknown as HTMLButtonElement;
+                        const attachedListener = (htmlEl as any)._touchListenerAttached;
+                        if (!attachedListener) {
+                          const handleIOSTouch = (event: TouchEvent) => {
+                            // Uniquement pour iOS - prévenir le comportement par défaut qui peut causer un délai
+                            event.preventDefault();
+                            event.stopPropagation();
+                            // Sélectionner la carte
+                            selectCard();
+                            // Ajouter un retour visuel immédiat
+                            htmlEl.classList.add('ios-touch-active');
+                            // Créer et utiliser un input file
+                            setTimeout(() => {
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = 'image/*,video/*';
+                              
+                              input.onchange = (e: Event) => {
+                                const target = e.target as HTMLInputElement;
+                                if (target.files && target.files.length > 0) {
+                                  // Créer un faux événement React
+                                  const fakeEvent = {
+                                    target: target,
+                                    currentTarget: target,
+                                    preventDefault: () => {},
+                                    stopPropagation: () => {}
+                                  } as unknown as React.ChangeEvent<HTMLInputElement>;
+                                  
+                                  handleMediaUpload(fakeEvent);
+                                }
+                                // Restaurer l'apparence
+                                htmlEl.classList.remove('ios-touch-active');
+                              };
+                              
+                              input.click();
+                            }, 50);
+                          };
+                          
+                          // Ajouter l'écouteur d'événement pour iOS
+                          htmlEl.addEventListener('touchstart', handleIOSTouch, { passive: false });
+                          // Marquer comme attaché
+                          (htmlEl as any)._touchListenerAttached = true;
+                        }
+                      }
+                    }
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1016,7 +1067,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'manipulation',
+                    touchAction: isIOS ? 'manipulation' : 'auto', // Activer la manipulation tactile uniquement pour iOS
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -1024,7 +1075,29 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     opacity: isUploading ? 0.7 : 1,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     position: 'relative',
+                    transition: 'transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease', // Ajouter une transition fluide
                   }}
+                  onMouseDown={!isIOS ? (e) => {
+                    // Feedback visuel instantané pour les appareils non-iOS
+                    const button = e.currentTarget;
+                    button.style.transform = 'scale(0.97)';
+                    button.style.backgroundColor = '#f0f7ff';
+                    button.style.opacity = '0.9';
+                  } : undefined}
+                  onMouseUp={!isIOS ? (e) => {
+                    // Restaurer l'apparence normale après le clic pour les appareils non-iOS
+                    const button = e.currentTarget;
+                    button.style.transform = '';
+                    button.style.backgroundColor = '';
+                    button.style.opacity = '';
+                  } : undefined}
+                  onMouseLeave={!isIOS ? (e) => {
+                    // Restaurer l'apparence si la souris quitte le bouton
+                    const button = e.currentTarget;
+                    button.style.transform = '';
+                    button.style.backgroundColor = '';
+                    button.style.opacity = '';
+                  } : undefined}
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
@@ -1288,6 +1361,28 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         
         [data-intro="question-type-selector"]:active {
           background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Optimisations pour le bouton Add Media */
+        button[data-intro="add-media"] {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          position: relative !important;
+          cursor: pointer !important;
+          overflow: visible !important;
+        }
+
+        /* Style pour les appareils non-iOS */
+        button[data-intro="add-media"]:not(.ios-touch-active):hover {
+          background-color: #f0f7ff !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+        }
+        
+        /* Styles spécifiques pour améliorer l'interaction avec intro.js */
+        .introjs-helperLayer button[data-intro="add-media"] {
+          z-index: 10000 !important;
+          position: relative !important;
         }
         
         /* Optimisations pour les popover */
