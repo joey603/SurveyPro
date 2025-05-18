@@ -1064,8 +1064,8 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         // 1. Nœuds en déplacement (z-index: 2000) - priorité absolue
         // 2. Nœuds sélectionnés (z-index: 1000) - priorité élevée
         // 3. Nœuds en mode édition (z-index: 500) - priorité intermédiaire
-        // 4. Nœuds normaux (z-index: non défini) - priorité par défaut
-        zIndex: isMoving ? 2000 : (node.id === selectedNode ? 1000 : (isNodeInEditMode ? 500 : undefined)),
+        // 4. Nœuds normaux (z-index: non défini ou 1) - priorité par défaut
+        zIndex: isMoving ? 2000 : (node.id === selectedNode ? 1000 : (isNodeInEditMode ? 500 : 1)),
         // Ajouter une ombre plus prononcée pour les nœuds en mode édition ou en déplacement
         boxShadow: isMoving 
           ? '0 12px 30px rgba(0, 0, 0, 0.35)' 
