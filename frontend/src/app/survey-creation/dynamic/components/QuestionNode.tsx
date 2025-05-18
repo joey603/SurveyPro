@@ -90,6 +90,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Référence pour le bouton de suppression de média
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Détection iOS une seule fois au chargement du composant
+  const isIOS = typeof navigator !== 'undefined' ? /iPad|iPhone|iPod/.test(navigator.userAgent) : false;
+
   // Vérifier si on est en mode fullscreen
   useEffect(() => {
     const checkFullscreen = () => {
@@ -548,15 +551,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       document.documentElement.classList.add('touch-device');
       
       // Détecter si c'est un appareil iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (isIOS) {
         document.documentElement.classList.add('ios-device');
-        // Afficher l'infobulle sur iOS
-        setShowIOSTooltip(true);
-        // Masquer l'infobulle après 5 secondes
-        setTimeout(() => {
-          setShowIOSTooltip(false);
-        }, 5000);
       }
     };
     
@@ -566,7 +562,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       document.removeEventListener('touchstart', markTouchDevice);
     };
-  }, []);
+  }, [isIOS]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -579,10 +575,34 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           borderRadius: 2,
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          position: 'relative', // Assurez-vous que la position est relative
         }}
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
         
+        {/* Infobulle fixe pour iOS */}
+        {isIOS && isEditing && (
+          <div
+            style={{
+              position: 'absolute',
+              right: '20px',
+              bottom: '20px',
+              backgroundColor: '#667eea',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              zIndex: 10,
+              pointerEvents: 'none',
+              opacity: 0.95,
+            }}
+          >
+            Need Double Click For Media Selection
+          </div>
+        )}
+
         <Box sx={{ 
           mb: 2, 
           display: 'flex', 
@@ -959,47 +979,54 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       // Éviter d'attacher plusieurs fois le même écouteur
                       const attachedListener = (buttonEl as any)._touchListenerAttached;
                       if (!attachedListener) {
+                        // Variable pour détecter le double-clic
+                        let lastClickTime = 0;
+                        
                         // Fonction simple qui force directement l'ouverture du sélecteur
                         const forceOpenFileSelector = (event: Event) => {
                           // Empêcher la propagation mais pas le comportement par défaut
                           event.preventDefault();
                           event.stopPropagation();
                           
-                          // Retour visuel immédiat
-                          buttonEl.style.opacity = '0.7';
-                          
-                          // SOLUTION DIRECTE POUR iOS:
-                          // Utiliser une méthode agressive pour forcer un clic réel
-                          // sur l'élément input file natif
-                          try {
-                            // Créer un vrai événement de clic natif
-                            const clickEvent = new MouseEvent('click', {
-                              view: window,
-                              bubbles: true,
-                              cancelable: true,
-                              clientX: 20, // Coordonnées non-nulles pour éviter la détection de clics simulés
-                              clientY: 20
-                            });
+                          if (isIOS) {
+                            // Gérer le double-clic sur iOS
+                            const currentTime = new Date().getTime();
+                            const clickTimeDiff = currentTime - lastClickTime;
                             
-                            // Cliquer directement sur l'input file original
-                            fileInput.dispatchEvent(clickEvent);
-                            
-                            // Pour iOS, parfois le premier événement est bloqué
-                            // Tentative immédiate avec un léger délai
-                            setTimeout(() => {
+                            // Si c'est un double-clic (moins de 300ms entre les clics)
+                            if (clickTimeDiff < 300 && lastClickTime > 0) {
+                              // Retour visuel immédiat pour le double-clic
+                              buttonEl.style.opacity = '0.7';
+                              buttonEl.style.backgroundColor = '#f0f7ff';
+                              
+                              // Ouvrir le sélecteur de fichiers
                               fileInput.click();
                               
-                              // Restaurer l'apparence du bouton après un délai
+                              // Réinitialiser le temps du dernier clic
+                              lastClickTime = 0;
+                              
+                              // Restaurer l'apparence après un délai
                               setTimeout(() => {
                                 buttonEl.style.opacity = '';
+                                buttonEl.style.backgroundColor = '';
                               }, 300);
-                            }, 50);
-                          } catch (error) {
-                            console.error("Erreur lors de l'ouverture du sélecteur:", error);
-                            // Fallback au clic standard en cas d'erreur
+                            } else {
+                              // Premier clic, mémoriser le temps
+                              lastClickTime = currentTime;
+                              
+                              // Ajouter une classe visuelle pour indiquer le premier clic
+                              buttonEl.classList.add('first-click');
+                              
+                              // Retirer la classe après un délai
+                              setTimeout(() => {
+                                buttonEl.classList.remove('first-click');
+                              }, 300);
+                            }
+                          } else {
+                            // Pour les appareils non-iOS, un seul clic suffit
+                            buttonEl.style.opacity = '0.7';
                             fileInput.click();
                             
-                            // Restaurer l'apparence
                             setTimeout(() => {
                               buttonEl.style.opacity = '';
                             }, 300);
@@ -1054,42 +1081,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
                 </button>
-                
-                {/* Infobulle pour iOS indiquant le besoin de double-clic */}
-                {showIOSTooltip && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 'calc(100% + 8px)',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      backgroundColor: '#667eea',
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      zIndex: 10,
-                      pointerEvents: 'none',
-                      opacity: 0.95,
-                      transition: 'opacity 0.3s ease'
-                    }}
-                  >
-                    Need Double Click
-                    <div
-                      style={{
-                        position: 'absolute',
-                        width: '8px',
-                        height: '8px',
-                        backgroundColor: '#667eea',
-                        left: '-4px',
-                        top: '50%',
-                        transform: 'translateY(-50%) rotate(45deg)',
-                      }}
-                    />
-                  </div>
-                )}
                 
                 {data.mediaUrl && (
                   <button 
@@ -1393,6 +1384,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             min-height: 44px !important;
             min-width: 44px !important;
           }
+        }
+        
+        /* Style pour le premier clic */
+        .ios-optimized-button.first-click {
+          background-color: #f0f7ff !important;
+          transform: scale(0.98) !important;
+          transition: all 0.1s ease-out !important;
         }
       `}</style>
     </div>
