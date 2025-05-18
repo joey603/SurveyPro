@@ -1006,9 +1006,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     <div
                       style={{
                         position: 'absolute',
-                        top: '-40px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
+                        top: '50%',
+                        left: 'calc(100% + 10px)',
+                        transform: 'translateY(-50%)',
                         backgroundColor: '#667eea',
                         color: 'white',
                         padding: '6px 12px',
@@ -1027,9 +1027,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                           width: '10px',
                           height: '10px',
                           backgroundColor: '#667eea',
-                          bottom: '-5px',
-                          left: '50%',
-                          transform: 'translateX(-50%) rotate(45deg)',
+                          left: '-5px',
+                          top: '50%',
+                          transform: 'translateY(-50%) rotate(45deg)',
                         }}
                       />
                     </div>
