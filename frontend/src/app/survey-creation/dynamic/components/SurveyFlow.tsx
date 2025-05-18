@@ -275,7 +275,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, [fakeFullscreen]);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
+    // Vérifier si le nœud doit être sélectionné
+    if (newData._selectNode) {
+      setSelectedNode(nodeId);
+      setSelectedEdge(null);
+      
+      // Supprimer la propriété _selectNode pour ne pas la stocker dans les données du nœud
+      delete newData._selectNode;
+    }
+    
     setNodes(prevNodes => {
+      // Filtrer les propriétés non standard
       const filteredData = { ...newData };
       if ('_editingState' in filteredData) {
         delete filteredData._editingState;
@@ -286,7 +296,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           ? { ...node, data: { ...node.data, ...filteredData } }
           : node
       );
-
+      
       const editedNode = updatedNodes.find(n => n.id === nodeId);
       if (editedNode && '_editingState' in newData) {
         const isEditing = newData._editingState;
