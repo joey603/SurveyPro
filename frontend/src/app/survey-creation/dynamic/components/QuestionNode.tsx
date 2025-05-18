@@ -902,38 +902,68 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
             <Box sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  component="label"
-                  variant="outlined"
-                  disabled={isUploading}
-                  startIcon={isUploading ? (
-                    <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                  ) : (
-                    <AddPhotoAlternateIcon />
-                  )}
+                <Box 
+                  component="div"
                   sx={{
-                    color: '#1976d2',
-                    borderColor: '#1976d2',
-                    '&:hover': {
-                      borderColor: '#0f5bbb',
-                      backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                    },
+                    display: 'inline-block',
+                    position: 'relative',
                     minWidth: { xs: '100%', sm: '150px' },
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none',
                   }}
                 >
-                  {isUploading ? 'Uploading...' : 'Add Media'}
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*,video/*"
-                    onChange={handleMediaUpload}
-                  />
-                </Button>
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    disabled={isUploading}
+                    startIcon={isUploading ? (
+                      <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                    ) : (
+                      <AddPhotoAlternateIcon />
+                    )}
+                    sx={{
+                      color: '#1976d2',
+                      borderColor: '#1976d2',
+                      '&:hover': {
+                        borderColor: '#0f5bbb',
+                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                      },
+                      width: '100%',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                      minHeight: '44px',
+                    }}
+                    onTouchStart={(e) => {
+                      // Pour iOS: Empêcher le délai tactile de 300ms
+                      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    {isUploading ? 'Uploading...' : 'Add Media'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,video/*"
+                      onChange={handleMediaUpload}
+                      style={{ 
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        minWidth: '100%',
+                        minHeight: '100%',
+                        fontSize: '100px',
+                        textAlign: 'right',
+                        filter: 'alpha(opacity=0)',
+                        opacity: 0,
+                        outline: 'none',
+                        cursor: 'inherit',
+                        display: 'block',
+                      }}
+                    />
+                  </Button>
+                </Box>
                 
                 {data.mediaUrl && (
                   <button 
@@ -1039,11 +1069,54 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       </Paper>
 
       <style jsx global>{`
-        .question-node-popover {
-          z-index: 30000 !important;
-          position: fixed !important;
+        /* Styles spécifiques pour les appareils iOS */
+        @supports (-webkit-touch-callout: none) {
+          /* Optimisation mobile-first pour iOS */
+          input[type="file"] {
+            cursor: pointer !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            opacity: 0.00001 !important; /* Très légère opacité pour meilleure détection tactile */
+            font-size: 100px !important; /* Forcer une zone tactile plus large */
+            z-index: 2 !important;
+          }
+          
+          /* Améliorer la réactivité des boutons pour le tactile */
+          button, 
+          .MuiButton-root {
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+          }
+          
+          /* Supprimer tous les effets d'appui prolongé sur iOS */
+          * {
+            -webkit-touch-callout: none !important;
+          }
         }
-        .MuiPopover-root {
+        
+        /* Pour empêcher absolument les doubles clics sur la version Safari iOS */
+        .MuiButton-root[component="label"] {
+          position: relative !important;
+        }
+        
+        .MuiButton-root[component="label"] > input[type="file"] {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          cursor: pointer !important;
+          opacity: 0 !important;
+          z-index: 2 !important;
+        }
+        
+        .question-node-popover {
           z-index: 30000 !important;
           position: fixed !important;
         }
