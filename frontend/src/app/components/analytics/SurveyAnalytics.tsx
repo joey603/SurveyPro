@@ -464,49 +464,50 @@ const convertToDialogFormat = (details: QuestionDetailsSurveyFormat | null): Dia
   };
 };
 
-// Assurez-vous d'avoir accès aux couleurs de mise en évidence
-// Si elles ne sont pas déjà importées depuis PathTreeVisualizer, ajoutez-les:
-const HIGHLIGHT_COLORS = [
-  '#8A2BE2', // Violet
-  '#1E90FF', // Bleu dodger
-  '#FF6347', // Tomate
-  '#32CD32', // Vert lime
-  '#FF8C00', // Orange foncé
-  '#9932CC', // Orchidée foncée
-  '#20B2AA', // Turquoise
-  '#FF1493', // Rose profond
-  '#4682B4', // Bleu acier
-  '#00CED1', // Turquoise moyen
-  '#FF69B4', // Rose chaud
-  '#4169E1', // Bleu royal
-  '#2E8B57', // Vert mer
-  '#DAA520', // Or
-  '#4B0082', // Indigo
-  '#FF4500', // Orange rouge
-  '#008080', // Teal
-  '#800080', // Pourpre
-  '#FFD700', // Or
-  '#00FF00', // Vert lime
-  '#FF00FF', // Magenta
-  '#00FFFF', // Cyan
-  '#FFA500', // Orange
-  '#800000', // Marron
-  '#000080', // Bleu marine
-  '#008000', // Vert
-  '#808000', // Olive
-  '#800080', // Violet
-  '#008080', // Teal
-  '#0000FF', // Bleu
-  '#00FF00', // Vert lime
-  '#FFFF00', // Jaune
-  '#00FFFF', // Cyan
-  '#FF00FF', // Magenta
-  '#FF0000', // Rouge
-  '#000000', // Noir
-  '#808080', // Gris
-  '#C0C0C0', // Argent
-  '#FFFFFF', // Blanc
-];
+// Remplacer la constante HIGHLIGHT_COLORS par une constante PATH_COLORS plus claire
+const PATH_COLORS: { [key: string]: string } = {
+  'A': '#8A2BE2', // Violet
+  'B': '#1E90FF', // Bleu dodger
+  'C': '#FF6347', // Tomate
+  'D': '#32CD32', // Vert lime
+  'E': '#FF8C00', // Orange foncé
+  'F': '#9932CC', // Orchidée foncée
+  'G': '#20B2AA', // Turquoise
+  'H': '#FF1493', // Rose profond
+  'I': '#4682B4', // Bleu acier
+  'J': '#00CED1', // Turquoise moyen
+  'K': '#FF69B4', // Rose chaud
+  'L': '#4169E1', // Bleu royal
+  'M': '#2E8B57', // Vert mer
+  'N': '#DAA520', // Or
+  'O': '#4B0082', // Indigo
+  'P': '#FF4500', // Orange rouge
+  'Q': '#008080', // Teal
+  'R': '#800080', // Pourpre
+  'S': '#FFD700', // Or
+  'T': '#00FF00', // Vert lime
+  'U': '#FF00FF', // Magenta
+  'V': '#00FFFF', // Cyan
+  'W': '#FFA500', // Orange
+  'X': '#800000', // Marron
+  'Y': '#000080', // Bleu marine
+  'Z': '#008000', // Vert
+};
+
+// Fonction utilitaire pour obtenir la couleur à partir du nom du chemin
+const getPathColorByName = (pathName: string): string => {
+  if (pathName.startsWith('Path ') && pathName.length > 5) {
+    const letter = pathName.charAt(5);
+    return PATH_COLORS[letter] || '#667eea';
+  }
+  return '#667eea';
+};
+
+// Fonction utilitaire pour obtenir la couleur à partir de l'index
+const getPathColor = (pathIndex: number): string => {
+  const pathLetter = String.fromCharCode(65 + pathIndex);
+  return PATH_COLORS[pathLetter] || '#667eea';
+};
 
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
@@ -643,7 +644,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         pathNamesRef.current[pathKey] = pathName;
       }
       if (!pathColorsRef.current[pathKey]) {
-        pathColorsRef.current[pathKey] = HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length];
+        // Utiliser la fonction getPathColorByName pour assigner une couleur statique
+        pathColorsRef.current[pathKey] = getPathColorByName(pathNamesRef.current[pathKey]);
       }
     });
   }, [selectedPaths, allPaths]);
@@ -1754,7 +1756,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
                               const pathKey = path.map(segment => `${segment.questionId}-${segment.answer}`).join('|');
                               const pathName = pathNamesRef.current[pathKey] || `Path ${String.fromCharCode(65 + pathIndex)}`;
-                              const pathColor = pathColorsRef.current[pathKey] || HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+                              // Utiliser la fonction getPathColorByName pour obtenir la couleur statique
+                              const pathColor = getPathColorByName(pathName);
                               
                               const isInFilteredPaths = filteredResponsesByPath.length > 0 
                                 ? filteredResponsesByPath.some(response => 

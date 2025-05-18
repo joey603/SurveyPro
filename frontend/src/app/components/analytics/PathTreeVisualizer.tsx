@@ -91,6 +91,36 @@ const HIGHLIGHT_COLORS = [
   '#00CED1', // Turquoise moyen
 ];
 
+// Ajoutez ce mappage statique des noms de chemins à des couleurs en haut du fichier, juste après les imports
+const PATH_NAME_COLORS: { [key: string]: string } = {
+  'Path A': '#8A2BE2', // Violet
+  'Path B': '#1E90FF', // Bleu dodger
+  'Path C': '#FF6347', // Tomate
+  'Path D': '#32CD32', // Vert lime
+  'Path E': '#FF8C00', // Orange foncé
+  'Path F': '#9932CC', // Orchidée foncée
+  'Path G': '#20B2AA', // Turquoise
+  'Path H': '#FF1493', // Rose profond
+  'Path I': '#4682B4', // Bleu acier
+  'Path J': '#00CED1', // Turquoise moyen
+  'Path K': '#FF69B4', // Rose chaud
+  'Path L': '#4169E1', // Bleu royal
+  'Path M': '#2E8B57', // Vert mer
+  'Path N': '#DAA520', // Or
+  'Path O': '#4B0082', // Indigo
+  'Path P': '#FF4500', // Orange rouge
+  'Path Q': '#008080', // Teal
+  'Path R': '#800080', // Pourpre
+  'Path S': '#FFD700', // Or
+  'Path T': '#00FF00', // Vert lime
+  'Path U': '#FF00FF', // Magenta
+  'Path V': '#00FFFF', // Cyan
+  'Path W': '#FFA500', // Orange
+  'Path X': '#800000', // Marron
+  'Path Y': '#000080', // Bleu marine
+  'Path Z': '#008000', // Vert
+};
+
 // Ajout de l'interface nécessaire pour QuestionNode
 interface QuestionNodeProps {
   data: {
@@ -1747,6 +1777,12 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     onPathSelect(path);
   };
   
+  // Remplacer par la nouvelle fonction qui utilise les couleurs statiques
+  const getPathColor = (pathName: string): string => {
+    // Utiliser la couleur définie dans le mapping statique
+    return PATH_NAME_COLORS[pathName] || HIGHLIGHT_COLORS[Object.keys(PATH_NAME_COLORS).indexOf(pathName) % HIGHLIGHT_COLORS.length];
+  };
+  
   const createSinglePathTree = (survey: any, responses: any[], path: PathSegment[], pathIndex: number, pathColors?: {[key: string]: string}) => {
     if (!path || path.length === 0) return { nodes: [], edges: [] };
     
@@ -1773,7 +1809,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    const pathColor = pathColors?.[pathIndex] || HIGHLIGHT_COLORS[pathIndex % HIGHLIGHT_COLORS.length];
+    const pathName = `Path ${String.fromCharCode(65 + pathIndex)}`;
+    const pathColor = pathColors?.[pathIndex] || getPathColor(pathName);
     
     path.forEach((segment, index) => {
       const question = questionsMap.get(segment.questionId);
@@ -2342,7 +2379,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                       p: 1.5,
                       mb: 1.5,
                       border: '1px solid',
-                      borderColor: isSelected ? pathColor : 'rgba(102, 126, 234, 0.1)',
+                      borderColor: isSelected ? getPathColor(pathItem.name) : 'rgba(102, 126, 234, 0.1)',
                       borderRadius: '12px',
                       backgroundColor: backgroundColor,
                       cursor: filterApplied ? 'default' : 'pointer',
@@ -2351,14 +2388,14 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                         backgroundColor: filterApplied 
                           ? backgroundColor 
                           : isSelected 
-                            ? `${HIGHLIGHT_COLORS[pathColorIndex % HIGHLIGHT_COLORS.length]}20`
+                            ? `${getPathColor(pathItem.name)}20`
                             : 'rgba(102, 126, 234, 0.04)',
                         boxShadow: filterApplied ? 'none' : '0 4px 14px rgba(0, 0, 0, 0.06)',
                         transform: filterApplied ? 'scale(1)' : 'scale(1.02)'
                       },
                       transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       boxShadow: isSelected 
-                        ? `0 8px 20px -5px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}20` 
+                        ? `0 8px 20px -5px ${getPathColor(pathItem.name)}20` 
                         : '0 2px 8px rgba(0, 0, 0, 0.02)',
                       opacity: filterApplied ? 0.8 : 1
                     }}
@@ -2371,15 +2408,15 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                           height: 12, 
                           borderRadius: '50%', 
                           backgroundColor: isSelected 
-                            ? HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]
+                            ? getPathColor(pathItem.name)
                             : 'rgba(102, 126, 234, 0.4)',
                           boxShadow: isSelected 
-                            ? `0 0 8px ${HIGHLIGHT_COLORS[selectedPathIndex % HIGHLIGHT_COLORS.length]}60`
+                            ? `0 0 8px ${getPathColor(pathItem.name)}60`
                             : 'none',
                           border: '2px solid white'
                         }} 
                       />
-                      <Typography variant="body2" fontWeight="bold" color={isSelected ? pathColor : 'text.primary'}>
+                      <Typography variant="body2" fontWeight="bold" color={isSelected ? getPathColor(pathItem.name) : 'text.primary'}>
                         {pathItem.name} ({pathItem.path.length} steps)
                       </Typography>
                     </Box>
@@ -2397,7 +2434,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
                           <Typography variant="caption" sx={{ 
                             mr: 1,
                             fontWeight: 'bold', 
-                            color: isSelected ? pathColor : 'text.secondary'
+                            color: isSelected ? getPathColor(pathItem.name) : 'text.secondary'
                           }}>
                             {segIdx + 1}.
                           </Typography>

@@ -13,7 +13,7 @@ import {
 import { PathTreeVisualizer, PathSegment } from './PathTreeVisualizer';
 import { GroupsList as ImportedGroupsList, GroupsListProps, AnalysisGroup } from './GroupsList';
 
-// Définition des couleurs fixes pour chaque lettre de chemin
+// Remplacer la constante PATH_COLORS pour qu'elle utilise plus directement les lettres comme clés
 const PATH_COLORS: { [key: string]: string } = {
   'A': '#8A2BE2', // Violet
   'B': '#1E90FF', // Bleu dodger
@@ -25,6 +25,22 @@ const PATH_COLORS: { [key: string]: string } = {
   'H': '#FF1493', // Rose profond
   'I': '#4682B4', // Bleu acier
   'J': '#00CED1', // Turquoise moyen
+  'K': '#FF69B4', // Rose chaud
+  'L': '#4169E1', // Bleu royal
+  'M': '#2E8B57', // Vert mer
+  'N': '#DAA520', // Or
+  'O': '#4B0082', // Indigo
+  'P': '#FF4500', // Orange rouge
+  'Q': '#008080', // Teal
+  'R': '#800080', // Pourpre
+  'S': '#FFD700', // Or
+  'T': '#00FF00', // Vert lime
+  'U': '#FF00FF', // Magenta
+  'V': '#00FFFF', // Cyan
+  'W': '#FFA500', // Orange
+  'X': '#800000', // Marron
+  'Y': '#000080', // Bleu marine
+  'Z': '#008000', // Vert
 };
 
 interface SelectedPathsPanelProps {
