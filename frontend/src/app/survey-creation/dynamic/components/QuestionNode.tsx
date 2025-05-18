@@ -1080,6 +1080,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 accept="image/*,video/*"
                 style={{ display: 'none' }}
                 onChange={handleMediaUpload}
+                className="ios-file-input"
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -1089,81 +1090,86 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   className="ios-optimized-button"
                   ref={(buttonEl) => {
                     if (buttonEl) {
-                      // Éviter d'attacher plusieurs fois le même écouteur
+                      // Assurer qu'on n'attache l'écouteur qu'une seule fois
                       const attachedListener = (buttonEl as any)._touchListenerAttached;
                       if (!attachedListener) {
-                        // Fonction qui force l'ouverture du sélecteur de fichiers
-                        const openFileSelector = (event: Event) => {
-                          // Empêcher la propagation mais pas le comportement par défaut
+                        // Référence directe à l'élément input d'origine
+                        const originalInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+                        
+                        // Solution spéciale pour iOS
+                        const handleIOSMediaSelect = (event: Event) => {
+                          // Empêcher la propagation mais permettre le comportement par défaut
                           event.stopPropagation();
                           
                           // Retour visuel immédiat
-                          buttonEl.style.opacity = '0.7';
                           buttonEl.style.backgroundColor = '#f0f7ff';
+                          buttonEl.style.opacity = '0.8';
                           buttonEl.style.transform = 'scale(0.97)';
                           
-                          // Créer un nouvel élément input temporaire à chaque clic
-                          const tempInput = document.createElement('input');
-                          tempInput.type = 'file';
-                          tempInput.accept = 'image/*,video/*';
-                          tempInput.style.position = 'absolute';
-                          tempInput.style.top = '-1000px';
-                          tempInput.style.opacity = '0';
-                          tempInput.multiple = false; // Assurer qu'un seul fichier est sélectionné
-                          
-                          // Gestionnaire d'événement pour le changement de fichier
-                          tempInput.onchange = (changeEvent) => {
-                            // Transférer le fichier sélectionné à notre gestionnaire
-                            const input = changeEvent.target as HTMLInputElement;
-                            if (input.files && input.files.length > 0) {
-                              // Créer un événement React synthétique
-                              const syntheticEvent = {
-                                target: input,
-                                currentTarget: input,
-                                preventDefault: () => {},
-                                stopPropagation: () => {}
-                              } as unknown as React.ChangeEvent<HTMLInputElement>;
-                              
-                              // Appeler notre gestionnaire
-                              handleMediaUpload(syntheticEvent);
-                              
-                              // Nettoyer après utilisation
-                              document.body.removeChild(tempInput);
-                            }
+                          // SOLUTION SUPER DIRECTE POUR iOS
+                          if (originalInput) {
+                            // Créer un événement natif de clic
+                            const clickEvent = document.createEvent('MouseEvents');
+                            clickEvent.initEvent('click', true, true);
                             
-                            // Restaurer l'apparence du bouton
+                            // Rendre l'input visible temporairement
+                            // C'est essentiel pour que ça fonctionne sur iOS
+                            const originalDisplay = originalInput.style.display;
+                            
+                            // Placer l'input juste au-dessus du bouton pour le clic iOS
+                            originalInput.style.position = 'absolute';
+                            originalInput.style.top = buttonEl.offsetTop + 'px';
+                            originalInput.style.left = buttonEl.offsetLeft + 'px';
+                            originalInput.style.width = buttonEl.offsetWidth + 'px';
+                            originalInput.style.height = buttonEl.offsetHeight + 'px';
+                            originalInput.style.opacity = '0.01'; // Presque invisible mais techniquement visible
+                            originalInput.style.display = 'block';
+                            originalInput.style.zIndex = '9999';
+                            
+                            // Envoyer le clic directement
                             setTimeout(() => {
-                              buttonEl.style.opacity = '';
-                              buttonEl.style.backgroundColor = '';
-                              buttonEl.style.transform = '';
-                            }, 300);
-                          };
-                          
-                          // Ajouter l'élément au DOM
-                          document.body.appendChild(tempInput);
-                          
-                          // Forcer le clic après un court délai
-                          setTimeout(() => {
-                            // Utiliser click() pour ouvrir le sélecteur de fichiers
-                            tempInput.click();
-                          }, 50);
+                              // Forcer le focus pour garantir que l'événement est capturé
+                              originalInput.focus();
+                              // iOS exige un vrai clic sur un élément visible
+                              originalInput.click();
+                              
+                              // Sur certains appareils iOS, dispatchEvent fonctionne mieux
+                              setTimeout(() => {
+                                originalInput.dispatchEvent(clickEvent);
+                                
+                                // Restaurer l'état du bouton
+                                setTimeout(() => {
+                                  buttonEl.style.backgroundColor = '';
+                                  buttonEl.style.opacity = '';
+                                  buttonEl.style.transform = '';
+                                  
+                                  // Remettre l'input à sa place d'origine après un délai
+                                  setTimeout(() => {
+                                    originalInput.style.display = originalDisplay;
+                                    originalInput.style.position = '';
+                                    originalInput.style.top = '';
+                                    originalInput.style.left = '';
+                                    originalInput.style.width = '';
+                                    originalInput.style.height = '';
+                                    originalInput.style.opacity = '';
+                                    originalInput.style.zIndex = '';
+                                  }, 1000); // Délai pour s'assurer que l'utilisateur a eu le temps de sélectionner
+                                }, 300);
+                              }, 50);
+                            }, 10);
+                          }
                         };
                         
-                        // Attacher des écouteurs d'événements pour les appareils tactiles
-                        buttonEl.addEventListener('touchstart', openFileSelector, { passive: false });
+                        // Ajouter des écouteurs pour différents types d'événements
+                        buttonEl.addEventListener('touchstart', handleIOSMediaSelect, { passive: false });
+                        buttonEl.addEventListener('mousedown', handleIOSMediaSelect, { passive: false });
                         
                         // Marquer comme attaché
                         (buttonEl as any)._touchListenerAttached = true;
                       }
                     }
                   }}
-                  onClick={(e) => {
-                    // S'exécuter uniquement pour les vrais clics (non tactiles)
-                    if (!(window as any).touchDetected) {
-                      // Utiliser le comportement normal pour les non-tactiles
-                      triggerMediaDialog();
-                    }
-                  }}
+                  onClick={() => {}} // Gestionnaire vide pour éviter les avertissements React
                   disabled={isUploading}
                   style={{
                     display: 'flex',
@@ -1497,6 +1503,30 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             cursor: pointer !important;
             min-height: 44px !important;
             min-width: 44px !important;
+          }
+        }
+        
+        /* Optimisation spécifique pour les inputs de type file sur iOS */
+        @supports (-webkit-touch-callout: none) {
+          .ios-file-input {
+            font-size: 16px !important; /* Évite le zoom sur iOS */
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            z-index: -1;
+          }
+          
+          /* Pour s'assurer que le bouton répond bien au toucher */
+          .ios-optimized-button {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            touch-action: manipulation !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -webkit-appearance: none !important;
+            transform: translateZ(0); /* Force l'accélération matérielle */
           }
         }
       `}</style>
