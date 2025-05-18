@@ -1084,93 +1084,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  id={`add-media-button-${id}`}
-                  className="ios-optimized-button"
-                  ref={(buttonEl) => {
-                    if (buttonEl) {
-                      // Assurer qu'on n'attache l'écouteur qu'une seule fois
-                      const attachedListener = (buttonEl as any)._touchListenerAttached;
-                      if (!attachedListener) {
-                        // Référence directe à l'élément input d'origine
-                        const originalInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-                        
-                        // Solution spéciale pour iOS
-                        const handleIOSMediaSelect = (event: Event) => {
-                          // Empêcher la propagation mais permettre le comportement par défaut
-                          event.stopPropagation();
-                          
-                          // Retour visuel immédiat
-                          buttonEl.style.backgroundColor = '#f0f7ff';
-                          buttonEl.style.opacity = '0.8';
-                          buttonEl.style.transform = 'scale(0.97)';
-                          
-                          // SOLUTION SUPER DIRECTE POUR iOS
-                          if (originalInput) {
-                            // Créer un événement natif de clic
-                            const clickEvent = document.createEvent('MouseEvents');
-                            clickEvent.initEvent('click', true, true);
-                            
-                            // Rendre l'input visible temporairement
-                            // C'est essentiel pour que ça fonctionne sur iOS
-                            const originalDisplay = originalInput.style.display;
-                            
-                            // Placer l'input juste au-dessus du bouton pour le clic iOS
-                            originalInput.style.position = 'absolute';
-                            originalInput.style.top = buttonEl.offsetTop + 'px';
-                            originalInput.style.left = buttonEl.offsetLeft + 'px';
-                            originalInput.style.width = buttonEl.offsetWidth + 'px';
-                            originalInput.style.height = buttonEl.offsetHeight + 'px';
-                            originalInput.style.opacity = '0.01'; // Presque invisible mais techniquement visible
-                            originalInput.style.display = 'block';
-                            originalInput.style.zIndex = '9999';
-                            
-                            // Envoyer le clic directement
-                            setTimeout(() => {
-                              // Forcer le focus pour garantir que l'événement est capturé
-                              originalInput.focus();
-                              // iOS exige un vrai clic sur un élément visible
-                              originalInput.click();
-                              
-                              // Sur certains appareils iOS, dispatchEvent fonctionne mieux
-                              setTimeout(() => {
-                                originalInput.dispatchEvent(clickEvent);
-                                
-                                // Restaurer l'état du bouton
-                                setTimeout(() => {
-                                  buttonEl.style.backgroundColor = '';
-                                  buttonEl.style.opacity = '';
-                                  buttonEl.style.transform = '';
-                                  
-                                  // Remettre l'input à sa place d'origine après un délai
-                                  setTimeout(() => {
-                                    originalInput.style.display = originalDisplay;
-                                    originalInput.style.position = '';
-                                    originalInput.style.top = '';
-                                    originalInput.style.left = '';
-                                    originalInput.style.width = '';
-                                    originalInput.style.height = '';
-                                    originalInput.style.opacity = '';
-                                    originalInput.style.zIndex = '';
-                                  }, 1000); // Délai pour s'assurer que l'utilisateur a eu le temps de sélectionner
-                                }, 300);
-                              }, 50);
-                            }, 10);
-                          }
-                        };
-                        
-                        // Ajouter des écouteurs pour différents types d'événements
-                        buttonEl.addEventListener('touchstart', handleIOSMediaSelect, { passive: false });
-                        buttonEl.addEventListener('mousedown', handleIOSMediaSelect, { passive: false });
-                        
-                        // Marquer comme attaché
-                        (buttonEl as any)._touchListenerAttached = true;
-                      }
-                    }
-                  }}
-                  onClick={() => {}} // Gestionnaire vide pour éviter les avertissements React
-                  disabled={isUploading}
+                <label 
+                  htmlFor={`media-upload-${id}`}
+                  className="ios-optimized-button native-file-label"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1200,7 +1116,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
-                </button>
+                </label>
                 
                 {data.mediaUrl && (
                   <button 
@@ -1527,6 +1443,48 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             -webkit-user-select: none !important;
             -webkit-appearance: none !important;
             transform: translateZ(0); /* Force l'accélération matérielle */
+          }
+        }
+        
+        /* Optimisations spécifiques pour label qui déclenche le sélecteur de fichiers */
+        .native-file-label {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -webkit-appearance: none !important;
+          cursor: pointer !important;
+        }
+        
+        /* Animation pour retour visuel */
+        .native-file-label:active {
+          background-color: #f0f8ff !important;
+          opacity: 0.8 !important;
+          transform: scale(0.97) !important;
+          transition: all 0.1s ease-out !important;
+        }
+        
+        /* Support spécial iOS */
+        @supports (-webkit-touch-callout: none) {
+          /* Pour les appareils iOS */
+          .ios-file-input {
+            /* Reset complet pour l'input file */
+            -webkit-appearance: none !important;
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            z-index: -1;
+          }
+          
+          .native-file-label {
+            /* Garantir les dimensions minimales pour zones tactiles iOS */
+            min-height: 44px !important;
+            min-width: 44px !important;
+            padding: 12px 16px !important;
+            font-size: 16px !important; /* Évite le zoom sur iOS */
           }
         }
       `}</style>
