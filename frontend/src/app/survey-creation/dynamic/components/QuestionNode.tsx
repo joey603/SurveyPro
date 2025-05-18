@@ -1081,20 +1081,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               )}
 
               {data.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' }, position: 'relative' }}>
-                  {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                    <img 
-                      src={data.mediaUrl} 
-                      alt="Question media" 
-                      style={{ width: '100%', borderRadius: '4px' }}
-                    />
-                  ) : (
-                    <video 
-                      src={data.mediaUrl}
-                      controls
-                      style={{ width: '100%', borderRadius: '4px' }}
-                    />
-                  )}
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ maxWidth: { xs: '150px', sm: '200px' } }}>
+                    {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                      <img 
+                        src={data.mediaUrl} 
+                        alt="Question media" 
+                        style={{ width: '100%', borderRadius: '4px' }}
+                      />
+                    ) : (
+                      <video 
+                        src={data.mediaUrl}
+                        controls
+                        style={{ width: '100%', borderRadius: '4px' }}
+                      />
+                    )}
+                  </Box>
                   
                   <button 
                     type="button"
@@ -1105,8 +1107,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       handleMediaDelete();
                     }}
                     style={{
-                      width: '36px',
-                      height: '36px',
+                      width: '40px',
+                      height: '40px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1123,13 +1125,12 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       userSelect: 'none',
                       WebkitUserSelect: 'none',
                       WebkitTouchCallout: 'none',
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      alignSelf: 'center',
+                      flexShrink: 0
                     }}
                   >
-                    <DeleteIcon style={{ fontSize: '18px' }} />
+                    <DeleteIcon style={{ fontSize: '20px' }} />
                   </button>
                 </Box>
               )}
