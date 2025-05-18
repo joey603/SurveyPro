@@ -644,7 +644,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
     // Gestionnaire pour le toucher
     button.addEventListener('touchstart', handleTouchStart, { passive: false });
-    
+
     // Gestionnaire pour le clic standard (pour les non-mobiles)
     button.addEventListener('click', handleClick);
     
@@ -1022,7 +1022,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                         // Également ajouter l'écouteur sur le label pour s'assurer qu'il est capturé
                         const label = el.querySelector('.MuiInputLabel-root');
                         if (label) {
-                          label.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                          label.addEventListener('touchstart', (event: Event) => {
+                            event.stopPropagation();
+                            handleDirectTouch(event as unknown as TouchEvent);
+                          }, { passive: true });
                         }
                         
                         // Marquer comme attaché
@@ -1082,12 +1085,83 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  ref={addMediaButtonRef}
+                  id={`add-media-button-${id}`}
+                  className="ios-optimized-button"
+                  ref={(buttonEl) => {
+                    if (buttonEl) {
+                      // Éviter d'attacher plusieurs fois le même écouteur
+                      const attachedListener = (buttonEl as any)._touchListenerAttached;
+                      if (!attachedListener) {
+                        // Fonction qui force l'ouverture du sélecteur de fichiers
+                        const openFileSelector = (event: Event) => {
+                          // Empêcher la propagation mais pas le comportement par défaut
+                          event.stopPropagation();
+                          
+                          // Retour visuel immédiat
+                          buttonEl.style.opacity = '0.7';
+                          buttonEl.style.backgroundColor = '#f0f7ff';
+                          buttonEl.style.transform = 'scale(0.97)';
+                          
+                          // Créer un nouvel élément input temporaire à chaque clic
+                          const tempInput = document.createElement('input');
+                          tempInput.type = 'file';
+                          tempInput.accept = 'image/*,video/*';
+                          tempInput.style.position = 'absolute';
+                          tempInput.style.top = '-1000px';
+                          tempInput.style.opacity = '0';
+                          tempInput.multiple = false; // Assurer qu'un seul fichier est sélectionné
+                          
+                          // Gestionnaire d'événement pour le changement de fichier
+                          tempInput.onchange = (changeEvent) => {
+                            // Transférer le fichier sélectionné à notre gestionnaire
+                            const input = changeEvent.target as HTMLInputElement;
+                            if (input.files && input.files.length > 0) {
+                              // Créer un événement React synthétique
+                              const syntheticEvent = {
+                                target: input,
+                                currentTarget: input,
+                                preventDefault: () => {},
+                                stopPropagation: () => {}
+                              } as unknown as React.ChangeEvent<HTMLInputElement>;
+                              
+                              // Appeler notre gestionnaire
+                              handleMediaUpload(syntheticEvent);
+                              
+                              // Nettoyer après utilisation
+                              document.body.removeChild(tempInput);
+                            }
+                            
+                            // Restaurer l'apparence du bouton
+                            setTimeout(() => {
+                              buttonEl.style.opacity = '';
+                              buttonEl.style.backgroundColor = '';
+                              buttonEl.style.transform = '';
+                            }, 300);
+                          };
+                          
+                          // Ajouter l'élément au DOM
+                          document.body.appendChild(tempInput);
+                          
+                          // Forcer le clic après un court délai
+                          setTimeout(() => {
+                            // Utiliser click() pour ouvrir le sélecteur de fichiers
+                            tempInput.click();
+                          }, 50);
+                        };
+                        
+                        // Attacher des écouteurs d'événements pour les appareils tactiles
+                        buttonEl.addEventListener('touchstart', openFileSelector, { passive: false });
+                        
+                        // Marquer comme attaché
+                        (buttonEl as any)._touchListenerAttached = true;
+                      }
+                    }
+                  }}
                   onClick={(e) => {
-                    // Pour les clics non-tactiles
-                    const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-                    if (fileInput) {
-                      fileInput.click();
+                    // S'exécuter uniquement pour les vrais clics (non tactiles)
+                    if (!(window as any).touchDetected) {
+                      // Utiliser le comportement normal pour les non-tactiles
+                      triggerMediaDialog();
                     }
                   }}
                   disabled={isUploading}
@@ -1108,7 +1182,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'none',
+                    touchAction: 'manipulation',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -1396,6 +1470,33 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           .ios-optimized-input input {
             min-height: 44px !important;
             font-size: 16px !important; /* iOS n'active pas le zoom sur les inputs ≥ 16px */
+          }
+        }
+        
+        /* Optimisations pour le bouton Add Media */
+        .ios-optimized-button {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -webkit-appearance: none !important;
+        }
+        
+        /* Animation rapide pour le retour visuel */
+        .ios-optimized-button:active {
+          opacity: 0.7 !important;
+          background-color: #f0f7ff !important;
+          transform: scale(0.97) !important;
+          transition: all 0.05s ease-out !important;
+        }
+        
+        /* Support spécifique pour iOS */
+        @supports (-webkit-touch-callout: none) {
+          .ios-optimized-button {
+            cursor: pointer !important;
+            min-height: 44px !important;
+            min-width: 44px !important;
           }
         }
       `}</style>
