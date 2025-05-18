@@ -516,29 +516,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     if (fileInput) fileInput.click();
   };
 
-  // Simplification extrême du bouton Add Media pour iOS
-  useEffect(() => {
-    const button = addMediaButtonRef.current;
-    if (!button) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
-      e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
-      e.stopPropagation();
-      // Appelle directement la fonction de suppression
-      handleMediaDelete();
-    };
-
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-    button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-    // Nettoyage
-    return () => {
-      button.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [handleMediaDelete]);
-
   // Détecter les événements tactiles pour optimiser l'expérience
   useEffect(() => {
     // Fonction pour marquer que le dispositif utilise les événements tactiles
@@ -945,6 +922,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <label
                   htmlFor={`media-upload-${id}`}
                   className="ios-optimized-button media-button"
+                  ref={addMediaButtonRef}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1277,6 +1255,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             min-height: 44px !important;
             min-width: 44px !important;
           }
+          
+          /* Agrandir légèrement la zone tactile */
+          label.media-button {
+            padding: 12px 20px !important;
+          }
+          
+          /* Fournir un retour visuel immédiat */
+          label.media-button:active {
+            background-color: rgba(25, 118, 210, 0.08) !important;
+          }
         }
         
         /* Styles pour le bouton media utilisant label */
@@ -1291,12 +1279,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           label.media-button {
             min-height: 44px !important;
             min-width: 44px !important;
-          }
-          
-          /* Assurer que le tap est bien visible */
-          label.media-button:active {
-            opacity: 0.7 !important;
-            background-color: #f0f7ff !important;
           }
           
           /* Eliminer les doubles clics */
