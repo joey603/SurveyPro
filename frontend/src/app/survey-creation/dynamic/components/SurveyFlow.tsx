@@ -275,17 +275,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, [fakeFullscreen]);
 
   const handleNodeChange = useCallback((nodeId: string, newData: any) => {
-    // Vérifier si le nœud doit être sélectionné
-    if (newData._selectNode) {
-      setSelectedNode(nodeId);
-      setSelectedEdge(null);
-      
-      // Supprimer la propriété _selectNode pour ne pas la stocker dans les données du nœud
-      delete newData._selectNode;
-    }
-    
     setNodes(prevNodes => {
-      // Filtrer les propriétés non standard
       const filteredData = { ...newData };
       if ('_editingState' in filteredData) {
         delete filteredData._editingState;
@@ -296,7 +286,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           ? { ...node, data: { ...node.data, ...filteredData } }
           : node
       );
-      
+
       const editedNode = updatedNodes.find(n => n.id === nodeId);
       if (editedNode && '_editingState' in newData) {
         const isEditing = newData._editingState;
@@ -1025,7 +1015,6 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const parentEdge = edges.find(edge => edge.target === node.id);
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
-    const isNodeInEditMode = node.data && node.data._editingState;
 
     return {
       ...node,
@@ -1033,16 +1022,13 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...node.data,
         onChange: (newData: any) => handleNodeChange(node.id, newData),
         onCreatePaths: createPathsFromNode,
-        isSelected: node.id === selectedNode
+        isSelected: node.id === selectedNode,
+        onSelect: (nodeId: string) => setSelectedNode(nodeId)
       },
       style: {
         ...node.style,
         border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
         width: 450,
-        // Augmenter significativement le z-index si le nœud est en mode édition
-        zIndex: isNodeInEditMode ? 1000 : (node.id === selectedNode ? 100 : undefined),
-        // Ajouter une ombre plus prononcée en mode édition pour mettre en évidence le nœud
-        boxShadow: isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined,
       }
     };
   });

@@ -43,7 +43,8 @@ interface QuestionNodeData {
   isEditing?: boolean;
   onChange?: (data: Partial<QuestionNodeData>) => void;
   onCreatePaths?: (nodeId: string, options: string[]) => void;
-  _selectNode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (nodeId: string) => void;
 }
 
 interface QuestionNodeProps {
@@ -419,20 +420,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [isEditing, data]);
 
-  // Fonction pour sélectionner ce nœud dans SurveyFlow
-  const selectNode = useCallback(() => {
-    if (data.onChange) {
-      data.onChange({
-        _selectNode: true // Signal au parent SurveyFlow de sélectionner ce nœud
-      });
-    }
-  }, [data]);
-
   // Fonction pour changer l'état critique avec un événement direct
   const toggleCritical = useCallback(() => {
-    // Sélectionner le nœud
-    selectNode();
-    
     const newCriticalState = !questionData.isCritical;
     console.log("Toggling critical state to:", newCriticalState);
     
@@ -467,8 +456,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         data.onCreatePaths(data.id, []);
       }
     }
-  }, [questionData, data, updateNodeData, selectNode]);
+  }, [questionData, data, updateNodeData]);
   
+  // Fonction pour sélectionner le nœud
+  const selectNode = useCallback(() => {
+    if (data.onSelect) {
+      data.onSelect(data.id);
+    }
+  }, [data]);
+
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'édition
   useEffect(() => {
     const button = editButtonRef.current;
@@ -492,8 +488,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [isEditing, selectNode]);
-  
+  }, [isEditing, selectNode]); // Ajout de selectNode aux dépendances
+
   // Gestionnaire d'événements tactiles natif pour iOS - pour la case à cocher Critical Question
   useEffect(() => {
     const checkbox = criticalCheckboxRef.current;
@@ -517,9 +513,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       checkbox.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [toggleCritical, selectNode]);
+  }, [toggleCritical, selectNode]); // Ajout de selectNode aux dépendances
 
-  // Modifier toggleEditMode pour sélectionner le nœud quand on entre en mode édition
+  // Fonction pour les navigateurs non tactiles
   const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
     // iOS simule des clics après les événements tactiles, donc nous devons éviter ce comportement
     if (e.nativeEvent.type === 'click' && window.TouchEvent && e.nativeEvent instanceof MouseEvent) {
@@ -528,10 +524,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         return; // Ignore les clics simulés sur les appareils tactiles
       }
     }
-    
-    // Sélectionner le nœud lors de l'activation du mode édition
+    // Sélectionner le nœud
     selectNode();
-    
     setIsEditing(!isEditing);
   };
 
@@ -551,8 +545,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Sélectionner le nœud
-      selectNode();
       // Appelle directement la fonction de suppression
       handleMediaDelete();
     };
@@ -564,7 +556,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [handleMediaDelete, selectNode]);
+  }, [handleMediaDelete]);
 
   // Détecter les événements tactiles pour optimiser l'expérience
   useEffect(() => {
@@ -599,6 +591,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
           position: 'relative', // Assurez-vous que la position est relative
+          ...(data.isSelected && { 
+            border: '2px solid #ff4444',
+            boxShadow: '0 0 8px rgba(255, 68, 68, 0.3)'
+          })
         }}
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
@@ -824,7 +820,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
               id={`question-field-${id}`}
               className="ios-optimized-input"
-              onClick={() => selectNode()}
+              onClick={() => selectNode()} // Ajout de la sélection du nœud au clic
               inputRef={(inputEl) => {
                 // Capturer la référence de l'élément input directement
                 if (inputEl) {
@@ -838,9 +834,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       // Ne pas empêcher le comportement par défaut pour permettre au focus de fonctionner
                       // Mais arrêter la propagation
                       event.stopPropagation();
-                      
-                      // Sélectionner le nœud
-                      selectNode();
                       
                       // Focus explicite
                       setTimeout(() => {
@@ -975,7 +968,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   onClick={() => {
                     // Sélectionner le nœud
                     selectNode();
-                    
                     // Solution simple et directe - utiliser un input natif
                     const input = document.createElement('input');
                     input.type = 'file';
