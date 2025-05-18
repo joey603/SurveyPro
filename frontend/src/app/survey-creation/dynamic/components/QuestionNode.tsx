@@ -1063,6 +1063,40 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     </div>
                   )}
                 </button>
+                
+                {data.mediaUrl && (
+                  <button 
+                    type="button"
+                    ref={deleteMediaButtonRef}
+                    onClick={() => {
+                      // Sélectionner la carte
+                      selectCard();
+                      handleMediaDelete();
+                    }}
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #f44336',
+                      borderRadius: '50%',
+                      background: 'white',
+                      color: '#f44336',
+                      cursor: 'pointer',
+                      padding: 0,
+                      WebkitAppearance: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'none',
+                      outline: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                    }}
+                  >
+                    <DeleteIcon style={{ fontSize: '20px' }} />
+                  </button>
+                )}
               </Box>
 
               {isUploading && (
@@ -1081,7 +1115,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               )}
 
               {data.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' }, position: 'relative', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  maxWidth: { xs: '150px', sm: '200px' },
+                  margin: '0 auto',  // Centrage horizontal
+                  display: 'flex',   // Utiliser flexbox pour un meilleur centrage
+                  justifyContent: 'center',  // Centrer horizontalement le contenu
+                  alignItems: 'center',      // Centrer verticalement le contenu
+                  marginTop: 2,      // Marge supérieure
+                }}>
                   {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                     <img 
                       src={data.mediaUrl} 
@@ -1095,25 +1136,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       style={{ width: '100%', borderRadius: '4px' }}
                     />
                   )}
-                  
-                  {/* Bouton de suppression à droite du média (comme pour les options) */}
-                  <IconButton
-                    size="small"
-                    ref={deleteMediaButtonRef}
-                    onClick={() => {
-                      // Sélectionner la carte
-                      selectCard();
-                      handleMediaDelete();
-                    }}
-                    sx={{ 
-                      color: '#ff4444',
-                      width: '36px',
-                      height: '36px',
-                      flexShrink: 0
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
                 </Box>
               )}
             </Box>
