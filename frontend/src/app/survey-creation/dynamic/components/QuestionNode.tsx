@@ -901,57 +901,39 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             {renderQuestionFields()}
 
             <Box sx={{ mt: 2 }}>
-              <input
-                type="file"
-                id={`media-upload-${id}`}
-                accept="image/*,video/*"
-                style={{ 
-                  position: 'absolute',
-                  width: '1px',
-                  height: '1px',
-                  padding: 0,
-                  margin: '-1px',
-                  overflow: 'hidden',
-                  clip: 'rect(0,0,0,0)',
-                  border: 0
-                }}
-                onChange={handleMediaUpload}
-              />
-              
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <label
-                  htmlFor={`media-upload-${id}`}
-                  className="ios-optimized-button media-button"
-                  ref={addMediaButtonRef}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    minHeight: '48px',
-                    height: 'auto',
-                    width: 'auto',
-                    padding: '12px 16px',
-                    border: 'none',
-                    borderRadius: '4px',
-                    background: 'white',
+                <Button
+                  component="label"
+                  variant="outlined"
+                  disabled={isUploading}
+                  startIcon={isUploading ? (
+                    <CircularProgress size={20} sx={{ color: '#667eea' }} />
+                  ) : (
+                    <AddPhotoAlternateIcon />
+                  )}
+                  sx={{
                     color: '#1976d2',
-                    fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
-                    cursor: isUploading ? 'not-allowed' : 'pointer',
-                    WebkitAppearance: 'none',
-                    WebkitTapHighlightColor: 'transparent',
+                    borderColor: '#1976d2',
+                    '&:hover': {
+                      borderColor: '#0f5bbb',
+                      backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                    },
+                    minWidth: { xs: '100%', sm: '150px' },
                     touchAction: 'manipulation',
-                    outline: 'none',
+                    WebkitTapHighlightColor: 'transparent',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
-                    opacity: isUploading ? 0.7 : 1,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   }}
                 >
-                  <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
-                  <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
-                </label>
+                  {isUploading ? 'Uploading...' : 'Add Media'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*,video/*"
+                    onChange={handleMediaUpload}
+                  />
+                </Button>
                 
                 {data.mediaUrl && (
                   <button 
