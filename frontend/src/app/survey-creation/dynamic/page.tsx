@@ -1212,11 +1212,31 @@ export default function DynamicSurveyCreation() {
         // Gestion de l'étape pour l'ajout de média
         if (currentStepData.element.includes('add-media-placeholder')) {
           setTimeout(() => {
-            const addMediaButton = document.querySelector('.react-flow__node:first-child [data-intro="add-media"]');
+            console.log("Recherche du bouton Add Media...");
+            const allButtons = document.querySelectorAll('[data-intro]');
+            console.log("Tous les éléments avec data-intro:", Array.from(allButtons).map(el => ({ attr: el.getAttribute('data-intro'), id: el.id })));
+            
+            // Essayer plusieurs méthodes de sélection
+            let addMediaButton = document.querySelector('.react-flow__node:first-child [data-intro="add-media"]');
+            
+            // Si la première méthode échoue, essayer avec la classe
+            if (!addMediaButton) {
+              console.log("Première méthode échouée, essai avec la classe...");
+              addMediaButton = document.querySelector('.add-media-button-class');
+            }
+            
+            // Si les deux méthodes échouent, essayer avec l'ID
+            if (!addMediaButton) {
+              console.log("Deuxième méthode échouée, essai avec l'ID...");
+              addMediaButton = document.getElementById('add-media-button');
+            }
+            
+            console.log("Bouton Add Media trouvé:", addMediaButton);
             
             if (addMediaButton) {
               // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
               const rect = addMediaButton.getBoundingClientRect();
+              console.log("Rectangle du bouton:", rect);
               addMediaPlaceholder.style.position = 'absolute';
               addMediaPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
               addMediaPlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
@@ -1235,6 +1255,8 @@ export default function DynamicSurveyCreation() {
               setTimeout(() => {
                 (addMediaButton as HTMLElement).style.boxShadow = '';
               }, 2000);
+            } else {
+              console.error("Bouton Add Media non trouvé malgré les multiples tentatives!");
             }
           }, 100);
         }

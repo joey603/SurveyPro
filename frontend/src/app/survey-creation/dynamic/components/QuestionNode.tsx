@@ -1261,6 +1261,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     // Déclencher le sélecteur de fichiers
                     input.click();
                   }}
+                  data-intro="add-media"
+                  data-step="10"
+                  id="add-media-button"
+                  className="add-media-button-class"
+                  ref={addMediaButtonRef}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
@@ -1271,7 +1276,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     height: 'auto',
                     width: 'auto',
                     padding: '12px 16px',
-                    border: 'none',
+                    border: '1px solid #1976d2',
                     borderRadius: '4px',
                     background: 'white',
                     color: '#1976d2',
@@ -1287,6 +1292,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     opacity: isUploading ? 0.7 : 1,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     position: 'relative',
+                    zIndex: 10,
                   }}
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
