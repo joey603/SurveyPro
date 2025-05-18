@@ -348,34 +348,79 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 </IconButton>
               </Box>
             ))}
-            <Button
-              size="small"
-              onClick={() => {
-                const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
-                handleOptionsChange(newOptions);
+            <button
+              ref={(el) => {
+                if (el) {
+                  // Attacher un listener natif directement sur l'élément HTML
+                  const buttonEl = el as HTMLButtonElement;
+                  const attachedListener = (buttonEl as any)._touchListenerAttached;
+                  if (!attachedListener) {
+                    const handleDirectTouch = (event: TouchEvent) => {
+                      // Prévient le comportement par défaut qui peut causer un délai
+                      event.preventDefault();
+                      // Force l'arrêt de la propagation de l'événement
+                      event.stopPropagation();
+                      // Sélectionner la carte
+                      selectCard();
+                      // Ajouter un retour visuel immédiat
+                      buttonEl.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+                      // Ajouter une nouvelle option immédiatement
+                      const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
+                      handleOptionsChange(newOptions);
+                      // Restaurer l'apparence
+                      setTimeout(() => {
+                        buttonEl.style.backgroundColor = '';
+                      }, 300);
+                    };
+                    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+                    buttonEl.addEventListener('touchstart', handleDirectTouch, { passive: false });
+                    // Marquer comme attaché
+                    (buttonEl as any)._touchListenerAttached = true;
+                  }
+                }
               }}
-              onTouchStart={(e) => {
-                // Optimiser la réponse tactile sur iOS
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-                if (isIOS) {
-                  // Empêcher tout délai tactile sur iOS
-                  e.preventDefault();
+              onClick={() => {
+                // S'exécute uniquement pour les vrais clics (non simulés)
+                if (!(window as any).touchDetected) {
+                  // Sélectionner la carte
+                  selectCard();
+                  // Ajouter une nouvelle option
                   const newOptions = [...questionData.options, `Option ${questionData.options.length + 1}`];
                   handleOptionsChange(newOptions);
                 }
               }}
-              sx={{
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+              data-intro="add-option-button"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                minHeight: '48px',
+                height: 'auto',
+                width: 'auto',
+                padding: '8px 16px',
+                border: 'none',
+                borderRadius: '4px',
+                background: 'white',
+                color: '#1976d2',
+                fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
                 cursor: 'pointer',
+                WebkitAppearance: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation',
+                outline: 'none',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 WebkitTouchCallout: 'none',
-                minHeight: { xs: '44px', sm: '36px' },
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                position: 'relative',
               }}
             >
-              Add Option
-            </Button>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>Add Option</span>
+            </button>
           </Box>
         );
 
@@ -1357,6 +1402,27 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           background-color: #f0f7ff !important;
           transform: scale(0.98) !important;
           transition: all 0.1s ease-out !important;
+        }
+        
+        /* Optimisations pour le bouton Add Option */
+        button[data-intro="add-option-button"] {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        button[data-intro="add-option-button"]:active {
+          opacity: 0.8;
+          background-color: rgba(25, 118, 210, 0.04);
+          transform: scale(0.97);
+          transition: all 0.05s linear !important;
+        }
+        
+        @supports (-webkit-touch-callout: none) {
+          button[data-intro="add-option-button"] {
+            min-height: 44px !important;
+            min-width: 100px !important;
+          }
         }
       `}</style>
     </div>
