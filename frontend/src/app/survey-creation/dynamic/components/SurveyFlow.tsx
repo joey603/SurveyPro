@@ -1457,6 +1457,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         },
       }}
       onClick={reorganizeFlow}
+      data-intro="reorganize-flow-button"
+      id="reorganize-flow-button"
+      className="reorganize-flow-button"
       TouchRippleProps={{
         classes: {
           child: 'touch-ripple-child',

@@ -1301,11 +1301,31 @@ export default function DynamicSurveyCreation() {
         // Pour l'étape du bouton Reorganize Flow
         if (currentStepData.element === '#reorganize-flow-placeholder') {
           // Trouver le bouton directement par son attribut data-intro
-          const reorganizeButton = document.querySelector('[data-intro="reorganize-flow-button"]');
+          console.log("Recherche du bouton Reorganize Flow...");
+          const allButtons = document.querySelectorAll('[data-intro]');
+          console.log("Tous les éléments avec data-intro:", Array.from(allButtons).map(el => ({ attr: el.getAttribute('data-intro'), id: el.id })));
+          
+          // Essayer plusieurs méthodes de sélection
+          let reorganizeButton = document.querySelector('[data-intro="reorganize-flow-button"]');
+          
+          // Si la première méthode échoue, essayer avec la classe
+          if (!reorganizeButton) {
+            console.log("Première méthode échouée, essai avec la classe...");
+            reorganizeButton = document.querySelector('.reorganize-flow-button');
+          }
+          
+          // Si les deux méthodes échouent, essayer avec l'ID
+          if (!reorganizeButton) {
+            console.log("Deuxième méthode échouée, essai avec l'ID...");
+            reorganizeButton = document.getElementById('reorganize-flow-button');
+          }
+          
+          console.log("Bouton Reorganize Flow trouvé:", reorganizeButton);
           
           if (reorganizeButton) {
             // Positionner le placeholder au-dessus du bouton Reorganize Flow
             const rect = reorganizeButton.getBoundingClientRect();
+            console.log("Rectangle du bouton:", rect);
             reorganizePlaceholder.style.position = 'absolute';
             reorganizePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
             reorganizePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
@@ -1326,28 +1346,7 @@ export default function DynamicSurveyCreation() {
               (reorganizeButton as HTMLElement).style.boxShadow = '';
             }, 3000);
           } else {
-            console.log("Reorganize button not found for placeholder positioning!");
-            // Essayer de trouver par ID dans ce cas
-            const altButton = document.getElementById('reorganize-flow-button');
-            if (altButton) {
-              const rect = altButton.getBoundingClientRect();
-              reorganizePlaceholder.style.position = 'absolute';
-              reorganizePlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
-              reorganizePlaceholder.style.left = (rect.left + window.pageXOffset) + 'px';
-              reorganizePlaceholder.style.width = rect.width + 'px';
-              reorganizePlaceholder.style.height = rect.height + 'px';
-              reorganizePlaceholder.style.zIndex = '9999';
-              
-              intro.refresh();
-              
-              altButton.style.transition = 'all 0.3s';
-              altButton.style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
-              altButton.style.zIndex = '10001';
-              
-              setTimeout(() => {
-                altButton.style.boxShadow = '';
-              }, 3000);
-            }
+            console.error("Bouton Reorganize Flow non trouvé malgré les multiples tentatives!");
           }
         }
       }
