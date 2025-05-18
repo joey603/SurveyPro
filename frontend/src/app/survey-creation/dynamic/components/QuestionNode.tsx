@@ -85,7 +85,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Référence pour la case à cocher Critical Question
   const criticalCheckboxRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton d'ajout de média
-  const addMediaButtonRef = useRef<HTMLButtonElement>(null);
+  const addMediaButtonRef = useRef<HTMLLabelElement>(null);
   // Référence pour le bouton de suppression de média
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
 
