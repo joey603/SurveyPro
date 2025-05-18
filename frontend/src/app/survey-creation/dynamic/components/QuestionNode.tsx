@@ -43,8 +43,6 @@ interface QuestionNodeData {
   isEditing?: boolean;
   onChange?: (data: Partial<QuestionNodeData>) => void;
   onCreatePaths?: (nodeId: string, options: string[]) => void;
-  isSelected?: boolean;
-  onSelect?: (nodeId: string) => void;
 }
 
 interface QuestionNodeProps {
@@ -458,12 +456,19 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [questionData, data, updateNodeData]);
   
-  // Fonction pour sélectionner le nœud
-  const selectNode = useCallback(() => {
-    if (data.onSelect) {
-      data.onSelect(data.id);
+  // Fonction pour sélectionner la carte
+  const selectCard = useCallback(() => {
+    // Utiliser un événement personnalisé pour communiquer avec le composant SurveyFlow
+    const event = new CustomEvent('select-node', { 
+      detail: { nodeId: id },
+      bubbles: true 
+    });
+    // Déclencher l'événement sur l'élément DOM de la carte
+    const nodeElement = document.querySelector(`[data-id="${id}"]`);
+    if (nodeElement) {
+      nodeElement.dispatchEvent(event);
     }
-  }, [data]);
+  }, [id]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'édition
   useEffect(() => {
@@ -475,8 +480,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Sélectionner le nœud
-      selectNode();
+      // Sélectionner la carte
+      selectCard();
       // Bascule l'état d'édition immédiatement
       setIsEditing(!isEditing);
     };
@@ -488,8 +493,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [isEditing, selectNode]); // Ajout de selectNode aux dépendances
-
+  }, [isEditing, selectCard]); // Dépendance à isEditing pour recréer le gestionnaire quand l'état change
+  
   // Gestionnaire d'événements tactiles natif pour iOS - pour la case à cocher Critical Question
   useEffect(() => {
     const checkbox = criticalCheckboxRef.current;
@@ -500,8 +505,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
-      // Sélectionner le nœud
-      selectNode();
+      // Sélectionner la carte
+      selectCard();
       // Bascule l'état critique immédiatement
       toggleCritical();
     };
@@ -513,7 +518,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       checkbox.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [toggleCritical, selectNode]); // Ajout de selectNode aux dépendances
+  }, [toggleCritical, selectCard]);
 
   // Fonction pour les navigateurs non tactiles
   const toggleEditMode = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -524,8 +529,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         return; // Ignore les clics simulés sur les appareils tactiles
       }
     }
-    // Sélectionner le nœud
-    selectNode();
+    // Sélectionner la carte
+    selectCard();
     setIsEditing(!isEditing);
   };
 
@@ -545,6 +550,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.preventDefault();
       // Force l'arrêt de la propagation de l'événement
       e.stopPropagation();
+      // Sélectionner la carte
+      selectCard();
       // Appelle directement la fonction de suppression
       handleMediaDelete();
     };
@@ -556,7 +563,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [handleMediaDelete]);
+  }, [handleMediaDelete, selectCard]);
 
   // Détecter les événements tactiles pour optimiser l'expérience
   useEffect(() => {
@@ -591,10 +598,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
           position: 'relative', // Assurez-vous que la position est relative
-          ...(data.isSelected && { 
-            border: '2px solid #ff4444',
-            boxShadow: '0 0 8px rgba(255, 68, 68, 0.3)'
-          })
         }}
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
@@ -695,6 +698,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     const handleDirectTouch = (event: TouchEvent) => {
                       event.preventDefault();
                       event.stopPropagation();
+                      // Sélectionner la carte
+                      selectCard();
                       // Détecter iOS spécifiquement
                       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                       // Ajouter un retour visuel immédiat
@@ -718,6 +723,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               onClick={(e) => {
                 // S'exécute uniquement pour les vrais clics (non simulés)
                 if (!(window as any).touchDetected) {
+                  // Sélectionner la carte
+                  selectCard();
                   handleTypeClick(e);
                 }
               }}
@@ -820,7 +827,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
               id={`question-field-${id}`}
               className="ios-optimized-input"
-              onClick={() => selectNode()} // Ajout de la sélection du nœud au clic
               inputRef={(inputEl) => {
                 // Capturer la référence de l'élément input directement
                 if (inputEl) {
@@ -966,8 +972,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   onClick={() => {
-                    // Sélectionner le nœud
-                    selectNode();
+                    // Sélectionner la carte
+                    selectCard();
                     // Solution simple et directe - utiliser un input natif
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -1062,7 +1068,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   <button 
                     type="button"
                     ref={deleteMediaButtonRef}
-                    onClick={handleMediaDelete}
+                    onClick={() => {
+                      // Sélectionner la carte
+                      selectCard();
+                      handleMediaDelete();
+                    }}
                     style={{
                       width: '48px',
                       height: '48px',

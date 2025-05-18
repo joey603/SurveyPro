@@ -681,6 +681,25 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     setSelectedEdge(null);
   }, []);
 
+  // Écouteur pour l'événement personnalisé 'select-node'
+  useEffect(() => {
+    const handleSelectNode = (event: CustomEvent) => {
+      const { nodeId } = event.detail;
+      if (nodeId) {
+        setSelectedNode(nodeId);
+        setSelectedEdge(null);
+      }
+    };
+
+    // Ajouter l'écouteur au niveau du document
+    document.addEventListener('select-node', handleSelectNode as EventListener);
+
+    // Nettoyage
+    return () => {
+      document.removeEventListener('select-node', handleSelectNode as EventListener);
+    };
+  }, []);
+
   const onDeleteNode = useCallback(async (nodeId: string) => {
     // Prevent deleting question 1
     if (nodeId === '1') {
@@ -1015,6 +1034,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const parentEdge = edges.find(edge => edge.target === node.id);
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
+    const isNodeInEditMode = node.data && node.data._editingState;
 
     return {
       ...node,
@@ -1022,13 +1042,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...node.data,
         onChange: (newData: any) => handleNodeChange(node.id, newData),
         onCreatePaths: createPathsFromNode,
-        isSelected: node.id === selectedNode,
-        onSelect: (nodeId: string) => setSelectedNode(nodeId)
+        isSelected: node.id === selectedNode
       },
       style: {
         ...node.style,
         border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
         width: 450,
+        // Augmenter significativement le z-index si le nœud est en mode édition
+        zIndex: isNodeInEditMode ? 1000 : (node.id === selectedNode ? 100 : undefined),
+        // Ajouter une ombre plus prononcée en mode édition pour mettre en évidence le nœud
+        boxShadow: isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined,
       }
     };
   });
