@@ -939,46 +939,92 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               label="Question"
               value={questionData.text}
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
+              id={`question-field-${id}`}
+              className="ios-optimized-input"
               inputRef={(inputEl) => {
                 // Capturer la référence de l'élément input directement
                 if (inputEl) {
                   // Stocker la référence pour pouvoir l'utiliser dans les gestionnaires d'événements
                   (window as any).questionInputRef = inputEl;
+                  
+                  // Ajouter un gestionnaire direct sur l'élément input lui-même
+                  const attachedListener = (inputEl as any)._touchListenerAttached;
+                  if (!attachedListener) {
+                    const handleDirectInputTouch = (event: Event) => {
+                      // Ne pas empêcher le comportement par défaut pour permettre au focus de fonctionner
+                      // Mais arrêter la propagation
+                      event.stopPropagation();
+                      
+                      // Focus explicite
+                      setTimeout(() => {
+                        inputEl.focus();
+                        inputEl.click();
+                      }, 0);
+                    };
+                    
+                    // Ajouter plusieurs écouteurs pour s'assurer que l'événement est capturé
+                    inputEl.addEventListener('touchstart', handleDirectInputTouch, { passive: true });
+                    inputEl.addEventListener('mousedown', handleDirectInputTouch, { passive: true });
+                    
+                    // Marquer comme attaché
+                    (inputEl as any)._touchListenerAttached = true;
+                  }
                 }
               }}
               InputProps={{
-                ref: (el) => {
+                ref: (wrapperEl) => {
+                  // Type correct pour éviter les erreurs TypeScript
+                  const el = wrapperEl as unknown as HTMLDivElement;
                   if (el) {
-                    // Obtenir le conteneur racine du TextField comme élément DOM
+                    // Obtenir le conteneur racine du TextField
                     const rootEl = el.querySelector('.MuiInputBase-root') as HTMLDivElement;
                     if (rootEl) {
                       const attachedListener = (rootEl as any)._touchListenerAttached;
                       if (!attachedListener) {
+                        // Créer un gestionnaire d'événements tactiles
                         const handleDirectTouch = (event: TouchEvent) => {
                           // Empêcher la propagation mais pas le comportement par défaut
                           event.stopPropagation();
                           
-                          // Ajouter un retour visuel
+                          // Ajouter un retour visuel immédiat
                           rootEl.style.borderColor = 'rgba(25, 118, 210, 0.6)';
                           
-                          // Obtenir l'élément input et forcer le focus
-                          const inputEl = (window as any).questionInputRef;
-                          if (inputEl) {
-                            // Forcer le focus et l'activation du clavier virtuel
+                          // Trouver l'élément input
+                          const input = document.getElementById(`question-field-${id}`)?.querySelector('input');
+                          if (input) {
+                            // Créer et déclencher un faux événement de clic
+                            const clickEvent = new MouseEvent('click', {
+                              view: window,
+                              bubbles: true,
+                              cancelable: true
+                            });
+                            
+                            // Forcer le focus et activer le clavier
+                            input.dispatchEvent(clickEvent);
+                            input.focus();
+                            
+                            // Double tentative de focus après un court délai
                             setTimeout(() => {
-                              inputEl.focus();
-                              inputEl.click();
+                              input.click();
+                              input.focus();
                               
                               // Restaurer l'apparence
                               setTimeout(() => {
                                 rootEl.style.borderColor = '';
                               }, 300);
-                            }, 10);
+                            }, 50);
                           }
                         };
                         
-                        // Ajouter l'écouteur d'événement
+                        // Ajouter les écouteurs d'événements sur le conteneur root et sur le label
                         rootEl.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                        
+                        // Également ajouter l'écouteur sur le label pour s'assurer qu'il est capturé
+                        const label = el.querySelector('.MuiInputLabel-root');
+                        if (label) {
+                          label.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                        }
+                        
                         // Marquer comme attaché
                         (rootEl as any)._touchListenerAttached = true;
                       }
@@ -1010,6 +1056,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   '&:focus-within': {
                     boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
                   }
+                },
+                // Suppression des délais tactiles pour iOS
+                '& input': {
+                  cursor: 'text !important',
+                  touchAction: 'manipulation !important',
+                  WebkitTapHighlightColor: 'transparent !important',
+                  WebkitAppearance: 'none !important',
+                  WebkitTouchCallout: 'none !important'
                 }
               }}
             />
@@ -1316,6 +1370,32 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           button,
           input {
             min-height: 44px !important;
+          }
+        }
+        
+        /* Optimisations spécifiques pour les inputs iOS */
+        .ios-optimized-input {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        /* Suppression du délai tactile de 300ms sur iOS */
+        .ios-optimized-input input, 
+        .ios-optimized-input .MuiInputBase-root {
+          touch-action: manipulation !important;
+          cursor: text !important;
+        }
+        
+        /* Augmenter la zone tactile pour les inputs sur iOS */
+        @supports (-webkit-touch-callout: none) {
+          .ios-optimized-input .MuiInputBase-root {
+            padding: 8px !important;
+          }
+          
+          .ios-optimized-input input {
+            min-height: 44px !important;
+            font-size: 16px !important; /* iOS n'active pas le zoom sur les inputs ≥ 16px */
           }
         }
       `}</style>
