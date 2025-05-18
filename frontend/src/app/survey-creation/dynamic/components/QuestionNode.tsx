@@ -331,9 +331,122 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   sx={{ 
                     '& .MuiInputBase-root': {
                       minHeight: '48px', // Taille minimale recommandée pour les zones tactiles
+                    },
+                    mb: 2,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '4px',
+                      cursor: 'text',
+                      touchAction: 'manipulation',
+                      WebkitAppearance: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      '&:focus-within': {
+                        boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
+                      }
+                    },
+                    // Suppression des délais tactiles pour iOS
+                    '& input': {
+                      cursor: 'text !important',
+                      touchAction: 'manipulation !important',
+                      WebkitTapHighlightColor: 'transparent !important',
+                      WebkitAppearance: 'none !important',
+                      WebkitTouchCallout: 'none !important'
+                    }
+                  }}
+                  id={`option-field-${id}-${index}`}
+                  className="ios-optimized-input"
+                  inputRef={(inputEl) => {
+                    // Capturer la référence de l'élément input directement
+                    if (inputEl) {
+                      // Stocker la référence pour pouvoir l'utiliser dans les gestionnaires d'événements
+                      (window as any)[`optionInputRef_${id}_${index}`] = inputEl;
+                      
+                      // Ajouter un gestionnaire direct sur l'élément input lui-même
+                      const attachedListener = (inputEl as any)._touchListenerAttached;
+                      if (!attachedListener) {
+                        const handleDirectInputTouch = (event: Event) => {
+                          // Ne pas empêcher le comportement par défaut pour permettre au focus de fonctionner
+                          // Mais arrêter la propagation
+                          event.stopPropagation();
+                          
+                          // Focus explicite
+                          setTimeout(() => {
+                            inputEl.focus();
+                            inputEl.click();
+                          }, 0);
+                        };
+                        
+                        // Ajouter plusieurs écouteurs pour s'assurer que l'événement est capturé
+                        inputEl.addEventListener('touchstart', handleDirectInputTouch, { passive: true });
+                        inputEl.addEventListener('mousedown', handleDirectInputTouch, { passive: true });
+                        
+                        // Marquer comme attaché
+                        (inputEl as any)._touchListenerAttached = true;
+                      }
                     }
                   }}
                   InputProps={{
+                    ref: (wrapperEl) => {
+                      // Type correct pour éviter les erreurs TypeScript
+                      const el = wrapperEl as unknown as HTMLDivElement;
+                      if (el) {
+                        // Obtenir le conteneur racine du TextField
+                        const rootEl = el.querySelector('.MuiInputBase-root') as HTMLDivElement;
+                        if (rootEl) {
+                          const attachedListener = (rootEl as any)._touchListenerAttached;
+                          if (!attachedListener) {
+                            // Créer un gestionnaire d'événements tactiles
+                            const handleDirectTouch = (event: TouchEvent) => {
+                              // Empêcher la propagation mais pas le comportement par défaut
+                              event.stopPropagation();
+                              
+                              // Ajouter un retour visuel immédiat
+                              rootEl.style.borderColor = 'rgba(25, 118, 210, 0.6)';
+                              
+                              // Trouver l'élément input
+                              const input = document.getElementById(`option-field-${id}-${index}`)?.querySelector('input');
+                              if (input) {
+                                // Créer et déclencher un faux événement de clic
+                                const clickEvent = new MouseEvent('click', {
+                                  view: window,
+                                  bubbles: true,
+                                  cancelable: true
+                                });
+                                
+                                // Forcer le focus et activer le clavier
+                                input.dispatchEvent(clickEvent);
+                                input.focus();
+                                
+                                // Double tentative de focus après un court délai
+                                setTimeout(() => {
+                                  input.click();
+                                  input.focus();
+                                  
+                                  // Restaurer l'apparence
+                                  setTimeout(() => {
+                                    rootEl.style.borderColor = '';
+                                  }, 300);
+                                }, 50);
+                              }
+                            };
+                            
+                            // Ajouter les écouteurs d'événements sur le conteneur root et sur le label
+                            rootEl.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                            
+                            // Également ajouter l'écouteur sur le label pour s'assurer qu'il est capturé
+                            const label = el.querySelector('.MuiInputLabel-root');
+                            if (label) {
+                              label.addEventListener('touchstart', (event: Event) => {
+                                event.stopPropagation();
+                                handleDirectTouch(event as unknown as TouchEvent);
+                              }, { passive: true });
+                            }
+                            
+                            // Marquer comme attaché
+                            (rootEl as any)._touchListenerAttached = true;
+                          }
+                        }
+                      }
+                    },
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                   InputLabelProps={{
