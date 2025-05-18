@@ -689,6 +689,22 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     };
   }, [handleMediaDelete]);
 
+  // Détecter les événements tactiles pour optimiser l'expérience
+  useEffect(() => {
+    // Fonction pour marquer que le dispositif utilise les événements tactiles
+    const markTouchDevice = () => {
+      (window as any).touchDetected = true;
+      document.documentElement.classList.add('touch-device');
+    };
+    
+    // Écouter le premier événement tactile
+    document.addEventListener('touchstart', markTouchDevice, { once: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', markTouchDevice);
+    };
+  }, []);
+
   return (
     <div style={{ position: 'relative' }}>
       <Paper 
@@ -791,16 +807,38 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             />
 
             <Box
-              onClick={handleTypeClick}
-              onTouchStart={(e) => {
-                // Optimiser la réponse tactile sur iOS
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-                if (isIOS) {
-                  // Empêcher tout délai tactile sur iOS
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Appeler directement la fonction
-                  handleTypeClick(e as any);
+              ref={(el) => {
+                if (el) {
+                  // Attacher un listener natif directement sur l'élément
+                  const attachedListener = (el as any)._touchListenerAttached;
+                  if (!attachedListener) {
+                    const handleDirectTouch = (event: TouchEvent) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      // Détecter iOS spécifiquement
+                      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                      // Ajouter un retour visuel immédiat
+                      el.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+                      // Forcer l'ouverture du popover immédiatement
+                      setTimeout(() => {
+                        setAnchorEl(el);
+                        // Restaurer l'apparence
+                        setTimeout(() => {
+                          el.style.backgroundColor = '';
+                        }, 300);
+                      }, isIOS ? 10 : 0);
+                    };
+                    // Ajouter l'écouteur d'événement
+                    el.addEventListener('touchstart', handleDirectTouch, { passive: false });
+                    // Marquer comme attaché
+                    (el as any)._touchListenerAttached = true;
+                  }
+                }
+              }}
+              onClick={(e) => {
+                // S'exécute uniquement pour les vrais clics (non simulés)
+                if (!(window as any).touchDetected) {
+                  handleTypeClick(e);
                 }
               }}
               data-intro="question-type-selector"
@@ -900,14 +938,31 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               label="Question"
               value={questionData.text}
               onChange={(e) => updateNodeData({ ...questionData, text: e.target.value })}
-              onTouchStart={(e) => {
-                // Empêcher les événements de propagation qui pourraient causer des délais
-                const target = e.currentTarget;
-                setTimeout(() => {
-                  if (target && target.querySelector('input')) {
-                    (target.querySelector('input') as HTMLInputElement).focus();
+              ref={(el) => {
+                if (el) {
+                  // Attacher un listener natif uniquement sur iOS
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                  if (isIOS) {
+                    const attachedListener = (el as any)._touchListenerAttached;
+                    if (!attachedListener) {
+                      const handleDirectTouch = (event: TouchEvent) => {
+                        // Ne pas empêcher l'événement par défaut car nous voulons le focus natif
+                        // Trouver l'élément input
+                        const input = el.querySelector('input');
+                        if (input) {
+                          // Forcer le focus après un petit délai
+                          setTimeout(() => {
+                            (input as HTMLInputElement).focus();
+                          }, 50);
+                        }
+                      };
+                      // Ajouter l'écouteur d'événement
+                      el.addEventListener('touchstart', handleDirectTouch, { passive: true });
+                      // Marquer comme attaché
+                      (el as any)._touchListenerAttached = true;
+                    }
                   }
-                }, 50);
+                }
               }}
               sx={{ 
                 mb: 2,
@@ -1220,6 +1275,28 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         .question-node-popover {
           -webkit-tap-highlight-color: transparent !important;
           touch-action: manipulation !important;
+        }
+        
+        /* Styles pour les appareils tactiles */
+        html.touch-device .MuiInputBase-root {
+          cursor: pointer !important;
+        }
+        
+        html.touch-device [data-intro="question-type-selector"] {
+          -webkit-user-select: none;
+          user-select: none;
+        }
+        
+        /* Styles pour améliorer l'accessibilité tactile */
+        @media (pointer: coarse) {
+          .MuiInputBase-root, 
+          .MuiOutlinedInput-root,
+          .MuiSelect-select,
+          [data-intro="question-type-selector"],
+          button,
+          input {
+            min-height: 44px !important;
+          }
         }
       `}</style>
     </div>
