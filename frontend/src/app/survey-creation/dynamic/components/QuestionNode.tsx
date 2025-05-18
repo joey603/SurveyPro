@@ -91,6 +91,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton d'ajout d'option
   const addOptionButtonRef = useRef<HTMLButtonElement>(null);
+  // Référence pour le bouton de suppression d'option
+  const deleteOptionButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Détection iOS une seule fois au chargement du composant
   const isIOS = typeof navigator !== 'undefined' ? /iPad|iPhone|iPod/.test(navigator.userAgent) : false;
@@ -338,16 +340,47 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                 />
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const newOptions = questionData.options.filter((_, i) => i !== index);
-                    handleOptionsChange(newOptions);
+                <button
+                  ref={el => {
+                    if (deleteOptionButtonRefs.current.length <= index) {
+                      deleteOptionButtonRefs.current.push(el);
+                    } else {
+                      deleteOptionButtonRefs.current[index] = el;
+                    }
                   }}
-                  sx={{ color: '#ff4444' }}
+                  onClick={() => {
+                    // S'exécute uniquement pour les vrais clics (non simulés)
+                    if (!(window as any).touchDetected) {
+                      // Sélectionner la carte
+                      selectCard();
+                      // Supprimer l'option
+                      const newOptions = questionData.options.filter((_, i) => i !== index);
+                      handleOptionsChange(newOptions);
+                    }
+                  }}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    borderRadius: '50%',
+                    background: 'white',
+                    color: '#ff4444',
+                    cursor: 'pointer',
+                    padding: 0,
+                    WebkitAppearance: 'none',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'none', // "none" pour éviter tout comportement tactile du navigateur
+                    outline: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                  }}
                 >
                   <DeleteIcon />
-                </IconButton>
+                </button>
               </Box>
             ))}
             <button
@@ -568,6 +601,40 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
+  }, [questionData.options, handleOptionsChange, selectCard]);
+
+  // Gestionnaire d'événements tactiles natif pour iOS - pour les boutons de suppression d'option
+  useEffect(() => {
+    // Pour chaque bouton de suppression d'option
+    deleteOptionButtonRefs.current.forEach((button, index) => {
+      if (!button) return;
+
+      const handleTouchStart = (e: TouchEvent) => {
+        // Prévient le comportement par défaut qui peut causer un délai
+        e.preventDefault();
+        // Force l'arrêt de la propagation de l'événement
+        e.stopPropagation();
+        // Sélectionner la carte
+        selectCard();
+        // Ajouter un retour visuel immédiat
+        button.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+        // Supprimer l'option
+        const newOptions = questionData.options.filter((_, i) => i !== index);
+        handleOptionsChange(newOptions);
+        // Restaurer l'apparence
+        setTimeout(() => {
+          button.style.backgroundColor = '';
+        }, 300);
+      };
+
+      // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+      button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+      // Nettoyage
+      return () => {
+        button.removeEventListener('touchstart', handleTouchStart);
+      };
+    });
   }, [questionData.options, handleOptionsChange, selectCard]);
 
   // Fonction pour les navigateurs non tactiles
@@ -1427,6 +1494,27 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           button[data-intro="add-option-button"] {
             min-height: 44px !important;
             min-width: 100px !important;
+          }
+        }
+        
+        /* Optimisations pour les boutons de suppression d'option */
+        button[data-delete-option] {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        button[data-delete-option]:active {
+          opacity: 0.8;
+          background-color: rgba(244, 67, 54, 0.1);
+          transform: scale(0.97);
+          transition: all 0.05s linear !important;
+        }
+        
+        @supports (-webkit-touch-callout: none) {
+          button[data-delete-option] {
+            min-height: 44px !important;
+            min-width: 44px !important;
           }
         }
       `}</style>
