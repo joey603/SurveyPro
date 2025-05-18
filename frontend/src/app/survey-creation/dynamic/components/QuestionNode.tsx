@@ -279,6 +279,63 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     }
   }, [data]);
 
+  // Nouvelle fonction pour gérer les téléchargements d'images
+  const openNativePicker = useCallback(() => {
+    // Cette fonction sera appelée par le bouton natif
+    console.log("Opening native media picker");
+    
+    // Créer un élément input file natif
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*';
+    
+    // Pour déboguer sur iOS
+    input.style.position = 'fixed';
+    input.style.top = '0';
+    input.style.left = '0';
+    input.style.width = '100%';
+    input.style.height = '100px';
+    input.style.zIndex = '10000'; // Valeur élevée pour être au-dessus de tout
+    input.style.opacity = '0.01'; // Presque invisible mais toujours présent
+    
+    // Déclencher un changement dans l'état React pour forcer un rendu
+    const randomKey = Math.random().toString(36).substring(7);
+    (window as any).mediaUploadKey = randomKey;
+    
+    // Gestionnaire d'événement pour le changement de fichier
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      
+      if (file) {
+        // Créer un événement React synthétique
+        const fakeEvent = {
+          target,
+          currentTarget: target,
+          preventDefault: () => {},
+          stopPropagation: () => {}
+        } as unknown as React.ChangeEvent<HTMLInputElement>;
+        
+        // Appeler notre gestionnaire
+        handleMediaUpload(fakeEvent);
+      }
+      
+      // Supprimer l'élément input une fois terminé
+      if (input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+    };
+    
+    // Ajouter l'élément au DOM
+    document.body.appendChild(input);
+    
+    // Forcer le focus et le clic
+    setTimeout(() => {
+      input.focus();
+      input.click();
+    }, 100);
+  }, [handleMediaUpload]);
+
   const handleMediaDelete = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -544,7 +601,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       button.style.backgroundColor = '#f0f7ff';
       button.style.transform = 'scale(0.97)';
       
-      // Solution spécifique pour iOS Safari
+      // Solution spécifique pour iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
       if (isIOS) {
@@ -1073,171 +1130,124 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
             {renderQuestionFields()}
 
-            <Box sx={{ mt: 2, position: 'relative' }}>
-              {/* Ancien input caché avec un id différent */}
-              <input
-                type="file"
-                id={`hidden-media-upload-${id}`}
-                style={{display: 'none'}}
-                onChange={handleMediaUpload}
-              />
-              
-              {/* Nouvel input file positionné par-dessus avec une taille énorme */}
-              <input
-                type="file"
-                id={`media-upload-${id}`}
-                accept="image/*,video/*"
-                onChange={handleMediaUpload}
-                className="ios-direct-file-input"
+            <Box sx={{ mt: 2 }}>
+              <label 
+                htmlFor={`native-file-upload-${id}`}
+                className="media-upload-button"
                 style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '-10px',
-                  width: '150%',  // Beaucoup plus large
-                  height: '200%', // Beaucoup plus haut
-                  opacity: 0.01,  // Légèrement visible pour iOS
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  minHeight: '48px',
+                  height: 'auto',
+                  width: 'auto',
+                  padding: '12px 16px',
                   border: 'none',
-                  padding: '30px',
+                  borderRadius: '4px',
+                  background: 'white',
+                  color: '#1976d2',
+                  fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
+                  cursor: isUploading ? 'not-allowed' : 'pointer',
+                  WebkitAppearance: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
+                  outline: 'none',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                  opacity: isUploading ? 0.7 : 1,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                 }}
-              />
+                onClick={(e) => {
+                  // Empêcher le comportement par défaut qui pourrait causer des problèmes sur iOS
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Appeler la fonction qui ouvre le sélecteur de fichiers natif
+                  openNativePicker();
+                  
+                  // Ajouter un retour visuel
+                  const target = e.currentTarget;
+                  target.style.backgroundColor = '#f0f7ff';
+                  target.style.opacity = '0.8';
+                  target.style.transform = 'scale(0.97)';
+                  
+                  // Restaurer l'apparence après un délai
+                  setTimeout(() => {
+                    target.style.backgroundColor = '';
+                    target.style.opacity = '';
+                    target.style.transform = '';
+                  }, 300);
+                }}
+              >
+                <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
+                <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
+              </label>
               
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', position: 'relative' }}>
-                {/* Faux bouton qui est visuellement dessous l'input */}
-                <div
-                  className="fake-button-visual" 
+              {data.mediaUrl && (
+                <button 
+                  type="button"
+                  ref={deleteMediaButtonRef}
+                  onClick={handleMediaDelete}
                   style={{
+                    width: '48px',
+                    height: '48px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    minHeight: '48px',
-                    height: 'auto',
-                    width: 'auto',
-                    padding: '12px 16px',
-                    border: 'none',
-                    borderRadius: '4px',
+                    border: '1px solid #f44336',
+                    borderRadius: '50%',
                     background: 'white',
-                    color: '#1976d2',
-                    fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
-                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    color: '#f44336',
+                    cursor: 'pointer',
+                    padding: 0,
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'manipulation',
+                    touchAction: 'none',
                     outline: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
-                    opacity: isUploading ? 0.7 : 1,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    pointerEvents: 'none', // Pour que les clics passent à l'input au-dessus
                   }}
                 >
-                  <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
-                  <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
-                </div>
-
-                {/* Script spécial pour forcer l'activation de l'input sur iOS */}
-                <script dangerouslySetInnerHTML={{
-                  __html: `
-                    (function() {
-                      // Détection iOS
-                      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                      if (!isIOS) return;
-                      
-                      // Attendre que le DOM soit prêt
-                      setTimeout(function() {
-                        var fakeButton = document.querySelector('.fake-button-visual');
-                        var fileInput = document.getElementById('media-upload-${id}');
-                        
-                        if (fakeButton && fileInput) {
-                          // Attacher des gestionnaires d'événements directs
-                          fakeButton.addEventListener('touchstart', function(e) {
-                            // Empêcher la propagation mais pas le comportement par défaut
-                            e.stopPropagation();
-                            
-                            // Style de feedback visuel
-                            this.style.backgroundColor = '#f0f8ff';
-                            this.style.opacity = '0.8';
-                            
-                            // Tentative de forcer le focus et le clic
-                            setTimeout(function() {
-                              // Forcer le clic sur l'input
-                              fileInput.click();
-                            }, 10);
-                          }, {passive: false});
-                        }
-                      }, 500);
-                    })();
-                  `
-                }} />
-
-                {data.mediaUrl && (
-                  <button 
-                    type="button"
-                    ref={deleteMediaButtonRef}
-                    onClick={handleMediaDelete}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #f44336',
-                      borderRadius: '50%',
-                      background: 'white',
-                      color: '#f44336',
-                      cursor: 'pointer',
-                      padding: 0,
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'none',
-                      outline: 'none',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
-                    }}
-                  >
-                    <DeleteIcon style={{ fontSize: '20px' }} />
-                  </button>
-                )}
-              </Box>
-              
-              {isUploading && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  <CircularProgress size={20} />
-                  <Typography variant="caption" sx={{ ml: 1, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                    Uploading media...
-                  </Typography>
-                </Box>
-              )}
-
-              {uploadError && (
-                <Typography color="error" variant="caption" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                  {uploadError}
-                </Typography>
-              )}
-
-              {data.mediaUrl && (
-                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' } }}>
-                  {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                    <img 
-                      src={data.mediaUrl} 
-                      alt="Question media" 
-                      style={{ width: '100%', borderRadius: '4px' }}
-                    />
-                  ) : (
-                    <video 
-                      src={data.mediaUrl}
-                      controls
-                      style={{ width: '100%', borderRadius: '4px' }}
-                    />
-                  )}
-                </Box>
+                  <DeleteIcon style={{ fontSize: '20px' }} />
+                </button>
               )}
             </Box>
+
+            {isUploading && (
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <CircularProgress size={20} />
+                <Typography variant="caption" sx={{ ml: 1, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                  Uploading media...
+                </Typography>
+              </Box>
+            )}
+
+            {uploadError && (
+              <Typography color="error" variant="caption" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                {uploadError}
+              </Typography>
+            )}
+
+            {data.mediaUrl && (
+              <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' } }}>
+                {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                  <img 
+                    src={data.mediaUrl} 
+                    alt="Question media" 
+                    style={{ width: '100%', borderRadius: '4px' }}
+                  />
+                ) : (
+                  <video 
+                    src={data.mediaUrl}
+                    controls
+                    style={{ width: '100%', borderRadius: '4px' }}
+                  />
+                )}
+              </Box>
+            )}
           </Box>
         ) : (
           <Box>
@@ -1502,42 +1512,38 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           }
         }
         
-        /* Input file direct et entièrement fonctionnel pour iOS */
-        .ios-direct-file-input {
-          cursor: pointer !important;
+        /* Styles optimisés pour le bouton d'upload sur iOS */
+        .media-upload-button {
           -webkit-tap-highlight-color: transparent !important;
           -webkit-touch-callout: none !important;
           touch-action: manipulation !important;
-          border: none !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          background: transparent !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -webkit-appearance: none !important;
+          transform: translateZ(0); /* Force l'accélération matérielle */
+          cursor: pointer !important;
         }
         
-        /* Garantir que l'input a une taille suffisante pour iOS */
+        /* Retour visuel pour la pression sur le bouton */
+        .media-upload-button:active {
+          opacity: 0.7 !important;
+          background-color: #f0f7ff !important;
+          transform: scale(0.97) !important;
+          transition: all 0.05s ease-out !important;
+        }
+        
+        /* Optimisations pour iOS Safari */
         @supports (-webkit-touch-callout: none) {
-          .ios-direct-file-input {
-            min-height: 100px !important;
-            min-width: 200px !important;
-            font-size: 20px !important; /* Plus grand pour iOS */
-            opacity: 0.01 !important; /* Juste assez visible pour que iOS le détecte */
-            -webkit-appearance: none !important;
-            -webkit-user-select: none !important;
-            border: 30px solid transparent !important; /* Grande zone de toucher */
-            background-clip: content-box !important;
+          /* Taille minimale recommandée par Apple pour les éléments tactiles */
+          .media-upload-button {
+            min-height: 44px !important;
+            min-width: 44px !important;
           }
           
-          /* Cacher le texte de l'input but pas l'input lui-même */
-          .ios-direct-file-input::-webkit-file-upload-button {
-            visibility: hidden;
+          /* Éviter le zoom automatique du formulaire sur iOS */
+          input[type="file"] {
+            font-size: 16px !important;
           }
-        }
-        
-        /* Faux bouton sous l'input */
-        .fake-button-visual:active {
-          background-color: #f0f8ff !important;
-          opacity: 0.8 !important;
-          transform: scale(0.97) !important;
         }
       `}</style>
     </div>
