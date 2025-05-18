@@ -968,87 +968,30 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', position: 'relative' }}>
                 <button
                   type="button"
-                  id={`add-media-button-${id}`}
-                  className="ios-optimized-button"
-                  ref={(buttonEl) => {
-                    if (buttonEl) {
-                      // Accéder directement à l'élément input original
-                      const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-                      if (!fileInput) return;
-                      
-                      // Éviter d'attacher plusieurs fois le même écouteur
-                      const attachedListener = (buttonEl as any)._touchListenerAttached;
-                      if (!attachedListener) {
-                        // Variable pour détecter le double-clic
-                        let lastClickTime = 0;
+                  onClick={() => {
+                    // Solution simple et directe - utiliser un input natif
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*,video/*';
+                    
+                    input.onchange = (e: Event) => {
+                      const target = e.target as HTMLInputElement;
+                      if (target.files && target.files.length > 0) {
+                        // Créer un faux événement React
+                        const fakeEvent = {
+                          target: target,
+                          currentTarget: target,
+                          preventDefault: () => {},
+                          stopPropagation: () => {}
+                        } as unknown as React.ChangeEvent<HTMLInputElement>;
                         
-                        // Fonction simple qui force directement l'ouverture du sélecteur
-                        const forceOpenFileSelector = (event: Event) => {
-                          // Empêcher la propagation mais pas le comportement par défaut
-                          event.preventDefault();
-                          event.stopPropagation();
-                          
-                          if (isIOS) {
-                            // Gérer le double-clic sur iOS
-                            const currentTime = new Date().getTime();
-                            const clickTimeDiff = currentTime - lastClickTime;
-                            
-                            // Si c'est un double-clic (moins de 300ms entre les clics)
-                            if (clickTimeDiff < 300 && lastClickTime > 0) {
-                              // Retour visuel immédiat pour le double-clic
-                              buttonEl.style.opacity = '0.7';
-                              buttonEl.style.backgroundColor = '#f0f7ff';
-                              
-                              // Ouvrir le sélecteur de fichiers
-                              fileInput.click();
-                              
-                              // Réinitialiser le temps du dernier clic
-                              lastClickTime = 0;
-                              
-                              // Restaurer l'apparence après un délai
-                              setTimeout(() => {
-                                buttonEl.style.opacity = '';
-                                buttonEl.style.backgroundColor = '';
-                              }, 300);
-                            } else {
-                              // Premier clic, mémoriser le temps
-                              lastClickTime = currentTime;
-                              
-                              // Ajouter une classe visuelle pour indiquer le premier clic
-                              buttonEl.classList.add('first-click');
-                              
-                              // Retirer la classe après un délai
-                              setTimeout(() => {
-                                buttonEl.classList.remove('first-click');
-                              }, 300);
-                            }
-                          } else {
-                            // Pour les appareils non-iOS, un seul clic suffit
-                            buttonEl.style.opacity = '0.7';
-                            fileInput.click();
-                            
-                            setTimeout(() => {
-                              buttonEl.style.opacity = '';
-                            }, 300);
-                          }
-                        };
-                        
-                        // Attacher un gestionnaire direct pour les événements tactiles
-                        buttonEl.addEventListener('touchstart', forceOpenFileSelector, { passive: false });
-                        
-                        // Marquer comme attaché
-                        (buttonEl as any)._touchListenerAttached = true;
+                        // Appeler notre gestionnaire
+                        handleMediaUpload(fakeEvent);
                       }
-                    }
-                  }}
-                  onClick={(e) => {
-                    // S'exécuter uniquement pour les vrais clics (non tactiles)
-                    if (!(window as any).touchDetected) {
-                      const fileInput = document.getElementById(`media-upload-${id}`);
-                      if (fileInput) {
-                        fileInput.click();
-                      }
-                    }
+                    };
+                    
+                    // Déclencher le sélecteur de fichiers
+                    input.click();
                   }}
                   disabled={isUploading}
                   style={{
@@ -1076,7 +1019,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     opacity: isUploading ? 0.7 : 1,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   }}
-                  data-intro="add-media"
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
