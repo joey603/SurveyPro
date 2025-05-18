@@ -1073,20 +1073,31 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
 
             {renderQuestionFields()}
 
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, position: 'relative' }}>
+              {/* Input file positionné par-dessus le "bouton" */}
               <input
                 type="file"
                 id={`media-upload-${id}`}
                 accept="image/*,video/*"
-                style={{ display: 'none' }}
                 onChange={handleMediaUpload}
-                className="ios-file-input"
+                className="ios-direct-file-input"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '48px',
+                  opacity: 0,
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <label 
-                  htmlFor={`media-upload-${id}`}
-                  className="ios-optimized-button native-file-label"
+                {/* Faux bouton qui est visuellement dessous l'input */}
+                <div
+                  className="fake-button-visual" 
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1111,13 +1122,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitTouchCallout: 'none',
                     opacity: isUploading ? 0.7 : 1,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    pointerEvents: 'none', // Pour que les clics passent à l'input au-dessus
                   }}
-                  data-intro="add-media"
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
-                </label>
-                
+                </div>
+
                 {data.mediaUrl && (
                   <button 
                     type="button"
@@ -1148,7 +1159,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   </button>
                 )}
               </Box>
-
+              
               {isUploading && (
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                   <CircularProgress size={20} />
@@ -1446,46 +1457,29 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           }
         }
         
-        /* Optimisations spécifiques pour label qui déclenche le sélecteur de fichiers */
-        .native-file-label {
+        /* Input file direct et entièrement fonctionnel pour iOS */
+        .ios-direct-file-input {
+          cursor: pointer !important;
           -webkit-tap-highlight-color: transparent !important;
           -webkit-touch-callout: none !important;
           touch-action: manipulation !important;
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -webkit-appearance: none !important;
-          cursor: pointer !important;
         }
         
-        /* Animation pour retour visuel */
-        .native-file-label:active {
+        /* Garantir que l'input a une taille suffisante pour iOS */
+        @supports (-webkit-touch-callout: none) {
+          .ios-direct-file-input {
+            min-height: 48px !important;
+            min-width: 120px !important;
+            font-size: 16px !important; /* iOS n'active pas le zoom sur les inputs ≥ 16px */
+            opacity: 0.00001 !important; /* Presque invisible mais techniquement visible pour iOS */
+          }
+        }
+        
+        /* Faux bouton sous l'input */
+        .fake-button-visual:active {
           background-color: #f0f8ff !important;
           opacity: 0.8 !important;
           transform: scale(0.97) !important;
-          transition: all 0.1s ease-out !important;
-        }
-        
-        /* Support spécial iOS */
-        @supports (-webkit-touch-callout: none) {
-          /* Pour les appareils iOS */
-          .ios-file-input {
-            /* Reset complet pour l'input file */
-            -webkit-appearance: none !important;
-            width: 0.1px;
-            height: 0.1px;
-            opacity: 0;
-            overflow: hidden;
-            position: absolute;
-            z-index: -1;
-          }
-          
-          .native-file-label {
-            /* Garantir les dimensions minimales pour zones tactiles iOS */
-            min-height: 44px !important;
-            min-width: 44px !important;
-            padding: 12px 16px !important;
-            font-size: 16px !important; /* Évite le zoom sur iOS */
-          }
         }
       `}</style>
     </div>
