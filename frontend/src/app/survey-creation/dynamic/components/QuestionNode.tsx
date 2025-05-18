@@ -580,29 +580,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       >
         <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
         
-        {/* Infobulle fixe pour iOS */}
-        {isIOS && isEditing && (
-          <div
-            style={{
-              position: 'absolute',
-              right: '20px',
-              bottom: '20px',
-              backgroundColor: '#667eea',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              fontSize: '0.75rem',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              zIndex: 10,
-              pointerEvents: 'none',
-              opacity: 0.95,
-            }}
-          >
-            Need Double Click For Media Selection
-          </div>
-        )}
-
         <Box sx={{ 
           mb: 2, 
           display: 'flex', 
@@ -1018,10 +995,45 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitTouchCallout: 'none',
                     opacity: isUploading ? 0.7 : 1,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    position: 'relative',
                   }}
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
                   <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
+                  
+                  {/* Infobulle à côté du bouton avec flèche */}
+                  {isIOS && isEditing && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '-40px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        zIndex: 10,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      Need Double Click
+                      <div
+                        style={{
+                          position: 'absolute',
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: '#667eea',
+                          bottom: '-5px',
+                          left: '50%',
+                          transform: 'translateX(-50%) rotate(45deg)',
+                        }}
+                      />
+                    </div>
+                  )}
                 </button>
                 
                 {data.mediaUrl && (
