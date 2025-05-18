@@ -77,6 +77,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [mediaTracker, setMediaTracker] = useState<Record<string, string>>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showIOSTooltip, setShowIOSTooltip] = useState(false);
   
   // Use a ref to track previous editing state
   const prevEditingRef = useRef(false);
@@ -85,7 +86,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   // Référence pour la case à cocher Critical Question
   const criticalCheckboxRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton d'ajout de média
-  const addMediaButtonRef = useRef<HTMLLabelElement>(null);
+  const addMediaButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton de suppression de média
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -516,12 +517,47 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     if (fileInput) fileInput.click();
   };
 
+  // Simplification extrême du bouton Add Media pour iOS
+  useEffect(() => {
+    const button = addMediaButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Appelle directement la fonction de suppression
+      handleMediaDelete();
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [handleMediaDelete]);
+
   // Détecter les événements tactiles pour optimiser l'expérience
   useEffect(() => {
     // Fonction pour marquer que le dispositif utilise les événements tactiles
     const markTouchDevice = () => {
       (window as any).touchDetected = true;
       document.documentElement.classList.add('touch-device');
+      
+      // Détecter si c'est un appareil iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        document.documentElement.classList.add('ios-device');
+        // Afficher l'infobulle sur iOS
+        setShowIOSTooltip(true);
+        // Masquer l'infobulle après 5 secondes
+        setTimeout(() => {
+          setShowIOSTooltip(false);
+        }, 5000);
+      }
     };
     
     // Écouter le premier événement tactile
@@ -901,69 +937,159 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             {renderQuestionFields()}
 
             <Box sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Box 
-                  component="div"
-                  sx={{
-                    display: 'inline-block',
-                    position: 'relative',
-                    minWidth: { xs: '100%', sm: '150px' },
-                  }}
-                >
-                  <Button
-                    component="label"
-                    variant="outlined"
-                    disabled={isUploading}
-                    startIcon={isUploading ? (
-                      <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                    ) : (
-                      <AddPhotoAlternateIcon />
-                    )}
-                    sx={{
-                      color: '#1976d2',
-                      borderColor: '#1976d2',
-                      '&:hover': {
-                        borderColor: '#0f5bbb',
-                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                      },
-                      width: '100%',
-                      touchAction: 'manipulation',
-                      WebkitTapHighlightColor: 'transparent',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
-                      minHeight: '44px',
-                    }}
-                    onTouchStart={(e) => {
-                      // Pour iOS: Empêcher le délai tactile de 300ms
-                      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                        e.stopPropagation();
+              <input
+                type="file"
+                id={`media-upload-${id}`}
+                accept="image/*,video/*"
+                style={{ display: 'none' }}
+                onChange={handleMediaUpload}
+              />
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', position: 'relative' }}>
+                <button
+                  type="button"
+                  id={`add-media-button-${id}`}
+                  className="ios-optimized-button"
+                  ref={(buttonEl) => {
+                    if (buttonEl) {
+                      // Accéder directement à l'élément input original
+                      const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+                      if (!fileInput) return;
+                      
+                      // Éviter d'attacher plusieurs fois le même écouteur
+                      const attachedListener = (buttonEl as any)._touchListenerAttached;
+                      if (!attachedListener) {
+                        // Fonction simple qui force directement l'ouverture du sélecteur
+                        const forceOpenFileSelector = (event: Event) => {
+                          // Empêcher la propagation mais pas le comportement par défaut
+                          event.preventDefault();
+                          event.stopPropagation();
+                          
+                          // Retour visuel immédiat
+                          buttonEl.style.opacity = '0.7';
+                          
+                          // SOLUTION DIRECTE POUR iOS:
+                          // Utiliser une méthode agressive pour forcer un clic réel
+                          // sur l'élément input file natif
+                          try {
+                            // Créer un vrai événement de clic natif
+                            const clickEvent = new MouseEvent('click', {
+                              view: window,
+                              bubbles: true,
+                              cancelable: true,
+                              clientX: 20, // Coordonnées non-nulles pour éviter la détection de clics simulés
+                              clientY: 20
+                            });
+                            
+                            // Cliquer directement sur l'input file original
+                            fileInput.dispatchEvent(clickEvent);
+                            
+                            // Pour iOS, parfois le premier événement est bloqué
+                            // Tentative immédiate avec un léger délai
+                            setTimeout(() => {
+                              fileInput.click();
+                              
+                              // Restaurer l'apparence du bouton après un délai
+                              setTimeout(() => {
+                                buttonEl.style.opacity = '';
+                              }, 300);
+                            }, 50);
+                          } catch (error) {
+                            console.error("Erreur lors de l'ouverture du sélecteur:", error);
+                            // Fallback au clic standard en cas d'erreur
+                            fileInput.click();
+                            
+                            // Restaurer l'apparence
+                            setTimeout(() => {
+                              buttonEl.style.opacity = '';
+                            }, 300);
+                          }
+                        };
+                        
+                        // Attacher un gestionnaire direct pour les événements tactiles
+                        buttonEl.addEventListener('touchstart', forceOpenFileSelector, { passive: false });
+                        
+                        // Marquer comme attaché
+                        (buttonEl as any)._touchListenerAttached = true;
                       }
+                    }
+                  }}
+                  onClick={(e) => {
+                    // S'exécuter uniquement pour les vrais clics (non tactiles)
+                    if (!(window as any).touchDetected) {
+                      const fileInput = document.getElementById(`media-upload-${id}`);
+                      if (fileInput) {
+                        fileInput.click();
+                      }
+                    }
+                  }}
+                  disabled={isUploading}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    minHeight: '48px',
+                    height: 'auto',
+                    width: 'auto',
+                    padding: '12px 16px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: 'white',
+                    color: '#1976d2',
+                    fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    WebkitAppearance: 'none',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation',
+                    outline: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                    opacity: isUploading ? 0.7 : 1,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  }}
+                  data-intro="add-media"
+                >
+                  <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
+                  <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
+                </button>
+                
+                {/* Infobulle pour iOS indiquant le besoin de double-clic */}
+                {showIOSTooltip && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 'calc(100% + 8px)',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: '#667eea',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      zIndex: 10,
+                      pointerEvents: 'none',
+                      opacity: 0.95,
+                      transition: 'opacity 0.3s ease'
                     }}
                   >
-                    {isUploading ? 'Uploading...' : 'Add Media'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,video/*"
-                      onChange={handleMediaUpload}
-                      style={{ 
+                    Need Double Click
+                    <div
+                      style={{
                         position: 'absolute',
-                        top: 0,
-                        right: 0,
-                        minWidth: '100%',
-                        minHeight: '100%',
-                        fontSize: '100px',
-                        textAlign: 'right',
-                        filter: 'alpha(opacity=0)',
-                        opacity: 0,
-                        outline: 'none',
-                        cursor: 'inherit',
-                        display: 'block',
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#667eea',
+                        left: '-4px',
+                        top: '50%',
+                        transform: 'translateY(-50%) rotate(45deg)',
                       }}
                     />
-                  </Button>
-                </Box>
+                  </div>
+                )}
                 
                 {data.mediaUrl && (
                   <button 
@@ -1069,54 +1195,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       </Paper>
 
       <style jsx global>{`
-        /* Styles spécifiques pour les appareils iOS */
-        @supports (-webkit-touch-callout: none) {
-          /* Optimisation mobile-first pour iOS */
-          input[type="file"] {
-            cursor: pointer !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            opacity: 0.00001 !important; /* Très légère opacité pour meilleure détection tactile */
-            font-size: 100px !important; /* Forcer une zone tactile plus large */
-            z-index: 2 !important;
-          }
-          
-          /* Améliorer la réactivité des boutons pour le tactile */
-          button, 
-          .MuiButton-root {
-            touch-action: manipulation !important;
-            -webkit-tap-highlight-color: transparent !important;
-            -webkit-touch-callout: none !important;
-            -webkit-user-select: none !important;
-            user-select: none !important;
-          }
-          
-          /* Supprimer tous les effets d'appui prolongé sur iOS */
-          * {
-            -webkit-touch-callout: none !important;
-          }
-        }
-        
-        /* Pour empêcher absolument les doubles clics sur la version Safari iOS */
-        .MuiButton-root[component="label"] {
-          position: relative !important;
-        }
-        
-        .MuiButton-root[component="label"] > input[type="file"] {
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          cursor: pointer !important;
-          opacity: 0 !important;
-          z-index: 2 !important;
-        }
-        
         .question-node-popover {
+          z-index: 30000 !important;
+          position: fixed !important;
+        }
+        .MuiPopover-root {
           z-index: 30000 !important;
           position: fixed !important;
         }
@@ -1309,38 +1392,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
             cursor: pointer !important;
             min-height: 44px !important;
             min-width: 44px !important;
-          }
-          
-          /* Agrandir légèrement la zone tactile */
-          label.media-button {
-            padding: 12px 20px !important;
-          }
-          
-          /* Fournir un retour visuel immédiat */
-          label.media-button:active {
-            background-color: rgba(25, 118, 210, 0.08) !important;
-          }
-        }
-        
-        /* Styles pour le bouton media utilisant label */
-        label.media-button {
-          -webkit-tap-highlight-color: transparent !important;
-          -webkit-touch-callout: none !important;
-          touch-action: manipulation !important;
-        }
-        
-        /* Support spécifique pour iOS */
-        @supports (-webkit-touch-callout: none) {
-          label.media-button {
-            min-height: 44px !important;
-            min-width: 44px !important;
-          }
-          
-          /* Eliminer les doubles clics */
-          input[type="file"] {
-            font-size: 100px !important;
-            position: absolute !important;
-            opacity: 0.0001 !important; 
           }
         }
       `}</style>
