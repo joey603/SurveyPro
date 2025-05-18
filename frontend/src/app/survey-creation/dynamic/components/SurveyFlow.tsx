@@ -60,6 +60,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [movingNodeId, setMovingNodeId] = useState<string | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -621,7 +622,17 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
   }, [nodes, handleNodeChange, reactFlowInstance]);
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => {
+      // Détecter si un nœud est en cours de déplacement
+      changes.forEach(change => {
+        if (change.type === 'position' && change.dragging === true) {
+          setMovingNodeId(change.id);
+        } else if (change.type === 'position' && change.dragging === false) {
+          setMovingNodeId(null);
+        }
+      });
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
     []
   );
 
@@ -1035,6 +1046,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const parentNode = parentEdge ? nodes.find(n => n.id === parentEdge.source) : null;
     const isChildOfCritical = parentNode?.data?.isCritical;
     const isNodeInEditMode = node.data && node.data._editingState;
+    const isMoving = node.id === movingNodeId;
 
     return {
       ...node,
@@ -1048,10 +1060,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         ...node.style,
         border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
         width: 450,
-        // Augmenter significativement le z-index si le nœud est en mode édition
-        zIndex: isNodeInEditMode ? 1000 : (node.id === selectedNode ? 100 : undefined),
-        // Ajouter une ombre plus prononcée en mode édition pour mettre en évidence le nœud
-        boxShadow: isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined,
+        // Gérer les priorités de z-index:
+        // 1. Nœuds en déplacement (z-index: 2000) - priorité absolue
+        // 2. Nœuds sélectionnés (z-index: 1000) - priorité élevée
+        // 3. Nœuds en mode édition (z-index: 500) - priorité intermédiaire
+        // 4. Nœuds normaux (z-index: non défini) - priorité par défaut
+        zIndex: isMoving ? 2000 : (node.id === selectedNode ? 1000 : (isNodeInEditMode ? 500 : undefined)),
+        // Ajouter une ombre plus prononcée pour les nœuds en mode édition ou en déplacement
+        boxShadow: isMoving 
+          ? '0 12px 30px rgba(0, 0, 0, 0.35)' 
+          : (isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined),
       }
     };
   });
