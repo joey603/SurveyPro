@@ -795,6 +795,39 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     };
   }, [handleMediaDelete, selectCard]);
 
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
+  useEffect(() => {
+    const button = deleteMediaButtonRef.current;
+    if (!button) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prévient le comportement par défaut qui peut causer un délai
+      e.preventDefault();
+      // Force l'arrêt de la propagation de l'événement
+      e.stopPropagation();
+      // Sélectionner la carte
+      selectCard();
+      // Ajouter un retour visuel immédiat
+      button.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+      button.style.transform = 'scale(0.95)';
+      // Supprimer le média
+      handleMediaDelete();
+      // Restaurer l'apparence
+      setTimeout(() => {
+        button.style.backgroundColor = '';
+        button.style.transform = '';
+      }, 300);
+    };
+
+    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
+    button.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    // Nettoyage
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [handleMediaDelete, selectCard]);
+
   // Détecter les événements tactiles pour optimiser l'expérience
   useEffect(() => {
     // Fonction pour marquer que le dispositif utilise les événements tactiles
@@ -1331,10 +1364,14 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   <button 
                     type="button"
                     ref={deleteMediaButtonRef}
-                    onClick={() => {
-                      // Sélectionner la carte
-                      selectCard();
-                      handleMediaDelete();
+                    onClick={(e) => {
+                      // S'exécute uniquement pour les vrais clics (non simulés)
+                      if (!(window as any).touchDetected) {
+                        // Sélectionner la carte
+                        selectCard();
+                        // Supprimer le média
+                        handleMediaDelete();
+                      }
                     }}
                     style={{
                       width: '40px',
@@ -1359,6 +1396,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       alignSelf: 'center',
                       flexShrink: 0
                     }}
+                    data-delete-media="true"
                   >
                     <DeleteIcon style={{ fontSize: '20px' }} />
                   </button>
@@ -1626,6 +1664,27 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         
         @supports (-webkit-touch-callout: none) {
           button[data-delete-option] {
+            min-height: 44px !important;
+            min-width: 44px !important;
+          }
+        }
+        
+        /* Optimisations pour le bouton de suppression de média */
+        button[data-delete-media] {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          touch-action: manipulation !important;
+        }
+        
+        button[data-delete-media]:active {
+          opacity: 0.8;
+          background-color: rgba(244, 67, 54, 0.1);
+          transform: scale(0.95);
+          transition: all 0.05s linear !important;
+        }
+        
+        @supports (-webkit-touch-callout: none) {
+          button[data-delete-media] {
             min-height: 44px !important;
             min-width: 44px !important;
           }
