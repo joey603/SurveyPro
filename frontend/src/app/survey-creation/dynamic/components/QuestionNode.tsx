@@ -1063,40 +1063,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     </div>
                   )}
                 </button>
-                
-                {data.mediaUrl && (
-                  <button 
-                    type="button"
-                    ref={deleteMediaButtonRef}
-                    onClick={() => {
-                      // Sélectionner la carte
-                      selectCard();
-                      handleMediaDelete();
-                    }}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #f44336',
-                      borderRadius: '50%',
-                      background: 'white',
-                      color: '#f44336',
-                      cursor: 'pointer',
-                      padding: 0,
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'none',
-                      outline: 'none',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
-                    }}
-                  >
-                    <DeleteIcon style={{ fontSize: '20px' }} />
-                  </button>
-                )}
               </Box>
 
               {isUploading && (
@@ -1115,14 +1081,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               )}
 
               {data.mediaUrl && (
-                <Box sx={{ 
-                  maxWidth: { xs: '150px', sm: '200px' },
-                  margin: '0 auto',  // Centrage horizontal
-                  display: 'flex',   // Utiliser flexbox pour un meilleur centrage
-                  justifyContent: 'center',  // Centrer horizontalement le contenu
-                  alignItems: 'center',      // Centrer verticalement le contenu
-                  marginTop: 2,      // Marge supérieure
-                }}>
+                <Box sx={{ mt: 2, maxWidth: { xs: '150px', sm: '200px' }, position: 'relative' }}>
                   {data.mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                     <img 
                       src={data.mediaUrl} 
@@ -1136,6 +1095,42 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       style={{ width: '100%', borderRadius: '4px' }}
                     />
                   )}
+                  
+                  <button 
+                    type="button"
+                    ref={deleteMediaButtonRef}
+                    onClick={() => {
+                      // Sélectionner la carte
+                      selectCard();
+                      handleMediaDelete();
+                    }}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #f44336',
+                      borderRadius: '50%',
+                      background: 'white',
+                      color: '#f44336',
+                      cursor: 'pointer',
+                      padding: 0,
+                      WebkitAppearance: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'none',
+                      outline: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <DeleteIcon style={{ fontSize: '18px' }} />
+                  </button>
                 </Box>
               )}
             </Box>
