@@ -527,9 +527,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     }
     
     // Ajouter un espacement supplémentaire si la question a une image
-    if (sourceNode.data.mediaUrl && sourceNode.data.mediaUrl.length > 0) {
-      baseSpacing += EXTRA_SPACING_FOR_IMAGE;
-    }
+    // Commenté pour uniformiser l'espacement, que les nœuds aient des médias ou non
+    // if (sourceNode.data.mediaUrl && sourceNode.data.mediaUrl.length > 0) {
+    //   baseSpacing += EXTRA_SPACING_FOR_IMAGE;
+    // }
     
     // Calculer l'espacement horizontal réel comme dans reorganizeFlow
     // Si le nœud est critique ou a plusieurs options, on utilise un espacement horizontal complet
@@ -1242,10 +1243,10 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         baseSpacing = Math.max(BASE_VERTICAL_SPACING + 50, (maxCurrentHeight + maxNextHeight) / 2 + 50);
       }
       
-      // Add extra spacing for images
-      if (parentHasImage) {
-        baseSpacing += EXTRA_SPACING_FOR_IMAGE;
-      }
+      // Add extra spacing for images - SUPPRIMER CETTE PARTIE
+      // if (parentHasImage) {
+      //   baseSpacing += EXTRA_SPACING_FOR_IMAGE;
+      // }
       
       // Add extra spacing for critical questions, mais pas si le parent est déjà un descendant d'une question critique
       if (parentIsCritical && !isParentDescendantOfCritical) {
