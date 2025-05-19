@@ -202,9 +202,29 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      // Sauvegarder uniquement le surveyId et le pathname
+      console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
+      console.log('ID du sondage détecté:', sharedSurveyId);
+      
+      // Sauvegarder l'URL complète (absolue)
+      const fullUrl = window.location.href;
+      
+      // Sauvegarder aussi le chemin relatif comme solution de secours
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
-      localStorage.setItem('redirectAfterLogin', redirectPath);
+      
+      // Stocker les deux versions dans le localStorage
+      try {
+        localStorage.setItem('redirectAfterLogin', fullUrl);
+        localStorage.setItem('redirectPathAfterLogin', redirectPath);
+        console.log('URL complète sauvegardée:', fullUrl);
+        console.log('Chemin relatif sauvegardé:', redirectPath);
+        
+        // Également stocker dans un cookie pour plus de sécurité
+        document.cookie = `surveyRedirect=${encodeURIComponent(fullUrl)}; path=/; max-age=3600;`;
+        console.log('URL également sauvegardée dans cookie surveyRedirect');
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'URL:', error);
+      }
+      
       // Rediriger vers la page de connexion
       router.push('/login');
     }
@@ -213,15 +233,56 @@ const SurveyAnswerPage: React.FC = () => {
   useEffect(() => {
     // Vérifier si l'utilisateur vient de se connecter et a une URL de redirection
     if (isAuthenticated) {
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      console.log('=== VÉRIFICATION DE REDIRECTION APRÈS CONNEXION ===');
+      
+      // Essayer de récupérer l'URL de redirection depuis plusieurs sources
+      let redirectUrl = localStorage.getItem('redirectAfterLogin');
+      
+      // Fonction pour récupérer un cookie
+      const getCookieValue = (name: string): string | null => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          cookie = cookie.trim();
+          if (cookie.startsWith(name + '=')) {
+            return decodeURIComponent(cookie.substring(name.length + 1));
+          }
+        }
+        return null;
+      };
+      
+      // Si pas trouvé dans le localStorage, essayer le cookie
+      if (!redirectUrl) {
+        redirectUrl = getCookieValue('surveyRedirect') || getCookieValue('redirectAfterLogin') || getCookieValue('localRedirect');
+        console.log('URL récupérée depuis cookie:', redirectUrl);
+      } else {
+        console.log('URL récupérée depuis localStorage:', redirectUrl);
+      }
+      
+      // Vérifier si on a un chemin relatif sauvegardé (solution de secours)
+      if (!redirectUrl) {
+        const relativePath = localStorage.getItem('redirectPathAfterLogin');
+        if (relativePath) {
+          redirectUrl = `${window.location.origin}${relativePath}`;
+          console.log('URL reconstruite depuis le chemin relatif:', redirectUrl);
+        }
+      }
+      
       if (redirectUrl) {
-        // Nettoyer le localStorage immédiatement
+        // Nettoyer toutes les sources de stockage
         localStorage.removeItem('redirectAfterLogin');
+        localStorage.removeItem('redirectPathAfterLogin');
+        document.cookie = 'surveyRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'localRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        
+        console.log('Stockage nettoyé. Redirection vers:', redirectUrl);
+        
         // Supprimer le paramètre surveyId de l'URL actuelle
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.delete('surveyId');
         const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '');
         window.history.replaceState({}, '', newUrl);
+        
         // Rediriger vers l'URL sauvegardée
         window.location.href = redirectUrl;
       }

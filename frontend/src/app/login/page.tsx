@@ -66,32 +66,56 @@ const LoginPage: React.FC = () => {
 
   // Récupérer l'URL de callback au chargement de la page
   useEffect(() => {
-    const callbackUrl = searchParams.get('callbackUrl');
+    // S'assurer que searchParams n'est pas null avant de l'utiliser
+    const callbackUrl = searchParams?.get('callbackUrl') || null;
     console.log('=== DÉBUT DU PROCESSUS DE REDIRECTION ===');
     console.log('URL de callback reçue:', callbackUrl);
     console.log('URL complète:', window.location.href);
     console.log('Paramètres de recherche:', window.location.search);
     
+    // Fonction pour récupérer la valeur d'un cookie spécifique
+    const getCookieValue = (name: string): string | null => {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      }
+      return null;
+    };
+    
     // Récupérer l'URL de redirection depuis les cookies
-    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-    const redirectCookie = cookies.find(cookie => cookie.startsWith('redirectAfterLogin='));
-    const redirectPath = redirectCookie ? decodeURIComponent(redirectCookie.split('=')[1]) : null;
-    console.log('URL de redirection depuis cookie:', redirectPath);
+    const redirectFromCookie = getCookieValue('redirectAfterLogin');
+    console.log('URL de redirection depuis cookie (brut):', redirectFromCookie);
     
-    // Utiliser l'URL de redirection du cookie ou du paramètre d'URL
-    const finalRedirectUrl = redirectPath || callbackUrl;
+    let redirectPath: string | null = null;
     
-    if (finalRedirectUrl) {
+    // Essayer d'abord de récupérer depuis le cookie
+    if (redirectFromCookie) {
+      redirectPath = redirectFromCookie;
+      console.log('URL trouvée dans le cookie:', redirectPath);
+    }
+    // Sinon utiliser le paramètre callbackUrl
+    else if (callbackUrl) {
+      redirectPath = callbackUrl;
+      console.log('URL trouvée dans le paramètre callbackUrl:', redirectPath);
+    }
+    
+    if (redirectPath) {
       try {
         // Stocker l'URL complète dans le localStorage
-        localStorage.setItem('redirectAfterLogin', finalRedirectUrl);
-        console.log('URL de redirection sauvegardée:', finalRedirectUrl);
+        localStorage.setItem('redirectAfterLogin', redirectPath);
+        console.log('URL de redirection sauvegardée dans localStorage:', redirectPath);
         
-        // Supprimer le cookie de redirection
-        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        // Aussi sauvegarder dans un cookie de session pour plus de sécurité
+        document.cookie = `localRedirect=${encodeURIComponent(redirectPath)}; path=/;`;
+        console.log('URL également sauvegardée dans cookie localRedirect');
       } catch (error) {
-        console.error('Erreur lors du traitement de l\'URL de redirection:', error);
+        console.error('Erreur lors du stockage de l\'URL de redirection:', error);
       }
+    } else {
+      console.log('Aucune URL de redirection trouvée');
     }
   }, [searchParams]);
 
