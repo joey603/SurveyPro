@@ -67,16 +67,16 @@ const LoginPage: React.FC = () => {
   // Fonction pour récupérer un cookie
   const getCookie = (name: string): string | null => {
     if (typeof document === 'undefined') return null;
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      cookie = cookie.trim();
-      if (cookie.startsWith(name + '=')) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
         return cookie.substring(name.length + 1);
+        }
       }
-    }
-    return null;
-  };
-
+      return null;
+    };
+    
   // Fonction pour décoder une URL
   const decodeUrl = (url) => {
     try {
@@ -116,6 +116,9 @@ const LoginPage: React.FC = () => {
           const decodedUrl = decodeURIComponent(callbackUrl);
           localStorage.setItem('redirectAfterLogin', decodedUrl);
           console.log('URL décodée sauvegardée dans localStorage:', decodedUrl);
+          
+          // Sauvegarder l'URL dans un cookie pour le backend
+          document.cookie = `redirect_uri=${decodedUrl}; path=/; max-age=3600; secure; samesite=lax`;
         }
 
         // Vérifier l'authentification via le backend
