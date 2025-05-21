@@ -131,7 +131,23 @@ const LoginPage: React.FC = () => {
             const redirectPath = localStorage.getItem('redirectAfterLogin');
             if (redirectPath) {
               console.log('Redirection vers:', redirectPath);
-              window.location.href = redirectPath;
+              // Utiliser le backend pour la redirection
+              const redirectResponse = await fetch('https://surveypro-ir3u.onrender.com/api/auth/redirect', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ redirectUrl: redirectPath })
+              });
+
+              if (redirectResponse.ok) {
+                const { redirectUrl } = await redirectResponse.json();
+                window.location.href = redirectUrl;
+              } else {
+                console.error('Erreur lors de la redirection');
+                router.push('/dashboard');
+              }
             } else {
               router.push('/dashboard');
             }
