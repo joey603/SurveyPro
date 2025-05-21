@@ -89,7 +89,8 @@ const LoginPage: React.FC = () => {
       for (let cookie of cookies) {
         cookie = cookie.trim();
         if (cookie.startsWith(name + '=')) {
-          return decodeUrl(cookie.substring(name.length + 1));
+          const value = cookie.substring(name.length + 1);
+          return decodeUrl(value);
         }
       }
       return null;
@@ -122,9 +123,9 @@ const LoginPage: React.FC = () => {
         document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         document.cookie = 'localRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         
-        // Sauvegarder dans un nouveau cookie
-        document.cookie = `redirectAfterLogin=${encodeURIComponent(redirectPath)}; path=/;`;
-        console.log('URL sauvegardée dans le cookie redirectAfterLogin');
+        // Sauvegarder dans un nouveau cookie (sans encoder l'URL)
+        document.cookie = `redirectAfterLogin=${redirectPath}; path=/;`;
+        console.log('URL sauvegardée dans le cookie redirectAfterLogin:', redirectPath);
       } catch (error) {
         console.error('Erreur lors du stockage de l\'URL de redirection:', error);
       }
