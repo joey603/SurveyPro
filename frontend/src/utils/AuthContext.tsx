@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(false);
       setAccessToken(null);
       setUser(null);
-      if (!publicRoutes.includes(pathname)) {
+      if (!publicRoutes.includes(pathname as string)) {
         // Sauvegarder l'URL actuelle avant la redirection
         const currentUrl = window.location.pathname + window.location.search;
         localStorage.setItem('redirectAfterLogin', currentUrl);
@@ -78,9 +78,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(false);
   }, [pathname]);
-
   useEffect(() => {
-    if (!publicRoutes.includes(pathname)) {
+    if (!publicRoutes.includes(pathname as string)) {
       const token = localStorage.getItem("accessToken");
       if (!token || isTokenExpired(token)) {
         logout();
@@ -99,21 +98,82 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const decoded = jwtDecode(accessToken);
       setUser(decoded);
       
-      // Récupérer l'URL de redirection sauvegardée
-      const redirectFromStorage = localStorage.getItem('redirectAfterLogin') || 
-                                 sessionStorage.getItem('redirectAfterLogin');
+      console.log('=== LOGIN RÉUSSI, PRÉPARATION DE LA REDIRECTION ===');
       
-      // Nettoyer les storages dans tous les cas
+      // Récupérer l'URL de redirection depuis toutes les sources possibles
+      let redirectUrl: string | null = null;
+      
+      // 1. Essayer localStorage
+      const localUrl = localStorage.getItem('redirectAfterLogin');
+      if (localUrl) {
+        redirectUrl = localUrl;
+        console.log('URL de redirection trouvée dans localStorage:', redirectUrl);
+      }
+      
+      // 2. Essayer sessionStorage si pas trouvé dans localStorage
+      if (!redirectUrl) {
+        const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
+        if (sessionUrl) {
+          redirectUrl = sessionUrl;
+          console.log('URL de redirection trouvée dans sessionStorage:', redirectUrl);
+        }
+      }
+      
+      // 3. Essayer les cookies si toujours pas trouvé
+      if (!redirectUrl) {
+        const cookies = document.cookie.split(';');
+        
+        // Essayer d'abord redirectAfterLogin
+        const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
+        if (redirectCookie) {
+          redirectUrl = decodeURIComponent(redirectCookie.split('=')[1]);
+          console.log('URL de redirection trouvée dans cookie redirectAfterLogin:', redirectUrl);
+        }
+        
+        // Essayer ensuite redirect_uri
+        if (!redirectUrl) {
+          const redirectUriCookie = cookies.find(cookie => cookie.trim().startsWith('redirect_uri='));
+          if (redirectUriCookie) {
+            redirectUrl = decodeURIComponent(redirectUriCookie.split('=')[1]);
+            console.log('URL de redirection trouvée dans cookie redirect_uri:', redirectUrl);
+          }
+        }
+      }
+      
+      // 4. Essayer les paramètres d'URL
+      if (!redirectUrl) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectParam = urlParams.get('redirect');
+        if (redirectParam) {
+          redirectUrl = redirectParam;
+          console.log('URL de redirection trouvée dans les paramètres d\'URL:', redirectUrl);
+        }
+      }
+      
+      // Nettoyer tous les stockages
       localStorage.removeItem('redirectAfterLogin');
       sessionStorage.removeItem('redirectAfterLogin');
+      document.cookie = "redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       
       // Rediriger selon ce qui a été trouvé
-      if (redirectFromStorage) {
-        console.log('Redirection vers URL sauvegardée:', redirectFromStorage);
-        window.location.href = redirectFromStorage;
+      if (redirectUrl) {
+        console.log('Redirection vers URL sauvegardée:', redirectUrl);
+        
+        // Construire l'URL complète si nécessaire
+        let fullRedirectUrl = redirectUrl;
+        if (!redirectUrl.startsWith('http')) {
+          if (redirectUrl.startsWith('/')) {
+            fullRedirectUrl = `${window.location.origin}${redirectUrl}`;
+          } else {
+            fullRedirectUrl = `${window.location.origin}/${redirectUrl}`;
+          }
+        }
+        
+        console.log('URL complète pour la redirection:', fullRedirectUrl);
+        window.location.href = fullRedirectUrl;
       } else {
         // Redirection par défaut vers la racine
         console.log('Pas d\'URL trouvée, redirection vers /');

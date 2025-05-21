@@ -204,29 +204,62 @@ const SurveyAnswerPage: React.FC = () => {
     if (sharedSurveyId && !isAuthenticated) {
       console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
       console.log('ID du sondage détecté:', sharedSurveyId);
+      console.log('URL complète actuelle:', window.location.href);
       
-      // Sauvegarder uniquement le chemin relatif
+      // Sauvegarder le chemin relatif
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
+      const fullRedirectPath = `${window.location.origin}${redirectPath}`;
       
       try {
-        // Stocker dans le localStorage et aussi dans sessionStorage pour plus de sécurité
+        // Utiliser plusieurs méthodes de stockage pour maximiser les chances de succès
+        // 1. localStorage
         localStorage.setItem('redirectAfterLogin', redirectPath);
-        sessionStorage.setItem('redirectAfterLogin', redirectPath);
-        console.log('Chemin de redirection sauvegardé:', redirectPath);
+        console.log('URL sauvegardée dans localStorage:', redirectPath);
         
-        // Ajouter un délai court pour s'assurer que le localStorage est mis à jour avant la redirection
-        setTimeout(() => {
-          // Vérifier que l'URL a bien été sauvegardée
-          const savedPath = localStorage.getItem('redirectAfterLogin');
-          console.log('Chemin vérifié avant redirection:', savedPath);
+        // 2. sessionStorage
+        sessionStorage.setItem('redirectAfterLogin', redirectPath);
+        console.log('URL sauvegardée dans sessionStorage:', redirectPath);
+        
+        // 3. Cookies (avec différentes options)
+        document.cookie = `redirectAfterLogin=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
+        document.cookie = `redirectAfterLoginFull=${encodeURIComponent(fullRedirectPath)}; path=/; max-age=3600`;
+        console.log('URL sauvegardée dans cookies');
+        
+        // 4. Paramètre d'URL pour la page de connexion
+        const loginUrl = `/login?redirect=${encodeURIComponent(redirectPath)}`;
+        console.log('URL de connexion préparée:', loginUrl);
+        
+        // Vérifier que les données ont bien été sauvegardées
+        const verifyStorage = () => {
+          const fromLocal = localStorage.getItem('redirectAfterLogin');
+          const fromSession = sessionStorage.getItem('redirectAfterLogin');
+          const allCookies = document.cookie;
           
-          // Rediriger vers la page de connexion
-          router.push('/login');
-        }, 100);
+          console.log('=== VÉRIFICATION DU STOCKAGE DE L\'URL ===');
+          console.log('localStorage:', fromLocal);
+          console.log('sessionStorage:', fromSession);
+          console.log('cookies:', allCookies);
+          
+          // Si au moins une méthode de stockage a fonctionné, procéder à la redirection
+          if (fromLocal || fromSession || allCookies.includes('redirectAfterLogin')) {
+            console.log('URL correctement sauvegardée, redirection vers la page de connexion');
+            router.push(loginUrl);
+          } else {
+            // Si aucune méthode n'a fonctionné, essayer une approche différente
+            console.error('ERREUR: Impossible de sauvegarder l\'URL de redirection');
+            // Redirection avec paramètre dans l'URL comme solution de secours
+            window.location.href = loginUrl;
+          }
+        };
+        
+        // Attendre un court instant pour s'assurer que les données sont bien sauvegardées
+        setTimeout(verifyStorage, 200);
+        
       } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'URL:', error);
-        // En cas d'erreur, rediriger quand même
-        router.push('/login');
+        // En cas d'erreur, rediriger avec le paramètre dans l'URL
+        const loginUrl = `/login?redirect=${encodeURIComponent(redirectPath)}`;
+        window.location.href = loginUrl;
       }
     }
   }, [isAuthenticated, router]);
