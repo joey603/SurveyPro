@@ -205,22 +205,13 @@ const SurveyAnswerPage: React.FC = () => {
       console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
       console.log('ID du sondage détecté:', sharedSurveyId);
       
-      // Sauvegarder l'URL complète (absolue)
-      const fullUrl = window.location.href;
-      
-      // Sauvegarder aussi le chemin relatif comme solution de secours
+      // Sauvegarder uniquement le chemin relatif
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
       
-      // Stocker les deux versions dans le localStorage
       try {
-        localStorage.setItem('redirectAfterLogin', fullUrl);
-        localStorage.setItem('redirectPathAfterLogin', redirectPath);
-        console.log('URL complète sauvegardée:', fullUrl);
-        console.log('Chemin relatif sauvegardé:', redirectPath);
-        
-        // Également stocker dans un cookie pour plus de sécurité
-        document.cookie = `surveyRedirect=${encodeURIComponent(fullUrl)}; path=/; max-age=3600;`;
-        console.log('URL également sauvegardée dans cookie surveyRedirect');
+        // Stocker uniquement dans le localStorage
+        localStorage.setItem('redirectAfterLogin', redirectPath);
+        console.log('Chemin de redirection sauvegardé:', redirectPath);
       } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'URL:', error);
       }
@@ -233,58 +224,17 @@ const SurveyAnswerPage: React.FC = () => {
   useEffect(() => {
     // Vérifier si l'utilisateur vient de se connecter et a une URL de redirection
     if (isAuthenticated) {
-      console.log('=== VÉRIFICATION DE REDIRECTION APRÈS CONNEXION ===');
-      
-      // Essayer de récupérer l'URL de redirection depuis plusieurs sources
-      let redirectUrl = localStorage.getItem('redirectAfterLogin');
-      
-      // Fonction pour récupérer un cookie
-      const getCookieValue = (name: string): string | null => {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-          cookie = cookie.trim();
-          if (cookie.startsWith(name + '=')) {
-            return decodeURIComponent(cookie.substring(name.length + 1));
-          }
-        }
-        return null;
-      };
-      
-      // Si pas trouvé dans le localStorage, essayer le cookie
-      if (!redirectUrl) {
-        redirectUrl = getCookieValue('surveyRedirect') || getCookieValue('redirectAfterLogin') || getCookieValue('localRedirect');
-        console.log('URL récupérée depuis cookie:', redirectUrl);
-      } else {
-        console.log('URL récupérée depuis localStorage:', redirectUrl);
-      }
-      
-      // Vérifier si on a un chemin relatif sauvegardé (solution de secours)
-      if (!redirectUrl) {
-        const relativePath = localStorage.getItem('redirectPathAfterLogin');
-        if (relativePath) {
-          redirectUrl = `${window.location.origin}${relativePath}`;
-          console.log('URL reconstruite depuis le chemin relatif:', redirectUrl);
-        }
-      }
-      
-      if (redirectUrl) {
-        // Nettoyer toutes les sources de stockage
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
-        localStorage.removeItem('redirectPathAfterLogin');
-        document.cookie = 'surveyRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = 'localRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         
-        console.log('Stockage nettoyé. Redirection vers:', redirectUrl);
-        
-        // Supprimer le paramètre surveyId de l'URL actuelle
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.delete('surveyId');
-        const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '');
-        window.history.replaceState({}, '', newUrl);
+        // Construire l'URL complète
+        const fullUrl = `${window.location.origin}${redirectPath}`;
+        console.log('Redirection vers:', fullUrl);
         
         // Rediriger vers l'URL sauvegardée
-        window.location.href = redirectUrl;
+        window.location.href = fullUrl;
       }
     }
   }, [isAuthenticated]);

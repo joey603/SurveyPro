@@ -234,18 +234,17 @@ const LoginPage: React.FC = () => {
     try {
       console.log('=== DÉBUT DE LA REDIRECTION APRÈS CONNEXION ===');
       const redirectPath = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée:', redirectPath);
       
       if (redirectPath) {
         console.log('Redirection vers:', redirectPath);
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
         
-        // Attendre un court instant pour s'assurer que le token est bien enregistré
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Construire l'URL complète
+        const fullUrl = `${window.location.origin}${redirectPath}`;
         
         // Rediriger vers l'URL sauvegardée
-        window.location.href = redirectPath;
+        window.location.href = fullUrl;
       } else {
         console.log('Pas d\'URL de redirection, retour à l\'accueil');
         router.push('/');
