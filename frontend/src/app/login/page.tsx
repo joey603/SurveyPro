@@ -111,45 +111,30 @@ const LoginPage: React.FC = () => {
         console.log('Paramètres de recherche:', window.location.search);
 
         if (callbackUrl) {
-          // Décoder l'URL de redirection
-          const decodedCallbackUrl = decodeUrl(callbackUrl);
-          console.log('URL de callback décodée:', decodedCallbackUrl);
-
-          // Sauvegarder l'URL complète dans localStorage
-          localStorage.setItem('redirectAfterLogin', decodedCallbackUrl);
-          console.log('URL sauvegardée dans localStorage:', decodedCallbackUrl);
-
-          // Sauvegarder l'URL complète dans un cookie
-          document.cookie = `redirectAfterLogin=${decodedCallbackUrl}; path=/; max-age=3600`;
-          console.log('URL sauvegardée dans le cookie redirectAfterLogin:', decodedCallbackUrl);
+          // Sauvegarder l'URL de redirection dans le localStorage
+          localStorage.setItem('redirectAfterLogin', callbackUrl);
+          console.log('URL sauvegardée dans localStorage:', callbackUrl);
         }
 
-        // Vérifier si l'utilisateur est déjà connecté
-        const accessToken = getCookie('accessToken');
-        if (accessToken) {
-          try {
-            const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
-              headers: {
-                'Authorization': `Bearer ${accessToken}`
-              }
-            });
+        // Vérifier l'authentification via le backend
+        const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
+          credentials: 'include', // Important pour envoyer les cookies
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-            if (response.ok) {
-              const data = await response.json();
-              if (data.valid) {
-                // Récupérer l'URL de redirection
-                const redirectPath = localStorage.getItem('redirectAfterLogin');
-                if (redirectPath) {
-                  console.log('Redirection vers:', redirectPath);
-                  // Rediriger directement vers l'URL complète
-                  window.location.href = redirectPath;
-                } else {
-                  router.push('/dashboard');
-                }
-              }
+        if (response.ok) {
+          const data = await response.json();
+          if (data.valid) {
+            // Récupérer l'URL de redirection
+            const redirectPath = localStorage.getItem('redirectAfterLogin');
+            if (redirectPath) {
+              console.log('Redirection vers:', redirectPath);
+              window.location.href = redirectPath;
+            } else {
+              router.push('/dashboard');
             }
-          } catch (error) {
-            console.error('Erreur lors de la vérification du token:', error);
           }
         }
       } catch (error) {
