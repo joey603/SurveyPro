@@ -64,75 +64,103 @@ const LoginPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Récupérer l'URL de callback au chargement de la page
+  // Fonction pour décoder une URL
+  const decodeUrl = (url) => {
+    try {
+      return decodeURIComponent(url);
+    } catch (e) {
+      console.error('Erreur lors du décodage de l\'URL:', e);
+      return url;
+    }
+  };
+
+  // Fonction pour nettoyer l'URL de redirection
+  const cleanRedirectUrl = (url) => {
+    try {
+      const decodedUrl = decodeUrl(url);
+      const urlObj = new URL(decodedUrl);
+      return urlObj.pathname + urlObj.search;
+    } catch (e) {
+      console.error('Erreur lors du nettoyage de l\'URL:', e);
+      return url;
+    }
+  };
+
   useEffect(() => {
-    // S'assurer que searchParams n'est pas null avant de l'utiliser
-    const callbackUrl = searchParams?.get('callbackUrl') || null;
-    console.log('=== DÉBUT DU PROCESSUS DE REDIRECTION ===');
-    console.log('URL de callback reçue:', callbackUrl);
-    console.log('URL complète:', window.location.href);
-    console.log('Paramètres de recherche:', window.location.search);
-    
-    // Fonction pour décoder une URL
-    const decodeUrl = (url: string): string => {
+    const checkAuth = async () => {
       try {
-        return decodeURIComponent(url);
-      } catch (e) {
-        console.error('Erreur lors du décodage de l\'URL:', e);
-        return url;
-      }
-    };
-    
-    // Fonction pour récupérer la valeur d'un cookie spécifique
-    const getCookieValue = (name: string): string | null => {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          const value = cookie.substring(name.length + 1);
-          return decodeUrl(value);
+        // Récupérer l'URL de redirection depuis les paramètres de l'URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const callbackUrl = searchParams.get('callbackUrl');
+        
+        console.log('URL de callback reçue:', callbackUrl);
+        console.log('URL complète:', window.location.href);
+        console.log('Paramètres de recherche:', window.location.search);
+
+        if (callbackUrl) {
+          // Décoder l'URL de redirection
+          const decodedCallbackUrl = decodeUrl(callbackUrl);
+          console.log('URL de callback décodée:', decodedCallbackUrl);
+
+          // Nettoyer l'URL de redirection
+          const cleanUrl = cleanRedirectUrl(decodedCallbackUrl);
+          console.log('URL de redirection nettoyée:', cleanUrl);
+
+          // Sauvegarder l'URL de redirection dans localStorage
+          localStorage.setItem('redirectAfterLogin', cleanUrl);
+          console.log('URL sauvegardée dans localStorage:', cleanUrl);
+
+          // Sauvegarder l'URL de redirection dans un cookie
+          document.cookie = `redirectAfterLogin=${cleanUrl}; path=/; max-age=3600`;
+          console.log('URL sauvegardée dans le cookie redirectAfterLogin:', cleanUrl);
         }
-      }
-      return null;
-    };
-    
-    // Récupérer l'URL de redirection depuis les cookies
-    const redirectFromCookie = getCookieValue('redirectAfterLogin');
-    console.log('URL de redirection depuis cookie (décodée):', redirectFromCookie);
-    
-    let redirectPath: string | null = null;
-    
-    // Prioriser l'URL de callback si elle existe
-    if (callbackUrl) {
-      redirectPath = decodeUrl(callbackUrl);
-      console.log('URL de callback décodée:', redirectPath);
-    }
-    // Sinon utiliser l'URL du cookie
-    else if (redirectFromCookie) {
-      redirectPath = redirectFromCookie;
-      console.log('URL trouvée dans le cookie:', redirectPath);
-    }
-    
-    if (redirectPath) {
-      try {
-        // Stocker l'URL décodée dans le localStorage
-        localStorage.setItem('redirectAfterLogin', redirectPath);
-        console.log('URL de redirection sauvegardée dans localStorage:', redirectPath);
+
+        // Tester les endpoints d'authentification
+        console.log('Test des endpoints d\'authentification...');
+        const googleEndpoint = 'https://surveypro-ir3u.onrender.com/api/auth/google';
+        const githubEndpoint = 'https://surveypro-ir3u.onrender.com/api/auth/github';
         
-        // Nettoyer les anciens cookies de redirection
-        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = 'localRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        
-        // Sauvegarder dans un nouveau cookie (sans encoder l'URL)
-        document.cookie = `redirectAfterLogin=${redirectPath}; path=/;`;
-        console.log('URL sauvegardée dans le cookie redirectAfterLogin:', redirectPath);
+        console.log('Test de l\'endpoint Google:', googleEndpoint);
+        console.log('Test de l\'endpoint GitHub:', githubEndpoint);
+
+        // Vérifier si l'utilisateur est déjà connecté
+        const accessToken = getCookie('accessToken');
+        if (accessToken) {
+          try {
+            const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.valid) {
+                // Récupérer l'URL de redirection
+                const redirectPath = localStorage.getItem('redirectAfterLogin');
+                if (redirectPath) {
+                  // Nettoyer l'URL de redirection
+                  const cleanPath = cleanRedirectUrl(redirectPath);
+                  console.log('Redirection vers:', cleanPath);
+                  
+                  // Rediriger vers l'URL sauvegardée
+                  router.push(cleanPath);
+                } else {
+                  router.push('/dashboard');
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Erreur lors de la vérification du token:', error);
+          }
+        }
       } catch (error) {
-        console.error('Erreur lors du stockage de l\'URL de redirection:', error);
+        console.error('Erreur lors de la vérification de l\'authentification:', error);
       }
-    } else {
-      console.log('Aucune URL de redirection trouvée');
-    }
-  }, [searchParams]);
+    };
+
+    checkAuth();
+  }, [router]);
 
   // Exécuter le test des endpoints au chargement de la page
   useEffect(() => {
