@@ -106,6 +106,7 @@ const LoginPage: React.FC = () => {
         const searchParams = new URLSearchParams(window.location.search);
         const callbackUrl = searchParams.get('callbackUrl');
         
+        console.log('=== DÉBUT DE LA VÉRIFICATION AUTH ===');
         console.log('URL de callback reçue:', callbackUrl);
         console.log('URL complète:', window.location.href);
         console.log('Paramètres de recherche:', window.location.search);
@@ -114,7 +115,7 @@ const LoginPage: React.FC = () => {
           // Sauvegarder l'URL de redirection dans le localStorage sans encodage
           const decodedUrl = decodeURIComponent(callbackUrl);
           localStorage.setItem('redirectAfterLogin', decodedUrl);
-          console.log('URL sauvegardée dans localStorage:', decodedUrl);
+          console.log('URL décodée sauvegardée dans localStorage:', decodedUrl);
         }
 
         // Vérifier l'authentification via le backend
@@ -127,14 +128,17 @@ const LoginPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
+          console.log('Réponse de vérification auth:', data);
           if (data.valid) {
             // Récupérer l'URL de redirection
             const redirectPath = localStorage.getItem('redirectAfterLogin');
+            console.log('URL de redirection trouvée dans localStorage:', redirectPath);
             if (redirectPath) {
               console.log('Redirection vers:', redirectPath);
               // Redirection directe vers l'URL sauvegardée
               window.location.href = redirectPath;
             } else {
+              console.log('Pas d\'URL de redirection trouvée, redirection vers dashboard');
               router.push('/dashboard');
             }
           }
@@ -262,6 +266,7 @@ const LoginPage: React.FC = () => {
     try {
       console.log('=== DÉBUT DE LA REDIRECTION APRÈS CONNEXION ===');
       const redirectPath = localStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection trouvée après connexion:', redirectPath);
       
       if (redirectPath) {
         console.log('Redirection vers:', redirectPath);
