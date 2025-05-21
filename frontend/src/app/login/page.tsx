@@ -112,13 +112,14 @@ const LoginPage: React.FC = () => {
 
         if (callbackUrl) {
           // Sauvegarder l'URL de redirection dans le localStorage sans encodage
-          localStorage.setItem('redirectAfterLogin', decodeURIComponent(callbackUrl));
-          console.log('URL sauvegardée dans localStorage:', decodeURIComponent(callbackUrl));
+          const decodedUrl = decodeURIComponent(callbackUrl);
+          localStorage.setItem('redirectAfterLogin', decodedUrl);
+          console.log('URL sauvegardée dans localStorage:', decodedUrl);
         }
 
         // Vérifier l'authentification via le backend
         const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
-          credentials: 'include', // Important pour envoyer les cookies
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json'
           }
@@ -131,23 +132,8 @@ const LoginPage: React.FC = () => {
             const redirectPath = localStorage.getItem('redirectAfterLogin');
             if (redirectPath) {
               console.log('Redirection vers:', redirectPath);
-              // Utiliser le backend pour la redirection avec l'URL non encodée
-              const redirectResponse = await fetch('https://surveypro-ir3u.onrender.com/api/auth/redirect', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ redirectUrl: redirectPath })
-              });
-
-              if (redirectResponse.ok) {
-                const { redirectUrl } = await redirectResponse.json();
-                window.location.href = redirectUrl;
-              } else {
-                console.error('Erreur lors de la redirection');
-                router.push('/dashboard');
-              }
+              // Redirection directe vers l'URL sauvegardée
+              window.location.href = redirectPath;
             } else {
               router.push('/dashboard');
             }
@@ -282,11 +268,8 @@ const LoginPage: React.FC = () => {
         // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
         
-        // Construire l'URL complète
-        const fullUrl = `${window.location.origin}${redirectPath}`;
-        
-        // Rediriger vers l'URL sauvegardée
-        window.location.href = fullUrl;
+        // Redirection directe vers l'URL sauvegardée
+        window.location.href = redirectPath;
       } else {
         console.log('Pas d\'URL de redirection, retour à l\'accueil');
         router.push('/');
