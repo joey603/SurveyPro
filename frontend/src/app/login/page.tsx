@@ -64,6 +64,19 @@ const LoginPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Fonction pour récupérer un cookie
+  const getCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') return null;
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name + '=')) {
+        return cookie.substring(name.length + 1);
+      }
+    }
+    return null;
+  };
+
   // Fonction pour décoder une URL
   const decodeUrl = (url) => {
     try {
