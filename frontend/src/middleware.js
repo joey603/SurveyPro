@@ -9,18 +9,38 @@ export function middleware(request) {
       // Vérifier si l'utilisateur est authentifié via le cookie
       const accessToken = request.cookies.get('accessToken');
       
+      // Si pas de token, rediriger vers la page de connexion
       if (!accessToken) {
-        // Construire l'URL de redirection
+        console.log('Middleware - Utilisateur non authentifié, redirection vers login');
         const loginUrl = new URL('/login', request.url);
-        
-        // Utiliser l'URL complète de la requête comme URL de redirection
-        const redirectUrl = request.url;
-        console.log('Middleware - URL de redirection:', redirectUrl);
-        
-        // Ajouter l'URL de redirection comme paramètre
-        loginUrl.searchParams.set('callbackUrl', redirectUrl);
-        
-        // Rediriger vers la page de connexion
+        loginUrl.searchParams.set('callbackUrl', request.url);
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // Si le token existe, vérifier sa validité
+      try {
+        // Vérifier le token avec l'API
+        const response = fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${accessToken.value}`
+          }
+        });
+
+        if (!response.ok) {
+          console.log('Middleware - Token invalide, redirection vers login');
+          const loginUrl = new URL('/login', request.url);
+          loginUrl.searchParams.set('callbackUrl', request.url);
+          return NextResponse.redirect(loginUrl);
+        }
+
+        // Token valide, continuer vers la page demandée
+        console.log('Middleware - Utilisateur authentifié, accès autorisé');
+        return NextResponse.next();
+      } catch (error) {
+        console.error('Middleware - Erreur lors de la vérification du token:', error);
+        // En cas d'erreur, rediriger vers la page de connexion
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('callbackUrl', request.url);
         return NextResponse.redirect(loginUrl);
       }
     }
