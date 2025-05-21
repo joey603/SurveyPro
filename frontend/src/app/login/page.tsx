@@ -111,9 +111,9 @@ const LoginPage: React.FC = () => {
         console.log('Paramètres de recherche:', window.location.search);
 
         if (callbackUrl) {
-          // Sauvegarder l'URL de redirection dans le localStorage
-          localStorage.setItem('redirectAfterLogin', callbackUrl);
-          console.log('URL sauvegardée dans localStorage:', callbackUrl);
+          // Sauvegarder l'URL de redirection dans le localStorage sans encodage
+          localStorage.setItem('redirectAfterLogin', decodeURIComponent(callbackUrl));
+          console.log('URL sauvegardée dans localStorage:', decodeURIComponent(callbackUrl));
         }
 
         // Vérifier l'authentification via le backend
@@ -131,7 +131,7 @@ const LoginPage: React.FC = () => {
             const redirectPath = localStorage.getItem('redirectAfterLogin');
             if (redirectPath) {
               console.log('Redirection vers:', redirectPath);
-              // Utiliser le backend pour la redirection
+              // Utiliser le backend pour la redirection avec l'URL non encodée
               const redirectResponse = await fetch('https://surveypro-ir3u.onrender.com/api/auth/redirect', {
                 method: 'POST',
                 credentials: 'include',
