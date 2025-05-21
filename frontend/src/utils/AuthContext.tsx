@@ -100,18 +100,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(decoded);
       
       // Récupérer l'URL de redirection sauvegardée
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        // Nettoyer le localStorage immédiatement
-        localStorage.removeItem('redirectAfterLogin');
-        // Supprimer tous les cookies liés à la redirection
-        document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        // Rediriger vers l'URL sauvegardée
-        router.push(redirectPath);
+      const redirectFromStorage = localStorage.getItem('redirectAfterLogin') || 
+                                 sessionStorage.getItem('redirectAfterLogin');
+      
+      // Nettoyer les storages dans tous les cas
+      localStorage.removeItem('redirectAfterLogin');
+      sessionStorage.removeItem('redirectAfterLogin');
+      document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      
+      // Rediriger selon ce qui a été trouvé
+      if (redirectFromStorage) {
+        console.log('Redirection vers URL sauvegardée:', redirectFromStorage);
+        window.location.href = redirectFromStorage;
       } else {
         // Redirection par défaut vers la racine
+        console.log('Pas d\'URL trouvée, redirection vers /');
         router.push('/');
       }
     } catch (error) {

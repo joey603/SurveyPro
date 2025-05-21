@@ -209,15 +209,25 @@ const SurveyAnswerPage: React.FC = () => {
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
       
       try {
-        // Stocker uniquement dans le localStorage
+        // Stocker dans le localStorage et aussi dans sessionStorage pour plus de sécurité
         localStorage.setItem('redirectAfterLogin', redirectPath);
+        sessionStorage.setItem('redirectAfterLogin', redirectPath);
         console.log('Chemin de redirection sauvegardé:', redirectPath);
+        
+        // Ajouter un délai court pour s'assurer que le localStorage est mis à jour avant la redirection
+        setTimeout(() => {
+          // Vérifier que l'URL a bien été sauvegardée
+          const savedPath = localStorage.getItem('redirectAfterLogin');
+          console.log('Chemin vérifié avant redirection:', savedPath);
+          
+          // Rediriger vers la page de connexion
+          router.push('/login');
+        }, 100);
       } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'URL:', error);
+        // En cas d'erreur, rediriger quand même
+        router.push('/login');
       }
-      
-      // Rediriger vers la page de connexion
-      router.push('/login');
     }
   }, [isAuthenticated, router]);
 

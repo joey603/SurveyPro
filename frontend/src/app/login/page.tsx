@@ -113,9 +113,20 @@ const LoginPage: React.FC = () => {
 
         // Vérifier si nous sommes sur la page de login
         if (window.location.pathname === '/login') {
-          // Récupérer l'URL de redirection depuis le localStorage
-          const savedRedirectUrl = localStorage.getItem('redirectAfterLogin');
-          console.log('URL de redirection trouvée dans localStorage:', savedRedirectUrl);
+          // Récupérer l'URL de redirection depuis le localStorage ou sessionStorage
+          let savedRedirectUrl = localStorage.getItem('redirectAfterLogin');
+          
+          // Si pas trouvé dans localStorage, essayer dans sessionStorage
+          if (!savedRedirectUrl) {
+            savedRedirectUrl = sessionStorage.getItem('redirectAfterLogin');
+            if (savedRedirectUrl) {
+              // Si trouvé dans sessionStorage, le copier dans localStorage
+              localStorage.setItem('redirectAfterLogin', savedRedirectUrl);
+              console.log('URL récupérée depuis sessionStorage et copiée dans localStorage:', savedRedirectUrl);
+            }
+          }
+          
+          console.log('URL de redirection trouvée:', savedRedirectUrl);
 
           if (savedRedirectUrl) {
             // Sauvegarder l'URL dans un cookie pour le backend
@@ -126,7 +137,8 @@ const LoginPage: React.FC = () => {
           // Si nous ne sommes pas sur la page de login et qu'une URL de callback est fournie
           const decodedUrl = decodeURIComponent(callbackUrl);
           localStorage.setItem('redirectAfterLogin', decodedUrl);
-          console.log('URL décodée sauvegardée dans localStorage:', decodedUrl);
+          sessionStorage.setItem('redirectAfterLogin', decodedUrl);
+          console.log('URL décodée sauvegardée dans localStorage et sessionStorage:', decodedUrl);
           
           // Sauvegarder l'URL dans un cookie pour le backend
           document.cookie = `redirect_uri=${decodedUrl}; path=/; max-age=3600; secure; samesite=lax`;
