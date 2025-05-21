@@ -91,8 +91,8 @@ const LoginPage: React.FC = () => {
   const cleanRedirectUrl = (url) => {
     try {
       const decodedUrl = decodeUrl(url);
-      const urlObj = new URL(decodedUrl);
-      return urlObj.pathname + urlObj.search;
+      // Retourner l'URL complète au lieu du chemin relatif
+      return decodedUrl;
     } catch (e) {
       console.error('Erreur lors du nettoyage de l\'URL:', e);
       return url;
@@ -115,26 +115,14 @@ const LoginPage: React.FC = () => {
           const decodedCallbackUrl = decodeUrl(callbackUrl);
           console.log('URL de callback décodée:', decodedCallbackUrl);
 
-          // Nettoyer l'URL de redirection
-          const cleanUrl = cleanRedirectUrl(decodedCallbackUrl);
-          console.log('URL de redirection nettoyée:', cleanUrl);
+          // Sauvegarder l'URL complète dans localStorage
+          localStorage.setItem('redirectAfterLogin', decodedCallbackUrl);
+          console.log('URL sauvegardée dans localStorage:', decodedCallbackUrl);
 
-          // Sauvegarder l'URL de redirection dans localStorage
-          localStorage.setItem('redirectAfterLogin', cleanUrl);
-          console.log('URL sauvegardée dans localStorage:', cleanUrl);
-
-          // Sauvegarder l'URL de redirection dans un cookie
-          document.cookie = `redirectAfterLogin=${cleanUrl}; path=/; max-age=3600`;
-          console.log('URL sauvegardée dans le cookie redirectAfterLogin:', cleanUrl);
+          // Sauvegarder l'URL complète dans un cookie
+          document.cookie = `redirectAfterLogin=${decodedCallbackUrl}; path=/; max-age=3600`;
+          console.log('URL sauvegardée dans le cookie redirectAfterLogin:', decodedCallbackUrl);
         }
-
-        // Tester les endpoints d'authentification
-        console.log('Test des endpoints d\'authentification...');
-        const googleEndpoint = 'https://surveypro-ir3u.onrender.com/api/auth/google';
-        const githubEndpoint = 'https://surveypro-ir3u.onrender.com/api/auth/github';
-        
-        console.log('Test de l\'endpoint Google:', googleEndpoint);
-        console.log('Test de l\'endpoint GitHub:', githubEndpoint);
 
         // Vérifier si l'utilisateur est déjà connecté
         const accessToken = getCookie('accessToken');
@@ -152,12 +140,9 @@ const LoginPage: React.FC = () => {
                 // Récupérer l'URL de redirection
                 const redirectPath = localStorage.getItem('redirectAfterLogin');
                 if (redirectPath) {
-                  // Nettoyer l'URL de redirection
-                  const cleanPath = cleanRedirectUrl(redirectPath);
-                  console.log('Redirection vers:', cleanPath);
-                  
-                  // Rediriger vers l'URL sauvegardée
-                  router.push(cleanPath);
+                  console.log('Redirection vers:', redirectPath);
+                  // Rediriger directement vers l'URL complète
+                  window.location.href = redirectPath;
                 } else {
                   router.push('/dashboard');
                 }
