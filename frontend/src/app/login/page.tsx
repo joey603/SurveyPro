@@ -73,13 +73,23 @@ const LoginPage: React.FC = () => {
     console.log('URL complète:', window.location.href);
     console.log('Paramètres de recherche:', window.location.search);
     
+    // Fonction pour décoder une URL
+    const decodeUrl = (url: string): string => {
+      try {
+        return decodeURIComponent(url);
+      } catch (e) {
+        console.error('Erreur lors du décodage de l\'URL:', e);
+        return url;
+      }
+    };
+    
     // Fonction pour récupérer la valeur d'un cookie spécifique
     const getCookieValue = (name: string): string | null => {
       const cookies = document.cookie.split(';');
       for (let cookie of cookies) {
         cookie = cookie.trim();
         if (cookie.startsWith(name + '=')) {
-          return decodeURIComponent(cookie.substring(name.length + 1));
+          return decodeUrl(cookie.substring(name.length + 1));
         }
       }
       return null;
@@ -87,30 +97,34 @@ const LoginPage: React.FC = () => {
     
     // Récupérer l'URL de redirection depuis les cookies
     const redirectFromCookie = getCookieValue('redirectAfterLogin');
-    console.log('URL de redirection depuis cookie (brut):', redirectFromCookie);
+    console.log('URL de redirection depuis cookie (décodée):', redirectFromCookie);
     
     let redirectPath: string | null = null;
     
-    // Essayer d'abord de récupérer depuis le cookie
-    if (redirectFromCookie) {
+    // Prioriser l'URL de callback si elle existe
+    if (callbackUrl) {
+      redirectPath = decodeUrl(callbackUrl);
+      console.log('URL de callback décodée:', redirectPath);
+    }
+    // Sinon utiliser l'URL du cookie
+    else if (redirectFromCookie) {
       redirectPath = redirectFromCookie;
       console.log('URL trouvée dans le cookie:', redirectPath);
-    }
-    // Sinon utiliser le paramètre callbackUrl
-    else if (callbackUrl) {
-      redirectPath = callbackUrl;
-      console.log('URL trouvée dans le paramètre callbackUrl:', redirectPath);
     }
     
     if (redirectPath) {
       try {
-        // Stocker l'URL complète dans le localStorage
+        // Stocker l'URL décodée dans le localStorage
         localStorage.setItem('redirectAfterLogin', redirectPath);
         console.log('URL de redirection sauvegardée dans localStorage:', redirectPath);
         
-        // Aussi sauvegarder dans un cookie de session pour plus de sécurité
-        document.cookie = `localRedirect=${encodeURIComponent(redirectPath)}; path=/;`;
-        console.log('URL également sauvegardée dans cookie localRedirect');
+        // Nettoyer les anciens cookies de redirection
+        document.cookie = 'redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'localRedirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        
+        // Sauvegarder dans un nouveau cookie
+        document.cookie = `redirectAfterLogin=${encodeURIComponent(redirectPath)}; path=/;`;
+        console.log('URL sauvegardée dans le cookie redirectAfterLogin');
       } catch (error) {
         console.error('Erreur lors du stockage de l\'URL de redirection:', error);
       }

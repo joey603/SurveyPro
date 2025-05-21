@@ -12,7 +12,10 @@ export function middleware(request) {
       if (!accessToken) {
         // Construire l'URL de redirection
         const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('callbackUrl', request.url);
+        const currentUrl = request.url;
+        
+        // Encoder l'URL actuelle pour le paramètre callbackUrl
+        loginUrl.searchParams.set('callbackUrl', currentUrl);
         
         // Rediriger vers la page de connexion
         return NextResponse.redirect(loginUrl);
