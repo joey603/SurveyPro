@@ -169,9 +169,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Récupérer l'URL de redirection depuis n'importe quelle méthode qui a fonctionné
+      // Priorité donnée à la méthode sessionStorage si elle existe
+      const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
       const standardUrl = localStorage.getItem('redirectAfterLogin');
       const backupUrl = localStorage.getItem('redirectAfterLogin_backup');
-      const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
       
       console.log('=== RÉSUMÉ DES MÉTHODES (AUTH CONTEXT) ===');
       console.log('Méthode standard a fonctionné:', !!standardUrl);
@@ -181,8 +182,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Méthode cookie a fonctionné:', !!cookieUrl);
       console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
       
-      // Sélectionner la première méthode qui a fonctionné
-      const redirectUrl = standardUrl || backupUrl || sessionUrl || jsonUrl || cookieUrl || urlFromLastVisited;
+      // Sélectionner la première méthode qui a fonctionné, avec priorité à sessionStorage
+      const redirectUrl = sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
       console.log('URL de redirection finale sélectionnée:', redirectUrl);
       
       // Nettoyer toutes les méthodes de stockage
