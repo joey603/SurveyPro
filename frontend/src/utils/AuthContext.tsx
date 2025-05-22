@@ -101,59 +101,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Vérifier toutes les méthodes possibles de stockage
       console.log('Vérification de toutes les méthodes de stockage:');
-      console.log('MÉTHODE 1 (localStorage standard):', localStorage.getItem('redirectAfterLogin'));
-      console.log('MÉTHODE 2 (localStorage avec délai):', localStorage.getItem('redirectAfterLogin_method2'));
-      console.log('MÉTHODE 3 (window.localStorage):', window.localStorage.getItem('redirectAfterLogin_method3'));
+      console.log('MÉTHODE STANDARD:', localStorage.getItem('redirectAfterLogin'));
+      console.log('MÉTHODE BACKUP:', localStorage.getItem('redirectAfterLogin_backup'));
+      console.log('MÉTHODE SESSION:', sessionStorage.getItem('redirectAfterLogin'));
       
-      // Vérifier la méthode 4 (JSON)
-      const method4Data = localStorage.getItem('redirectAfterLogin_method4');
-      let method4Url = null;
-      if (method4Data) {
+      // Vérifier la méthode JSON
+      const jsonData = localStorage.getItem('redirectAfterLogin_json');
+      let jsonUrl: string | null = null;
+      if (jsonData) {
         try {
-          const parsed = JSON.parse(method4Data);
-          method4Url = parsed.url;
-          console.log('MÉTHODE 4 (JSON):', parsed);
-          console.log('MÉTHODE 4 URL:', method4Url);
+          const parsed = JSON.parse(jsonData);
+          jsonUrl = parsed.url || null;
+          console.log('MÉTHODE JSON:', parsed);
+          console.log('MÉTHODE JSON URL:', jsonUrl);
         } catch (error) {
-          console.error('Erreur de parsing JSON pour la méthode 4:', error);
+          console.error('Erreur de parsing JSON:', error);
         }
       } else {
-        console.log('MÉTHODE 4 (JSON): Non trouvée');
+        console.log('MÉTHODE JSON: Non trouvée');
       }
       
       // Vérifier les cookies
       console.log('TOUS LES COOKIES:', document.cookie);
       
       // Fonction pour récupérer un cookie spécifique
-      const getCookieValue = (name) => {
+      const getCookieValue = (name: string): string | null => {
         const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
         return match ? decodeURIComponent(match[2]) : null;
       };
       
-      const method5 = getCookieValue('redirectAfterLogin_cookie');
-      console.log('MÉTHODE 5 (Cookie):', method5);
+      const cookieUrl = getCookieValue('redirectAfterLogin_cookie');
+      console.log('MÉTHODE COOKIE:', cookieUrl);
+      
+      // Vérifier l'URL complète stockée
+      const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
+      console.log('URL complète stockée:', lastVisitedUrl);
+      
+      // Obtenir l'URL à partir du lastVisitedUrl si nécessaire
+      let urlFromLastVisited: string | null = null;
+      if (lastVisitedUrl) {
+        try {
+          const url = new URL(lastVisitedUrl);
+          const surveyId = new URLSearchParams(url.search).get('surveyId');
+          if (surveyId) {
+            urlFromLastVisited = `/survey-answer?surveyId=${surveyId}`;
+            console.log('URL extraite de lastVisitedUrl:', urlFromLastVisited);
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'extraction de l\'URL:', error);
+        }
+      }
       
       // Récupérer l'URL de redirection depuis n'importe quelle méthode qui a fonctionné
-      const method1 = localStorage.getItem('redirectAfterLogin');
-      const method2 = localStorage.getItem('redirectAfterLogin_method2');
-      const method3 = localStorage.getItem('redirectAfterLogin_method3');
+      const standardUrl = localStorage.getItem('redirectAfterLogin');
+      const backupUrl = localStorage.getItem('redirectAfterLogin_backup');
+      const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
       
       console.log('=== RÉSUMÉ DES MÉTHODES (AUTH CONTEXT) ===');
-      console.log('Méthode 1 a fonctionné:', !!method1);
-      console.log('Méthode 2 a fonctionné:', !!method2);
-      console.log('Méthode 3 a fonctionné:', !!method3);
-      console.log('Méthode 4 a fonctionné:', !!method4Url);
-      console.log('Méthode 5 a fonctionné:', !!method5);
+      console.log('Méthode standard a fonctionné:', !!standardUrl);
+      console.log('Méthode backup a fonctionné:', !!backupUrl);
+      console.log('Méthode session a fonctionné:', !!sessionUrl);
+      console.log('Méthode JSON a fonctionné:', !!jsonUrl);
+      console.log('Méthode cookie a fonctionné:', !!cookieUrl);
+      console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
       
       // Sélectionner la première méthode qui a fonctionné
-      const redirectUrl = method1 || method2 || method3 || method4Url || method5;
+      const redirectUrl = standardUrl || backupUrl || sessionUrl || jsonUrl || cookieUrl || urlFromLastVisited;
       console.log('URL de redirection finale sélectionnée:', redirectUrl);
       
       // Nettoyer toutes les méthodes de stockage
       localStorage.removeItem('redirectAfterLogin');
-      localStorage.removeItem('redirectAfterLogin_method2');
-      localStorage.removeItem('redirectAfterLogin_method3');
-      localStorage.removeItem('redirectAfterLogin_method4');
+      localStorage.removeItem('redirectAfterLogin_backup');
+      localStorage.removeItem('redirectAfterLogin_json');
+      localStorage.removeItem('lastVisitedUrl');
+      sessionStorage.removeItem('redirectAfterLogin');
       document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
