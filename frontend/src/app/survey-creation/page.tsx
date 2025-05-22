@@ -1512,11 +1512,7 @@ const SurveyCreationPage = () => {
           return newState;
         });
 
-        setNotification({
-          message: 'Media deleted successfully',
-          severity: 'success',
-          open: true
-        });
+        // Suppression de la notification de succès
       }
     } catch (error) {
       console.error('Error deleting media:', error);
@@ -2071,7 +2067,7 @@ const SurveyCreationPage = () => {
                                           sx={{ 
                                             position: 'absolute',
                                             top: '50%',
-                                            right: -15,
+                                            right: -35,
                                             transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
@@ -2116,7 +2112,7 @@ const SurveyCreationPage = () => {
                                           sx={{ 
                                             position: 'absolute',
                                             top: '50%',
-                                            right: -15,
+                                            right: -35,
                                             transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
