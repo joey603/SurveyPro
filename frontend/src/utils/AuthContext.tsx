@@ -302,12 +302,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!isLocalhost) {
         document.cookie = `${name}=; path=/; ${cookieDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
         document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        
+        // Sans le point au début du domaine
+        const rootDomain = domain.replace(/^www\./, '');
+        document.cookie = `${name}=; path=/; domain=${rootDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${name}=; path=/; domain=.${rootDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
       }
       
       // Autres chemins potentiels
       document.cookie = `${name}=; path=/login; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
       document.cookie = `${name}=; path=/survey-answer; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      
+      // Suppression sans attributs
+      document.cookie = `${name}=`;
     };
     
     // Supprimer chaque cookie de la liste
@@ -315,6 +323,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearCookie(cookieName);
       console.log(`Tentative de suppression du cookie: ${cookieName}`);
     });
+    
+    // Solution spéciale pour redirectAfterLogin_cookie qui semble persistant
+    try {
+      // Suppression directe avec des méthodes alternatives
+      document.cookie = 'redirectAfterLogin_cookie=; Max-Age=-99999999; path=/;';
+      document.cookie = 'redirectAfterLogin_cookie=; Max-Age=0; path=/;';
+      
+      // Remplacer par une valeur vide avec expiration
+      const expDate = new Date();
+      expDate.setTime(expDate.getTime() - 3600000); // -1 heure
+      document.cookie = `redirectAfterLogin_cookie=; expires=${expDate.toUTCString()}; path=/`;
+      
+      // Essayer de remplacer par une valeur vide avec SameSite
+      document.cookie = 'redirectAfterLogin_cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict';
+      document.cookie = 'redirectAfterLogin_cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
+      
+      console.log('Tentatives supplémentaires pour supprimer redirectAfterLogin_cookie');
+    } catch (error) {
+      console.error('Erreur lors de la suppression spéciale du cookie:', error);
+    }
     
     // Log des valeurs après suppression
     console.log('Après suppression - localStorage:');
@@ -339,20 +367,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     console.log('=== FIN DE LA FONCTION LOGOUT (AUTH CONTEXT) ===');
     
-    // Bloquer toute redirection automatique possible en utilisant window.location
-    // Cela garantit un changement de page complet plutôt qu'une navigation Next.js
-    try {
-      // Utiliser un paramètre pour indiquer qu'on vient de se déconnecter
-      // Cela permet d'éviter des redirections en boucle
-      window.location.href = `/login?logout=true&time=${Date.now()}`;
-    } catch (error) {
-      console.error("Erreur lors de la redirection après logout:", error);
-      // Fallback sur la méthode router classique
-      router.push("/login");
-    }
-    
-    // Bloquer l'exécution pour éviter toute autre redirection
-    return;
+    // Rediriger vers la page de connexion en utilisant window.location pour un rafraîchissement complet
+    // ce qui aidera à effacer tout état restant
+    window.location.href = '/login';
   };
 
   const register = (accessToken: string, refreshToken: string) => {
