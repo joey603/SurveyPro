@@ -385,6 +385,16 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Début de la connexion Google');
       
+      // Sauvegarder l'URL de redirection depuis sessionStorage si disponible
+      const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection depuis sessionStorage pour Google:', sessionUrl);
+      
+      if (sessionUrl) {
+        // Sauvegarder dans un cookie persistant qui survivra à la redirection OAuth
+        document.cookie = `oauth_redirect_url=${encodeURIComponent(sessionUrl)}; path=/; max-age=3600; secure; samesite=lax`;
+        console.log('URL de redirection sauvegardée dans cookie oauth_redirect_url:', sessionUrl);
+      }
+      
       // Récupérer l'URL de redirection depuis les cookies
       const cookies = document.cookie.split(';');
       const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
@@ -427,6 +437,16 @@ const LoginPage: React.FC = () => {
   const handleGithubLogin = () => {
     try {
       console.log('Début de la connexion GitHub');
+      
+      // Sauvegarder l'URL de redirection depuis sessionStorage si disponible
+      const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection depuis sessionStorage pour GitHub:', sessionUrl);
+      
+      if (sessionUrl) {
+        // Sauvegarder dans un cookie persistant qui survivra à la redirection OAuth
+        document.cookie = `oauth_redirect_url=${encodeURIComponent(sessionUrl)}; path=/; max-age=3600; secure; samesite=lax`;
+        console.log('URL de redirection sauvegardée dans cookie oauth_redirect_url:', sessionUrl);
+      }
       
       // Récupérer l'URL de redirection depuis les cookies
       const cookies = document.cookie.split(';');
