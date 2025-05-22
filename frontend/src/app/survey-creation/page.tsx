@@ -1989,51 +1989,97 @@ const SurveyCreationPage = () => {
                                   />
                                 </Box>
                                 {(field.media || field.mediaUrl) && (
-                                  <Box sx={{ mt: 2, maxWidth: '200px' }}>
+                                  <Box sx={{ mt: 2, maxWidth: '200px', position: 'relative' }}>
                                     {isUploading[field.id] || loadingMedia[field.id] ? (
                                       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
                                         <CircularProgress size={40} sx={{ color: '#667eea' }} />
                                       </Box>
                                     ) : isImageFile(field.media || '') ? (
-                                      <img 
-                                        src={field.media || ''}
-                                        alt="Question media"
-                                        style={{ 
-                                          width: '100%', 
-                                          height: 'auto',
-                                          borderRadius: '8px',
-                                          objectFit: 'contain'
-                                        }}
-                                        onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                        onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                        onError={() => {
-                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                          setNotification({
-                                            message: 'Error loading image. Please check the URL.',
-                                            severity: 'error',
-                                            open: true
-                                          });
-                                        }}
-                                      />
+                                      <>
+                                        <IconButton 
+                                          onClick={() => {
+                                            // Réinitialiser le média pour cette question
+                                            handleMediaChange(index, '', field);
+                                          }}
+                                          sx={{ 
+                                            position: 'absolute',
+                                            top: -8,
+                                            right: -8,
+                                            backgroundColor: '#f44336',
+                                            color: 'white',
+                                            zIndex: 10,
+                                            width: 30,
+                                            height: 30,
+                                            '&:hover': {
+                                              backgroundColor: '#d32f2f',
+                                            }
+                                          }}
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                        <img 
+                                          src={field.media || ''}
+                                          alt="Question media"
+                                          style={{ 
+                                            width: '100%', 
+                                            height: 'auto',
+                                            borderRadius: '8px',
+                                            objectFit: 'contain'
+                                          }}
+                                          onLoadStart={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                          onLoad={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                          onError={() => {
+                                            setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                            setNotification({
+                                              message: 'Error loading image. Please check the URL.',
+                                              severity: 'error',
+                                              open: true
+                                            });
+                                          }}
+                                        />
+                                      </>
                                     ) : (
-                                      <ReactPlayer
-                                        url={field.media}
-                                        controls
-                                        width="100%"
-                                        height="auto"
-                                        style={{ borderRadius: '8px' }}
-                                        onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
-                                        onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
-                                        onError={(e) => {
-                                          setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
-                                          console.error('Error loading media:', e);
-                                          setNotification({
-                                            message: 'Error loading media. Please check the URL.',
-                                            severity: 'error',
-                                            open: true
-                                          });
-                                        }}
-                                      />
+                                      <>
+                                        <IconButton 
+                                          onClick={() => {
+                                            // Réinitialiser le média pour cette question
+                                            handleMediaChange(index, '', field);
+                                          }}
+                                          sx={{ 
+                                            position: 'absolute',
+                                            top: -8,
+                                            right: -8,
+                                            backgroundColor: '#f44336',
+                                            color: 'white',
+                                            zIndex: 10,
+                                            width: 30,
+                                            height: 30,
+                                            '&:hover': {
+                                              backgroundColor: '#d32f2f',
+                                            }
+                                          }}
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                        <ReactPlayer
+                                          url={field.media}
+                                          controls
+                                          width="100%"
+                                          height="auto"
+                                          style={{ borderRadius: '8px' }}
+                                          onBuffer={() => setLoadingMedia(prev => ({ ...prev, [field.id]: true }))}
+                                          onBufferEnd={() => setLoadingMedia(prev => ({ ...prev, [field.id]: false }))}
+                                          onError={(e) => {
+                                            setLoadingMedia(prev => ({ ...prev, [field.id]: false }));
+                                            console.error('Error loading media:', e);
+                                            setNotification({
+                                              message: 'Error loading media. Please check the URL.',
+                                              severity: 'error',
+                                              open: true
+                                            });
+                                          }}
+                                        />
+                                      </>
                                     )}
                                   </Box>
                                 )}
