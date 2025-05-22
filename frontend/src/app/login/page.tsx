@@ -105,114 +105,94 @@ const LoginPage: React.FC = () => {
         // Récupérer l'URL de redirection depuis les paramètres de l'URL
         const searchParams = new URLSearchParams(window.location.search);
         const callbackUrl = searchParams.get('callbackUrl');
-        const redirectParam = searchParams.get('redirect');
         
-        console.log('=== DÉBUT DE LA VÉRIFICATION AUTH ===');
-        console.log('URL de callback reçue:', callbackUrl);
-        console.log('Paramètre redirect reçu:', redirectParam);
+        console.log('=== VÉRIFICATION DES MÉTHODES DE STOCKAGE SUR LA PAGE LOGIN ===');
         console.log('URL complète:', window.location.href);
-        console.log('Paramètres de recherche:', window.location.search);
-
-        // Récupérer l'URL de redirection depuis toutes les sources possibles
-        let savedRedirectUrl: string | null = null;
         
-        // 1. Essayer d'abord le paramètre d'URL (priorité la plus haute)
-        if (redirectParam) {
-          savedRedirectUrl = redirectParam;
-          console.log('URL de redirection trouvée dans les paramètres d\'URL:', savedRedirectUrl);
-        }
+        // Vérifier toutes les méthodes possibles de stockage
+        console.log('MÉTHODE 1 (localStorage standard):', localStorage.getItem('redirectAfterLogin'));
+        console.log('MÉTHODE 2 (localStorage avec délai):', localStorage.getItem('redirectAfterLogin_method2'));
+        console.log('MÉTHODE 3 (window.localStorage):', window.localStorage.getItem('redirectAfterLogin_method3'));
         
-        // 2. Essayer localStorage
-        if (!savedRedirectUrl) {
-          const localUrl = localStorage.getItem('redirectAfterLogin');
-          if (localUrl) {
-            savedRedirectUrl = localUrl;
-            console.log('URL de redirection trouvée dans localStorage:', savedRedirectUrl);
+        // Vérifier la méthode 4 (JSON)
+        const method4Data = localStorage.getItem('redirectAfterLogin_method4');
+        if (method4Data) {
+          try {
+            const parsed = JSON.parse(method4Data);
+            console.log('MÉTHODE 4 (JSON):', parsed);
+            console.log('MÉTHODE 4 URL:', parsed.url);
+            console.log('MÉTHODE 4 Timestamp:', new Date(parsed.timestamp).toISOString());
+          } catch (error) {
+            console.error('Erreur de parsing JSON pour la méthode 4:', error);
           }
-        }
-        
-        // 3. Essayer sessionStorage
-        if (!savedRedirectUrl) {
-          const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
-          if (sessionUrl) {
-            savedRedirectUrl = sessionUrl;
-            console.log('URL de redirection trouvée dans sessionStorage:', savedRedirectUrl);
-          }
-        }
-        
-        // 4. Essayer les cookies
-        if (!savedRedirectUrl) {
-          const cookies = document.cookie.split(';');
-          const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
-          if (redirectCookie) {
-            savedRedirectUrl = decodeURIComponent(redirectCookie.split('=')[1]);
-            console.log('URL de redirection trouvée dans les cookies:', savedRedirectUrl);
-          }
-        }
-        
-        // Si une URL de redirection a été trouvée, la sauvegarder dans toutes les sources
-        if (savedRedirectUrl) {
-          console.log('URL de redirection trouvée:', savedRedirectUrl);
-          
-          // Sauvegarder dans localStorage et sessionStorage
-          localStorage.setItem('redirectAfterLogin', savedRedirectUrl);
-          sessionStorage.setItem('redirectAfterLogin', savedRedirectUrl);
-          
-          // Sauvegarder dans les cookies
-          document.cookie = `redirectAfterLogin=${encodeURIComponent(savedRedirectUrl)}; path=/; max-age=3600; secure; samesite=lax`;
-          document.cookie = `redirect_uri=${encodeURIComponent(savedRedirectUrl)}; path=/; max-age=3600; secure; samesite=lax`;
-          
-          console.log('URL de redirection synchronisée dans tous les stockages');
         } else {
-          console.log('Aucune URL de redirection trouvée');
+          console.log('MÉTHODE 4 (JSON): Non trouvée');
+        }
+        
+        // Vérifier les cookies
+        console.log('TOUS LES COOKIES:', document.cookie);
+        
+        // Fonction pour récupérer un cookie spécifique
+        const getCookieValue = (name) => {
+          const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+          return match ? decodeURIComponent(match[2]) : null;
+        };
+        
+        console.log('MÉTHODE 5 (Cookie):', getCookieValue('redirectAfterLogin_cookie'));
+        
+        // Détecter quelle méthode a fonctionné
+        const method1 = localStorage.getItem('redirectAfterLogin');
+        const method2 = localStorage.getItem('redirectAfterLogin_method2');
+        const method3 = localStorage.getItem('redirectAfterLogin_method3');
+        const method4 = method4Data ? JSON.parse(method4Data).url : null;
+        const method5 = getCookieValue('redirectAfterLogin_cookie');
+        
+        console.log('=== RÉSUMÉ DES MÉTHODES ===');
+        console.log('Méthode 1 a fonctionné:', !!method1);
+        console.log('Méthode 2 a fonctionné:', !!method2);
+        console.log('Méthode 3 a fonctionné:', !!method3);
+        console.log('Méthode 4 a fonctionné:', !!method4);
+        console.log('Méthode 5 a fonctionné:', !!method5);
+        
+        // Sélectionner la première méthode qui a fonctionné
+        let redirectUrl = method1 || method2 || method3 || method4 || method5 || null;
+        console.log('URL de redirection sélectionnée:', redirectUrl);
+        
+        if (redirectUrl) {
+          // Sauvegarder dans localStorage principal pour être utilisé par le mécanisme de login
+          localStorage.setItem('redirectAfterLogin', redirectUrl);
+          console.log('URL sauvegardée dans redirectAfterLogin standard pour le login:', redirectUrl);
         }
 
         // Vérifier l'authentification via le backend
-        try {
-          const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
+        const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Réponse de vérification auth:', data);
-            if (data.valid) {
-              // Récupérer l'URL de redirection (utiliser celle qu'on vient de synchroniser)
-              const redirectPath = localStorage.getItem('redirectAfterLogin');
-              console.log('URL de redirection pour la navigation:', redirectPath);
-              
-              if (redirectPath) {
-                console.log('Redirection vers URL sauvegardée:', redirectPath);
-                
-                // Construire l'URL complète si nécessaire
-                let fullRedirectUrl = redirectPath;
-                if (!redirectPath.startsWith('http')) {
-                  if (redirectPath.startsWith('/')) {
-                    fullRedirectUrl = `${window.location.origin}${redirectPath}`;
-                  } else {
-                    fullRedirectUrl = `${window.location.origin}/${redirectPath}`;
-                  }
-                }
-                
-                console.log('URL complète pour la redirection:', fullRedirectUrl);
-                
-                // Nettoyer les stockages avant la redirection
-                localStorage.removeItem('redirectAfterLogin');
-                sessionStorage.removeItem('redirectAfterLogin');
-                
-                // Redirection directe vers l'URL sauvegardée
-                window.location.href = fullRedirectUrl;
-              } else {
-                console.log('Pas d\'URL de redirection trouvée, redirection vers dashboard');
-                router.push('/');
-              }
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Réponse de vérification auth:', data);
+          if (data.valid) {
+            // Récupérer l'URL de redirection
+            console.log('Utilisateur authentifié, vérification de l\'URL de redirection');
+            if (redirectUrl) {
+              console.log('Redirection vers:', redirectUrl);
+              // Nettoyer toutes les méthodes de stockage
+              localStorage.removeItem('redirectAfterLogin');
+              localStorage.removeItem('redirectAfterLogin_method2');
+              localStorage.removeItem('redirectAfterLogin_method3');
+              localStorage.removeItem('redirectAfterLogin_method4');
+              document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              // Redirection directe vers l'URL sauvegardée
+              window.location.href = redirectUrl;
+            } else {
+              console.log('Pas d\'URL de redirection trouvée, redirection vers dashboard');
+              router.push('/dashboard');
             }
           }
-        } catch (error) {
-          console.error('Erreur lors de la vérification de l\'authentification:', error);
         }
       } catch (error) {
         console.error('Erreur lors de la vérification de l\'authentification:', error);

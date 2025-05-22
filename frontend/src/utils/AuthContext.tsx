@@ -89,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (accessToken: string, refreshToken: string) => {
     try {
+      console.log('=== DÉBUT DE LA FONCTION LOGIN (AUTH CONTEXT) ===');
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       setAccessToken(accessToken);
@@ -98,82 +99,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const decoded = jwtDecode(accessToken);
       setUser(decoded);
       
-      console.log('=== LOGIN RÉUSSI, PRÉPARATION DE LA REDIRECTION ===');
+      // Vérifier toutes les méthodes possibles de stockage
+      console.log('Vérification de toutes les méthodes de stockage:');
+      console.log('MÉTHODE 1 (localStorage standard):', localStorage.getItem('redirectAfterLogin'));
+      console.log('MÉTHODE 2 (localStorage avec délai):', localStorage.getItem('redirectAfterLogin_method2'));
+      console.log('MÉTHODE 3 (window.localStorage):', window.localStorage.getItem('redirectAfterLogin_method3'));
       
-      // Récupérer l'URL de redirection depuis toutes les sources possibles
-      let redirectUrl: string | null = null;
-      
-      // 1. Essayer localStorage
-      const localUrl = localStorage.getItem('redirectAfterLogin');
-      if (localUrl) {
-        redirectUrl = localUrl;
-        console.log('URL de redirection trouvée dans localStorage:', redirectUrl);
+      // Vérifier la méthode 4 (JSON)
+      const method4Data = localStorage.getItem('redirectAfterLogin_method4');
+      let method4Url = null;
+      if (method4Data) {
+        try {
+          const parsed = JSON.parse(method4Data);
+          method4Url = parsed.url;
+          console.log('MÉTHODE 4 (JSON):', parsed);
+          console.log('MÉTHODE 4 URL:', method4Url);
+        } catch (error) {
+          console.error('Erreur de parsing JSON pour la méthode 4:', error);
+        }
+      } else {
+        console.log('MÉTHODE 4 (JSON): Non trouvée');
       }
       
-      // 2. Essayer sessionStorage si pas trouvé dans localStorage
-      if (!redirectUrl) {
-        const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
-        if (sessionUrl) {
-          redirectUrl = sessionUrl;
-          console.log('URL de redirection trouvée dans sessionStorage:', redirectUrl);
-        }
-      }
+      // Vérifier les cookies
+      console.log('TOUS LES COOKIES:', document.cookie);
       
-      // 3. Essayer les cookies si toujours pas trouvé
-      if (!redirectUrl) {
-        const cookies = document.cookie.split(';');
-        
-        // Essayer d'abord redirectAfterLogin
-        const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
-        if (redirectCookie) {
-          redirectUrl = decodeURIComponent(redirectCookie.split('=')[1]);
-          console.log('URL de redirection trouvée dans cookie redirectAfterLogin:', redirectUrl);
-        }
-        
-        // Essayer ensuite redirect_uri
-        if (!redirectUrl) {
-          const redirectUriCookie = cookies.find(cookie => cookie.trim().startsWith('redirect_uri='));
-          if (redirectUriCookie) {
-            redirectUrl = decodeURIComponent(redirectUriCookie.split('=')[1]);
-            console.log('URL de redirection trouvée dans cookie redirect_uri:', redirectUrl);
-          }
-        }
-      }
+      // Fonction pour récupérer un cookie spécifique
+      const getCookieValue = (name) => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      };
       
-      // 4. Essayer les paramètres d'URL
-      if (!redirectUrl) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectParam = urlParams.get('redirect');
-        if (redirectParam) {
-          redirectUrl = redirectParam;
-          console.log('URL de redirection trouvée dans les paramètres d\'URL:', redirectUrl);
-        }
-      }
+      const method5 = getCookieValue('redirectAfterLogin_cookie');
+      console.log('MÉTHODE 5 (Cookie):', method5);
       
-      // Nettoyer tous les stockages
+      // Récupérer l'URL de redirection depuis n'importe quelle méthode qui a fonctionné
+      const method1 = localStorage.getItem('redirectAfterLogin');
+      const method2 = localStorage.getItem('redirectAfterLogin_method2');
+      const method3 = localStorage.getItem('redirectAfterLogin_method3');
+      
+      console.log('=== RÉSUMÉ DES MÉTHODES (AUTH CONTEXT) ===');
+      console.log('Méthode 1 a fonctionné:', !!method1);
+      console.log('Méthode 2 a fonctionné:', !!method2);
+      console.log('Méthode 3 a fonctionné:', !!method3);
+      console.log('Méthode 4 a fonctionné:', !!method4Url);
+      console.log('Méthode 5 a fonctionné:', !!method5);
+      
+      // Sélectionner la première méthode qui a fonctionné
+      const redirectUrl = method1 || method2 || method3 || method4Url || method5;
+      console.log('URL de redirection finale sélectionnée:', redirectUrl);
+      
+      // Nettoyer toutes les méthodes de stockage
       localStorage.removeItem('redirectAfterLogin');
-      sessionStorage.removeItem('redirectAfterLogin');
-      document.cookie = "redirectAfterLogin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      localStorage.removeItem('redirectAfterLogin_method2');
+      localStorage.removeItem('redirectAfterLogin_method3');
+      localStorage.removeItem('redirectAfterLogin_method4');
+      document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       
       // Rediriger selon ce qui a été trouvé
       if (redirectUrl) {
         console.log('Redirection vers URL sauvegardée:', redirectUrl);
-        
-        // Construire l'URL complète si nécessaire
-        let fullRedirectUrl = redirectUrl;
-        if (!redirectUrl.startsWith('http')) {
-          if (redirectUrl.startsWith('/')) {
-            fullRedirectUrl = `${window.location.origin}${redirectUrl}`;
-          } else {
-            fullRedirectUrl = `${window.location.origin}/${redirectUrl}`;
-          }
-        }
-        
-        console.log('URL complète pour la redirection:', fullRedirectUrl);
-        window.location.href = fullRedirectUrl;
+        window.location.href = redirectUrl;
       } else {
         // Redirection par défaut vers la racine
         console.log('Pas d\'URL trouvée, redirection vers /');

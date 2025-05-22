@@ -202,65 +202,80 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
+      console.log('=== DÉBUT DES TESTS DE STOCKAGE LOCALSTORAGE ===');
       console.log('ID du sondage détecté:', sharedSurveyId);
-      console.log('URL complète actuelle:', window.location.href);
       
-      // Sauvegarder le chemin relatif
+      // Sauvegarder uniquement le chemin relatif
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
-      const fullRedirectPath = `${window.location.origin}${redirectPath}`;
+      console.log('Chemin de redirection à sauvegarder:', redirectPath);
       
+      // MÉTHODE 1: localStorage.setItem standard
       try {
-        // Utiliser plusieurs méthodes de stockage pour maximiser les chances de succès
-        // 1. localStorage
+        console.log('MÉTHODE 1: Tentative de stockage avec localStorage.setItem standard');
         localStorage.setItem('redirectAfterLogin', redirectPath);
-        console.log('URL sauvegardée dans localStorage:', redirectPath);
-        
-        // 2. sessionStorage
-        sessionStorage.setItem('redirectAfterLogin', redirectPath);
-        console.log('URL sauvegardée dans sessionStorage:', redirectPath);
-        
-        // 3. Cookies (avec différentes options)
-        document.cookie = `redirectAfterLogin=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
-        document.cookie = `redirectAfterLoginFull=${encodeURIComponent(fullRedirectPath)}; path=/; max-age=3600`;
-        console.log('URL sauvegardée dans cookies');
-        
-        // 4. Paramètre d'URL pour la page de connexion
-        const loginUrl = `/login?redirect=${encodeURIComponent(redirectPath)}`;
-        console.log('URL de connexion préparée:', loginUrl);
-        
-        // Vérifier que les données ont bien été sauvegardées
-        const verifyStorage = () => {
-          const fromLocal = localStorage.getItem('redirectAfterLogin');
-          const fromSession = sessionStorage.getItem('redirectAfterLogin');
-          const allCookies = document.cookie;
-          
-          console.log('=== VÉRIFICATION DU STOCKAGE DE L\'URL ===');
-          console.log('localStorage:', fromLocal);
-          console.log('sessionStorage:', fromSession);
-          console.log('cookies:', allCookies);
-          
-          // Si au moins une méthode de stockage a fonctionné, procéder à la redirection
-          if (fromLocal || fromSession || allCookies.includes('redirectAfterLogin')) {
-            console.log('URL correctement sauvegardée, redirection vers la page de connexion');
-            router.push(loginUrl);
-          } else {
-            // Si aucune méthode n'a fonctionné, essayer une approche différente
-            console.error('ERREUR: Impossible de sauvegarder l\'URL de redirection');
-            // Redirection avec paramètre dans l'URL comme solution de secours
-            window.location.href = loginUrl;
-          }
-        };
-        
-        // Attendre un court instant pour s'assurer que les données sont bien sauvegardées
-        setTimeout(verifyStorage, 200);
-        
+        console.log('MÉTHODE 1: Vérification immédiate ->', localStorage.getItem('redirectAfterLogin'));
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde de l\'URL:', error);
-        // En cas d'erreur, rediriger avec le paramètre dans l'URL
-        const loginUrl = `/login?redirect=${encodeURIComponent(redirectPath)}`;
-        window.location.href = loginUrl;
+        console.error('MÉTHODE 1: Erreur ->', error);
       }
+      
+      // MÉTHODE 2: Stockage avec délai
+      try {
+        console.log('MÉTHODE 2: Tentative de stockage avec délai');
+        setTimeout(() => {
+          localStorage.setItem('redirectAfterLogin_method2', redirectPath);
+          console.log('MÉTHODE 2: Stockage effectué avec délai');
+          console.log('MÉTHODE 2: Vérification ->', localStorage.getItem('redirectAfterLogin_method2'));
+        }, 50);
+      } catch (error) {
+        console.error('MÉTHODE 2: Erreur ->', error);
+      }
+      
+      // MÉTHODE 3: Stockage via une fonction globale (window)
+      try {
+        console.log('MÉTHODE 3: Tentative via window.localStorage');
+        window.localStorage.setItem('redirectAfterLogin_method3', redirectPath);
+        console.log('MÉTHODE 3: Vérification ->', window.localStorage.getItem('redirectAfterLogin_method3'));
+      } catch (error) {
+        console.error('MÉTHODE 3: Erreur ->', error);
+      }
+      
+      // MÉTHODE 4: Stockage avec JSON.stringify
+      try {
+        console.log('MÉTHODE 4: Tentative avec JSON.stringify');
+        const dataObj = { url: redirectPath, timestamp: Date.now() };
+        localStorage.setItem('redirectAfterLogin_method4', JSON.stringify(dataObj));
+        const retrieved = localStorage.getItem('redirectAfterLogin_method4');
+        console.log('MÉTHODE 4: Vérification ->', retrieved);
+        if (retrieved) {
+          const parsed = JSON.parse(retrieved);
+          console.log('MÉTHODE 4: Données parsées ->', parsed.url);
+        }
+      } catch (error) {
+        console.error('MÉTHODE 4: Erreur ->', error);
+      }
+      
+      // MÉTHODE 5: Stockage via document.cookie
+      try {
+        console.log('MÉTHODE 5: Tentative via document.cookie');
+        document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
+        console.log('MÉTHODE 5: Cookie défini, vérification des cookies actuels:', document.cookie);
+      } catch (error) {
+        console.error('MÉTHODE 5: Erreur ->', error);
+      }
+
+      // Vérification finale de toutes les méthodes après 100ms
+      setTimeout(() => {
+        console.log('=== VÉRIFICATION FINALE DE TOUTES LES MÉTHODES ===');
+        console.log('MÉTHODE 1:', localStorage.getItem('redirectAfterLogin'));
+        console.log('MÉTHODE 2:', localStorage.getItem('redirectAfterLogin_method2'));
+        console.log('MÉTHODE 3:', localStorage.getItem('redirectAfterLogin_method3'));
+        console.log('MÉTHODE 4:', localStorage.getItem('redirectAfterLogin_method4'));
+        console.log('COOKIES:', document.cookie);
+        
+        // Redirection vers la page de connexion après les tests
+        console.log('=== REDIRECTION VERS LA PAGE DE CONNEXION ===');
+        router.push('/login');
+      }, 200);
     }
   }, [isAuthenticated, router]);
 
