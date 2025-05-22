@@ -275,73 +275,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("lastVisitedUrl");
     localStorage.removeItem("user");
     
+    // Nettoyer tout autre élément potentiel dans localStorage
+    localStorage.removeItem("redirectUrl");
+    localStorage.removeItem("surveyId");
+    localStorage.removeItem("lastSurveyId");
+    localStorage.removeItem("currentUrl");
+    localStorage.removeItem("redirectPath");
+    
     // Nettoyer sessionStorage - suppression de tous les éléments liés à la redirection
     sessionStorage.removeItem("redirectAfterLogin");
     sessionStorage.removeItem("surveyId");
     sessionStorage.removeItem("lastSurvey");
     sessionStorage.removeItem("lastPath");
+    sessionStorage.removeItem("redirectUrl");
+    sessionStorage.removeItem("currentUrl");
+    sessionStorage.removeItem("redirectPath");
     
-    // Obtenir le domaine pour supprimer les cookies correctement
-    const domain = window.location.hostname;
-    const isLocalhost = domain === 'localhost' || domain === '127.0.0.1';
-    const cookieDomain = isLocalhost ? '' : `domain=.${domain}`;
-    
-    // Supprimer également les cookies liés à la redirection avec plusieurs combinaisons de chemins et domaines
-    const cookiesToClear = [
-      "origin", "origin_alt", "redirect_uri", "redirectAfterLogin_cookie",
-      "oauth_redirect_url", "surveyId", "from", "redirectUrl",
-      "accessToken", "refreshToken"
-    ];
-    
-    // Fonction pour supprimer un cookie avec plusieurs options de path et domain
-    const clearCookie = (name) => {
-      // Options de base
+    // Fonction pour supprimer tous les cookies
+    const deleteCookie = (name) => {
+      console.log('Tentative de suppression du cookie:', name);
       document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      
-      // Avec domaine si non localhost
-      if (!isLocalhost) {
-        document.cookie = `${name}=; path=/; ${cookieDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-        document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-        
-        // Sans le point au début du domaine
-        const rootDomain = domain.replace(/^www\./, '');
-        document.cookie = `${name}=; path=/; domain=${rootDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-        document.cookie = `${name}=; path=/; domain=.${rootDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      }
-      
-      // Autres chemins potentiels
-      document.cookie = `${name}=; path=/login; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      document.cookie = `${name}=; path=/survey-answer; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      
-      // Suppression sans attributs
-      document.cookie = `${name}=`;
+      // Essayer aussi avec le domaine
+      document.cookie = `${name}=; domain=.surveyflow.co; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      // Et avec secure et SameSite=None pour les cookies potentiellement sécurisés
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; SameSite=None`;
     };
     
-    // Supprimer chaque cookie de la liste
-    cookiesToClear.forEach(cookieName => {
-      clearCookie(cookieName);
-      console.log(`Tentative de suppression du cookie: ${cookieName}`);
-    });
+    // Supprimer également les cookies liés à la redirection
+    deleteCookie("origin");
+    deleteCookie("origin_alt");
+    deleteCookie("redirect_uri");
+    deleteCookie("redirectAfterLogin_cookie");
+    deleteCookie("oauth_redirect_url");
+    deleteCookie("surveyId");
+    deleteCookie("from");
+    deleteCookie("redirectUrl");
+    deleteCookie("accessToken");
+    deleteCookie("refreshToken");
     
-    // Solution spéciale pour redirectAfterLogin_cookie qui semble persistant
-    try {
-      // Suppression directe avec des méthodes alternatives
-      document.cookie = 'redirectAfterLogin_cookie=; Max-Age=-99999999; path=/;';
-      document.cookie = 'redirectAfterLogin_cookie=; Max-Age=0; path=/;';
-      
-      // Remplacer par une valeur vide avec expiration
-      const expDate = new Date();
-      expDate.setTime(expDate.getTime() - 3600000); // -1 heure
-      document.cookie = `redirectAfterLogin_cookie=; expires=${expDate.toUTCString()}; path=/`;
-      
-      // Essayer de remplacer par une valeur vide avec SameSite
-      document.cookie = 'redirectAfterLogin_cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict';
-      document.cookie = 'redirectAfterLogin_cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
-      
-      console.log('Tentatives supplémentaires pour supprimer redirectAfterLogin_cookie');
-    } catch (error) {
-      console.error('Erreur lors de la suppression spéciale du cookie:', error);
+    // Nettoyer tout autre cookie potentiel
+    const allCookies = document.cookie.split(';');
+    for (let cookie of allCookies) {
+      if (cookie.trim()) {
+        const cookieName = cookie.split('=')[0].trim();
+        deleteCookie(cookieName);
+      }
     }
     
     // Log des valeurs après suppression
@@ -367,9 +345,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     console.log('=== FIN DE LA FONCTION LOGOUT (AUTH CONTEXT) ===');
     
-    // Rediriger vers la page de connexion en utilisant window.location pour un rafraîchissement complet
-    // ce qui aidera à effacer tout état restant
-    window.location.href = '/login';
+    // Rediriger vers la page de connexion avec un paramètre pour éviter le stockage de l'URL
+    window.location.href = "/login?clear=true";
   };
 
   const register = (accessToken: string, refreshToken: string) => {

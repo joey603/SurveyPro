@@ -108,19 +108,24 @@ const LoginPage: React.FC = () => {
         // Récupérer l'URL de redirection depuis les paramètres de l'URL
         const searchParams = new URLSearchParams(window.location.search);
         const fromParam = searchParams.get('from');
-        const logoutParam = searchParams.get('logout');
+        const clearParam = searchParams.get('clear');
         
-        // Si on vient de se déconnecter, ne pas rediriger automatiquement
-        if (logoutParam === 'true') {
-          console.log('Déconnexion détectée, blocage des redirections automatiques');
-          // Nettoyer tous les storages pour être sûr
+        // Si le paramètre clear=true est présent, supprimer toutes les redirections
+        if (clearParam === 'true') {
+          console.log('Paramètre "clear" détecté - Suppression de toutes les redirections stockées');
           localStorage.removeItem('redirectAfterLogin');
           localStorage.removeItem('redirectAfterLogin_backup');
           localStorage.removeItem('redirectAfterLogin_json');
           localStorage.removeItem('lastVisitedUrl');
           sessionStorage.removeItem('redirectAfterLogin');
           document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-          // Sortir immédiatement
+          
+          // Enlever le paramètre clear de l'URL
+          searchParams.delete('clear');
+          const newUrl = window.location.pathname + (searchParams.toString() ? '?' + searchParams.toString() : '');
+          window.history.replaceState({}, '', newUrl);
+          
+          // Ne pas continuer avec la vérification des redirections
           return;
         }
         
