@@ -530,8 +530,238 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    // Récupérer le paramètre d'erreur de l'URL
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    
+    if (errorParam === 'existing_user') {
+      setError('Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
+    }
+  }, []);
+
   return (
-    // ... existing code ...
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        width: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Partie gauche avec l'image */}
+      <Box
+        sx={{
+          width: '50%',
+          background: `url('/images/login.avif')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: { xs: 'none', md: 'block' },
+          position: 'relative',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: colors.background.overlay,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 4,
+            color: colors.text.light,
+          }}
+        >
+          <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
+            Welcome
+          </Typography>
+          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
+            Log in to access your personal space
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Partie droite avec le formulaire */}
+      <Box
+        sx={{
+          width: { xs: '100%', md: '50%' },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          backgroundColor: colors.background.paper,
+          padding: 4,
+          overflow: 'auto',
+        }}
+      >
+        <Container maxWidth="sm">
+          <Typography
+            variant="h2"
+            sx={{ 
+              fontWeight: 800, 
+              mb: 1, 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              display: 'inline-block'
+            }}
+          >
+            Surveyflow
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{ mb: 4, color: colors.text.secondary }}
+          >
+            The ultimate platform to create professional surveys in just a few clicks
+          </Typography>
+          
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700, mb: 4, color: colors.text.primary }}
+          >
+            Log in
+          </Typography>
+
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                width: '100%',
+                '& .MuiAlert-message': {
+                  width: '100%'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              required
+              value={email}
+              onChange={handleEmailChange}
+              error={!!emailError}
+              helperText={emailError}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: colors.border.hover,
+                  },
+                },
+              }}
+            />
+
+            <TextField
+              label="Password"
+              type="password"
+              fullWidth
+              required
+              value={password}
+              onChange={handlePasswordChange}
+              error={!!passwordError}
+              helperText={passwordError}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: colors.border.hover,
+                  },
+                },
+              }}
+            />
+
+            <Divider sx={{ my: 3 }}>OR</Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with Google
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              onClick={handleGithubLogin}
+              sx={{ mb: 2 }}
+            >
+              Continue with GitHub
+            </Button>
+
+            <Button
+              type="submit"
+              fullWidth
+              disabled={isLoading}
+              variant="contained"
+              sx={{
+                padding: '12px',
+                background: colors.primary.gradient,
+                '&:hover': {
+                  background: colors.primary.hover,
+                },
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                mb: 2,
+              }}
+            >
+              {isLoading ? (
+                <CircularProgress size={24} sx={{ color: colors.text.light }} />
+              ) : (
+                'Log in'
+              )}
+            </Button>
+
+            <Typography align="center" sx={{ mb: 2 }}>
+              <Button
+                href="/forgot-password"
+                sx={{
+                  textTransform: 'none',
+                  color: colors.primary.main,
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Forgot password ?
+              </Button>
+            </Typography>
+
+            <Typography align="center" sx={{ mt: 2 }}>
+              Don't have an account ?{' '}
+              <Button
+                href="/register"
+                sx={{
+                  textTransform: 'none',
+                  color: colors.primary.main,
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Sign up
+              </Button>
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 
