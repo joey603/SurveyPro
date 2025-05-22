@@ -241,6 +241,14 @@ const SurveyAnswerPage: React.FC = () => {
             // Stocker l'URL complète
             localStorage.setItem('lastVisitedUrl', window.location.href);
             console.log('URL complète stockée');
+
+            // Méthode spécifique pour les appareils mobiles
+            // Créer un cookie avec SameSite=None pour meilleure compatibilité mobile
+            document.cookie = `redirectAfterLogin_mobile=${encodeURIComponent(redirectPath)}; path=/; max-age=3600; SameSite=None; Secure`;
+            console.log('Cookie mobile mis à jour');
+            
+            // Méthode supplémentaire avec paramètre dans l'URL pour les redirections mobiles
+            localStorage.setItem('mobile_redirect', redirectPath);
             
             // Attendre un peu pour s'assurer que tout est bien enregistré
             setTimeout(() => {
@@ -275,29 +283,8 @@ const SurveyAnswerPage: React.FC = () => {
     if (isAuthenticated) {
       const redirectPath = localStorage.getItem('redirectAfterLogin');
       if (redirectPath) {
-        // Nettoyer toutes les méthodes de stockage
-        console.log('Nettoyage de toutes les méthodes de stockage après redirection réussie');
+        // Nettoyer le localStorage
         localStorage.removeItem('redirectAfterLogin');
-        localStorage.removeItem('redirectAfterLogin_backup');
-        localStorage.removeItem('redirectAfterLogin_json');
-        localStorage.removeItem('lastVisitedUrl');
-        sessionStorage.removeItem('redirectAfterLogin');
-        
-        // Nettoyer également les cookies
-        document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "from=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        
-        // Vérifier que tout a bien été nettoyé
-        const checkLocalStorage = localStorage.getItem('redirectAfterLogin');
-        const checkSessionStorage = sessionStorage.getItem('redirectAfterLogin');
-        console.log('Vérification après nettoyage:', {
-          localStorage: checkLocalStorage,
-          sessionStorage: checkSessionStorage,
-          cookies: document.cookie
-        });
         
         // Construire l'URL complète
         const fullUrl = `${window.location.origin}${redirectPath}`;

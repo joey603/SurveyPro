@@ -117,8 +117,10 @@ const LoginPage: React.FC = () => {
           localStorage.removeItem('redirectAfterLogin_backup');
           localStorage.removeItem('redirectAfterLogin_json');
           localStorage.removeItem('lastVisitedUrl');
+          localStorage.removeItem('mobile_redirect');
           sessionStorage.removeItem('redirectAfterLogin');
           document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          document.cookie = 'redirectAfterLogin_mobile=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
           
           // Enlever le paramètre clear de l'URL
           searchParams.delete('clear');
@@ -136,6 +138,9 @@ const LoginPage: React.FC = () => {
           localStorage.setItem('redirectAfterLogin', fromParam);
           sessionStorage.setItem('redirectAfterLogin', fromParam);
           document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(fromParam)}; path=/; max-age=3600`;
+          // Sauvegarder également dans les méthodes mobiles
+          document.cookie = `redirectAfterLogin_mobile=${encodeURIComponent(fromParam)}; path=/; max-age=3600; SameSite=None; Secure`;
+          localStorage.setItem('mobile_redirect', fromParam);
           console.log('Paramètre "from" sauvegardé dans tous les storages');
         }
         
@@ -143,17 +148,20 @@ const LoginPage: React.FC = () => {
         console.log('MÉTHODE STANDARD:', localStorage.getItem('redirectAfterLogin'));
         console.log('MÉTHODE BACKUP:', localStorage.getItem('redirectAfterLogin_backup'));
         console.log('MÉTHODE SESSION:', sessionStorage.getItem('redirectAfterLogin'));
+        console.log('MÉTHODE MOBILE:', localStorage.getItem('mobile_redirect'));
         
         // Vérifier la méthode JSON
         const jsonData = localStorage.getItem('redirectAfterLogin_json');
-        let jsonUrl = null;
+        let jsonUrl: string | null = null;
         if (jsonData) {
           try {
             const parsed = JSON.parse(jsonData);
-            jsonUrl = parsed.url;
+            if (parsed && typeof parsed.url === 'string') {
+              jsonUrl = parsed.url;
+            }
             console.log('MÉTHODE JSON:', parsed);
             console.log('MÉTHODE JSON URL:', jsonUrl);
-            console.log('MÉTHODE JSON Timestamp:', new Date(parsed.timestamp).toISOString());
+            console.log('MÉTHODE JSON Timestamp:', parsed.timestamp ? new Date(parsed.timestamp).toISOString() : 'N/A');
           } catch (error) {
             console.error('Erreur de parsing JSON:', error);
           }
@@ -172,6 +180,9 @@ const LoginPage: React.FC = () => {
         
         const cookieUrl = getCookieValue('redirectAfterLogin_cookie');
         console.log('MÉTHODE COOKIE:', cookieUrl);
+        
+        const mobileCookieUrl = getCookieValue('redirectAfterLogin_mobile');
+        console.log('MÉTHODE COOKIE MOBILE:', mobileCookieUrl);
         
         // Vérifier l'URL complète stockée
         const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
@@ -196,6 +207,7 @@ const LoginPage: React.FC = () => {
         const standardUrl = localStorage.getItem('redirectAfterLogin');
         const backupUrl = localStorage.getItem('redirectAfterLogin_backup');
         const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
+        const mobileRedirectUrl = localStorage.getItem('mobile_redirect');
         
         console.log('=== RÉSUMÉ DES MÉTHODES ===');
         console.log('Méthode standard a fonctionné:', !!standardUrl);
@@ -203,16 +215,21 @@ const LoginPage: React.FC = () => {
         console.log('Méthode session a fonctionné:', !!sessionUrl);
         console.log('Méthode JSON a fonctionné:', !!jsonUrl);
         console.log('Méthode cookie a fonctionné:', !!cookieUrl);
+        console.log('Méthode cookie mobile a fonctionné:', !!mobileCookieUrl);
+        console.log('Méthode mobile redirect a fonctionné:', !!mobileRedirectUrl);
         console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
         console.log('Paramètre URL "from" a fonctionné:', !!fromParam);
         
-        // Sélectionner la première méthode qui a fonctionné (priorité au paramètre URL)
-        let redirectUrl = fromParam || sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
+        // Sélectionner la première méthode qui a fonctionné (priorité au paramètre URL, puis méthodes mobiles)
+        let redirectUrl: string | null = fromParam || mobileCookieUrl || mobileRedirectUrl || sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
         console.log('URL de redirection sélectionnée:', redirectUrl);
         
         if (redirectUrl) {
           // Sauvegarder dans localStorage principal pour être utilisé par le mécanisme de login
           localStorage.setItem('redirectAfterLogin', redirectUrl);
+          // Sauvegarder également dans les méthodes mobiles
+          localStorage.setItem('mobile_redirect', redirectUrl);
+          document.cookie = `redirectAfterLogin_mobile=${encodeURIComponent(redirectUrl)}; path=/; max-age=3600; SameSite=None; Secure`;
           console.log('URL sauvegardée dans redirectAfterLogin standard pour le login:', redirectUrl);
         }
 
@@ -237,8 +254,10 @@ const LoginPage: React.FC = () => {
               localStorage.removeItem('redirectAfterLogin_backup');
               localStorage.removeItem('redirectAfterLogin_json');
               localStorage.removeItem('lastVisitedUrl');
+              localStorage.removeItem('mobile_redirect');
               sessionStorage.removeItem('redirectAfterLogin');
               document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              document.cookie = 'redirectAfterLogin_mobile=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               // Redirection directe vers l'URL sauvegardée
               window.location.href = redirectUrl;
             } else {
@@ -511,238 +530,8 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    // Récupérer le paramètre d'erreur de l'URL
-    const params = new URLSearchParams(window.location.search);
-    const errorParam = params.get('error');
-    
-    if (errorParam === 'existing_user') {
-      setError('Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
-    }
-  }, []);
-
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        minHeight: '100vh',
-        width: '100%',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Partie gauche avec l'image */}
-      <Box
-        sx={{
-          width: '50%',
-          background: `url('/images/login.avif')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          display: { xs: 'none', md: 'block' },
-          position: 'relative',
-        }}
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: colors.background.overlay,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 4,
-            color: colors.text.light,
-          }}
-        >
-          <Typography variant="h3" sx={{ fontWeight: 700, marginBottom: 2 }}>
-            Welcome
-          </Typography>
-          <Typography variant="h6" sx={{ textAlign: 'center', maxWidth: '80%' }}>
-            Log in to access your personal space
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Partie droite avec le formulaire */}
-      <Box
-        sx={{
-          width: { xs: '100%', md: '50%' },
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          backgroundColor: colors.background.paper,
-          padding: 4,
-          overflow: 'auto',
-        }}
-      >
-        <Container maxWidth="sm">
-          <Typography
-            variant="h2"
-            sx={{ 
-              fontWeight: 800, 
-              mb: 1, 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              display: 'inline-block'
-            }}
-          >
-            Surveyflow
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{ mb: 4, color: colors.text.secondary }}
-          >
-            The ultimate platform to create professional surveys in just a few clicks
-          </Typography>
-          
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 700, mb: 4, color: colors.text.primary }}
-          >
-            Log in
-          </Typography>
-
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 2,
-                width: '100%',
-                '& .MuiAlert-message': {
-                  width: '100%'
-                }
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              label="Email"
-              type="email"
-              fullWidth
-              required
-              value={email}
-              onChange={handleEmailChange}
-              error={!!emailError}
-              helperText={emailError}
-              sx={{
-                mb: 3,
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: colors.border.hover,
-                  },
-                },
-              }}
-            />
-
-            <TextField
-              label="Password"
-              type="password"
-              fullWidth
-              required
-              value={password}
-              onChange={handlePasswordChange}
-              error={!!passwordError}
-              helperText={passwordError}
-              sx={{
-                mb: 3,
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: colors.border.hover,
-                  },
-                },
-              }}
-            />
-
-            <Divider sx={{ my: 3 }}>OR</Divider>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              onClick={handleGoogleLogin}
-              sx={{ mb: 2 }}
-            >
-              Continue with Google
-            </Button>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GitHubIcon />}
-              onClick={handleGithubLogin}
-              sx={{ mb: 2 }}
-            >
-              Continue with GitHub
-            </Button>
-
-            <Button
-              type="submit"
-              fullWidth
-              disabled={isLoading}
-              variant="contained"
-              sx={{
-                padding: '12px',
-                background: colors.primary.gradient,
-                '&:hover': {
-                  background: colors.primary.hover,
-                },
-                textTransform: 'none',
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                mb: 2,
-              }}
-            >
-              {isLoading ? (
-                <CircularProgress size={24} sx={{ color: colors.text.light }} />
-              ) : (
-                'Log in'
-              )}
-            </Button>
-
-            <Typography align="center" sx={{ mb: 2 }}>
-              <Button
-                href="/forgot-password"
-                sx={{
-                  textTransform: 'none',
-                  color: colors.primary.main,
-                  '&:hover': {
-                    backgroundColor: 'transparent',
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Forgot password ?
-              </Button>
-            </Typography>
-
-            <Typography align="center" sx={{ mt: 2 }}>
-              Don't have an account ?{' '}
-              <Button
-                href="/register"
-                sx={{
-                  textTransform: 'none',
-                  color: colors.primary.main,
-                  '&:hover': {
-                    backgroundColor: 'transparent',
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Sign up
-              </Button>
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
-    </Box>
+    // ... existing code ...
   );
 };
 

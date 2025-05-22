@@ -188,6 +188,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
       console.log('URL complète stockée:', lastVisitedUrl);
       
+      // Vérifier les méthodes spécifiques aux appareils mobiles
+      const mobileCookieUrl = getCookieValue('redirectAfterLogin_mobile');
+      console.log('MÉTHODE COOKIE MOBILE:', mobileCookieUrl);
+      
+      const mobileRedirectUrl = localStorage.getItem('mobile_redirect');
+      console.log('MÉTHODE MOBILE REDIRECT:', mobileRedirectUrl);
+      
       // Obtenir l'URL à partir du lastVisitedUrl si nécessaire
       let urlFromLastVisited: string | null = null;
       if (lastVisitedUrl) {
@@ -215,10 +222,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Méthode session a fonctionné:', !!sessionUrl);
       console.log('Méthode JSON a fonctionné:', !!jsonUrl);
       console.log('Méthode cookie a fonctionné:', !!cookieUrl);
+      console.log('Méthode cookie mobile a fonctionné:', !!mobileCookieUrl);
+      console.log('Méthode mobile redirect a fonctionné:', !!mobileRedirectUrl);
       console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
       
-      // Sélectionner la première méthode qui a fonctionné, avec priorité à sessionStorage
-      const redirectUrl = sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
+      // Sélectionner la première méthode qui a fonctionné, avec priorité aux méthodes mobiles
+      const redirectUrl = mobileCookieUrl || mobileRedirectUrl || sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
       console.log('URL de redirection finale sélectionnée:', redirectUrl);
       
       // Nettoyer toutes les méthodes de stockage
@@ -226,8 +235,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('redirectAfterLogin_backup');
       localStorage.removeItem('redirectAfterLogin_json');
       localStorage.removeItem('lastVisitedUrl');
+      localStorage.removeItem('mobile_redirect');
       sessionStorage.removeItem('redirectAfterLogin');
       document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'redirectAfterLogin_mobile=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -257,6 +268,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('- redirectAfterLogin_backup:', localStorage.getItem("redirectAfterLogin_backup"));
     console.log('- redirectAfterLogin_json:', localStorage.getItem("redirectAfterLogin_json"));
     console.log('- lastVisitedUrl:', localStorage.getItem("lastVisitedUrl"));
+    console.log('- mobile_redirect:', localStorage.getItem("mobile_redirect"));
     
     console.log('Avant suppression - sessionStorage:');
     console.log('- redirectAfterLogin:', sessionStorage.getItem("redirectAfterLogin"));
@@ -274,6 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("redirectAfterLogin_json");
     localStorage.removeItem("lastVisitedUrl");
     localStorage.removeItem("user");
+    localStorage.removeItem("mobile_redirect");
     
     // Nettoyer tout autre élément potentiel dans localStorage
     localStorage.removeItem("redirectUrl");
@@ -306,6 +319,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteCookie("origin_alt");
     deleteCookie("redirect_uri");
     deleteCookie("redirectAfterLogin_cookie");
+    deleteCookie("redirectAfterLogin_mobile");
     deleteCookie("oauth_redirect_url");
     deleteCookie("surveyId");
     deleteCookie("from");
@@ -329,6 +343,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('- redirectAfterLogin_backup:', localStorage.getItem("redirectAfterLogin_backup"));
     console.log('- redirectAfterLogin_json:', localStorage.getItem("redirectAfterLogin_json"));
     console.log('- lastVisitedUrl:', localStorage.getItem("lastVisitedUrl"));
+    console.log('- mobile_redirect:', localStorage.getItem("mobile_redirect"));
     
     console.log('Après suppression - sessionStorage:');
     console.log('- redirectAfterLogin:', sessionStorage.getItem("redirectAfterLogin"));
