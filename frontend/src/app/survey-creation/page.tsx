@@ -467,56 +467,26 @@ const SurveyCreationPage = () => {
       message: 'Are you sure you want to reset the survey? All progress will be lost.',
       onConfirm: async () => {
         try {
-          // Récupérer tous les médias des questions
-          const currentMedia = fields
-            .map(field => field.media)
-            .filter(media => media && media.trim() !== '');
+          // Supprimer tous les médias des questions une par une
+          const questionsWithMedia = fields.filter(field => field.media && field.media.trim() !== '');
+          
+          if (questionsWithMedia.length > 0) {
+            console.log(`Suppression de ${questionsWithMedia.length} médias...`);
             
-          if (currentMedia.length > 0) {
-            console.log('Current media to mark for deletion:', currentMedia);
-            
-            // Marquer tous les médias pour suppression et attendre la mise à jour du state
-            const newTracker = {
-              ...mediaTracker,
-              ...Object.fromEntries(currentMedia.map(media => [media, 'to_delete']))
-            };
-            
-            // Mettre à jour le state et attendre que ce soit fait
-            setMediaTracker(newTracker);
-            
-            // Attendre que le state soit mis à jour
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            try {
-              // Nettoyer les médias avec le nouveau tracker
-              for (const media of currentMedia) {
-                if (!media) continue;
-                const parts = media.split('/');
-                const filename = parts[parts.length - 1];
-                const publicId = `uploads/${filename.split('.')[0]}`;
-                
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                  throw new Error('No authentication token found');
-                }
-
-                const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify({ publicId }),
-                });
-
-                if (!response.ok) {
-                  throw new Error(`Failed to delete media: ${publicId}`);
+            // Supprimer les médias un par un avec handleDeleteMedia
+            for (let i = 0; i < questionsWithMedia.length; i++) {
+              const field = questionsWithMedia[i];
+              const index = fields.findIndex(f => f.id === field.id);
+              
+              if (index !== -1) {
+                try {
+                  await handleDeleteMedia(index, field);
+                  // Petit délai pour éviter les requêtes trop rapides
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (error) {
+                  console.error(`Erreur lors de la suppression du média ${i+1}/${questionsWithMedia.length}:`, error);
                 }
               }
-            } catch (error) {
-              console.error('Error deleting media:', error);
             }
           }
 
