@@ -257,8 +257,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("lastVisitedUrl");
     localStorage.removeItem("user");
     
-    // Nettoyer sessionStorage
+    // Nettoyer sessionStorage - suppression de tous les éléments liés à la redirection
     sessionStorage.removeItem("redirectAfterLogin");
+    sessionStorage.removeItem("surveyId");
+    sessionStorage.removeItem("lastSurvey");
+    sessionStorage.removeItem("lastPath");
     
     // Supprimer également les cookies liés à la redirection
     document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -266,9 +269,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "oauth_redirect_url=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "surveyId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "from=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     
     // Réinitialiser l'état d'authentification
     setIsAuthenticated(false);
+    setAccessToken(null);
+    setUser(null);
     
     // Rediriger vers la page de connexion
     router.push("/login");
