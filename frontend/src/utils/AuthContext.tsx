@@ -339,8 +339,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     console.log('=== FIN DE LA FONCTION LOGOUT (AUTH CONTEXT) ===');
     
-    // Rediriger vers la page de connexion
-    router.push("/login");
+    // Bloquer toute redirection automatique possible en utilisant window.location
+    // Cela garantit un changement de page complet plutôt qu'une navigation Next.js
+    try {
+      // Utiliser un paramètre pour indiquer qu'on vient de se déconnecter
+      // Cela permet d'éviter des redirections en boucle
+      window.location.href = `/login?logout=true&time=${Date.now()}`;
+    } catch (error) {
+      console.error("Erreur lors de la redirection après logout:", error);
+      // Fallback sur la méthode router classique
+      router.push("/login");
+    }
+    
+    // Bloquer l'exécution pour éviter toute autre redirection
+    return;
   };
 
   const register = (accessToken: string, refreshToken: string) => {
