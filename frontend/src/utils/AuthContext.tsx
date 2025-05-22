@@ -248,6 +248,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    console.log('=== DÉBUT DE LA FONCTION LOGOUT (AUTH CONTEXT) ===');
+    
+    // Log des valeurs avant suppression
+    console.log('Avant suppression - localStorage:');
+    console.log('- accessToken:', !!localStorage.getItem("accessToken"));
+    console.log('- redirectAfterLogin:', localStorage.getItem("redirectAfterLogin"));
+    console.log('- redirectAfterLogin_backup:', localStorage.getItem("redirectAfterLogin_backup"));
+    console.log('- redirectAfterLogin_json:', localStorage.getItem("redirectAfterLogin_json"));
+    console.log('- lastVisitedUrl:', localStorage.getItem("lastVisitedUrl"));
+    
+    console.log('Avant suppression - sessionStorage:');
+    console.log('- redirectAfterLogin:', sessionStorage.getItem("redirectAfterLogin"));
+    console.log('- surveyId:', sessionStorage.getItem("surveyId"));
+    console.log('- lastSurvey:', sessionStorage.getItem("lastSurvey"));
+    
+    console.log('Avant suppression - cookies:');
+    console.log('- Tous les cookies:', document.cookie);
+    
     // Supprimer tous les éléments liés à l'authentification et à la redirection
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
@@ -272,10 +290,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     document.cookie = "surveyId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "from=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     
+    // Log des valeurs après suppression
+    console.log('Après suppression - localStorage:');
+    console.log('- accessToken:', !!localStorage.getItem("accessToken"));
+    console.log('- redirectAfterLogin:', localStorage.getItem("redirectAfterLogin"));
+    console.log('- redirectAfterLogin_backup:', localStorage.getItem("redirectAfterLogin_backup"));
+    console.log('- redirectAfterLogin_json:', localStorage.getItem("redirectAfterLogin_json"));
+    console.log('- lastVisitedUrl:', localStorage.getItem("lastVisitedUrl"));
+    
+    console.log('Après suppression - sessionStorage:');
+    console.log('- redirectAfterLogin:', sessionStorage.getItem("redirectAfterLogin"));
+    console.log('- surveyId:', sessionStorage.getItem("surveyId"));
+    console.log('- lastSurvey:', sessionStorage.getItem("lastSurvey"));
+    
+    console.log('Après suppression - cookies:');
+    console.log('- Tous les cookies:', document.cookie);
+    
     // Réinitialiser l'état d'authentification
     setIsAuthenticated(false);
     setAccessToken(null);
     setUser(null);
+    
+    console.log('=== FIN DE LA FONCTION LOGOUT (AUTH CONTEXT) ===');
     
     // Rediriger vers la page de connexion
     router.push("/login");
