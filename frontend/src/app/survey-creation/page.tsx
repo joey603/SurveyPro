@@ -424,72 +424,20 @@ const SurveyCreationPage = () => {
   const handleDeleteQuestion = async (index: number) => {
     const question = fields[index];
     
+    // Si la question a un média, le supprimer d'abord via handleDeleteMedia
     if (question.media) {
       try {
-        // Marquer le média pour suppression
-        const newTracker = {
-          ...mediaTracker,
-          [question.media]: 'to_delete'
-        };
+        // Utiliser la fonction handleDeleteMedia existante pour supprimer le média
+        await handleDeleteMedia(index, question);
         
-        setMediaTracker(newTracker);
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Récupérer le token et vérifier sa validité
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
-
-        // Vérifier si le token est expiré
-        try {
-          const tokenData = JSON.parse(atob(token.split('.')[1]));
-          if (tokenData.exp * 1000 < Date.now()) {
-            throw new Error('Token expired');
-          }
-        } catch (e) {
-          throw new Error('Invalid token');
-        }
-
-        const parts = question.media.split('/');
-        const filename = parts[parts.length - 1];
-        const publicId = `uploads/${filename.split('.')[0]}`;
-        
-        const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ publicId }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Si le token est invalide, on peut rediriger vers la page de connexion
-            localStorage.removeItem('accessToken');
-            window.location.href = '/login';
-            throw new Error('Session expired. Please login again.');
-          }
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Failed to delete media: ${publicId}`);
-        }
-
-        // Réinitialiser le tracker pour ce média
-        setMediaTracker(prev => {
-          const newState = { ...prev };
-          delete newState[question.media as string];
-          return newState;
-        });
-
+        // Attendre un peu pour que la suppression du média soit traitée
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
-        console.error('Error deleting media:', error);
+        console.error('Error deleting media during question deletion:', error);
       }
     }
     
+    // Supprimer la question
     remove(index);
   };
 
