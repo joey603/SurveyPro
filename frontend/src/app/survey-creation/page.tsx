@@ -456,7 +456,7 @@ const SurveyCreationPage = () => {
         const filename = parts[parts.length - 1];
         const publicId = `uploads/${filename.split('.')[0]}`;
         
-        const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+        const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -552,7 +552,7 @@ const SurveyCreationPage = () => {
                   throw new Error('No authentication token found');
                 }
 
-                const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+                const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -697,7 +697,7 @@ const SurveyCreationPage = () => {
           try {
             console.log('Sending delete request for:', publicId);
             // Correction du chemin de l'API et ajout des headers CORS
-            const response = await fetch('http://localhost:5041/api/surveys/delete-media', {
+            const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
