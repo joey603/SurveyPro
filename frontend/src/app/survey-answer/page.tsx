@@ -202,87 +202,24 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      console.log('=== DÉBUT DES TESTS DE STOCKAGE LOCALSTORAGE ===');
+      console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
       console.log('ID du sondage détecté:', sharedSurveyId);
       
-      // Sauvegarder uniquement le chemin relatif
+      // Créer l'URL de redirection qui sera utilisée après la connexion
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
-      console.log('Chemin de redirection à sauvegarder:', redirectPath);
+      console.log('URL de redirection à utiliser:', redirectPath);
       
-      // Créer une fonction asynchrone pour traiter la redirection
-      const saveAndRedirect = async () => {
-        try {
-          // Stocker dans le localStorage de manière fiable avec une promesse
-          return new Promise<void>((resolve) => {
-            // Stocker l'URL dans plusieurs endroits pour être sûr
-            console.log('Début du stockage');
-            
-            // Méthode 1: localStorage
-            localStorage.setItem('redirectAfterLogin', redirectPath);
-            console.log('localStorage standard mis à jour');
-            
-            // Méthode 2: localStorage avec nom alternatif
-            localStorage.setItem('redirectAfterLogin_backup', redirectPath);
-            console.log('localStorage backup mis à jour');
-            
-            // Méthode 3: sessionStorage
-            sessionStorage.setItem('redirectAfterLogin', redirectPath);
-            console.log('sessionStorage mis à jour');
-            
-            // Méthode 4: Cookie
-            document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
-            console.log('Cookie mis à jour');
-            
-            // Méthode 5: localStorage sous forme JSON
-            const dataObj = { url: redirectPath, timestamp: Date.now() };
-            localStorage.setItem('redirectAfterLogin_json', JSON.stringify(dataObj));
-            console.log('localStorage JSON mis à jour');
-            
-            // Attendre un peu pour s'assurer que tout est bien enregistré
-            setTimeout(() => {
-              // Vérifier que le stockage a bien fonctionné
-              const storedValue = localStorage.getItem('redirectAfterLogin');
-              console.log('Vérification du stockage:', storedValue);
-              
-              if (storedValue === redirectPath) {
-                console.log('Stockage vérifié avec succès, redirection possible');
-              } else {
-                console.warn('Stockage non vérifié, tentative de stockage à nouveau');
-                localStorage.setItem('redirectAfterLogin', redirectPath);
-              }
-              
-              resolve();
-            }, 300);
-          });
-        } catch (error) {
-          console.error('Erreur lors du stockage:', error);
-        }
-      };
+      // Stocker l'URL dans le localStorage avec plusieurs méthodes (backup)
+      localStorage.setItem('redirectAfterLogin', redirectPath);
+      localStorage.setItem('redirectAfterLogin_backup', redirectPath);
+      sessionStorage.setItem('redirectAfterLogin', redirectPath);
       
-      // Utiliser une IIFE async pour pouvoir utiliser await
-      (async () => {
-        console.log('Démarrage du processus de stockage et redirection');
-        await saveAndRedirect();
-        console.log('Stockage terminé, redirection vers la page de connexion');
-        
-        // Stocker d'autres informations qui pourraient être utiles
-        const fullURL = window.location.href;
-        localStorage.setItem('lastVisitedUrl', fullURL);
-        
-        // Une dernière vérification avant la redirection
-        const finalCheck = localStorage.getItem('redirectAfterLogin');
-        console.log('Vérification finale avant redirection:', finalCheck);
-        
-        // Redirection vers la page de connexion après stockage garanti
-        if (finalCheck) {
-          console.log('Redirection confirmée vers /login');
-          // Utiliser window.location.href pour une redirection plus fiable
-          window.location.href = '/login';
-        } else {
-          console.warn('Échec de la vérification finale, tentative de forcer la redirection');
-          window.location.href = `/login?from=${encodeURIComponent(redirectPath)}`;
-        }
-      })();
+      // Encoder l'URL pour l'utiliser comme paramètre dans la redirection
+      const encodedRedirectUrl = encodeURIComponent(redirectPath);
+      
+      // Rediriger directement vers la page de login avec le paramètre redirect
+      console.log('Redirection vers login avec paramètre redirect');
+      window.location.href = `/login?redirect=${encodedRedirectUrl}`;
     }
   }, [isAuthenticated, router]);
 

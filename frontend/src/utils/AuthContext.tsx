@@ -69,7 +69,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(false);
       setAccessToken(null);
       setUser(null);
-      if (!publicRoutes.includes(pathname as string)) {
+      
+      // Vérifier si c'est la page survey-answer avec un ID
+      const isSurveyAnswerWithId = pathname?.startsWith('/survey-answer') && 
+                                  window.location.search.includes('surveyId=');
+      
+      // Ne pas rediriger si c'est la page survey-answer avec un ID
+      // La redirection sera gérée directement dans la page survey-answer
+      if (!publicRoutes.includes(pathname as string) && !isSurveyAnswerWithId) {
         // Sauvegarder l'URL actuelle avant la redirection
         const currentUrl = window.location.pathname + window.location.search;
         localStorage.setItem('redirectAfterLogin', currentUrl);
