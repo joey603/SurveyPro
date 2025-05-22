@@ -105,42 +105,93 @@ const LoginPage: React.FC = () => {
         console.log('=== VÉRIFICATION DES MÉTHODES DE STOCKAGE SUR LA PAGE LOGIN ===');
         console.log('URL complète:', window.location.href);
         
-        // Récupérer les paramètres de l'URL
+        // Récupérer l'URL de redirection depuis les paramètres de l'URL
         const searchParams = new URLSearchParams(window.location.search);
-        
-        // Vérifier s'il y a un paramètre redirect dans l'URL
-        const redirectParam = searchParams.get('redirect');
-        if (redirectParam) {
-          console.log('Paramètre "redirect" détecté dans l\'URL:', redirectParam);
-          
-          // Décoder et sauvegarder le paramètre redirect dans le localStorage
-          try {
-            const decodedRedirect = decodeURIComponent(redirectParam);
-            console.log('URL de redirection décodée:', decodedRedirect);
-            
-            // Sauvegarder l'URL décodée dans le localStorage et sessionStorage
-            localStorage.setItem('redirectAfterLogin', decodedRedirect);
-            sessionStorage.setItem('redirectAfterLogin', decodedRedirect);
-            console.log('URL de redirection sauvegardée avec succès');
-          } catch (error) {
-            console.error('Erreur lors du décodage de l\'URL de redirection:', error);
-            // En cas d'erreur, utiliser la valeur non décodée
-            localStorage.setItem('redirectAfterLogin', redirectParam);
-          }
-        }
-        
-        // Vérifier aussi le paramètre 'from' (compatibilité avec l'ancien code)
         const fromParam = searchParams.get('from');
-        if (fromParam && !redirectParam) {
+        if (fromParam) {
           console.log('Paramètre "from" détecté dans l\'URL:', fromParam);
+          // Sauvegarder dans le localStorage pour être utilisé plus tard
           localStorage.setItem('redirectAfterLogin', fromParam);
+          console.log('URL du paramètre "from" sauvegardée dans le localStorage');
         }
         
-        // Vérifier toutes les méthodes possibles de stockage (pour le débogage)
+        // Vérifier toutes les méthodes possibles de stockage
         console.log('MÉTHODE STANDARD:', localStorage.getItem('redirectAfterLogin'));
         console.log('MÉTHODE BACKUP:', localStorage.getItem('redirectAfterLogin_backup'));
         console.log('MÉTHODE SESSION:', sessionStorage.getItem('redirectAfterLogin'));
         
+        // Vérifier la méthode JSON
+        const jsonData = localStorage.getItem('redirectAfterLogin_json');
+        let jsonUrl = null;
+        if (jsonData) {
+          try {
+            const parsed = JSON.parse(jsonData);
+            jsonUrl = parsed.url;
+            console.log('MÉTHODE JSON:', parsed);
+            console.log('MÉTHODE JSON URL:', jsonUrl);
+            console.log('MÉTHODE JSON Timestamp:', new Date(parsed.timestamp).toISOString());
+          } catch (error) {
+            console.error('Erreur de parsing JSON:', error);
+          }
+        } else {
+          console.log('MÉTHODE JSON: Non trouvée');
+        }
+        
+        // Vérifier les cookies
+        console.log('TOUS LES COOKIES:', document.cookie);
+        
+        // Fonction pour récupérer un cookie spécifique
+        const getCookieValue = (name) => {
+          const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+          return match ? decodeURIComponent(match[2]) : null;
+        };
+        
+        const cookieUrl = getCookieValue('redirectAfterLogin_cookie');
+        console.log('MÉTHODE COOKIE:', cookieUrl);
+        
+        // Vérifier l'URL complète stockée
+        const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
+        console.log('URL complète stockée:', lastVisitedUrl);
+        
+        // Obtenir l'URL à partir du lastVisitedUrl si nécessaire
+        let urlFromLastVisited = null;
+        if (lastVisitedUrl) {
+          try {
+            const url = new URL(lastVisitedUrl);
+            const surveyId = new URLSearchParams(url.search).get('surveyId');
+            if (surveyId) {
+              urlFromLastVisited = `/survey-answer?surveyId=${surveyId}`;
+              console.log('URL extraite de lastVisitedUrl:', urlFromLastVisited);
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'extraction de l\'URL:', error);
+          }
+        }
+        
+        // Détecter quelle méthode a fonctionné
+        const standardUrl = localStorage.getItem('redirectAfterLogin');
+        const backupUrl = localStorage.getItem('redirectAfterLogin_backup');
+        const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
+        
+        console.log('=== RÉSUMÉ DES MÉTHODES ===');
+        console.log('Méthode standard a fonctionné:', !!standardUrl);
+        console.log('Méthode backup a fonctionné:', !!backupUrl);
+        console.log('Méthode session a fonctionné:', !!sessionUrl);
+        console.log('Méthode JSON a fonctionné:', !!jsonUrl);
+        console.log('Méthode cookie a fonctionné:', !!cookieUrl);
+        console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
+        console.log('Paramètre URL "from" a fonctionné:', !!fromParam);
+        
+        // Sélectionner la première méthode qui a fonctionné
+        let redirectUrl = standardUrl || backupUrl || sessionUrl || jsonUrl || cookieUrl || urlFromLastVisited || fromParam;
+        console.log('URL de redirection sélectionnée:', redirectUrl);
+        
+        if (redirectUrl) {
+          // Sauvegarder dans localStorage principal pour être utilisé par le mécanisme de login
+          localStorage.setItem('redirectAfterLogin', redirectUrl);
+          console.log('URL sauvegardée dans redirectAfterLogin standard pour le login:', redirectUrl);
+        }
+
         // Vérifier l'authentification via le backend
         const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
           credentials: 'include',
@@ -155,15 +206,17 @@ const LoginPage: React.FC = () => {
           if (data.valid) {
             // Récupérer l'URL de redirection
             console.log('Utilisateur authentifié, vérification de l\'URL de redirection');
-            const redirectUrl = localStorage.getItem('redirectAfterLogin') || sessionStorage.getItem('redirectAfterLogin');
             if (redirectUrl) {
               console.log('Redirection vers:', redirectUrl);
               // Nettoyer toutes les méthodes de stockage
               localStorage.removeItem('redirectAfterLogin');
               localStorage.removeItem('redirectAfterLogin_backup');
+              localStorage.removeItem('redirectAfterLogin_json');
+              localStorage.removeItem('lastVisitedUrl');
               sessionStorage.removeItem('redirectAfterLogin');
+              document.cookie = 'redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               // Redirection directe vers l'URL sauvegardée
-              window.location.href = redirectUrl as string;
+              window.location.href = redirectUrl;
             } else {
               console.log('Pas d\'URL de redirection trouvée, redirection vers dashboard');
               router.push('/dashboard');
@@ -292,16 +345,32 @@ const LoginPage: React.FC = () => {
   const onLoginSuccess = async () => {
     try {
       console.log('=== DÉBUT DE LA REDIRECTION APRÈS CONNEXION ===');
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection trouvée après connexion:', redirectPath);
       
-      if (redirectPath) {
-        console.log('Redirection vers:', redirectPath);
-        // Nettoyer le localStorage
+      // Vérifier d'abord sessionStorage (priorité)
+      const sessionRedirectPath = sessionStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection dans sessionStorage:', sessionRedirectPath);
+      
+      // Puis vérifier localStorage
+      const localRedirectPath = localStorage.getItem('redirectAfterLogin');
+      console.log('URL de redirection dans localStorage:', localRedirectPath);
+      
+      // Vérifier en priorité sessionStorage
+      if (sessionRedirectPath) {
+        console.log('Redirection vers sessionStorage path:', sessionRedirectPath);
+        // Nettoyer les storages
         localStorage.removeItem('redirectAfterLogin');
+        sessionStorage.removeItem('redirectAfterLogin');
         
-        // Redirection directe vers l'URL sauvegardée
-        window.location.href = redirectPath;
+        // Redirection directe vers l'URL sauvegardée de sessionStorage
+        window.location.href = sessionRedirectPath;
+      } else if (localRedirectPath) {
+        console.log('Redirection vers localStorage path:', localRedirectPath);
+        // Nettoyer les storages
+        localStorage.removeItem('redirectAfterLogin');
+        sessionStorage.removeItem('redirectAfterLogin');
+        
+        // Redirection directe vers l'URL sauvegardée de localStorage
+        window.location.href = localRedirectPath;
       } else {
         console.log('Pas d\'URL de redirection, retour à l\'accueil');
         router.push('/');
