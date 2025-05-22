@@ -1461,6 +1461,73 @@ const SurveyCreationPage = () => {
     forceTooltipDisplay();
   };
 
+  // Fonction pour supprimer le média d'une question et de Cloudinary
+  const handleDeleteMedia = async (index: number, field: any) => {
+    try {
+      if (field.media) {
+        // Extraire le publicId du média à partir de l'URL
+        const parts = field.media.split('/');
+        const filename = parts[parts.length - 1];
+        const publicId = `uploads/${filename.split('.')[0]}`;
+        
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        // Marquer l'ancien média pour suppression
+        setMediaTracker(prev => ({
+          ...prev,
+          [field.media]: 'to_delete'
+        }));
+
+        // Envoyer une requête pour supprimer le média de Cloudinary
+        const response = await fetch('https://surveypro-ir3u.onrender.com/api/surveys/delete-media', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ publicId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to delete media: ${publicId}`);
+        }
+
+        // Mettre à jour la question sans le média
+        update(index, {
+          ...field,
+          media: '',
+          mediaUrl: ''
+        });
+
+        // Réinitialiser le tracker pour ce média
+        setMediaTracker(prev => {
+          const newState = { ...prev };
+          delete newState[field.media];
+          return newState;
+        });
+
+        setNotification({
+          message: 'Media deleted successfully',
+          severity: 'success',
+          open: true
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      setNotification({
+        message: error instanceof Error ? error.message : 'Failed to delete media',
+        severity: 'error',
+        open: true
+      });
+    }
+  };
+
   return (
     <Box
       component="main"
@@ -1998,13 +2065,14 @@ const SurveyCreationPage = () => {
                                       <>
                                         <IconButton 
                                           onClick={() => {
-                                            // Réinitialiser le média pour cette question
-                                            handleMediaChange(index, '', field);
+                                            // Supprimer le média pour cette question
+                                            handleDeleteMedia(index, field);
                                           }}
                                           sx={{ 
                                             position: 'absolute',
-                                            top: -8,
-                                            right: -8,
+                                            top: '50%',
+                                            right: -15,
+                                            transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
                                             zIndex: 10,
@@ -2042,13 +2110,14 @@ const SurveyCreationPage = () => {
                                       <>
                                         <IconButton 
                                           onClick={() => {
-                                            // Réinitialiser le média pour cette question
-                                            handleMediaChange(index, '', field);
+                                            // Supprimer le média pour cette question
+                                            handleDeleteMedia(index, field);
                                           }}
                                           sx={{ 
                                             position: 'absolute',
-                                            top: -8,
-                                            right: -8,
+                                            top: '50%',
+                                            right: -15,
+                                            transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
                                             zIndex: 10,
