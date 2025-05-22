@@ -108,11 +108,15 @@ const LoginPage: React.FC = () => {
         // Récupérer l'URL de redirection depuis les paramètres de l'URL
         const searchParams = new URLSearchParams(window.location.search);
         const fromParam = searchParams.get('from');
+        
+        // Si le paramètre "from" est présent, il a la plus haute priorité
         if (fromParam) {
           console.log('Paramètre "from" détecté dans l\'URL:', fromParam);
-          // Sauvegarder dans le localStorage pour être utilisé plus tard
+          // Sauvegarder dans tous les storages pour être sûr
           localStorage.setItem('redirectAfterLogin', fromParam);
-          console.log('URL du paramètre "from" sauvegardée dans le localStorage');
+          sessionStorage.setItem('redirectAfterLogin', fromParam);
+          document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(fromParam)}; path=/; max-age=3600`;
+          console.log('Paramètre "from" sauvegardé dans tous les storages');
         }
         
         // Vérifier toutes les méthodes possibles de stockage
@@ -182,8 +186,8 @@ const LoginPage: React.FC = () => {
         console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
         console.log('Paramètre URL "from" a fonctionné:', !!fromParam);
         
-        // Sélectionner la première méthode qui a fonctionné
-        let redirectUrl = standardUrl || backupUrl || sessionUrl || jsonUrl || cookieUrl || urlFromLastVisited || fromParam;
+        // Sélectionner la première méthode qui a fonctionné (priorité au paramètre URL)
+        let redirectUrl = fromParam || sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
         console.log('URL de redirection sélectionnée:', redirectUrl);
         
         if (redirectUrl) {

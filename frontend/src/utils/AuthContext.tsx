@@ -73,16 +73,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Sauvegarder l'URL actuelle avant la redirection
         const currentUrl = window.location.pathname + window.location.search;
         console.log('AuthContext: Sauvegarde de l\'URL avant redirection:', currentUrl);
-        localStorage.setItem('redirectAfterLogin', currentUrl);
-        sessionStorage.setItem('redirectAfterLogin', currentUrl);
-        document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(currentUrl)}; path=/; max-age=3600`;
         
-        // Stocker également sous forme JSON
-        const dataObj = { url: currentUrl, timestamp: Date.now() };
-        localStorage.setItem('redirectAfterLogin_json', JSON.stringify(dataObj));
-        
-        // Stocker l'URL complète
-        localStorage.setItem('lastVisitedUrl', window.location.href);
+        // IMPORTANT: Utiliser une approche synchrone pour le stockage
+        // Écrire dans localStorage, sessionStorage et cookie de manière synchrone
+        try {
+          // Méthode 1: localStorage
+          localStorage.setItem('redirectAfterLogin', currentUrl);
+          
+          // Méthode 2: localStorage backup
+          localStorage.setItem('redirectAfterLogin_backup', currentUrl);
+          
+          // Méthode 3: sessionStorage
+          sessionStorage.setItem('redirectAfterLogin', currentUrl);
+          
+          // Méthode 4: Cookie
+          document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(currentUrl)}; path=/; max-age=3600`;
+          
+          // Méthode 5: localStorage sous forme JSON
+          const dataObj = { url: currentUrl, timestamp: Date.now() };
+          localStorage.setItem('redirectAfterLogin_json', JSON.stringify(dataObj));
+          
+          // Méthode 6: URL complète
+          localStorage.setItem('lastVisitedUrl', window.location.href);
+          
+          // Forcer la synchronisation en lisant immédiatement les valeurs
+          const checkStandard = localStorage.getItem('redirectAfterLogin');
+          const checkSession = sessionStorage.getItem('redirectAfterLogin');
+          
+          console.log('Vérification immédiate des storages:');
+          console.log('- localStorage:', checkStandard);
+          console.log('- sessionStorage:', checkSession);
+          
+          // Si le stockage a échoué, utiliser un paramètre d'URL comme dernier recours
+          if (!checkStandard && !checkSession) {
+            console.warn('Stockage local échoué, utilisation de paramètre URL comme fallback');
+            // Rediriger avec un paramètre dans l'URL
+            router.push(`/login?from=${encodeURIComponent(currentUrl)}`);
+            return;
+          }
+        } catch (error) {
+          console.error('Erreur lors du stockage de l\'URL:', error);
+          // En cas d'erreur, utiliser un paramètre d'URL
+          router.push(`/login?from=${encodeURIComponent(currentUrl)}`);
+          return;
+        }
         
         // Attendre un peu pour s'assurer que le stockage est fait avant la redirection
         setTimeout(() => {
