@@ -74,8 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const currentUrl = window.location.pathname + window.location.search;
         console.log('AuthContext: Sauvegarde de l\'URL avant redirection:', currentUrl);
         
-        // IMPORTANT: Utiliser une approche synchrone pour le stockage
-        // Écrire dans localStorage, sessionStorage et cookie de manière synchrone
+        // NE PAS REDIRIGER AUTOMATIQUEMENT - Seulement stocker l'URL
+        // Utiliser une approche synchrone pour le stockage
         try {
           // Méthode 1: localStorage
           localStorage.setItem('redirectAfterLogin', currentUrl);
@@ -104,26 +104,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('- localStorage:', checkStandard);
           console.log('- sessionStorage:', checkSession);
           
-          // Si le stockage a échoué, utiliser un paramètre d'URL comme dernier recours
-          if (!checkStandard && !checkSession) {
-            console.warn('Stockage local échoué, utilisation de paramètre URL comme fallback');
-            // Rediriger avec un paramètre dans l'URL
-            router.push(`/login?from=${encodeURIComponent(currentUrl)}`);
-            return;
+          // Vérifier que le stockage a bien fonctionné
+          if (checkStandard && checkSession) {
+            console.log('Stockage réussi, redirection vers login possible');
+          } else {
+            console.warn('Stockage non vérifié, mais on continue quand même');
           }
+          
+          // Ajouter un délai suffisant pour garantir le stockage
+          setTimeout(() => {
+            // Vérification finale
+            const finalCheck = localStorage.getItem('redirectAfterLogin');
+            console.log('Vérification finale avant redirection:', finalCheck);
+            
+            // Maintenant, rediriger vers login avec un paramètre from pour être sûr
+            window.location.href = `/login?from=${encodeURIComponent(currentUrl)}`;
+          }, 300);
         } catch (error) {
           console.error('Erreur lors du stockage de l\'URL:', error);
-          // En cas d'erreur, utiliser un paramètre d'URL
-          router.push(`/login?from=${encodeURIComponent(currentUrl)}`);
-          return;
+          // En cas d'erreur, rediriger avec le paramètre directement
+          window.location.href = `/login?from=${encodeURIComponent(currentUrl)}`;
         }
-        
-        // Attendre un peu pour s'assurer que le stockage est fait avant la redirection
-        setTimeout(() => {
-          // Vérifier que le stockage a réussi
-          console.log('AuthContext: Vérification du stockage avant redirection:', localStorage.getItem('redirectAfterLogin'));
-          router.push("/login");
-        }, 100);
       }
     }
     setIsLoading(false);
