@@ -281,14 +281,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem("lastSurvey");
     sessionStorage.removeItem("lastPath");
     
-    // Supprimer également les cookies liés à la redirection
-    document.cookie = "origin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "origin_alt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "redirect_uri=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "redirectAfterLogin_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "oauth_redirect_url=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "surveyId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "from=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    // Obtenir le domaine pour supprimer les cookies correctement
+    const domain = window.location.hostname;
+    const isLocalhost = domain === 'localhost' || domain === '127.0.0.1';
+    const cookieDomain = isLocalhost ? '' : `domain=.${domain}`;
+    
+    // Supprimer également les cookies liés à la redirection avec plusieurs combinaisons de chemins et domaines
+    const cookiesToClear = [
+      "origin", "origin_alt", "redirect_uri", "redirectAfterLogin_cookie",
+      "oauth_redirect_url", "surveyId", "from", "redirectUrl",
+      "accessToken", "refreshToken"
+    ];
+    
+    // Fonction pour supprimer un cookie avec plusieurs options de path et domain
+    const clearCookie = (name) => {
+      // Options de base
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      
+      // Avec domaine si non localhost
+      if (!isLocalhost) {
+        document.cookie = `${name}=; path=/; ${cookieDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+      
+      // Autres chemins potentiels
+      document.cookie = `${name}=; path=/login; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      document.cookie = `${name}=; path=/survey-answer; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    };
+    
+    // Supprimer chaque cookie de la liste
+    cookiesToClear.forEach(cookieName => {
+      clearCookie(cookieName);
+      console.log(`Tentative de suppression du cookie: ${cookieName}`);
+    });
     
     // Log des valeurs après suppression
     console.log('Après suppression - localStorage:');
