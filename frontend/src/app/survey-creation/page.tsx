@@ -2067,13 +2067,14 @@ const SurveyCreationPage = () => {
                                           sx={{ 
                                             position: 'absolute',
                                             top: '50%',
-                                            right: -35,
+                                            right: { xs: -25, sm: -35 },
                                             transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
                                             zIndex: 10,
-                                            width: 30,
-                                            height: 30,
+                                            width: { xs: 24, sm: 30 },
+                                            height: { xs: 24, sm: 30 },
+                                            padding: { xs: '3px', sm: '4px' },
                                             '&:hover': {
                                               backgroundColor: '#d32f2f',
                                             }
@@ -2112,13 +2113,14 @@ const SurveyCreationPage = () => {
                                           sx={{ 
                                             position: 'absolute',
                                             top: '50%',
-                                            right: -35,
+                                            right: { xs: -25, sm: -35 },
                                             transform: 'translateY(-50%)',
                                             backgroundColor: '#f44336',
                                             color: 'white',
                                             zIndex: 10,
-                                            width: 30,
-                                            height: 30,
+                                            width: { xs: 24, sm: 30 },
+                                            height: { xs: 24, sm: 30 },
+                                            padding: { xs: '3px', sm: '4px' },
                                             '&:hover': {
                                               backgroundColor: '#d32f2f',
                                             }
