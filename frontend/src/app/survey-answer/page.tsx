@@ -202,24 +202,71 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      console.log('=== DÉTECTION D\'UN SONDAGE NÉCESSITANT AUTHENTIFICATION ===');
+      console.log('=== DÉBUT DES TESTS DE STOCKAGE LOCALSTORAGE DEPUIS SURVEY-ANSWER ===');
       console.log('ID du sondage détecté:', sharedSurveyId);
       
-      // Créer l'URL de redirection qui sera utilisée après la connexion
+      // Sauvegarder uniquement le chemin relatif
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
-      console.log('URL de redirection à utiliser:', redirectPath);
+      console.log('Chemin de redirection à sauvegarder:', redirectPath);
       
-      // Stocker l'URL dans le localStorage avec plusieurs méthodes (backup)
-      localStorage.setItem('redirectAfterLogin', redirectPath);
-      localStorage.setItem('redirectAfterLogin_backup', redirectPath);
-      sessionStorage.setItem('redirectAfterLogin', redirectPath);
+      // Créer une fonction asynchrone pour traiter la redirection
+      const saveRedirectPath = async () => {
+        try {
+          // Stocker dans le localStorage de manière fiable avec une promesse
+          return new Promise<void>((resolve) => {
+            // Stocker l'URL dans plusieurs endroits pour être sûr
+            console.log('Début du stockage');
+            
+            // Méthode 1: localStorage
+            localStorage.setItem('redirectAfterLogin', redirectPath);
+            console.log('localStorage standard mis à jour');
+            
+            // Méthode 2: localStorage avec nom alternatif
+            localStorage.setItem('redirectAfterLogin_backup', redirectPath);
+            console.log('localStorage backup mis à jour');
+            
+            // Méthode 3: sessionStorage
+            sessionStorage.setItem('redirectAfterLogin', redirectPath);
+            console.log('sessionStorage mis à jour');
+            
+            // Méthode 4: Cookie
+            document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
+            console.log('Cookie mis à jour');
+            
+            // Méthode 5: localStorage sous forme JSON
+            const dataObj = { url: redirectPath, timestamp: Date.now() };
+            localStorage.setItem('redirectAfterLogin_json', JSON.stringify(dataObj));
+            console.log('localStorage JSON mis à jour');
+            
+            // Stocker l'URL complète
+            localStorage.setItem('lastVisitedUrl', window.location.href);
+            console.log('URL complète stockée');
+            
+            // Attendre un peu pour s'assurer que tout est bien enregistré
+            setTimeout(() => {
+              // Vérifier que le stockage a bien fonctionné
+              const storedValue = localStorage.getItem('redirectAfterLogin');
+              console.log('Vérification du stockage:', storedValue);
+              
+              if (storedValue === redirectPath) {
+                console.log('Stockage vérifié avec succès');
+              } else {
+                console.warn('Stockage non vérifié, tentative de stockage à nouveau');
+                localStorage.setItem('redirectAfterLogin', redirectPath);
+              }
+              
+              resolve();
+            }, 300);
+          });
+        } catch (error) {
+          console.error('Erreur lors du stockage:', error);
+        }
+      };
       
-      // Encoder l'URL pour l'utiliser comme paramètre dans la redirection
-      const encodedRedirectUrl = encodeURIComponent(redirectPath);
+      // Exécuter la fonction de sauvegarde
+      saveRedirectPath();
       
-      // Rediriger directement vers la page de login avec le paramètre redirect
-      console.log('Redirection vers login avec paramètre redirect');
-      window.location.href = `/login?redirect=${encodedRedirectUrl}`;
+      // Note: Nous ne redirigeons pas ici, la redirection sera gérée par AuthContext
     }
   }, [isAuthenticated, router]);
 

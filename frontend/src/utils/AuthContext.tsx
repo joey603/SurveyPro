@@ -69,18 +69,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(false);
       setAccessToken(null);
       setUser(null);
-      
-      // Vérifier si c'est la page survey-answer avec un ID
-      const isSurveyAnswerWithId = pathname?.startsWith('/survey-answer') && 
-                                  window.location.search.includes('surveyId=');
-      
-      // Ne pas rediriger si c'est la page survey-answer avec un ID
-      // La redirection sera gérée directement dans la page survey-answer
-      if (!publicRoutes.includes(pathname as string) && !isSurveyAnswerWithId) {
+      if (!publicRoutes.includes(pathname as string)) {
         // Sauvegarder l'URL actuelle avant la redirection
         const currentUrl = window.location.pathname + window.location.search;
+        console.log('AuthContext: Sauvegarde de l\'URL avant redirection:', currentUrl);
         localStorage.setItem('redirectAfterLogin', currentUrl);
-        router.push("/login");
+        sessionStorage.setItem('redirectAfterLogin', currentUrl);
+        document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(currentUrl)}; path=/; max-age=3600`;
+        
+        // Stocker également sous forme JSON
+        const dataObj = { url: currentUrl, timestamp: Date.now() };
+        localStorage.setItem('redirectAfterLogin_json', JSON.stringify(dataObj));
+        
+        // Stocker l'URL complète
+        localStorage.setItem('lastVisitedUrl', window.location.href);
+        
+        // Attendre un peu pour s'assurer que le stockage est fait avant la redirection
+        setTimeout(() => {
+          // Vérifier que le stockage a réussi
+          console.log('AuthContext: Vérification du stockage avant redirection:', localStorage.getItem('redirectAfterLogin'));
+          router.push("/login");
+        }, 100);
       }
     }
     setIsLoading(false);
