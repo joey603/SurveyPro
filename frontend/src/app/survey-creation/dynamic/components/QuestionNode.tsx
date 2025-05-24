@@ -782,12 +782,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.stopPropagation();
       // Sélectionner la carte
       selectCard();
-      
-      // Ajouter un retour visuel immédiat
+      // Ajouter un retour visuel immédiat pour le feedback utilisateur
       button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
-      button.style.transform = 'scale(0.97)';
+      button.style.transform = 'scale(0.95)';
       
-      // Solution simple et directe - utiliser un input natif
+      // Créer et ouvrir le sélecteur de fichiers natif
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*,video/*';
@@ -812,7 +811,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       setTimeout(() => {
         button.style.backgroundColor = '';
         button.style.transform = '';
-        // Déclencher le sélecteur de fichiers
+        
+        // Déclencher le sélecteur de fichiers après la restauration visuelle
         input.click();
       }, 150);
     };
@@ -824,7 +824,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [handleMediaUpload, selectCard]);
+  }, [selectCard, handleMediaUpload]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -1303,15 +1303,16 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    minHeight: isIOS ? '52px' : '48px',
+                    minHeight: '60px',
                     height: 'auto',
-                    width: isIOS ? '100%' : 'auto',
-                    padding: isIOS ? '14px 20px' : '12px 16px',
+                    width: 'auto',
+                    minWidth: '150px',
+                    padding: '16px 24px',
                     border: '1px solid #1976d2',
-                    borderRadius: '4px',
+                    borderRadius: '8px',
                     background: 'white',
                     color: '#1976d2',
-                    fontSize: window.innerWidth < 600 ? '0.8rem' : '0.875rem',
+                    fontSize: window.innerWidth < 600 ? '0.9rem' : '1rem',
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
@@ -1321,47 +1322,46 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
                     opacity: isUploading ? 0.7 : 1,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                     position: 'relative',
                     zIndex: 10,
+                    transform: 'translateZ(0)',
+                    marginBottom: '10px',
+                    marginTop: '5px',
                   }}
                 >
-                  <AddPhotoAlternateIcon style={{ fontSize: isIOS ? '24px' : '18px' }} />
-                  <span style={{ fontWeight: isIOS ? 500 : 400 }}>{isUploading ? 'Uploading...' : 'Add Media'}</span>
+                  <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
+                  <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
                   
                   {/* Infobulle à côté du bouton avec flèche */}
                   {isIOS && isEditing && (
                     <div
                       style={{
                         position: 'absolute',
-                        top: '-40px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
+                        top: '50%',
+                        left: 'calc(100% + 10px)',
+                        transform: 'translateY(-50%)',
                         backgroundColor: '#667eea',
                         color: 'white',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        fontSize: '0.8rem',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
                         whiteSpace: 'nowrap',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        zIndex: 20,
-                        animation: 'pulsate 2s infinite',
-                        fontWeight: 500,
-                        textAlign: 'center',
-                        width: '90%',
-                        maxWidth: '300px',
+                        zIndex: 10,
+                        pointerEvents: 'none',
                       }}
                     >
-                      Appuyez pour ajouter une image
+                      Need Double Click
                       <div
                         style={{
                           position: 'absolute',
-                          width: '12px',
-                          height: '12px',
+                          width: '10px',
+                          height: '10px',
                           backgroundColor: '#667eea',
-                          left: '50%',
-                          bottom: '-6px',
-                          transform: 'translateX(-50%) rotate(45deg)',
+                          left: '-5px',
+                          top: '50%',
+                          transform: 'translateY(-50%) rotate(45deg)',
                         }}
                       />
                     </div>
@@ -1596,13 +1596,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           user-select: none;
         }
         
-        /* Animation pulsante pour l'infobulle iOS */
-        @keyframes pulsate {
-          0% { transform: translateX(-50%) scale(1); }
-          50% { transform: translateX(-50%) scale(1.05); }
-          100% { transform: translateX(-50%) scale(1); }
-        }
-        
         /* Styles pour améliorer l'accessibilité tactile */
         @media (pointer: coarse) {
           .MuiInputBase-root, 
@@ -1663,26 +1656,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         @supports (-webkit-touch-callout: none) {
           .ios-optimized-button {
             cursor: pointer !important;
-            min-height: 52px !important;
+            min-height: 44px !important;
             min-width: 44px !important;
-            width: 100% !important;
-            margin-bottom: 10px !important;
-            padding: 14px 20px !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
-            font-weight: 500 !important;
-          }
-          
-          #add-media-button {
-            margin-top: 5px !important;
-            margin-bottom: 15px !important;
-            border-width: 2px !important;
-            font-size: 1rem !important;
-            letter-spacing: 0.01em !important;
-          }
-          
-          #add-media-button:active {
-            background-color: rgba(25, 118, 210, 0.08) !important;
-            opacity: 0.9 !important;
           }
         }
         
@@ -1753,6 +1728,50 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           button[data-delete-media] {
             min-height: 44px !important;
             min-width: 44px !important;
+          }
+        }
+        
+        /* Optimisations supplémentaires pour le bouton Add Media sur iOS */
+        @supports (-webkit-touch-callout: none) {
+          /* Spécifique aux appareils iOS */
+          .add-media-button-class {
+            min-width: 160px !important;
+            min-height: 64px !important;
+            margin: 10px 0 !important;
+            -webkit-touch-callout: none !important;
+            -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+            /* Mettre en surbrillance la bordure pour plus de visibilité */
+            border: 2px solid #1976d2 !important;
+            /* Ajouter un espace de tapotement autour du bouton */
+            position: relative !important;
+          }
+          
+          /* Élargir la zone de tap sans changer l'apparence visuelle */
+          .add-media-button-class::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            z-index: -1;
+          }
+          
+          /* Feedback visuel immédiat au toucher */
+          .add-media-button-class:active {
+            background-color: rgba(25, 118, 210, 0.1) !important;
+            transform: scale(0.98) !important;
+            transition: all 0.05s ease-out !important;
+          }
+          
+          /* Réglages spécifiques pour les petits écrans (iPhone) */
+          @media (max-width: 390px) {
+            .add-media-button-class {
+              width: 100% !important;
+              max-width: 100% !important;
+              padding-left: 12px !important;
+              padding-right: 12px !important;
+            }
           }
         }
       `}</style>
