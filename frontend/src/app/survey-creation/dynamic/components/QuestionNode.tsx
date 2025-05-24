@@ -53,8 +53,8 @@ interface QuestionNodeProps {
 
 const questionTypes = [
   { value: 'text', label: 'Text' },
-  { value: 'yes-no', label: 'Yes/No' },
   { value: 'dropdown', label: 'Dropdown' },
+  { value: 'yes-no', label: 'Yes/No' },
   { value: 'slider', label: 'Slider' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'date', label: 'Date Picker' },
