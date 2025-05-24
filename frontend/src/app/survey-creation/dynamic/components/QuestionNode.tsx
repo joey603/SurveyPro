@@ -91,8 +91,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
   const deleteMediaButtonRef = useRef<HTMLButtonElement>(null);
   // Référence pour le bouton d'ajout d'option
   const addOptionButtonRef = useRef<HTMLButtonElement>(null);
-  // Référence pour le bouton de suppression d'option
-  const deleteOptionButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Détection iOS une seule fois au chargement du composant
   const isIOS = typeof navigator !== 'undefined' ? /iPad|iPhone|iPod/.test(navigator.userAgent) : false;
@@ -331,169 +329,25 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   sx={{ 
                     '& .MuiInputBase-root': {
                       minHeight: '48px', // Taille minimale recommandée pour les zones tactiles
-                    },
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '4px',
-                      cursor: 'text',
-                      touchAction: 'manipulation',
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      '&:focus-within': {
-                        boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
-                      }
-                    },
-                    // Suppression des délais tactiles pour iOS
-                    '& input': {
-                      cursor: 'text !important',
-                      touchAction: 'manipulation !important',
-                      WebkitTapHighlightColor: 'transparent !important',
-                      WebkitAppearance: 'none !important',
-                      WebkitTouchCallout: 'none !important'
-                    }
-                  }}
-                  id={`option-field-${id}-${index}`}
-                  className="ios-optimized-input"
-                  inputRef={(inputEl) => {
-                    // Capturer la référence de l'élément input directement
-                    if (inputEl) {
-                      // Stocker la référence pour pouvoir l'utiliser dans les gestionnaires d'événements
-                      (window as any)[`optionInputRef_${id}_${index}`] = inputEl;
-                      
-                      // Ajouter un gestionnaire direct sur l'élément input lui-même
-                      const attachedListener = (inputEl as any)._touchListenerAttached;
-                      if (!attachedListener) {
-                        const handleDirectInputTouch = (event: Event) => {
-                          // Ne pas empêcher le comportement par défaut pour permettre au focus de fonctionner
-                          // Mais arrêter la propagation
-                          event.stopPropagation();
-                          
-                          // Focus explicite
-                          setTimeout(() => {
-                            inputEl.focus();
-                            inputEl.click();
-                          }, 0);
-                        };
-                        
-                        // Ajouter plusieurs écouteurs pour s'assurer que l'événement est capturé
-                        inputEl.addEventListener('touchstart', handleDirectInputTouch, { passive: true });
-                        inputEl.addEventListener('mousedown', handleDirectInputTouch, { passive: true });
-                        
-                        // Marquer comme attaché
-                        (inputEl as any)._touchListenerAttached = true;
-                      }
                     }
                   }}
                   InputProps={{
-                    ref: (wrapperEl) => {
-                      // Type correct pour éviter les erreurs TypeScript
-                      const el = wrapperEl as unknown as HTMLDivElement;
-                      if (el) {
-                        // Obtenir le conteneur racine du TextField
-                        const rootEl = el.querySelector('.MuiInputBase-root') as HTMLDivElement;
-                        if (rootEl) {
-                          const attachedListener = (rootEl as any)._touchListenerAttached;
-                          if (!attachedListener) {
-                            // Créer un gestionnaire d'événements tactiles
-                            const handleDirectTouch = (event: TouchEvent) => {
-                              // Empêcher la propagation mais pas le comportement par défaut
-                              event.stopPropagation();
-                              
-                              // Ajouter un retour visuel immédiat
-                              rootEl.style.borderColor = 'rgba(25, 118, 210, 0.6)';
-                              
-                              // Trouver l'élément input
-                              const input = document.getElementById(`option-field-${id}-${index}`)?.querySelector('input');
-                              if (input) {
-                                // Créer et déclencher un faux événement de clic
-                                const clickEvent = new MouseEvent('click', {
-                                  view: window,
-                                  bubbles: true,
-                                  cancelable: true
-                                });
-                                
-                                // Forcer le focus et activer le clavier
-                                input.dispatchEvent(clickEvent);
-                                input.focus();
-                                
-                                // Double tentative de focus après un court délai
-                                setTimeout(() => {
-                                  input.click();
-                                  input.focus();
-                                  
-                                  // Restaurer l'apparence
-                                  setTimeout(() => {
-                                    rootEl.style.borderColor = '';
-                                  }, 300);
-                                }, 50);
-                              }
-                            };
-                            
-                            // Ajouter les écouteurs d'événements sur le conteneur root et sur le label
-                            rootEl.addEventListener('touchstart', handleDirectTouch, { passive: true });
-                            
-                            // Également ajouter l'écouteur sur le label pour s'assurer qu'il est capturé
-                            const label = el.querySelector('.MuiInputLabel-root');
-                            if (label) {
-                              label.addEventListener('touchstart', (event: Event) => {
-                                event.stopPropagation();
-                                handleDirectTouch(event as unknown as TouchEvent);
-                              }, { passive: true });
-                            }
-                            
-                            // Marquer comme attaché
-                            (rootEl as any)._touchListenerAttached = true;
-                          }
-                        }
-                      }
-                    },
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                   InputLabelProps={{
                     sx: { fontSize: { xs: '0.8rem', sm: '0.875rem' } }
                   }}
                 />
-                <button
-                  ref={el => {
-                    if (deleteOptionButtonRefs.current.length <= index) {
-                      deleteOptionButtonRefs.current.push(el);
-                    } else {
-                      deleteOptionButtonRefs.current[index] = el;
-                    }
-                  }}
+                <IconButton
+                  size="small"
                   onClick={() => {
-                    // S'exécute uniquement pour les vrais clics (non simulés)
-                    if (!(window as any).touchDetected) {
-                      // Sélectionner la carte
-                      selectCard();
-                      // Supprimer l'option
-                      const newOptions = questionData.options.filter((_, i) => i !== index);
-                      handleOptionsChange(newOptions);
-                    }
+                    const newOptions = questionData.options.filter((_, i) => i !== index);
+                    handleOptionsChange(newOptions);
                   }}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    borderRadius: '50%',
-                    background: 'white',
-                    color: '#ff4444',
-                    cursor: 'pointer',
-                    padding: 0,
-                    WebkitAppearance: 'none',
-                    WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'none', // "none" pour éviter tout comportement tactile du navigateur
-                    outline: 'none',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none',
-                  }}
+                  sx={{ color: '#ff4444' }}
                 >
                   <DeleteIcon />
-                </button>
+                </IconButton>
               </Box>
             ))}
             <button
@@ -684,7 +538,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     };
   }, [toggleCritical, selectCard]);
 
-  // Modifier le gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout d'option
+  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton d'ajout d'option
   useEffect(() => {
     const button = addOptionButtonRef.current;
     if (!button) return;
@@ -714,80 +568,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [questionData.options, handleOptionsChange, selectCard]);
-
-  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton Add Media
-  useEffect(() => {
-    const button = addMediaButtonRef.current;
-    if (!button) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
-      e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
-      e.stopPropagation();
-      // Sélectionner la carte
-      selectCard();
-      // Ajouter un retour visuel immédiat
-      button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
-      button.style.transform = 'scale(0.95)';
-      
-      // Référence à l'input natif existant
-      const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-      
-      // Restaurer l'apparence après un délai et déclencher l'input
-      setTimeout(() => {
-        button.style.backgroundColor = '';
-        button.style.transform = '';
-        
-        // Déclencher le sélecteur de fichiers après le retour visuel
-        if (input) {
-          input.click();
-        }
-      }, 300);
-    };
-
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-    button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-    // Nettoyage
-    return () => {
-      button.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [selectCard, id]);
-
-  // Gestionnaire d'événements tactiles natif pour iOS - pour les boutons de suppression d'option
-  useEffect(() => {
-    // Pour chaque bouton de suppression d'option
-    deleteOptionButtonRefs.current.forEach((button, index) => {
-      if (!button) return;
-
-      const handleTouchStart = (e: TouchEvent) => {
-        // Prévient le comportement par défaut qui peut causer un délai
-        e.preventDefault();
-        // Force l'arrêt de la propagation de l'événement
-        e.stopPropagation();
-        // Sélectionner la carte
-        selectCard();
-        // Ajouter un retour visuel immédiat
-        button.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
-        // Supprimer l'option
-        const newOptions = questionData.options.filter((_, i) => i !== index);
-        handleOptionsChange(newOptions);
-        // Restaurer l'apparence
-        setTimeout(() => {
-          button.style.backgroundColor = '';
-        }, 300);
-      };
-
-      // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-      button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-      // Nettoyage
-      return () => {
-        button.removeEventListener('touchstart', handleTouchStart);
-      };
-    });
   }, [questionData.options, handleOptionsChange, selectCard]);
 
   // Fonction pour les navigateurs non tactiles
@@ -822,112 +602,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.stopPropagation();
       // Sélectionner la carte
       selectCard();
-      
-      // Spécifiquement pour iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      
-      // Ajouter un retour visuel immédiat
-      button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
-      button.style.transform = 'scale(0.95)';
-      
-      // Utiliser l'input existant
-      const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-      
-      // Pour iOS, ajouter une classe temporaire au corps pour gérer l'accès au système de fichiers
-      if (isIOS) {
-        document.body.classList.add('ios-file-select-active');
-        
-        // Pour iOS, créer un nouvel input à chaque fois peut aider
-        const tempInput = document.createElement('input');
-        tempInput.type = 'file';
-        tempInput.accept = 'image/*,video/*';
-        tempInput.style.position = 'absolute';
-        tempInput.style.top = '-1000px';
-        tempInput.style.opacity = '0';
-        
-        // S'assurer que l'input est bien visible dans le DOM
-        document.body.appendChild(tempInput);
-        
-        // Configurer le gestionnaire d'événements
-        tempInput.onchange = (evt) => {
-          if (tempInput.files && tempInput.files.length > 0) {
-            // Créer un faux événement pour notre gestionnaire
-            const fakeEvent = {
-              target: {
-                files: tempInput.files
-              }
-            } as unknown as React.ChangeEvent<HTMLInputElement>;
-            
-            // Appeler notre gestionnaire
-            handleMediaUpload(fakeEvent);
-            
-            // Nettoyer après utilisation
-            setTimeout(() => {
-              document.body.removeChild(tempInput);
-            }, 500);
-          }
-        };
-        
-        // Restaurer l'apparence du bouton avec un délai
-        setTimeout(() => {
-          button.style.backgroundColor = '';
-          button.style.transform = '';
-          
-          // Avec un petit délai, déclencher le clic sur l'input temporaire
-          setTimeout(() => {
-            tempInput.click();
-            
-            // Nettoyer la classe du body après un délai
-            setTimeout(() => {
-              document.body.classList.remove('ios-file-select-active');
-            }, 1000);
-          }, 150);
-        }, 150);
-      } else {
-        // Pour les autres navigateurs, utiliser l'input existant
-        setTimeout(() => {
-          button.style.backgroundColor = '';
-          button.style.transform = '';
-          
-          // Utiliser l'input existant
-          if (fileInput) {
-            fileInput.click();
-          }
-        }, 150);
-      }
-    };
-
-    // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
-    button.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-    // Nettoyage
-    return () => {
-      button.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [selectCard, handleMediaUpload, id]);
-
-  // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
-  useEffect(() => {
-    const button = deleteMediaButtonRef.current;
-    if (!button) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Prévient le comportement par défaut qui peut causer un délai
-      e.preventDefault();
-      // Force l'arrêt de la propagation de l'événement
-      e.stopPropagation();
-      // Sélectionner la carte
-      selectCard();
-      // Ajouter un retour visuel immédiat
-      button.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
-      button.style.transform = 'scale(0.95)';
-      // Supprimer le média
+      // Appelle directement la fonction de suppression
       handleMediaDelete();
-      // Restaurer l'apparence
-      setTimeout(() => {
-        button.style.backgroundColor = '';
-        button.style.transform = '';
-      }, 300);
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -1346,38 +1022,47 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 <button
                   type="button"
                   onClick={() => {
-                    // S'exécute uniquement pour les vrais clics (non simulés)
-                    if (!(window as any).touchDetected) {
-                      // Sélectionner la carte
-                      selectCard();
-                      // Déclencher l'input natif
-                      const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-                      if (input) {
-                        input.click();
+                    // Sélectionner la carte
+                    selectCard();
+                    // Solution simple et directe - utiliser un input natif
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*,video/*';
+                    
+                    input.onchange = (e: Event) => {
+                      const target = e.target as HTMLInputElement;
+                      if (target.files && target.files.length > 0) {
+                        // Créer un faux événement React
+                        const fakeEvent = {
+                          target: target,
+                          currentTarget: target,
+                          preventDefault: () => {},
+                          stopPropagation: () => {}
+                        } as unknown as React.ChangeEvent<HTMLInputElement>;
+                        
+                        // Appeler notre gestionnaire
+                        handleMediaUpload(fakeEvent);
                       }
-                    }
+                    };
+                    
+                    // Déclencher le sélecteur de fichiers
+                    input.click();
                   }}
-                  data-intro="add-media"
-                  data-step="10"
-                  id="add-media-button"
-                  className="add-media-button-class ios-optimized-button"
-                  ref={addMediaButtonRef}
                   disabled={isUploading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    minHeight: '60px',
+                    minHeight: '48px',
                     height: 'auto',
                     width: 'auto',
-                    minWidth: '150px',
-                    padding: '16px 24px',
-                    border: '1px solid #1976d2',
-                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    border: 'none',
+                    borderRadius: '4px',
                     background: 'white',
                     color: '#1976d2',
-                    fontSize: window.innerWidth < 600 ? '0.9rem' : '1rem',
+                    fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
@@ -1387,12 +1072,8 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none',
                     opacity: isUploading ? 0.7 : 1,
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     position: 'relative',
-                    zIndex: 10,
-                    transform: 'translateZ(0)',
-                    marginBottom: '10px',
-                    marginTop: '5px',
                   }}
                 >
                   <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
@@ -1470,14 +1151,10 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   <button 
                     type="button"
                     ref={deleteMediaButtonRef}
-                    onClick={(e) => {
-                      // S'exécute uniquement pour les vrais clics (non simulés)
-                      if (!(window as any).touchDetected) {
-                        // Sélectionner la carte
-                        selectCard();
-                        // Supprimer le média
-                        handleMediaDelete();
-                      }
+                    onClick={() => {
+                      // Sélectionner la carte
+                      selectCard();
+                      handleMediaDelete();
                     }}
                     style={{
                       width: '40px',
@@ -1502,7 +1179,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                       alignSelf: 'center',
                       flexShrink: 0
                     }}
-                    data-delete-media="true"
                   >
                     <DeleteIcon style={{ fontSize: '20px' }} />
                   </button>
@@ -1751,106 +1427,6 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           button[data-intro="add-option-button"] {
             min-height: 44px !important;
             min-width: 100px !important;
-          }
-        }
-        
-        /* Optimisations pour les boutons de suppression d'option */
-        button[data-delete-option] {
-          -webkit-tap-highlight-color: transparent !important;
-          -webkit-touch-callout: none !important;
-          touch-action: manipulation !important;
-        }
-        
-        button[data-delete-option]:active {
-          opacity: 0.8;
-          background-color: rgba(244, 67, 54, 0.1);
-          transform: scale(0.97);
-          transition: all 0.05s linear !important;
-        }
-        
-        @supports (-webkit-touch-callout: none) {
-          button[data-delete-option] {
-            min-height: 44px !important;
-            min-width: 44px !important;
-          }
-        }
-        
-        /* Optimisations pour le bouton de suppression de média */
-        button[data-delete-media] {
-          -webkit-tap-highlight-color: transparent !important;
-          -webkit-touch-callout: none !important;
-          touch-action: manipulation !important;
-        }
-        
-        button[data-delete-media]:active {
-          opacity: 0.8;
-          background-color: rgba(244, 67, 54, 0.1);
-          transform: scale(0.95);
-          transition: all 0.05s linear !important;
-        }
-        
-        @supports (-webkit-touch-callout: none) {
-          button[data-delete-media] {
-            min-height: 44px !important;
-            min-width: 44px !important;
-          }
-        }
-        
-        /* Optimisations supplémentaires pour le bouton Add Media sur iOS */
-        @supports (-webkit-touch-callout: none) {
-          /* Spécifique aux appareils iOS */
-          .add-media-button-class {
-            min-width: 160px !important;
-            min-height: 64px !important;
-            margin: 10px 0 !important;
-            -webkit-touch-callout: none !important;
-            -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
-            /* Mettre en surbrillance la bordure pour plus de visibilité */
-            border: 2px solid #1976d2 !important;
-            /* Ajouter un espace de tapotement autour du bouton */
-            position: relative !important;
-          }
-          
-          /* Élargir la zone de tap sans changer l'apparence visuelle */
-          .add-media-button-class::before {
-            content: "";
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            z-index: -1;
-          }
-          
-          /* Feedback visuel immédiat au toucher */
-          .add-media-button-class:active {
-            background-color: rgba(25, 118, 210, 0.1) !important;
-            transform: scale(0.98) !important;
-            transition: all 0.05s ease-out !important;
-          }
-          
-          /* Réglages spécifiques pour les petits écrans (iPhone) */
-          @media (max-width: 390px) {
-            .add-media-button-class {
-              width: 100% !important;
-              max-width: 100% !important;
-              padding-left: 12px !important;
-              padding-right: 12px !important;
-            }
-          }
-        }
-        
-        /* Styles spécifiques pour améliorer la sélection de fichiers sur iOS */
-        body.ios-file-select-active {
-          position: relative;
-          overflow: visible !important;
-          height: auto !important;
-        }
-        
-        /* Styles spécifiques pour les boutons sur iOS */
-        @supports (-webkit-touch-callout: none) {
-          input[type="file"] {
-            font-size: 16px !important; /* iOS ne zoom pas sur les inputs ≥ 16px */
           }
         }
       `}</style>
