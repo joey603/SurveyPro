@@ -58,7 +58,7 @@ exports.getSurveyAnswers = async (req, res) => {
 exports.getUserSurveyResponses = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log("Recherche des réponses pour l'utilisateur:", userId);
+    console.log("Searching for responses for user:", userId);
 
     const responses = await SurveyAnswer.find({
       'respondent.userId': userId
@@ -69,29 +69,29 @@ exports.getUserSurveyResponses = async (req, res) => {
     })
     .sort({ submittedAt: -1 });
 
-    console.log("Réponses récupérées:", responses.length);
+    console.log("Responses retrieved:", responses.length);
 
     const formattedResponses = responses
       .filter(response => response.surveyId)
       .map(response => ({
         _id: response._id,
         surveyId: response.surveyId._id,
-        surveyTitle: response.surveyId.title || "Sondage supprimé",
+        surveyTitle: response.surveyId.title || "Survey deleted",
         completedAt: response.submittedAt,
         demographic: response.respondent.demographic,
         answers: response.answers
     }));
 
-    console.log("Réponses formatées:", formattedResponses.length);
+    console.log("Formatted responses:", formattedResponses.length);
     res.status(200).json(formattedResponses);
   } catch (error) {
-    console.error("Erreur détaillée lors de la récupération des réponses:", {
+    console.error("Error when retrieving survey responses:", {
       message: error.message,
       stack: error.stack,
       userId: req.user?.id
     });
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des réponses aux sondages", 
+      message: "Error when retrieving survey responses", 
       error: error.message 
     });
   }
@@ -113,13 +113,13 @@ exports.getUserSurveyResponseById = async (req, res) => {
     });
 
     if (!response) {
-      console.log("Aucune réponse trouvée pour ces critères");
-      return res.status(404).json({ message: "Réponse non trouvée" });
+      console.log("No response found for these criteria");
+      return res.status(404).json({ message: "Response not found" });
     }
 
     if (!response.surveyId) {
-      console.log("Le sondage associé n'existe plus");
-      return res.status(404).json({ message: "Le sondage associé n'existe plus" });
+      console.log("The associated survey does not exist");
+      return res.status(404).json({ message: "The associated survey does not exist" });
     }
 
     const formattedResponse = {
@@ -132,17 +132,17 @@ exports.getUserSurveyResponseById = async (req, res) => {
       questions: response.surveyId.questions
     };
 
-    console.log("Réponse formatée avec succès");
+    console.log("Response formatted successfully");
     res.status(200).json(formattedResponse);
   } catch (error) {
-    console.error("Erreur détaillée lors de la récupération de la réponse:", {
+    console.error("Error when retrieving the survey response:", {
       message: error.message,
       stack: error.stack,
       responseId: req.params.responseId,
       userId: req.user?.id
     });
     res.status(500).json({ 
-      message: "Erreur lors de la récupération de la réponse au sondage", 
+      message: "Error when retrieving the survey response", 
       error: error.message 
     });
   }
@@ -161,14 +161,14 @@ exports.getLastDemographicData = async (req, res) => {
     .select('respondent.demographic');
 
     if (!lastAnswer || !lastAnswer.respondent.demographic) {
-      return res.status(404).json({ message: "Aucune donnée démographique trouvée" });
+      return res.status(404).json({ message: "No demographic data found" });
     }
 
     res.status(200).json(lastAnswer.respondent.demographic);
   } catch (error) {
-    console.error("Erreur lors de la récupération des données démographiques:", error);
+    console.error("Error when retrieving demographic data:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des données démographiques", 
+      message: "Error when retrieving demographic data", 
       error: error.message 
     });
   }

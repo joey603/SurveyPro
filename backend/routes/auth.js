@@ -138,7 +138,7 @@ passport.use(new GitHubStrategy({
       
       if (!emails || emails.length === 0) {
         console.error('No emails available from GitHub');
-        return done(new Error('Aucun email disponible depuis GitHub'));
+        return done(new Error('No email available from GitHub'));
       }
 
       primaryEmail = emails[0].value;
@@ -253,7 +253,7 @@ router.get('/google', (req, res, next) => {
   // Forcer une nouvelle session
   req.logout((err) => {
     if (err) {
-      console.error('Erreur lors de la déconnexion:', err);
+      console.error('Error during logout:', err);
     }
     passport.authenticate('google', { 
       scope: ['profile', 'email'],
@@ -422,7 +422,7 @@ router.post('/register', async (req, res) => {
     
     if (existingUser) {
       return res.status(400).json({
-        message: existingUser.email === email ? 'Email déjà utilisé' : 'Nom d\'utilisateur déjà utilisé'
+        message: existingUser.email === email ? 'Email already used' : 'Username already used'
       });
     }
 
@@ -440,10 +440,10 @@ router.post('/register', async (req, res) => {
 
     await sendVerificationEmail(email, verificationCode);
 
-    res.status(201).json({ message: 'Inscription réussie ! Vérifiez votre e-mail pour activer votre compte.' });
+    res.status(201).json({ message: 'Registration successful! Check your email to activate your account.' });
   } catch (error) {
-    console.error('Erreur lors de l\'inscription:', error);
-    res.status(500).json({ message: 'Erreur du serveur' });
+    console.error('Error during registration:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -452,19 +452,19 @@ router.post('/verify-email', async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Utilisateur non trouvé.' });
+    if (!user) return res.status(400).json({ message: 'User not found.' });
 
     if (user.verificationCode === parseInt(verificationCode)) {
       user.isVerified = true;
       user.verificationCode = null;
       await user.save();
-      res.status(200).json({ message: 'Email vérifié avec succès.' });
+      res.status(200).json({ message: 'Email verified successfully.' });
     } else {
-      res.status(400).json({ message: 'Code de vérification incorrect.' });
+      res.status(400).json({ message: 'Incorrect verification code.' });
     }
   } catch (error) {
-    console.error('Erreur lors de la vérification:', error);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    console.error('Error during verification:', error);
+    res.status(500).json({ message: 'Server error.' });
   }
 });
 
@@ -474,27 +474,27 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     
-    if (!user) return res.status(400).json({ message: "Compte non trouvé" });
+    if (!user) return res.status(400).json({ message: "Account not found" });
 
     // Vérifier si c'est un compte GitHub ou Google
     if (user.authMethod === 'github' || user.authMethod === 'google') {
       return res.status(400).json({ 
         error: 'existing_user',
-        message: `Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`,
+        message: `An account already exists with this email. Please login with ${user.authMethod}.`,
         authMethod: user.authMethod,
-        redirectUrl: `/oauth-callback?error=existing_user&message=Un compte existe déjà avec cet email. Veuillez vous connecter avec ${user.authMethod}.`
+        redirectUrl: `/oauth-callback?error=existing_user&message=An account already exists with this email. Please login with ${user.authMethod}.`
       });
     }
 
     if (!user.isVerified) {
       return res.status(403).json({
-        message: "Compte non vérifié. Veuillez vérifier votre email.",
+        message: "Unverified account. Please verify your email.",
         isVerified: false
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Mot de passe incorrect" });
+    if (!isMatch) return res.status(400).json({ message: "Incorrect password" });
 
     const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "4h" });
     const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
@@ -585,7 +585,7 @@ router.put('/password', authMiddleware, async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
+    res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Error changing password:', error);
     res.status(500).json({ message: 'Server error' });
@@ -639,12 +639,12 @@ router.post('/forgot-password', async (req, res) => {
     const msg = {
       to: email,
       from: process.env.EMAIL_FROM,
-      subject: "Réinitialisation de mot de passe",
+      subject: "Password reset request",
       html: `
         <div style="text-align: center; font-family: Arial, sans-serif;">
-          <h2>Demande de réinitialisation de mot de passe</h2>
-          <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
-          <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
+          <h2>Password reset request</h2>
+          <p>You have requested to reset your password.</p>
+          <p>Click the button below to set a new password:</p>
           <a href="${resetUrl}" style="
             background-color: #4a90e2;
             color: white;
@@ -667,7 +667,7 @@ router.post('/forgot-password', async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erreur lors de la demande de réinitialisation:", error);
+    console.error("Error during password reset request:", error);
     res.status(500).json({ message: "An error occurred while sending the reset instructions." });
   }
 });
@@ -699,7 +699,7 @@ router.post('/reset-password', async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erreur lors de la réinitialisation du mot de passe:", error);
+    console.error("Error during password reset:", error);
     res.status(500).json({
       message: "An error occurred while resetting the password."
     });
@@ -708,14 +708,14 @@ router.post('/reset-password', async (req, res) => {
 
 // Ajouter cette fonction avant les routes
 const sendVerificationEmail = async (email, verificationCode) => {
-  console.log('Tentative d\'envoi d\'email de vérification à:', email);
-  console.log('Code de vérification:', verificationCode);
+  console.log('Attempting to send verification email to:', email);
+  console.log('Verification code:', verificationCode);
   console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
   
   const msg = {
     to: email,
     from: process.env.EMAIL_FROM,
-    subject: 'Vérification de votre compte SurveyPro',
+    subject: 'Verification of your SurveyPro account',
     html: `
       <div style="text-align: center; font-family: Arial, sans-serif;">
         <h2>Welcome to SurveyPro !</h2>
@@ -733,18 +733,18 @@ const sendVerificationEmail = async (email, verificationCode) => {
   };
 
   try {
-    console.log('Configuration de SendGrid avec la clé API...');
+    console.log('Configuring SendGrid with API key...');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    console.log('Envoi de l\'email...');
+    console.log('Sending email...');
     const response = await sgMail.send(msg);
-    console.log('Email envoyé avec succès:', response);
+    console.log('Email sent successfully:', response);
   } catch (error) {
-    console.error('Erreur détaillée lors de l\'envoi de l\'email:', {
+    console.error('Detailed error sending email:', {
       message: error.message,
       code: error.code,
       response: error.response?.body
     });
-    throw new Error('Erreur lors de l\'envoi de l\'email de vérification');
+    throw new Error('Error sending verification email');
   }
 };
 

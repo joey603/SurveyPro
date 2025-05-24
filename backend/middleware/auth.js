@@ -15,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
     if (!user) {
       // L'utilisateur n'existe plus dans la base de données
       return res.status(401).json({ 
-        message: 'Utilisateur non trouvé',
+        message: 'User not found',
         clearTokens: true // Indication au frontend de supprimer les tokens
       });
     }
@@ -23,7 +23,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Non autorisé' });
+    res.status(401).json({ message: 'Unauthorized' });
   }
 };
 

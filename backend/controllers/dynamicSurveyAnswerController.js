@@ -8,7 +8,7 @@ exports.submitDynamicSurveyAnswer = async (req, res) => {
     // Vérifier si le sondage existe
     const survey = await DynamicSurvey.findById(surveyId);
     if (!survey) {
-      return res.status(404).json({ message: "Sondage non trouvé" });
+      return res.status(404).json({ message: "Survey not found" });
     }
 
     // Créer la réponse
@@ -31,13 +31,13 @@ exports.submitDynamicSurveyAnswer = async (req, res) => {
 
     await surveyAnswer.save();
     res.status(201).json({ 
-      message: "Réponse au sondage enregistrée avec succès",
+      message: "Survey answer saved successfully",
       surveyAnswer 
     });
   } catch (error) {
-    console.error("Erreur lors de l'enregistrement de la réponse:", error);
+    console.error("Error when saving the answer:", error);
     res.status(500).json({ 
-      message: "Erreur lors de l'enregistrement de la réponse", 
+      message: "Error when saving the answer", 
       error: error.message 
     });
   }
@@ -53,9 +53,9 @@ exports.getDynamicSurveyAnswers = async (req, res) => {
     
     res.status(200).json(answers);
   } catch (error) {
-    console.error("Erreur lors de la récupération des réponses:", error);
+    console.error("Error when retrieving the responses:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des réponses", 
+      message: "Error when retrieving the responses", 
       error: error.message 
     });
   }
@@ -88,9 +88,9 @@ exports.getUserDynamicSurveyResponses = async (req, res) => {
 
     res.status(200).json(formattedResponses);
   } catch (error) {
-    console.error("Erreur lors de la récupération des réponses:", error);
+    console.error("Error when retrieving the responses:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des réponses", 
+      message: "Error when retrieving the responses", 
       error: error.message 
     });
   }
@@ -111,14 +111,14 @@ exports.getDynamicSurveyResponseById = async (req, res) => {
     });
 
     if (!response) {
-      return res.status(404).json({ message: "Réponse non trouvée" });
+      return res.status(404).json({ message: "Response not found" });
     }
 
     res.status(200).json(response);
   } catch (error) {
-    console.error("Erreur lors de la récupération de la réponse:", error);
+    console.error("Error when retrieving the response:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération de la réponse", 
+      message: "Error when retrieving the response", 
       error: error.message 
     });
   }

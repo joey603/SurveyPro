@@ -4,28 +4,28 @@ const fs = require('fs');
 
 exports.createDynamicSurvey = async (req, res) => {
   try {
-    console.log('Données reçues:', JSON.stringify(req.body, null, 2));
+    console.log('Received data:', JSON.stringify(req.body, null, 2));
     
     const { title, description, demographicEnabled, nodes, edges, isPrivate } = req.body;
 
     // Validation des données
     if (!title) {
       return res.status(400).json({ 
-        message: 'Le titre est requis',
+        message: 'The title is required',
         receivedData: req.body 
       });
     }
 
     if (!Array.isArray(nodes)) {
       return res.status(400).json({ 
-        message: 'Les nœuds doivent être un tableau',
+        message: "The nodes must be an array",
         receivedData: req.body 
       });
     }
 
     if (!Array.isArray(edges)) {
       return res.status(400).json({ 
-        message: 'Les arêtes doivent être un tableau',
+        message: "The edges must be an array",
         receivedData: req.body 
       });
     }
@@ -34,7 +34,7 @@ exports.createDynamicSurvey = async (req, res) => {
     for (const node of nodes) {
       if (!node.id || !node.type || !node.data) {
         return res.status(400).json({
-          message: 'Format de nœud invalide',
+          message: "Invalid node format",
           invalidNode: node
         });
       }
@@ -44,7 +44,7 @@ exports.createDynamicSurvey = async (req, res) => {
     for (const edge of edges) {
       if (!edge.id || !edge.source || !edge.target) {
         return res.status(400).json({
-          message: 'Format d\'arête invalide',
+          message: "Invalid edge format",
           invalidEdge: edge
         });
       }
@@ -82,7 +82,7 @@ exports.createDynamicSurvey = async (req, res) => {
       survey.privateLink = `${baseUrl}/survey-answer?surveyId=${survey._id}`;
     }
 
-    console.log('Survey à sauvegarder:', JSON.stringify(survey, null, 2));
+    console.log('Survey to save:', JSON.stringify(survey, null, 2));
 
     const savedSurvey = await survey.save();
 
@@ -94,9 +94,9 @@ exports.createDynamicSurvey = async (req, res) => {
 
     res.status(201).json(response);
   } catch (error) {
-    console.error('Erreur détaillée:', error);
+    console.error('Detailed error:', error);
     res.status(500).json({
-      message: 'Erreur lors de la création du sondage',
+      message: 'Error when creating the survey',
       error: error.message,
       stack: error.stack
     });
@@ -112,9 +112,9 @@ exports.getDynamicSurveys = async (req, res) => {
 
     res.status(200).json(surveys);
   } catch (error) {
-    console.error("Erreur lors de la récupération des sondages:", error);
+    console.error("Error when retrieving surveys:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération des sondages", 
+      message: "Error when retrieving surveys", 
       error: error.message 
     });
   }
@@ -126,14 +126,14 @@ exports.getDynamicSurveyById = async (req, res) => {
       .select('title description demographicEnabled nodes edges createdAt isPrivate');
 
     if (!survey) {
-      return res.status(404).json({ message: "Sondage non trouvé" });
+      return res.status(404).json({ message: "Survey not found" });
     }
 
     res.status(200).json(survey);
   } catch (error) {
-    console.error("Erreur lors de la récupération du sondage:", error);
+    console.error("Error when retrieving the survey:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la récupération du sondage", 
+      message: "Error when retrieving the survey", 
       error: error.message 
     });
   }
@@ -159,15 +159,15 @@ exports.updateDynamicSurvey = async (req, res) => {
 
     if (!survey) {
       return res.status(404).json({ 
-        message: "Sondage non trouvé ou non autorisé" 
+        message: "Survey not found or unauthorized" 
       });
     }
 
     res.status(200).json(survey);
   } catch (error) {
-    console.error("Erreur lors de la mise à jour du sondage:", error);
+    console.error("Error when updating the survey:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la mise à jour du sondage", 
+      message: "Error when updating the survey", 
       error: error.message 
     });
   }
@@ -183,15 +183,15 @@ exports.deleteDynamicSurvey = async (req, res) => {
 
     if (!survey) {
       return res.status(404).json({ 
-        message: "Sondage non trouvé ou non autorisé" 
+        message: "Survey not found or unauthorized" 
       });
     }
 
-    res.status(200).json({ message: "Sondage supprimé avec succès" });
+    res.status(200).json({ message: "Survey deleted successfully" });
   } catch (error) {
-    console.error("Erreur lors de la suppression du sondage:", error);
+    console.error("Error when deleting the survey:", error);
     res.status(500).json({ 
-      message: "Erreur lors de la suppression du sondage", 
+      message: "Error when deleting the survey", 
       error: error.message 
     });
   }
@@ -260,23 +260,23 @@ exports.deleteMedia = async (req, res) => {
 
 // Get all dynamic surveys available for answering
 exports.getAllDynamicSurveysForAnswering = async (req, res) => {
-  console.log('=== Début getAllDynamicSurveysForAnswering ===');
-  console.log('User dans la requête:', req.user);
+  console.log('=== Start getAllDynamicSurveysForAnswering ===');
+  console.log('User in request:', req.user);
   
   try {
-    console.log('Début de la recherche des sondages dynamiques');
+    console.log('Start searching for dynamic surveys');
     
     // Vérifier que req.user existe
     if (!req.user || !req.user.id) {
-      console.error('Utilisateur non authentifié');
+      console.error('User not authenticated');
       return res.status(401).json({ 
-        message: "Utilisateur non authentifié",
+        message: "User not authenticated",
         error: "Authentication required"
       });
     }
 
     // Récupérer tous les sondages sans filtre sur isPrivate
-    console.log('Recherche des sondages dynamiques dans la base de données...');
+    console.log('Searching for dynamic surveys in the database...');
     const surveys = await DynamicSurvey.find()
       .select('title description demographicEnabled nodes edges createdAt isPrivate userId')
       .sort({ createdAt: -1 })
@@ -285,9 +285,9 @@ exports.getAllDynamicSurveysForAnswering = async (req, res) => {
     console.log('Nombre de sondages dynamiques trouvés:', surveys.length);
     
     if (!surveys || surveys.length === 0) {
-      console.log('Aucun sondage dynamique trouvé');
+      console.log('No dynamic survey found');
       return res.status(404).json({ 
-        message: "Aucun sondage dynamique disponible.",
+        message: "No dynamic survey available.",
         debug: {
           modelName: DynamicSurvey.modelName,
           collectionName: DynamicSurvey.collection.name
@@ -296,23 +296,23 @@ exports.getAllDynamicSurveysForAnswering = async (req, res) => {
     }
 
     // Log des premiers sondages pour debug
-    console.log('Exemple de sondages dynamiques trouvés:', surveys.slice(0, 3).map(s => ({
+    console.log('Example of dynamic surveys found:', surveys.slice(0, 3).map(s => ({
       id: s._id,
       title: s.title,
       isPrivate: s.isPrivate
     })));
 
-    console.log('Envoi des sondages dynamiques au client');
+    console.log('Sending dynamic surveys to client');
     return res.status(200).json(surveys);
   } catch (error) {
-    console.error("=== Erreur dans getAllDynamicSurveysForAnswering ===");
-    console.error("Message d'erreur:", error.message);
+    console.error("=== Error in getAllDynamicSurveysForAnswering ===");
+    console.error("Error message:", error.message);
     console.error("Stack trace:", error.stack);
-    console.error("Nom du modèle:", DynamicSurvey.modelName);
-    console.error("Nom de la collection:", DynamicSurvey.collection.name);
+    console.error("Model name:", DynamicSurvey.modelName);
+    console.error("Collection name:", DynamicSurvey.collection.name);
     
     return res.status(500).json({ 
-      message: "Erreur lors de la récupération des sondages dynamiques.",
+      message: "Error when retrieving dynamic surveys.",
       error: error.message,
       debug: {
         modelName: DynamicSurvey.modelName,

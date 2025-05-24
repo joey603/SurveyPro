@@ -14,9 +14,9 @@ const Survey = require('../models/Survey');
 // Debug middleware pour mieux comprendre le problème
 router.use((req, res, next) => {
   console.log('=== Survey Shares Route Debug ===');
-  console.log(`Accès à la route survey-shares: ${req.method} ${req.originalUrl}`);
-  console.log('Routes disponibles:', ['/share', '/shared-with-me', '/pending', '/respond', '/debug', '/:shareId', '/cleanup-orphans']);
-  console.log('Corps de la requête:', req.body);
+  console.log(`Access to the survey-shares route: ${req.method} ${req.originalUrl}`);
+  console.log('Available routes:', ['/share', '/shared-with-me', '/pending', '/respond', '/debug', '/:shareId', '/cleanup-orphans']);
+  console.log('Request body:', req.body);
   console.log('User:', req.user?.id);
   next();
 });
@@ -34,17 +34,17 @@ router.delete('/:shareId', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     
     console.log(`=======================================`);
-    console.log(`SUPPRESSION DE PARTAGE - DÉBUT`);
-    console.log(`ID du partage à supprimer: ${shareId}`);
-    console.log(`ID de l'utilisateur qui fait la demande: ${userId}`);
+    console.log(`SHARE DELETION - START`);
+    console.log(`ID of the share to delete: ${shareId}`);
+    console.log(`ID of the user who is making the request: ${userId}`);
     
     // Vérifier d'abord si le partage existe
     console.log(`Recherche du partage dans la base de données...`);
     const share = await SurveyShare.findById(shareId);
     
     if (!share) {
-      console.log(`Partage avec ID ${shareId} non trouvé dans la base de données`);
-      console.log(`Voici les 5 premiers partages dans la base:`);
+      console.log(`Share with ID ${shareId} not found in the database`);
+      console.log(`Here are the first 5 shares in the database:`);
       const sampleShares = await SurveyShare.find().limit(5);
       console.log(sampleShares.map(s => ({
         id: s._id.toString(),
@@ -54,12 +54,12 @@ router.delete('/:shareId', authMiddleware, async (req, res) => {
       })));
       
       return res.status(200).json({ 
-        message: "Partage déjà supprimé ou inexistant",
+        message: "Share already deleted or does not exist",
         success: true
       });
     }
     
-    console.log(`Partage trouvé:`, {
+    console.log(`Share found:`, {
       id: share._id.toString(),
       surveyId: share.surveyId.toString(),
       sharedBy: share.sharedBy,
@@ -70,10 +70,10 @@ router.delete('/:shareId', authMiddleware, async (req, res) => {
     
     // Vérifier que l'utilisateur est autorisé à supprimer ce partage
     if (share.sharedWith.toString() !== userId) {
-      console.log(`ACCÈS REFUSÉ: L'utilisateur ${userId} n'est pas autorisé à supprimer le partage ${shareId}`);
-      console.log(`Le partage appartient à: ${share.sharedWith.toString()}`);
+      console.log(`ACCESS DENIED: User ${userId} is not authorized to delete share ${shareId}`);
+      console.log(`The share belongs to: ${share.sharedWith.toString()}`);
       return res.status(403).json({ 
-        message: "Non autorisé à supprimer ce partage"
+        message: "Not authorized to delete this share"
       });
     }
     
@@ -83,30 +83,30 @@ router.delete('/:shareId', authMiddleware, async (req, res) => {
     console.log(`Résultat de la suppression:`, deleteResult);
     
     if (deleteResult.deletedCount === 0) {
-      console.log(`Aucun partage n'a été supprimé, malgré le partage trouvé précédemment`);
+      console.log(`No share was deleted, despite the previous share being found`);
       return res.status(400).json({
-        message: "Échec de la suppression du partage",
+        message: "Failed to delete share",
         success: false
       });
     }
     
-    console.log(`Partage ${shareId} supprimé avec succès`);
+    console.log(`Share ${shareId} deleted successfully`);
     console.log(`SUPPRESSION DE PARTAGE - FIN`);
     console.log(`=======================================`);
     
     res.status(200).json({
-      message: "Partage supprimé avec succès",
+      message: "Share deleted successfully",
       success: true
     });
   } catch (error) {
-    console.error('Erreur détaillée lors de la suppression du partage:', {
+    console.error('Detailed error during share deletion:', {
       message: error.message,
       stack: error.stack,
       shareId: req.params.shareId,
       userId: req.user?.id
     });
     res.status(500).json({
-      message: "Erreur lors de la suppression du partage",
+      message: "Error during share deletion",
       error: error.message
     });
   }
@@ -116,29 +116,29 @@ router.delete('/:shareId', authMiddleware, async (req, res) => {
 router.get('/debug', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log('=== DIAGNOSTIC DES PARTAGES ===');
+    console.log('=== DIAGNOSTIC OF SHARES ===');
     
     // 1. Vérifier tous les partages
     const allShares = await SurveyShare.find({});
-    console.log(`Nombre total de partages: ${allShares.length}`);
+    console.log(`Total number of shares: ${allShares.length}`);
     
     // 2. Vérifier les partages en attente pour l'utilisateur
     const pendingForUser = await SurveyShare.find({
       sharedWith: userId,
       status: 'pending'
     });
-    console.log(`Partages en attente pour l'utilisateur: ${pendingForUser.length}`);
+    console.log(`Shares pending for user: ${pendingForUser.length}`);
     
     // 3. Vérifier les partages acceptés pour l'utilisateur
     const acceptedForUser = await SurveyShare.find({
       sharedWith: userId,
       status: 'accepted'
     });
-    console.log(`Partages acceptés pour l'utilisateur: ${acceptedForUser.length}`);
+    console.log(`Accepted shares for user: ${acceptedForUser.length}`);
     
     // 4. Vérifier les partages dynamiques
     const dynamicShares = allShares.filter(share => share.surveyModel === 'DynamicSurvey');
-    console.log(`Partages de sondages dynamiques: ${dynamicShares.length}`);
+    console.log(`Dynamic survey shares: ${dynamicShares.length}`);
     
     // 5. Vérifier pour chaque partage si le sondage existe
     // Partages statiques
@@ -183,16 +183,16 @@ router.get('/debug', authMiddleware, async (req, res) => {
       share => share.sharedWith.toString() === userId
     );
     
-    console.log(`Partages orphelins pour l'utilisateur: ${userOrphanedShares.length}`);
-    console.log('Détails des orphelins:', userOrphanedShares);
+    console.log(`Orphaned shares for user: ${userOrphanedShares.length}`);
+    console.log('Details of orphans:', userOrphanedShares);
     
     // 8. Vérifier les partages dynamiques pour l'utilisateur
     const userDynamicShares = dynamicSharesValidation.filter(
       share => share.sharedWith.toString() === userId && share.status === 'pending'
     );
     
-    console.log(`Partages dynamiques en attente pour l'utilisateur: ${userDynamicShares.length}`);
-    console.log('Détails:', userDynamicShares);
+    console.log(`Dynamic shares pending for user: ${userDynamicShares.length}`);
+    console.log('Details:', userDynamicShares);
     
     // Répondre avec les données de diagnostic
     res.status(200).json({
@@ -207,9 +207,9 @@ router.get('/debug', authMiddleware, async (req, res) => {
       userDynamicShares
     });
   } catch (error) {
-    console.error('Erreur lors du diagnostic:', error);
+    console.error('Error during diagnostic:', error);
     res.status(500).json({
-      message: 'Erreur lors du diagnostic',
+      message: 'Error during diagnostic',
       error: error.message
     });
   }
@@ -226,7 +226,7 @@ router.delete('/cleanup-orphans', authMiddleware, async (req, res) => {
       sharedWith: userId
     });
     
-    console.log(`${userShares.length} partages trouvés pour l'utilisateur`);
+    console.log(`${userShares.length} shares found for user`);
     
     // Vérifier l'existence de chaque sondage
     const orphanedShareIds = [];
@@ -244,7 +244,7 @@ router.delete('/cleanup-orphans', authMiddleware, async (req, res) => {
       
       if (!surveyExists) {
         orphanedShareIds.push(share._id);
-        console.log(`Partage orphelin trouvé: ${share._id} (sondage ${share.surveyId} non trouvé)`);
+        console.log(`Orphaned share found: ${share._id} (survey ${share.surveyId} not found)`);
       }
     }
     
@@ -254,24 +254,24 @@ router.delete('/cleanup-orphans', authMiddleware, async (req, res) => {
         _id: { $in: orphanedShareIds }
       });
       
-      console.log(`${deleteResult.deletedCount} partages orphelins supprimés`);
+      console.log(`${deleteResult.deletedCount} orphaned shares deleted`);
       
       res.status(200).json({
-        message: `${deleteResult.deletedCount} partages orphelins supprimés avec succès`,
+        message: `${deleteResult.deletedCount} orphaned shares deleted successfully`,
         deletedCount: deleteResult.deletedCount,
         orphanedIds: orphanedShareIds
       });
     } else {
-      console.log('Aucun partage orphelin trouvé');
+      console.log('No orphaned shares found');
       res.status(200).json({
-        message: 'Aucun partage orphelin trouvé',
+        message: 'No orphaned shares found',
         deletedCount: 0
       });
     }
   } catch (error) {
-    console.error('Erreur lors du nettoyage des partages orphelins:', error);
+    console.error('Error cleaning up orphaned shares:', error);
     res.status(500).json({
-      message: 'Erreur lors du nettoyage des partages orphelins',
+      message: 'Error cleaning up orphaned shares',
       error: error.message
     });
   }
@@ -279,7 +279,7 @@ router.delete('/cleanup-orphans', authMiddleware, async (req, res) => {
 
 // Catch-all route pour déboguer les routes non trouvées dans ce routeur
 router.use('*', (req, res) => {
-  console.log('Route non trouvée dans survey-shares:', {
+  console.log('Route not found in survey-shares:', {
     method: req.method,
     url: req.originalUrl,
     body: req.body

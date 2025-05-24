@@ -200,34 +200,34 @@ exports.cleanupUnusedMedia = async (req, res) => {
 
 // Get all surveys available for answering
 exports.getAllSurveysForAnswering = async (req, res) => {
-  console.log('=== Début getAllSurveysForAnswering ===');
-  console.log('User dans la requête:', req.user);
+  console.log('=== Start getAllSurveysForAnswering ===');
+  console.log('User in request:', req.user);
   
   try {
-    console.log('Début de la recherche des sondages');
+    console.log('Start searching for surveys');
     
     // Vérifier que req.user existe
     if (!req.user || !req.user.id) {
-      console.error('Utilisateur non authentifié');
+      console.error('User not authenticated');
       return res.status(401).json({ 
-        message: "Utilisateur non authentifié",
+        message: "User not authenticated",
         error: "Authentication required"
       });
     }
 
     // Récupérer tous les sondages sans filtre sur isPrivate
-    console.log('Recherche des sondages dans la base de données...');
+    console.log('Searching for surveys in the database...');
     const surveys = await Survey.find()
       .select('_id title description questions demographicEnabled createdAt isPrivate userId')
       .sort({ createdAt: -1 })
       .lean(); // Utiliser lean() pour de meilleures performances
     
-    console.log('Nombre de sondages trouvés:', surveys.length);
+    console.log('Number of surveys found:', surveys.length);
     
     if (!surveys || surveys.length === 0) {
-      console.log('Aucun sondage trouvé');
+      console.log('No survey found');
       return res.status(404).json({ 
-        message: "Aucun sondage disponible.",
+        message: "No survey available.",
         debug: {
           modelName: Survey.modelName,
           collectionName: Survey.collection.name
@@ -236,23 +236,23 @@ exports.getAllSurveysForAnswering = async (req, res) => {
     }
 
     // Log des premiers sondages pour debug
-    console.log('Exemple de sondages trouvés:', surveys.slice(0, 3).map(s => ({
+    console.log('Example of surveys found:', surveys.slice(0, 3).map(s => ({
       id: s._id,
       title: s.title,
       isPrivate: s.isPrivate
     })));
 
-    console.log('Envoi des sondages au client');
+    console.log('Sending surveys to client');
     return res.status(200).json(surveys);
   } catch (error) {
-    console.error("=== Erreur dans getAllSurveysForAnswering ===");
-    console.error("Message d'erreur:", error.message);
+    console.error("=== Error in getAllSurveysForAnswering ===");
+    console.error("Error message:", error.message);
     console.error("Stack trace:", error.stack);
-    console.error("Nom du modèle:", Survey.modelName);
-    console.error("Nom de la collection:", Survey.collection.name);
+    console.error("Model name:", Survey.modelName);
+    console.error("Collection name:", Survey.collection.name);
     
     return res.status(500).json({ 
-      message: "Erreur lors de la récupération des sondages.",
+      message: "Error when retrieving surveys.",
       error: error.message,
       debug: {
         modelName: Survey.modelName,
