@@ -26,6 +26,8 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import axios from 'axios';
 import { colors } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
+import Lottie from 'lottie-react';
+import loadingCardAnimation from '@/assets/Animation loading card survey.json';
 
 const SettingsContent = () => {
   const searchParams = useSearchParams();
@@ -44,6 +46,7 @@ const SettingsContent = () => {
     newPassword?: string;
     confirmPassword?: string;
   }>({});
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -111,6 +114,8 @@ const SettingsContent = () => {
       return;
     }
 
+    setIsProcessing(true);
+
     try {
       const token = localStorage.getItem('accessToken');
       // Utiliser une URL relative en production pour profiter des rewrites
@@ -146,6 +151,8 @@ const SettingsContent = () => {
     } catch (err: any) {
       console.log('[DEBUG] Full error:', err);
       setError(err.response?.data?.message || 'Failed to update password.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -197,6 +204,24 @@ const SettingsContent = () => {
           padding: '0 16px',
         }}
       >
+        {isProcessing && (
+          <Box 
+            sx={{ 
+              width: '100%',
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              mb: 2
+            }}
+          >
+            <Lottie
+              animationData={loadingCardAnimation}
+              style={{ width: 80, height: 80 }}
+              loop={true}
+            />
+          </Box>
+        )}
+
         {error && (
           <Alert 
             severity="error" 
@@ -445,6 +470,7 @@ const SettingsContent = () => {
                     variant="contained"
                     fullWidth
                     onClick={handlePasswordChange}
+                    disabled={isProcessing}
                     sx={{
                       py: 1.5,
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -456,7 +482,7 @@ const SettingsContent = () => {
                       fontWeight: 600,
                     }}
                   >
-                    Update Password
+                    {isProcessing ? 'Processing...' : 'Update Password'}
                   </Button>
                 </Box>
               </>
