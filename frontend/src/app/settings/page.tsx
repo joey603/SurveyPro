@@ -48,6 +48,11 @@ const SettingsContent = () => {
   }>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Forcer isProcessing à true pendant le développement pour tester l'animation
+  // useEffect(() => {
+  //   setIsProcessing(true);
+  // }, []);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -115,6 +120,9 @@ const SettingsContent = () => {
     }
 
     setIsProcessing(true);
+    
+    // Simulation d'un délai pour tester l'animation en développement
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -152,7 +160,10 @@ const SettingsContent = () => {
       console.log('[DEBUG] Full error:', err);
       setError(err.response?.data?.message || 'Failed to update password.');
     } finally {
-      setIsProcessing(false);
+      // Petit délai avant de masquer l'animation
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 500);
     }
   };
 
@@ -211,14 +222,23 @@ const SettingsContent = () => {
               display: 'flex', 
               justifyContent: 'center', 
               alignItems: 'center',
-              mb: 2
+              mb: 2,
+              bgcolor: 'rgba(255, 255, 255, 0.8)', 
+              borderRadius: 2,
+              p: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           >
-            <Lottie
-              animationData={loadingCardAnimation}
-              style={{ width: 80, height: 80 }}
-              loop={true}
-            />
+            <Box sx={{ textAlign: 'center' }}>
+              <Lottie
+                animationData={loadingCardAnimation}
+                style={{ width: 120, height: 120 }}
+                loop={true}
+              />
+              <Typography variant="subtitle1" fontWeight={500} color="primary" sx={{ mt: 1 }}>
+                Traitement en cours...
+              </Typography>
+            </Box>
           </Box>
         )}
 
@@ -278,8 +298,30 @@ const SettingsContent = () => {
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
             width: '100%',
             minHeight: '600px',
+            position: 'relative', // Pour les overlays potentiels
           }}
         >
+          {/* Overlay de chargement sur tout le formulaire */}
+          {isProcessing && (
+            <Box 
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: 'rgba(255, 255, 255, 0.5)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 10,
+                backdropFilter: 'blur(2px)',
+              }}
+            >
+              {/* Animation optionnelle ici aussi */}
+            </Box>
+          )}
+
           <Box
             component="header"
             data-testid="settings-header"
@@ -482,7 +524,7 @@ const SettingsContent = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {isProcessing ? 'Processing...' : 'Update Password'}
+                    {isProcessing ? 'Traitement en cours...' : 'Update Password'}
                   </Button>
                 </Box>
               </>
