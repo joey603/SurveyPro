@@ -15,6 +15,8 @@ import {
   Divider,
   IconButton,
   InputAdornment,
+  Snackbar,
+  Slide,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
@@ -37,6 +39,11 @@ const SettingsContent = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -64,7 +71,46 @@ const SettingsContent = () => {
     fetchProfile();
   }, []);
 
+  const validateForm = () => {
+    const errors: {
+      currentPassword?: string;
+      newPassword?: string;
+      confirmPassword?: string;
+    } = {};
+    let isValid = true;
+
+    if (!currentPassword) {
+      errors.currentPassword = 'Current password is required';
+      isValid = false;
+    }
+
+    if (!newPassword) {
+      errors.newPassword = 'New password is required';
+      isValid = false;
+    } else if (newPassword.length < 6) {
+      errors.newPassword = 'Password must be at least 6 characters';
+      isValid = false;
+    }
+
+    if (newPassword !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handlePasswordChange = async () => {
+    // Réinitialiser les messages d'erreur et de succès
+    setError('');
+    setSuccessMessage('');
+    
+    // Validation du formulaire
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const token = localStorage.getItem('accessToken');
       // Utiliser une URL relative en production pour profiter des rewrites
@@ -103,6 +149,11 @@ const SettingsContent = () => {
     }
   };
 
+  const handleCloseMessage = () => {
+    setError('');
+    setSuccessMessage('');
+  };
+
   if (loading) {
     return (
       <Box
@@ -126,9 +177,58 @@ const SettingsContent = () => {
       sx={{ 
         backgroundColor: '#f5f5f5', 
         minHeight: '100vh',
-        padding: { xs: 2, sm: 4 } 
+        padding: { xs: 2, sm: 4 },
+        position: 'relative',
       }}
     >
+      {/* Message d'alerte fixe en dessous de la navbar */}
+      <Box 
+        sx={{ 
+          position: 'fixed',
+          top: '64px', // Hauteur approximative de la navbar
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: '600px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '0 16px',
+        }}
+      >
+        {error && (
+          <Alert 
+            severity="error" 
+            variant="filled"
+            onClose={handleCloseMessage}
+            sx={{ 
+              width: '100%',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              mb: 2,
+              fontWeight: 500
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+        
+        {successMessage && (
+          <Alert 
+            severity="success" 
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              mb: 2,
+              fontWeight: 500
+            }}
+          >
+            {successMessage}
+          </Alert>
+        )}
+      </Box>
+
       <Box 
         component="section"
         data-testid="settings-container"
@@ -196,13 +296,6 @@ const SettingsContent = () => {
               minHeight: '400px',
             }}
           >
-            {(error || successMessage) && (
-              <Box sx={{ mb: 3 }}>
-                {error && <Alert severity="error">{error}</Alert>}
-                {successMessage && <Alert severity="success">{successMessage}</Alert>}
-              </Box>
-            )}
-
             <Typography variant="h6" sx={{ mb: 3, color: '#1a237e' }}>
               Profile Information
             </Typography>
@@ -247,7 +340,7 @@ const SettingsContent = () => {
               </Box>
             </Box>
 
-            {user?.authMethod === 'local' && (
+            {user?.authMethod !== 'google' && user?.authMethod !== 'github' && (
               <>
                 <Divider sx={{ my: 4 }} />
 
@@ -263,6 +356,8 @@ const SettingsContent = () => {
                     fullWidth
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
+                    error={!!formErrors.currentPassword}
+                    helperText={formErrors.currentPassword}
                     sx={{
                       mb: 3,
                       '& .MuiOutlinedInput-root': {
@@ -294,6 +389,8 @@ const SettingsContent = () => {
                     fullWidth
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    error={!!formErrors.newPassword}
+                    helperText={formErrors.newPassword}
                     sx={{
                       mb: 3,
                       '& .MuiOutlinedInput-root': {
@@ -325,6 +422,8 @@ const SettingsContent = () => {
                     fullWidth
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    error={!!formErrors.confirmPassword}
+                    helperText={formErrors.confirmPassword}
                     sx={{
                       mb: 3,
                       '& .MuiOutlinedInput-root': {
