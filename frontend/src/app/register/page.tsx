@@ -58,7 +58,7 @@ const RegisterPage: React.FC = () => {
       console.log('Form data:', { email, password, username });
       
       const response = await axios.post(`${apiUrl}/api/auth/register`, {
-        email,
+        email: email.toLowerCase(),
         password,
         username
       }, {
@@ -73,7 +73,7 @@ const RegisterPage: React.FC = () => {
       
       if (response.status === 201) {
         // Stocker l'email dans le localStorage pour la vérification
-        localStorage.setItem('email', email);
+        localStorage.setItem('email', email.toLowerCase());
         
         // Rediriger vers la page de vérification
         router.push('/verify');

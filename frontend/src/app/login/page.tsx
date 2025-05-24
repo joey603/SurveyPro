@@ -347,7 +347,7 @@ const LoginPage: React.FC = () => {
       console.log('API Path for login:', apiPath);
       
       const response = await axios.post(apiPath, {
-        email,
+        email: email.toLowerCase(),
         password,
       });
 
