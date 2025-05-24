@@ -782,8 +782,39 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.stopPropagation();
       // Sélectionner la carte
       selectCard();
-      // Appelle directement la fonction de suppression
-      handleMediaDelete();
+      
+      // Ajouter un retour visuel immédiat
+      button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+      button.style.transform = 'scale(0.97)';
+      
+      // Solution simple et directe - utiliser un input natif
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,video/*';
+      
+      input.onchange = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        if (target.files && target.files.length > 0) {
+          // Créer un faux événement React
+          const fakeEvent = {
+            target: target,
+            currentTarget: target,
+            preventDefault: () => {},
+            stopPropagation: () => {}
+          } as unknown as React.ChangeEvent<HTMLInputElement>;
+          
+          // Appeler notre gestionnaire
+          handleMediaUpload(fakeEvent);
+        }
+      };
+      
+      // Restaurer l'apparence
+      setTimeout(() => {
+        button.style.backgroundColor = '';
+        button.style.transform = '';
+        // Déclencher le sélecteur de fichiers
+        input.click();
+      }, 150);
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -793,7 +824,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [handleMediaDelete, selectCard]);
+  }, [handleMediaUpload, selectCard]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -1264,7 +1295,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   data-intro="add-media"
                   data-step="10"
                   id="add-media-button"
-                  className="add-media-button-class"
+                  className="add-media-button-class ios-optimized-button"
                   ref={addMediaButtonRef}
                   disabled={isUploading}
                   style={{
@@ -1272,15 +1303,15 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    minHeight: '48px',
+                    minHeight: isIOS ? '52px' : '48px',
                     height: 'auto',
-                    width: 'auto',
-                    padding: '12px 16px',
+                    width: isIOS ? '100%' : 'auto',
+                    padding: isIOS ? '14px 20px' : '12px 16px',
                     border: '1px solid #1976d2',
                     borderRadius: '4px',
                     background: 'white',
                     color: '#1976d2',
-                    fontSize: window.innerWidth < 600 ? '0.7rem' : '0.875rem',
+                    fontSize: window.innerWidth < 600 ? '0.8rem' : '0.875rem',
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     WebkitAppearance: 'none',
                     WebkitTapHighlightColor: 'transparent',
@@ -1295,38 +1326,42 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                     zIndex: 10,
                   }}
                 >
-                  <AddPhotoAlternateIcon style={{ fontSize: '18px' }} />
-                  <span>{isUploading ? 'Uploading...' : 'Add Media'}</span>
+                  <AddPhotoAlternateIcon style={{ fontSize: isIOS ? '24px' : '18px' }} />
+                  <span style={{ fontWeight: isIOS ? 500 : 400 }}>{isUploading ? 'Uploading...' : 'Add Media'}</span>
                   
                   {/* Infobulle à côté du bouton avec flèche */}
                   {isIOS && isEditing && (
                     <div
                       style={{
                         position: 'absolute',
-                        top: '50%',
-                        left: 'calc(100% + 10px)',
-                        transform: 'translateY(-50%)',
+                        top: '-40px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         backgroundColor: '#667eea',
                         color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
                         whiteSpace: 'nowrap',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        zIndex: 10,
-                        pointerEvents: 'none',
+                        zIndex: 20,
+                        animation: 'pulsate 2s infinite',
+                        fontWeight: 500,
+                        textAlign: 'center',
+                        width: '90%',
+                        maxWidth: '300px',
                       }}
                     >
-                      Need Double Click
+                      Appuyez pour ajouter une image
                       <div
                         style={{
                           position: 'absolute',
-                          width: '10px',
-                          height: '10px',
+                          width: '12px',
+                          height: '12px',
                           backgroundColor: '#667eea',
-                          left: '-5px',
-                          top: '50%',
-                          transform: 'translateY(-50%) rotate(45deg)',
+                          left: '50%',
+                          bottom: '-6px',
+                          transform: 'translateX(-50%) rotate(45deg)',
                         }}
                       />
                     </div>
@@ -1561,6 +1596,13 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
           user-select: none;
         }
         
+        /* Animation pulsante pour l'infobulle iOS */
+        @keyframes pulsate {
+          0% { transform: translateX(-50%) scale(1); }
+          50% { transform: translateX(-50%) scale(1.05); }
+          100% { transform: translateX(-50%) scale(1); }
+        }
+        
         /* Styles pour améliorer l'accessibilité tactile */
         @media (pointer: coarse) {
           .MuiInputBase-root, 
@@ -1621,8 +1663,26 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
         @supports (-webkit-touch-callout: none) {
           .ios-optimized-button {
             cursor: pointer !important;
-            min-height: 44px !important;
+            min-height: 52px !important;
             min-width: 44px !important;
+            width: 100% !important;
+            margin-bottom: 10px !important;
+            padding: 14px 20px !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+            font-weight: 500 !important;
+          }
+          
+          #add-media-button {
+            margin-top: 5px !important;
+            margin-bottom: 15px !important;
+            border-width: 2px !important;
+            font-size: 1rem !important;
+            letter-spacing: 0.01em !important;
+          }
+          
+          #add-media-button:active {
+            background-color: rgba(25, 118, 210, 0.08) !important;
+            opacity: 0.9 !important;
           }
         }
         
