@@ -118,7 +118,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ open, onClose, onShare, surve
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
           sx={{ mb: 2 }}
-          helperText="Enter the email address of an existing SurveyPro user"
+          helperText="Enter the email address of an existing SurveyFlow user"
         />
         
         {error && (
