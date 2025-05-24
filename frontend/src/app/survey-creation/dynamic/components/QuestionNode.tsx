@@ -786,35 +786,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
       button.style.transform = 'scale(0.95)';
       
-      // Créer et ouvrir le sélecteur de fichiers natif
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*,video/*';
-      
-      input.onchange = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-          // Créer un faux événement React
-          const fakeEvent = {
-            target: target,
-            currentTarget: target,
-            preventDefault: () => {},
-            stopPropagation: () => {}
-          } as unknown as React.ChangeEvent<HTMLInputElement>;
+      // Sur iOS, utiliser directement l'input natif existant au lieu d'en créer un nouveau
+      const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+      if (input) {
+        // Restaurer l'apparence
+        setTimeout(() => {
+          button.style.backgroundColor = '';
+          button.style.transform = '';
           
-          // Appeler notre gestionnaire
-          handleMediaUpload(fakeEvent);
-        }
-      };
-      
-      // Restaurer l'apparence
-      setTimeout(() => {
-        button.style.backgroundColor = '';
-        button.style.transform = '';
-        
-        // Déclencher le sélecteur de fichiers après la restauration visuelle
-        input.click();
-      }, 150);
+          // Sur iOS, un petit délai avant d'ouvrir le sélecteur fonctionne mieux
+          setTimeout(() => {
+            input.click();
+          }, 50);
+        }, 150);
+      }
     };
 
     // Ajouter l'écouteur d'événement avec { passive: false } pour permettre preventDefault
@@ -1268,29 +1253,11 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                   onClick={() => {
                     // Sélectionner la carte
                     selectCard();
-                    // Solution simple et directe - utiliser un input natif
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*,video/*';
-                    
-                    input.onchange = (e: Event) => {
-                      const target = e.target as HTMLInputElement;
-                      if (target.files && target.files.length > 0) {
-                        // Créer un faux événement React
-                        const fakeEvent = {
-                          target: target,
-                          currentTarget: target,
-                          preventDefault: () => {},
-                          stopPropagation: () => {}
-                        } as unknown as React.ChangeEvent<HTMLInputElement>;
-                        
-                        // Appeler notre gestionnaire
-                        handleMediaUpload(fakeEvent);
-                      }
-                    };
-                    
-                    // Déclencher le sélecteur de fichiers
-                    input.click();
+                    // Utiliser l'input existant au lieu d'en créer un nouveau
+                    const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+                    if (input) {
+                      input.click();
+                    }
                   }}
                   data-intro="add-media"
                   data-step="10"
