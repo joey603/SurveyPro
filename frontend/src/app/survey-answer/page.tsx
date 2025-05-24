@@ -202,8 +202,8 @@ const SurveyAnswerPage: React.FC = () => {
     const sharedSurveyId = urlParams.get('surveyId');
     
     if (sharedSurveyId && !isAuthenticated) {
-      console.log('=== DÉBUT DES TESTS DE STOCKAGE LOCALSTORAGE DEPUIS SURVEY-ANSWER ===');
-      console.log('ID du sondage détecté:', sharedSurveyId);
+      console.log('=== STARTING LOCALSTORAGE STORAGE FROM SURVEY-ANSWER ===');
+      console.log('Detected survey ID:', sharedSurveyId);
       
       // Sauvegarder uniquement le chemin relatif
       const redirectPath = `${window.location.pathname}?surveyId=${sharedSurveyId}`;
@@ -215,23 +215,23 @@ const SurveyAnswerPage: React.FC = () => {
           // Stocker dans le localStorage de manière fiable avec une promesse
           return new Promise<void>((resolve) => {
             // Stocker l'URL dans plusieurs endroits pour être sûr
-            console.log('Début du stockage');
+            console.log('Starting storage');
             
             // Méthode 1: localStorage
             localStorage.setItem('redirectAfterLogin', redirectPath);
-            console.log('localStorage standard mis à jour');
+            console.log('localStorage standard updated');
             
             // Méthode 2: localStorage avec nom alternatif
             localStorage.setItem('redirectAfterLogin_backup', redirectPath);
-            console.log('localStorage backup mis à jour');
+            console.log('localStorage backup updated');
             
             // Méthode 3: sessionStorage
             sessionStorage.setItem('redirectAfterLogin', redirectPath);
-            console.log('sessionStorage mis à jour');
+            console.log('sessionStorage updated');
             
             // Méthode 4: Cookie
             document.cookie = `redirectAfterLogin_cookie=${encodeURIComponent(redirectPath)}; path=/; max-age=3600`;
-            console.log('Cookie mis à jour');
+            console.log('Cookie updated');
             
             // Méthode 5: localStorage sous forme JSON
             const dataObj = { url: redirectPath, timestamp: Date.now() };
@@ -254,12 +254,12 @@ const SurveyAnswerPage: React.FC = () => {
             setTimeout(() => {
               // Vérifier que le stockage a bien fonctionné
               const storedValue = localStorage.getItem('redirectAfterLogin');
-              console.log('Vérification du stockage:', storedValue);
+              console.log('Verification of storage:', storedValue);
               
               if (storedValue === redirectPath) {
-                console.log('Stockage vérifié avec succès');
+                console.log('Storage verified successfully');
               } else {
-                console.warn('Stockage non vérifié, tentative de stockage à nouveau');
+                console.warn('Storage not verified, trying to store again');
                 localStorage.setItem('redirectAfterLogin', redirectPath);
               }
               
@@ -328,7 +328,7 @@ const SurveyAnswerPage: React.FC = () => {
         
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          throw new Error('Aucun token d\'authentification trouvé');
+          throw new Error('No authentication token found');
         }
 
         // Vérifier d'abord s'il y a un ID de survey dans l'URL
@@ -1245,7 +1245,7 @@ const SurveyAnswerPage: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5041/api/survey-answers/count', {
+      const response = await fetch('https://surveypro-ir3u.onrender.com/api/survey-answers/count', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

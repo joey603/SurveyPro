@@ -24,7 +24,7 @@ export const SurveyShareList = () => {
         const pendingShares = await fetchPendingShares(accessToken);
         setShares(pendingShares);
       } catch (error) {
-        console.error('Erreur lors du chargement des partages:', error);
+        console.error('Error during share loading:', error);
       }
     };
 
@@ -46,33 +46,33 @@ export const SurveyShareList = () => {
         prevShares.filter(s => s._id !== share._id)
       );
     } catch (error) {
-      console.error('Erreur lors de la réponse au partage:', error);
+      console.error('Error during share response:', error);
     }
   };
 
   return (
     <div className="survey-share-list">
-      <h2>Partages en attente</h2>
+      <h2>Pending shares</h2>
       {shares.length === 0 ? (
-        <p>Aucun partage en attente</p>
+        <p>No pending shares</p>
       ) : (
         <ul>
           {shares.map(share => (
             <li key={share._id}>
-              <p>Partagé par: {share.sharedBy}</p>
+              <p>Shared by: {share.sharedBy}</p>
               <p>Date: {new Date(share.sharedAt).toLocaleDateString()}</p>
               <div className="actions">
                 <button 
                   onClick={() => handleShareResponse(share, true)}
                   className="accept-btn"
                 >
-                  Accepter
+                  Accept
                 </button>
                 <button 
                   onClick={() => handleShareResponse(share, false)}
                   className="reject-btn"
                 >
-                  Refuser
+                  Reject
                 </button>
               </div>
             </li>

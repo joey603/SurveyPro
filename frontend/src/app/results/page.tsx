@@ -4020,14 +4020,14 @@ const ResultsPage: React.FC = () => {
   // Modifier l'effet qui gère les filtres avec des logs
   useEffect(() => {
     if (!selectedSurvey || !surveyAnswers[selectedSurvey._id]) {
-      console.log('🔍 Filtrage impossible:', {
+      console.log('🔍 Impossible to filter:', {
         selectedSurvey: !!selectedSurvey,
         hasAnswers: selectedSurvey ? !!surveyAnswers[selectedSurvey._id] : false
       });
       return;
     }
 
-    console.log('🔄 Début du filtrage:', {
+    console.log('🔄 Starting filtering process:', {
       totalAnswers: surveyAnswers[selectedSurvey._id].length,
       activeFilters: filters.demographic,
       answerFilters
@@ -4040,14 +4040,14 @@ const ResultsPage: React.FC = () => {
 
     const hasActiveAnswerFilters = Object.keys(answerFilters).length > 0;
 
-    console.log('📊 État des filtres:', {
+    console.log('📊 Filters state:', {
       hasActiveFilters,
       hasActiveAnswerFilters
     });
 
     // Éviter les calculs inutiles si aucun filtre n'est actif
     if (!hasActiveFilters && !hasActiveAnswerFilters) {
-      console.log('🔄 Réinitialisation des filtres');
+      console.log('🔄 Resetting filters');
       if (filteredStats !== null || filteredByAnswers) {
         setFilteredStats(null);
         setFilteredByAnswers(false);
@@ -4056,20 +4056,20 @@ const ResultsPage: React.FC = () => {
     }
 
     const originalAnswers = surveyAnswers[selectedSurvey._id];
-    console.log('📝 Réponses originales:', originalAnswers.length);
+    console.log('📝 Original answers:', originalAnswers.length);
 
     const filteredAnswers = originalAnswers.filter(answer => {
       const demographic = answer.respondent?.demographic;
       
       // Log pour chaque réponse filtrée
-      console.log('🔍 Vérification réponse:', {
+      console.log('🔍 Checking response:', {
         answerId: answer._id,
         hasDemographic: !!demographic,
         demographicData: demographic
       });
 
       if (hasActiveFilters && !demographic) {
-        console.log('❌ Réponse rejetée: pas de données démographiques');
+        console.log('❌ Response rejected: no demographic data');
         return false;
       }
 
@@ -4077,27 +4077,27 @@ const ResultsPage: React.FC = () => {
       if (hasActiveFilters && demographic) {
         if (filters.demographic.gender && 
             demographic.gender !== filters.demographic.gender.toLowerCase()) {
-          console.log('❌ Réponse rejetée: genre ne correspond pas', {
-            attendu: filters.demographic.gender,
-            reçu: demographic.gender
+          console.log('❌ Response rejected: gender does not match', {
+            expected: filters.demographic.gender,
+            received: demographic.gender
           });
           return false;
         }
 
         if (filters.demographic.educationLevel && 
             demographic.educationLevel !== filters.demographic.educationLevel) {
-          console.log('❌ Réponse rejetée: niveau d\'éducation ne correspond pas', {
-            attendu: filters.demographic.educationLevel,
-            reçu: demographic.educationLevel
+          console.log('❌ Response rejected: education level does not match', {
+            expected: filters.demographic.educationLevel,
+            received: demographic.educationLevel
           });
           return false;
         }
 
         if (filters.demographic.city && 
             demographic.city !== filters.demographic.city) {
-          console.log('❌ Réponse rejetée: ville ne correspond pas', {
-            attendu: filters.demographic.city,
-            reçu: demographic.city
+          console.log('❌ Response rejected: city does not match', {
+            expected: filters.demographic.city,
+            received: demographic.city
           });
           return false;
         }
@@ -4105,9 +4105,9 @@ const ResultsPage: React.FC = () => {
         if (filters.demographic.age && demographic.dateOfBirth) {
           const age = calculateAge(new Date(demographic.dateOfBirth));
           if (age < filters.demographic.age[0] || age > filters.demographic.age[1]) {
-            console.log('❌ Réponse rejetée: âge hors limites', {
+            console.log('❌ Response rejected: age out of limits', {
               age,
-              limites: filters.demographic.age
+              limits: filters.demographic.age
             });
             return false;
           }
@@ -4118,7 +4118,7 @@ const ResultsPage: React.FC = () => {
       if (hasActiveAnswerFilters) {
         const passesAnswerFilters = Object.entries(answerFilters).every(([questionId, filter]) => {
           const answerValue = answer.answers.find(a => a.questionId === questionId)?.answer;
-          console.log('🔍 Vérification réponse à la question:', {
+          console.log('🔍 Checking response to question:', {
             questionId,
             answerValue,
             filter
@@ -4126,7 +4126,7 @@ const ResultsPage: React.FC = () => {
 
           return filter.rules.every(rule => {
             const result = evaluateRule(answerValue, rule);
-            console.log('📋 Évaluation règle:', {
+            console.log('📋 Evaluation rule:', {
               rule,
               answerValue,
               result
@@ -4136,23 +4136,23 @@ const ResultsPage: React.FC = () => {
         });
 
         if (!passesAnswerFilters) {
-          console.log('❌ Réponse rejetée: ne correspond pas aux filtres de réponses');
+          console.log('❌ Response rejected: does not match answer filters');
           return false;
         }
       }
 
-      console.log('✅ Réponse acceptée');
+      console.log('✅ Response accepted');
       return true;
     });
 
-    console.log('📊 Résultats du filtrage:', {
+    console.log('📊 Filtered results:', {
       totalInitial: originalAnswers.length,
-      totalFiltré: filteredAnswers.length,
-      réponsesFiltrees: filteredAnswers
+      totalFiltered: filteredAnswers.length,
+      filteredResponses: filteredAnswers
     });
 
     const newStats = calculateDemographicStats(selectedSurvey._id, filteredAnswers);
-    console.log('📈 Nouvelles statistiques calculées:', newStats);
+    console.log('📈 New calculated statistics:', newStats);
 
     setFilteredStats(newStats);
     setFilteredByAnswers(hasActiveAnswerFilters);
@@ -4260,7 +4260,7 @@ const ResultsPage: React.FC = () => {
         console.log('Response data:', data);
 
         if (!response.ok) {
-          throw new Error(data.message || 'Erreur lors du partage');
+          throw new Error(data.message || 'Error during share');
         }
 
         setSuccess(true);
@@ -4270,8 +4270,8 @@ const ResultsPage: React.FC = () => {
           onClose();
         }, 2000);
       } catch (err) {
-        console.error('Erreur détaillée:', err);
-        setError(err instanceof Error ? err.message : 'Erreur lors du partage');
+        console.error('Detailed error:', err);
+        setError(err instanceof Error ? err.message : 'Error during share');
       } finally {
         setLoading(false);
       }
@@ -4387,7 +4387,7 @@ const ResultsPage: React.FC = () => {
       const targetShare = pendingShares.find((share: { surveyId: { _id: string } }) => share.surveyId._id === shareId);
       
       if (!targetShare) {
-        toast.error('Partage non trouvé');
+        toast.error('Share not found');
         return;
       }
 
@@ -4422,11 +4422,11 @@ const ResultsPage: React.FC = () => {
           );
         }
         
-        toast.success(accept ? 'Sondage accepté avec succès' : 'Sondage refusé avec succès');
+        toast.success(accept ? 'Survey accepted successfully' : 'Survey rejected successfully');
       }
     } catch (error: any) {
-      console.error('Erreur détaillée:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de la réponse au partage');
+      console.error('Detailed error:', error);
+      toast.error(error.response?.data?.message || 'Error during share response');
     }
   };
 

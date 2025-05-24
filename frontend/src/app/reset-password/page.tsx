@@ -19,7 +19,7 @@ const ResetPasswordPage = () => {
   const [success, setSuccess] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,7 @@ const ResetPasswordPage = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5041/api/auth/reset-password', {
+        const response = await axios.post('https://surveypro-ir3u.onrender.com/api/auth/reset-password', {
         token,
         newPassword
       });

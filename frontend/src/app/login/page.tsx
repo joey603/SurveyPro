@@ -23,33 +23,33 @@ import Link from 'next/link';
 // Fonction pour tester l'existence des endpoints d'authentification
 const testAuthEndpoints = async () => {
   try {
-    console.log('Test des endpoints d\'authentification...');
+    console.log('Testing authentication endpoints...');
     
     // URL de l'API backend
     const backendUrl = 'https://surveypro-ir3u.onrender.com';
     
     // Tester l'endpoint Google
-    console.log('Test de l\'endpoint Google:', `${backendUrl}/api/auth/google`);
+    console.log('Testing Google endpoint:', `${backendUrl}/api/auth/google`);
     
     // Tester l'endpoint GitHub
-    console.log('Test de l\'endpoint GitHub:', `${backendUrl}/api/auth/github`);
+    console.log('Testing GitHub endpoint:', `${backendUrl}/api/auth/github`);
     
     // Essayer d'atteindre les endpoints sans effectuer de redirection
     try {
       const googleResponse = await fetch(`${backendUrl}/api/auth/google`, { method: 'HEAD' });
-      console.log('Réponse de l\'endpoint Google:', googleResponse.status, googleResponse.statusText);
+      console.log('Google endpoint response:', googleResponse.status, googleResponse.statusText);
     } catch (err) {
-      console.error('Erreur lors du test de l\'endpoint Google:', err);
+      console.error('Error testing Google endpoint:', err);
     }
     
     try {
       const githubResponse = await fetch(`${backendUrl}/api/auth/github`, { method: 'HEAD' });
-      console.log('Réponse de l\'endpoint GitHub:', githubResponse.status, githubResponse.statusText);
+      console.log('GitHub endpoint response:', githubResponse.status, githubResponse.statusText);
     } catch (err) {
-      console.error('Erreur lors du test de l\'endpoint GitHub:', err);
+      console.error('Error testing GitHub endpoint:', err);
     }
   } catch (error) {
-    console.error('Erreur lors du test des endpoints:', error);
+    console.error('Error testing endpoints:', error);
   }
 };
 
@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
     try {
       return decodeURIComponent(url);
     } catch (e) {
-      console.error('Erreur lors du décodage de l\'URL:', e);
+      console.error('Error decoding URL:', e);
       return url;
     }
   };
@@ -94,7 +94,7 @@ const LoginPage: React.FC = () => {
       // Retourner l'URL complète au lieu du chemin relatif
       return decodedUrl;
     } catch (e) {
-      console.error('Erreur lors du nettoyage de l\'URL:', e);
+      console.error('Error cleaning URL:', e);
       return url;
     }
   };
@@ -102,8 +102,8 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('=== VÉRIFICATION DES MÉTHODES DE STOCKAGE SUR LA PAGE LOGIN ===');
-        console.log('URL complète:', window.location.href);
+        console.log('=== CHECKING STORAGE METHODS ON LOGIN PAGE ===');
+        console.log('Full URL:', window.location.href);
         
         // Récupérer l'URL de redirection depuis les paramètres de l'URL
         const searchParams = new URLSearchParams(window.location.search);
@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
         
         // Si le paramètre clear=true est présent, supprimer toutes les redirections
         if (clearParam === 'true') {
-          console.log('Paramètre "clear" détecté - Suppression de toutes les redirections stockées');
+          console.log('"clear" parameter detected - Deleting all stored redirections');
           localStorage.removeItem('redirectAfterLogin');
           localStorage.removeItem('redirectAfterLogin_backup');
           localStorage.removeItem('redirectAfterLogin_json');
@@ -133,7 +133,7 @@ const LoginPage: React.FC = () => {
         
         // Si le paramètre "from" est présent, il a la plus haute priorité
         if (fromParam) {
-          console.log('Paramètre "from" détecté dans l\'URL:', fromParam);
+          console.log('"from" parameter detected in URL:', fromParam);
           // Sauvegarder dans tous les storages pour être sûr
           localStorage.setItem('redirectAfterLogin', fromParam);
           sessionStorage.setItem('redirectAfterLogin', fromParam);
@@ -141,14 +141,14 @@ const LoginPage: React.FC = () => {
           // Sauvegarder également dans les méthodes mobiles
           document.cookie = `redirectAfterLogin_mobile=${encodeURIComponent(fromParam)}; path=/; max-age=3600; SameSite=None; Secure`;
           localStorage.setItem('mobile_redirect', fromParam);
-          console.log('Paramètre "from" sauvegardé dans tous les storages');
+          console.log('"from" parameter saved in all storages');
         }
         
         // Vérifier toutes les méthodes possibles de stockage
-        console.log('MÉTHODE STANDARD:', localStorage.getItem('redirectAfterLogin'));
-        console.log('MÉTHODE BACKUP:', localStorage.getItem('redirectAfterLogin_backup'));
-        console.log('MÉTHODE SESSION:', sessionStorage.getItem('redirectAfterLogin'));
-        console.log('MÉTHODE MOBILE:', localStorage.getItem('mobile_redirect'));
+        console.log('STANDARD METHOD:', localStorage.getItem('redirectAfterLogin'));
+        console.log('BACKUP METHOD:', localStorage.getItem('redirectAfterLogin_backup'));
+        console.log('SESSION METHOD:', sessionStorage.getItem('redirectAfterLogin'));
+        console.log('MOBILE METHOD:', localStorage.getItem('mobile_redirect'));
         
         // Vérifier la méthode JSON
         const jsonData = localStorage.getItem('redirectAfterLogin_json');
@@ -163,14 +163,14 @@ const LoginPage: React.FC = () => {
             console.log('MÉTHODE JSON URL:', jsonUrl);
             console.log('MÉTHODE JSON Timestamp:', parsed.timestamp ? new Date(parsed.timestamp).toISOString() : 'N/A');
           } catch (error) {
-            console.error('Erreur de parsing JSON:', error);
+            console.error('Error parsing JSON:', error);
           }
         } else {
-          console.log('MÉTHODE JSON: Non trouvée');
+          console.log('MÉTHODE JSON: Not found');
         }
         
         // Vérifier les cookies
-        console.log('TOUS LES COOKIES:', document.cookie);
+        console.log('ALL COOKIES:', document.cookie);
         
         // Fonction pour récupérer un cookie spécifique
         const getCookieValue = (name) => {
@@ -179,27 +179,27 @@ const LoginPage: React.FC = () => {
         };
         
         const cookieUrl = getCookieValue('redirectAfterLogin_cookie');
-        console.log('MÉTHODE COOKIE:', cookieUrl);
+        console.log('COOKIE METHOD:', cookieUrl);
         
         const mobileCookieUrl = getCookieValue('redirectAfterLogin_mobile');
-        console.log('MÉTHODE COOKIE MOBILE:', mobileCookieUrl);
+        console.log('MOBILE COOKIE METHOD:', mobileCookieUrl);
         
         // Vérifier l'URL complète stockée
         const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
-        console.log('URL complète stockée:', lastVisitedUrl);
+        console.log('STORED FULL URL:', lastVisitedUrl);
         
         // Obtenir l'URL à partir du lastVisitedUrl si nécessaire
-        let urlFromLastVisited = null;
+        let urlFromLastVisited: string | null = null;
         if (lastVisitedUrl) {
           try {
             const url = new URL(lastVisitedUrl);
             const surveyId = new URLSearchParams(url.search).get('surveyId');
             if (surveyId) {
               urlFromLastVisited = `/survey-answer?surveyId=${surveyId}`;
-              console.log('URL extraite de lastVisitedUrl:', urlFromLastVisited);
+              console.log('EXTRACTED URL FROM lastVisitedUrl:', urlFromLastVisited);
             }
           } catch (error) {
-            console.error('Erreur lors de l\'extraction de l\'URL:', error);
+            console.error('Error extracting URL:', error);
           }
         }
         
@@ -209,20 +209,20 @@ const LoginPage: React.FC = () => {
         const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
         const mobileRedirectUrl = localStorage.getItem('mobile_redirect');
         
-        console.log('=== RÉSUMÉ DES MÉTHODES ===');
-        console.log('Méthode standard a fonctionné:', !!standardUrl);
-        console.log('Méthode backup a fonctionné:', !!backupUrl);
-        console.log('Méthode session a fonctionné:', !!sessionUrl);
-        console.log('Méthode JSON a fonctionné:', !!jsonUrl);
-        console.log('Méthode cookie a fonctionné:', !!cookieUrl);
-        console.log('Méthode cookie mobile a fonctionné:', !!mobileCookieUrl);
-        console.log('Méthode mobile redirect a fonctionné:', !!mobileRedirectUrl);
-        console.log('URL extraite de lastVisitedUrl a fonctionné:', !!urlFromLastVisited);
-        console.log('Paramètre URL "from" a fonctionné:', !!fromParam);
+        console.log('=== SUMMARY OF METHODS ===');
+        console.log('Standard method worked:', !!standardUrl);
+        console.log('Backup method worked:', !!backupUrl);
+        console.log('Session method worked:', !!sessionUrl);
+        console.log('JSON method worked:', !!jsonUrl);
+        console.log('Cookie method worked:', !!cookieUrl);
+        console.log('Mobile cookie method worked:', !!mobileCookieUrl);
+        console.log('Mobile redirect method worked:', !!mobileRedirectUrl);
+        console.log('URL extracted from lastVisitedUrl worked:', !!urlFromLastVisited);
+        console.log('URL parameter "from" worked:', !!fromParam);
         
         // Sélectionner la première méthode qui a fonctionné (priorité au paramètre URL, puis méthodes mobiles)
         let redirectUrl: string | null = fromParam || mobileCookieUrl || mobileRedirectUrl || sessionUrl || standardUrl || backupUrl || jsonUrl || cookieUrl || urlFromLastVisited;
-        console.log('URL de redirection sélectionnée:', redirectUrl);
+        console.log('SELECTED REDIRECTION URL:', redirectUrl);
         
         if (redirectUrl) {
           // Sauvegarder dans localStorage principal pour être utilisé par le mécanisme de login
@@ -230,7 +230,7 @@ const LoginPage: React.FC = () => {
           // Sauvegarder également dans les méthodes mobiles
           localStorage.setItem('mobile_redirect', redirectUrl);
           document.cookie = `redirectAfterLogin_mobile=${encodeURIComponent(redirectUrl)}; path=/; max-age=3600; SameSite=None; Secure`;
-          console.log('URL sauvegardée dans redirectAfterLogin standard pour le login:', redirectUrl);
+          console.log('URL saved in redirectAfterLogin standard for login:', redirectUrl);
         }
 
         // Vérifier l'authentification via le backend
@@ -243,12 +243,12 @@ const LoginPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Réponse de vérification auth:', data);
+          console.log('AUTH CHECK RESPONSE:', data);
           if (data.valid) {
             // Récupérer l'URL de redirection
-            console.log('Utilisateur authentifié, vérification de l\'URL de redirection');
+            console.log('User authenticated, checking redirection URL');
             if (redirectUrl) {
-              console.log('Redirection vers:', redirectUrl);
+              console.log('Redirecting to:', redirectUrl);
               // Nettoyer toutes les méthodes de stockage
               localStorage.removeItem('redirectAfterLogin');
               localStorage.removeItem('redirectAfterLogin_backup');
@@ -261,13 +261,13 @@ const LoginPage: React.FC = () => {
               // Redirection directe vers l'URL sauvegardée
               window.location.href = redirectUrl;
             } else {
-              console.log('Pas d\'URL de redirection trouvée, redirection vers dashboard');
+              console.log('No redirection URL found, redirecting to dashboard');
               router.push('/dashboard');
             }
           }
         }
       } catch (error) {
-        console.error('Erreur lors de la vérification de l\'authentification:', error);
+        console.error('Error checking authentication:', error);
       }
     };
 
@@ -282,20 +282,20 @@ const LoginPage: React.FC = () => {
   const validateEmail = (value: string) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!value) {
-      return "L'email est requis";
+      return "The email is required";
     }
     if (!emailRegex.test(value)) {
-      return "Format d'email invalide";
+      return "Invalid email format";
     }
     return "";
   };
 
   const validatePassword = (value: string) => {
     if (!value) {
-      return "Le mot de passe est requis";
+      return "The password is required";
     }
     if (value.length < 4) {
-      return "Le mot de passe doit contenir au moins 4 caractères";
+      return "The password must contain at least 4 characters";
     }
     return "";
   };
@@ -338,7 +338,7 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      console.log('=== DÉBUT DE LA CONNEXION ===');
+      console.log('=== STARTING CONNECTION ===');
       // Utiliser un chemin relatif en production pour bénéficier des rewrites Vercel
       const apiPath = process.env.NODE_ENV === 'production' 
         ? '/api/auth/login' 
@@ -352,7 +352,7 @@ const LoginPage: React.FC = () => {
       });
 
       if (response.status === 200 && response.data) {
-        console.log('Connexion réussie, stockage du token');
+        console.log('Connection successful, storing token');
         setError('');
         
         // Stocker le token dans le localStorage et les cookies
@@ -373,12 +373,12 @@ const LoginPage: React.FC = () => {
         await onLoginSuccess();
       }
     } catch (err: any) {
-      console.error('Erreur de connexion:', err);
+      console.error('Connection error:', err);
       
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
-        setError('Erreur lors de la connexion. Veuillez réessayer.');
+        setError('Error during connection. Please try again.');
       }
       
       setIsLoading(false);
@@ -387,7 +387,7 @@ const LoginPage: React.FC = () => {
 
   const onLoginSuccess = async () => {
     try {
-      console.log('=== DÉBUT DE LA REDIRECTION APRÈS CONNEXION ===');
+      console.log('=== STARTING REDIRECTION AFTER CONNECTION ===');
       
       // Vérifier d'abord sessionStorage (priorité)
       const sessionRedirectPath = sessionStorage.getItem('redirectAfterLogin');
@@ -407,7 +407,7 @@ const LoginPage: React.FC = () => {
         // Redirection directe vers l'URL sauvegardée de sessionStorage
         window.location.href = sessionRedirectPath;
       } else if (localRedirectPath) {
-        console.log('Redirection vers localStorage path:', localRedirectPath);
+        console.log('Redirecting to localStorage path:', localRedirectPath);
         // Nettoyer les storages
         localStorage.removeItem('redirectAfterLogin');
         sessionStorage.removeItem('redirectAfterLogin');
@@ -415,27 +415,27 @@ const LoginPage: React.FC = () => {
         // Redirection directe vers l'URL sauvegardée de localStorage
         window.location.href = localRedirectPath;
       } else {
-        console.log('Pas d\'URL de redirection, retour à l\'accueil');
+        console.log('No redirection URL found, redirecting to home');
         router.push('/');
       }
     } catch (error) {
-      console.error('Erreur de redirection:', error);
+      console.error('Redirection error:', error);
       router.push('/');
     }
   };
 
   const handleGoogleLogin = () => {
     try {
-      console.log('Début de la connexion Google');
+      console.log('Starting Google connection');
       
       // Sauvegarder l'URL de redirection depuis sessionStorage si disponible
       const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection depuis sessionStorage pour Google:', sessionUrl);
+      console.log('Redirection URL from sessionStorage for Google:', sessionUrl);
       
       if (sessionUrl) {
         // Sauvegarder dans un cookie persistant qui survivra à la redirection OAuth
         document.cookie = `oauth_redirect_url=${encodeURIComponent(sessionUrl)}; path=/; max-age=3600; secure; samesite=lax`;
-        console.log('URL de redirection sauvegardée dans cookie oauth_redirect_url:', sessionUrl);
+        console.log('URL saved in cookie oauth_redirect_url:', sessionUrl);
       }
       
       // Récupérer l'URL de redirection depuis les cookies
@@ -444,7 +444,7 @@ const LoginPage: React.FC = () => {
       const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
       
       if (redirectPath) {
-        console.log('URL de redirection sauvegardée dans cookie:', redirectPath);
+        console.log('URL saved in cookie:', redirectPath);
       }
       
       // URL de l'API backend pour l'authentification Google
@@ -459,36 +459,36 @@ const LoginPage: React.FC = () => {
         document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
-        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        console.log('Origins saved in cookies:', currentOrigin);
         
         // Ajouter l'origine à l'URL de redirection
         const googleAuthUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(currentOrigin)}`;
-        console.log('URL de redirection Google avec origine:', googleAuthUrl);
+        console.log('URL of redirection Google with origin:', googleAuthUrl);
         
         // Redirection directe vers l'URL d'authentification Google
         window.location.href = googleAuthUrl;
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        console.error('Error saving origin:', error);
         // En cas d'erreur, essayer la redirection simple
         window.location.href = `${backendUrl}/api/auth/google`;
       }
     } catch (error) {
-      console.error('Erreur lors de la connexion Google:', error);
+      console.error('Error during Google connection:', error);
     }
   };
 
   const handleGithubLogin = () => {
     try {
-      console.log('Début de la connexion GitHub');
+      console.log('Starting GitHub connection');
       
       // Sauvegarder l'URL de redirection depuis sessionStorage si disponible
       const sessionUrl = sessionStorage.getItem('redirectAfterLogin');
-      console.log('URL de redirection depuis sessionStorage pour GitHub:', sessionUrl);
+      console.log('Redirection URL from sessionStorage for GitHub:', sessionUrl);
       
       if (sessionUrl) {
         // Sauvegarder dans un cookie persistant qui survivra à la redirection OAuth
         document.cookie = `oauth_redirect_url=${encodeURIComponent(sessionUrl)}; path=/; max-age=3600; secure; samesite=lax`;
-        console.log('URL de redirection sauvegardée dans cookie oauth_redirect_url:', sessionUrl);
+        console.log('URL saved in cookie oauth_redirect_url:', sessionUrl);
       }
       
       // Récupérer l'URL de redirection depuis les cookies
@@ -497,7 +497,7 @@ const LoginPage: React.FC = () => {
       const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
       
       if (redirectPath) {
-        console.log('URL de redirection sauvegardée dans cookie:', redirectPath);
+        console.log('URL saved in cookie:', redirectPath);
       }
       
       // URL de l'API backend pour l'authentification GitHub
@@ -512,21 +512,21 @@ const LoginPage: React.FC = () => {
         document.cookie = `origin=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `origin_alt=${currentOrigin}; path=/; max-age=86400`;
         document.cookie = `redirect_uri=${currentOrigin}; path=/; max-age=86400`;
-        console.log('Origines sauvegardées dans les cookies:', currentOrigin);
+        console.log('Origins saved in cookies:', currentOrigin);
         
         // Ajouter l'origine à l'URL de redirection
         const githubAuthUrl = `${backendUrl}/api/auth/github?redirect_uri=${encodeURIComponent(currentOrigin)}`;
-        console.log('URL de redirection GitHub avec origine:', githubAuthUrl);
+        console.log('URL of redirection GitHub with origin:', githubAuthUrl);
         
         // Redirection directe vers l'URL d'authentification GitHub
         window.location.href = githubAuthUrl;
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde de l\'origine:', error);
+        console.error('Error saving origin:', error);
         // En cas d'erreur, essayer la redirection simple
         window.location.href = `${backendUrl}/api/auth/github`;
       }
     } catch (error) {
-      console.error('Erreur lors de la connexion GitHub:', error);
+      console.error('Error during GitHub connection:', error);
     }
   };
 
@@ -536,7 +536,7 @@ const LoginPage: React.FC = () => {
     const errorParam = params.get('error');
     
     if (errorParam === 'existing_user') {
-      setError('Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.');
+      setError('An account already exists with this email. Please use your usual connection method.');
     }
   }, []);
 

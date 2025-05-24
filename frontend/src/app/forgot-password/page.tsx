@@ -23,7 +23,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      await axios.post('http://localhost:5041/api/auth/forgot-password', {
+      await axios.post('https://surveypro-ir3u.onrender.com/api/auth/forgot-password', {
         email,
       });
       setMessage('If an account exists with this email, you will receive reset instructions.');

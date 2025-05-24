@@ -1023,8 +1023,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       setLoading(true);
       const { nodes, edges, paths } = processPathTree(survey, responses);
       
-      console.log('=== Tous les chemins disponibles ===');
-      console.log('Nombre total de chemins:', paths.length);
+      console.log('=== All available paths ===');
+      console.log('Total number of paths:', paths.length);
       paths.forEach((path, index) => {
         console.log(`Chemin ${index + 1}:`, {
           name: path.name,
@@ -1258,31 +1258,31 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
   
   const getFilteredResponses = () => {
     if (!selectedPaths || selectedPaths.length === 0) {
-      console.log("Aucun chemin sélectionné, retournant toutes les réponses");
+      console.log("No path selected, returning all responses");
       return responses;
     }
 
-    console.log("=== DÉTAILS DU FILTRAGE DE PARCOURS ===");
-    console.log("Nombre total de réponses à filtrer:", responses.length);
-    console.log(`%c${selectedPaths.length > 1 ? 'MULTI-CHEMINS: ' + selectedPaths.length + ' chemins sélectionnés!' : 'UN SEUL CHEMIN sélectionné'}`, 
+    console.log("=== FILTERING DETAILS ===");
+    console.log("Total number of responses to filter:", responses.length);
+    console.log(`%c${selectedPaths.length > 1 ? 'MULTI-PATHS: ' + selectedPaths.length + ' paths selected!' : 'ONE PATH SELECTED'}`, 
       `font-weight: bold; color: ${selectedPaths.length > 1 ? 'red' : 'blue'}; font-size: 14px;`);
 
     // NOUVELLE APPROCHE: Traiter chaque chemin indépendamment
-    console.log("%cNOUVELLE LOGIQUE: Chaque chemin est traité indépendamment", "font-weight: bold; color: green;");
-    console.log("Chemins sélectionnés:");
+    console.log("%cNEW LOGIC: Each path is treated independently", "font-weight: bold; color: green;");
+    console.log("Selected paths:");
     selectedPaths.forEach((path, idx) => {
-      console.log(`  %cChemin ${idx+1}:`, 'font-weight: bold; color: blue;', path.map(segment => ({
+      console.log(`  %cPath ${idx+1}:`, 'font-weight: bold; color: blue;', path.map(segment => ({
         question: segment.questionText,
-        réponse: segment.answer
+        answer: segment.answer
       })));
     });
 
     // Si plusieurs chemins sont sélectionnés, expliquons la logique de filtrage
     if (selectedPaths.length > 1) {
-      console.log("%cNOUVELLE LOGIQUE DE FILTRAGE MULTI-CHEMINS:", "font-weight: bold; color: green;");
-      console.log("- Chaque chemin est traité INDÉPENDAMMENT");
-      console.log("- Une réponse est valide si elle correspond à AU MOINS UN des chemins sélectionnés");
-      console.log("- Pour chaque chemin: les réponses doivent contenir UNIQUEMENT les questions du chemin et dans le BON ORDRE");
+      console.log("%cNEW MULTI-PATH FILTERING LOGIC:", "font-weight: bold; color: green;");
+      console.log("- Each path is treated INDEPENDENTLY");
+      console.log("- A response is valid if it matches AT LEAST ONE of the selected paths");
+      console.log("- For each path: the responses must contain ONLY the questions of the path and in the CORRECT ORDER");
     }
 
     // Variables pour les statistiques
@@ -1299,7 +1299,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       const pathQuestionIds = path.map(segment => segment.questionId);
       responseIdsByPath[pathIndex] = new Set<string>();
       
-      console.log(`Analyse du chemin ${pathIndex + 1} (${pathQuestionIds.length} questions):`);
+      console.log(`Analysis of path ${pathIndex + 1} (${pathQuestionIds.length} questions):`);
       
       let validForThisPath = 0;
       let missingQuestionsCount = 0;
@@ -1366,8 +1366,8 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
         validResponseIds.add(response._id); // Ajouter à l'ensemble global
       });
       
-      console.log(`  Chemin ${pathIndex + 1}: ${validForThisPath} réponses valides`);
-      console.log(`    - Rejetées: ${missingQuestionsCount} (questions manquantes), ${extraQuestionsCount} (questions supplémentaires), ${wrongOrderCount} (ordre incorrect)`);
+      console.log(`  Path ${pathIndex + 1}: ${validForThisPath} valid responses`);
+      console.log(`    - Rejected: ${missingQuestionsCount} (missing questions), ${extraQuestionsCount} (extra questions), ${wrongOrderCount} (incorrect order)`);
     });
     
     // Construire l'ensemble final des réponses valides (union de tous les chemins)
@@ -1375,13 +1375,13 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     totalValidResponses = validResponseIds.size;
 
     // Afficher les résultats du filtrage
-    console.log("=== RÉSULTATS DU FILTRAGE ===");
-    console.log(`Réponses valides trouvées: ${totalValidResponses}`);
-    console.log(`Réponses rejetées: ${responses.length - totalValidResponses}`);
+    console.log("=== FILTERING RESULTS ===");
+    console.log(`Valid responses found: ${totalValidResponses}`);
+    console.log(`Rejected responses: ${responses.length - totalValidResponses}`);
     
     // Afficher la distribution des correspondances par chemin
     if (selectedPaths.length > 1) {
-      console.log("%cDISTRIBUTION DES CORRESPONDANCES PAR CHEMIN:", "font-weight: bold; color: purple;");
+      console.log("%cDISTRIBUTION OF MATCHES BY PATH:", "font-weight: bold; color: purple;");
       selectedPaths.forEach((path, idx) => {
         const percentage = totalValidResponses > 0 ? Math.round((matchesByPath[idx] / totalValidResponses) * 100) : 0;
         console.log(`  Chemin ${idx+1}: ${matchesByPath[idx]} réponses (${percentage}% du total)`);
@@ -1397,7 +1397,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
             });
             
             if (intersection.size > 0) {
-              console.log(`    Commun avec Chemin ${j+1}: ${intersection.size} réponses`);
+              console.log(`    Common with Path ${j+1}: ${intersection.size} responses`);
             }
           }
         }
@@ -1406,9 +1406,9 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
     
     // Afficher quelques exemples de réponses valides
     if (filteredResponses.length > 0) {
-      console.log("Exemples de réponses valides (max 2):");
+      console.log("Examples of valid responses (max 2):");
       filteredResponses.slice(0, 2).forEach((response, idx) => {
-        console.log(`  Exemple ${idx+1}:`, response.answers.map((a: { questionId: string; answer: string }) => ({
+        console.log(`  Example ${idx+1}:`, response.answers.map((a: { questionId: string; answer: string }) => ({
           questionId: a.questionId,
           answer: a.answer
         })));
@@ -1418,7 +1418,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
           responseIdsByPath[pathIdx].has(response._id) ? pathIdx + 1 : null
         ).filter(p => p !== null);
         
-        console.log(`    Correspond aux chemins: ${matchingPaths.join(', ')}`);
+        console.log(`    Corresponds to paths: ${matchingPaths.join(', ')}`);
       });
     }
     
@@ -1902,7 +1902,7 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       if (filterApplied && multipleTreeNodes.length > 0) {
         reactFlowInstancesRef.current.forEach((instance, idx) => {
           if (instance) {
-            console.log(`Recentrage de l'arbre ${idx}`);
+            console.log(`Recentrage of the tree ${idx}`);
             instance.fitView({ padding: 0.3 });
           }
         });
@@ -1910,17 +1910,17 @@ export const PathTreeVisualizer: React.FC<PathTreeVisualizerProps> = ({
       
       // Si nous venons juste de fermer le panneau, donnons plus d'espace au flow principal
       if (wasOpen && reactFlowInstance) {
-        console.log("Recentrage après fermeture du panneau");
+        console.log("Recentrage after closing the panel");
         reactFlowInstance.fitView({ padding: 0.1 });
       }
     }, 400);
   };
   
   const handleFilteredPathClick = (pathIndex: number) => {
-    console.log('=== Chemins filtrés ===');
-    console.log('Index du chemin cliqué:', pathIndex);
-    console.log('Chemin complet:', filteredPaths[pathIndex]);
-    console.log('Nombre total de chemins filtrés:', filteredPaths.length);
+    console.log('=== Filtered paths ===');
+    console.log('Index of clicked path:', pathIndex);
+    console.log('Full path:', filteredPaths[pathIndex]);
+    console.log('Total number of filtered paths:', filteredPaths.length);
     console.log('=====================');
     
     if (reactFlowInstancesRef.current[pathIndex]) {

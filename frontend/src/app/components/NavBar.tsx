@@ -48,7 +48,7 @@ const NavBar = () => {
   // Liste des routes où la navbar ne doit pas apparaître
   const noNavbarRoutes = ['/login', '/register'];
   
-  if (noNavbarRoutes.includes(pathname)) {
+  if (pathname && noNavbarRoutes.includes(pathname)) {
     return null;
   }
 

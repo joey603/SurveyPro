@@ -99,12 +99,12 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white'
         }}>
-          Sondages partagés avec vous
+          Shared surveys with you
         </DialogTitle>
         <DialogContent sx={{ p: 2 }}>
           {pendingShares.length === 0 ? (
             <Typography variant="body1" sx={{ p: 2, textAlign: 'center' }}>
-              Aucun sondage partagé en attente
+              No survey shared in pending
             </Typography>
           ) : (
             <Box sx={{ maxHeight: '500px', overflow: 'auto' }}>
@@ -114,7 +114,7 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
                     {share.surveyId && share.surveyId.title ? share.surveyId.title : "Sondage non disponible"}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Partagé par: {share.sharedBy}
+                    Shared by: {share.sharedBy}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Date: {new Date(share.createdAt).toLocaleDateString()}
@@ -130,7 +130,7 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
                         size="small"
                         onClick={() => handlePreviewSurvey(share.surveyId)}
                       >
-                        Prévisualiser
+                        Preview
                       </Button>
                     ) : (
                       <Button 
@@ -138,7 +138,7 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
                         size="small"
                         disabled
                       >
-                        Prévisualisation non disponible
+                        Preview not available
                       </Button>
                     )}
                     <Box>
@@ -149,7 +149,7 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
                         onClick={() => handleRespondToShare(share._id, false)}
                         sx={{ mr: 1 }}
                       >
-                        Refuser
+                        Reject
                       </Button>
                       <Button 
                         variant="contained" 
@@ -163,13 +163,13 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
                           }
                         }}
                       >
-                        Accepter
+                        Accept
                       </Button>
                     </Box>
                   </Box>
                   {!share.surveyId && (
                     <Alert severity="warning" sx={{ mt: 2 }}>
-                      Le sondage original semble avoir été supprimé ou est inaccessible.
+                      The original survey seems to have been deleted or is inaccessible.
                     </Alert>
                   )}
                 </Card>
@@ -194,7 +194,7 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white'
           }}>
-            Prévisualisation: {previewSurvey.title}
+            Preview: {previewSurvey.title}
           </DialogTitle>
           <DialogContent sx={{ p: 3 }}>
             <Typography variant="body1" sx={{ mb: 3 }}>
@@ -227,11 +227,11 @@ export const SurveyShareNotification: React.FC<SurveyShareNotificationProps> = (
             ))}
             
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Créé le: {new Date(previewSurvey.createdAt).toLocaleDateString()}
+              Created on: {new Date(previewSurvey.createdAt).toLocaleDateString()}
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClosePreview}>Fermer</Button>
+            <Button onClick={handleClosePreview}>Close</Button>
           </DialogActions>
         </Dialog>
       )}

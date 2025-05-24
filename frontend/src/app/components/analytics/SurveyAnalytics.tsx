@@ -553,7 +553,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const pathColorsRef = useRef<{[key: string]: string}>({});
 
   // Ajouter en début de composant
-  console.log("RENDU DU COMPOSANT - État initial:", {
+  console.log("COMPONENT RENDER - Initial state:", {
     responsesLength: responses.length,
     filteredResponsesLength: filteredResponses.length,
     filterState: filters
@@ -561,12 +561,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Ajouter un useEffect pour suivre les changements d'état
   useEffect(() => {
-    console.log("CHANGEMENT D'ÉTAT DE FILTRAGE:", filters);
+    console.log("FILTER STATE CHANGE:", filters);
   }, [filters]);
 
   // Ajouter un useEffect pour suivre les changements de filteredResponses
   useEffect(() => {
-    console.log("CHANGEMENT DES RÉPONSES FILTRÉES:", filteredResponses.length);
+    console.log("FILTERED RESPONSES CHANGE:", filteredResponses.length);
   }, [filteredResponses]);
 
   // Charger les réponses au montage du composant
@@ -1210,12 +1210,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
     // Créer les en-têtes
     const headers = [
-      'ID Répondant',
-      'Date de soumission',
-      'Genre',
-      'Date de naissance',
-      'Niveau d\'éducation',
-      'Ville',
+      'Respondent ID',
+      'Submission date',
+      'Gender',
+      'Date of birth',
+      'Education level',
+      'City',
       ...survey.questions.map(q => q.text)
     ];
 
@@ -1235,7 +1235,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `resultats_sondage_${survey._id}.csv`;
+    link.download = `survey_results_${survey._id}.csv`;
     link.click();
   }, [survey, prepareExportData]);
 
@@ -1250,7 +1250,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     const blob = new Blob([jsonContent], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `resultats_sondage_${survey._id}.json`;
+    link.download = `survey_results_${survey._id}.json`;
     link.click();
   }, [survey, prepareExportData]);
 
@@ -1271,7 +1271,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           const nodeData = node.data || {};
           return {
             id: node.id,
-            text: nodeData.text || nodeData.label || 'Question sans titre',
+            text: nodeData.text || nodeData.label || 'Question without title',
             type: mapNodeTypeToQuestionType(nodeData.questionType || nodeData.type || 'text'),
             options: nodeData.options || [],
             isCritical: nodeData.isCritical || false,
@@ -1427,21 +1427,21 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   // Ajoutez cette condition pour vérifier si le sondage est dynamique
   if (!survey.isDynamic) {
-    console.log("Ce sondage n'est pas dynamique - l'onglet d'analyse des parcours ne sera pas pertinent");
+    console.log("This survey is not dynamic - the path analysis tab will not be relevant");
   }
 
   // Mettre à jour handlePathFilterChange pour utiliser les réponses filtrées
   const handlePathFilterChange = (isFiltered: boolean, filteredResps: SurveyResponse[]) => {
-    console.log("=== Changement de filtre de parcours ===");
-    console.log("Filtre activé:", isFiltered);
-    console.log("Nombre de réponses filtrées:", filteredResps.length);
-    console.log("Nombre de chemins sélectionnés:", selectedPaths.length);
+    console.log("=== Path filter change ===");
+    console.log("Filter active:", isFiltered);
+    console.log("Number of filtered responses:", filteredResps.length);
+    console.log("Number of selected paths:", selectedPaths.length);
     
     // Log détaillé des chemins sélectionnés
     if (selectedPaths.length > 0) {
-      console.log("Chemins sélectionnés:");
+      console.log("Selected paths:");
       selectedPaths.forEach((path, index) => {
-        console.log(`  Chemin ${index + 1}:`, path.map(segment => ({
+        console.log(`  Path ${index + 1}:`, path.map(segment => ({
           question: segment.questionText,
           réponse: segment.answer
         })));
@@ -1450,16 +1450,16 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     
     // Log des réponses filtrées (limité pour éviter de surcharger la console)
     if (filteredResps.length > 0) {
-      console.log("Exemple de réponses filtrées (max 3):");
+      console.log("Example of filtered responses (max 3):");
       filteredResps.slice(0, 3).forEach((resp, index) => {
-        console.log(`  Réponse ${index + 1} (ID: ${resp._id}):`, resp.answers.map(a => ({
+        console.log(`  Response ${index + 1} (ID: ${resp._id}):`, resp.answers.map(a => ({
           questionId: a.questionId,
           answer: a.answer
         })));
       });
       
       if (filteredResps.length > 3) {
-        console.log(`  ... et ${filteredResps.length - 3} autres réponses`);
+        console.log(`  ... and ${filteredResps.length - 3} other responses`);
       }
     }
     console.log("==================================");
@@ -1499,11 +1499,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   // Cette fonction va afficher les résultats de filtrage dans la console pour le débogage
   useEffect(() => {
     if (pathFilterActive) {
-      console.log("Mode filtre parcours activé:", filteredPathResponses.length, "réponses");
+      console.log("Path filter mode active:", filteredPathResponses.length, "responses");
     } else if (filteredResponses.length > 0) {
-      console.log("Filtres standards appliqués:", filteredResponses.length, "réponses");
+      console.log("Standard filters applied:", filteredResponses.length, "responses");
     } else {
-      console.log("Aucun filtre actif:", responses.length, "réponses");
+      console.log("No active filters:", responses.length, "responses");
     }
   }, [pathFilterActive, filteredPathResponses, filteredResponses, responses]);
 

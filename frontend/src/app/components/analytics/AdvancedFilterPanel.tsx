@@ -1075,6 +1075,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              handleCloseAnswerFilterDialog();
             }} 
             sx={{ color: 'white' }}
           >
