@@ -236,7 +236,7 @@ const SettingsContent = () => {
                 loop={true}
               />
               <Typography variant="subtitle1" fontWeight={500} color="primary" sx={{ mt: 1 }}>
-                Traitement en cours...
+                Processing...
               </Typography>
             </Box>
           </Box>
@@ -269,7 +269,7 @@ const SettingsContent = () => {
               fontWeight: 500
             }}
           >
-            {successMessage}
+            {successMessage} You will be redirected to the login page.
           </Alert>
         )}
       </Box>
@@ -524,7 +524,7 @@ const SettingsContent = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {isProcessing ? 'Traitement en cours...' : 'Update Password'}
+                    {isProcessing ? 'Processing...' : 'Update Password'}
                   </Button>
                 </Box>
               </>
