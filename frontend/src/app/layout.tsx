@@ -14,18 +14,20 @@ const AuthHandler = ({ children }: { children: React.ReactNode }) => {
   const { login } = useAuth();
 
   useEffect(() => {
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
-    const auth = searchParams.get('auth');
+    if (searchParams) {
+      const accessToken = searchParams.get('accessToken');
+      const refreshToken = searchParams.get('refreshToken');
+      const auth = searchParams.get('auth');
 
-    if (accessToken && refreshToken && auth === 'success') {
-      try {
-        login(accessToken, refreshToken);
-        // Nettoyer l'URL
-        window.history.replaceState({}, document.title, '/');
-      } catch (error) {
-        console.error('Error processing auth tokens:', error);
-        window.location.href = '/login?error=auth_failed';
+      if (accessToken && refreshToken && auth === 'success') {
+        try {
+          login(accessToken, refreshToken);
+          // Nettoyer l'URL
+          window.history.replaceState({}, document.title, '/');
+        } catch (error) {
+          console.error('Error processing auth tokens:', error);
+          window.location.href = '/login?error=auth_failed';
+        }
       }
     }
   }, [searchParams, login]);
@@ -38,7 +40,6 @@ const NavigationManager = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsLoading(true);
