@@ -1021,6 +1021,9 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', position: 'relative' }}>
                 <button
                   type="button"
+                  id="add-media-button"
+                  data-intro="add-media"
+                  className="add-media-button-class"
                   onClick={() => {
                     // Sélectionner la carte
                     selectCard();

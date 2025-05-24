@@ -1216,31 +1216,72 @@ export default function DynamicSurveyCreation() {
         
         // Gestion de l'étape pour l'ajout de média
         if (currentStepData.element.includes('add-media-placeholder')) {
+          // Utiliser un délai plus long pour assurer que le mode édition est complètement chargé
           setTimeout(() => {
             console.log("Recherche du bouton Add Media...");
             const allButtons = document.querySelectorAll('[data-intro]');
             console.log("Tous les éléments avec data-intro:", Array.from(allButtons).map(el => ({ attr: el.getAttribute('data-intro'), id: el.id })));
             
-            // Essayer plusieurs méthodes de sélection
-            let addMediaButton = document.querySelector('.react-flow__node:first-child [data-intro="add-media"]');
+            // Fonction pour rechercher le bouton avec plusieurs tentatives
+            const findAddMediaButton = (attempts = 0, maxAttempts = 5) => {
+              if (attempts >= maxAttempts) {
+                console.error("Bouton Add Media non trouvé après plusieurs tentatives");
+                return null;
+              }
+              
+              console.log(`Tentative ${attempts + 1} de trouver le bouton Add Media...`);
+              
+              // Essayer toutes les méthodes de sélection possibles
+              let addMediaButton = document.querySelector('[data-intro="add-media"]');
+              
+              // Essayer avec une sélection plus spécifique
+              if (!addMediaButton) {
+                console.log("Essai avec sélecteur plus spécifique...");
+                addMediaButton = document.querySelector('.react-flow__node [data-intro="add-media"]');
+              }
+              
+              // Essayer avec la classe
+              if (!addMediaButton) {
+                console.log("Essai avec la classe...");
+                addMediaButton = document.querySelector('.add-media-button-class');
+              }
+              
+              // Essayer avec l'ID
+              if (!addMediaButton) {
+                console.log("Essai avec l'ID...");
+                addMediaButton = document.getElementById('add-media-button');
+              }
+
+              // Essayer de trouver n'importe quel bouton contenant "Add Media" comme texte
+              if (!addMediaButton) {
+                console.log("Recherche de texte 'Add Media'...");
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const buttonWithText = buttons.find(btn => 
+                  btn.textContent && btn.textContent.includes('Add Media')
+                );
+                addMediaButton = buttonWithText || null;
+              }
+              
+              if (addMediaButton) {
+                console.log("Bouton Add Media trouvé:", addMediaButton);
+                return addMediaButton;
+              } else {
+                // Attendre et réessayer si le bouton n'est pas trouvé
+                console.log(`Bouton non trouvé, nouvelle tentative dans 300ms...`);
+                setTimeout(() => {
+                  const result = findAddMediaButton(attempts + 1, maxAttempts);
+                  if (result) {
+                    positionAndHighlightButton(result);
+                  }
+                }, 300);
+                return null;
+              }
+            };
             
-            // Si la première méthode échoue, essayer avec la classe
-            if (!addMediaButton) {
-              console.log("Première méthode échouée, essai avec la classe...");
-              addMediaButton = document.querySelector('.add-media-button-class');
-            }
-            
-            // Si les deux méthodes échouent, essayer avec l'ID
-            if (!addMediaButton) {
-              console.log("Deuxième méthode échouée, essai avec l'ID...");
-              addMediaButton = document.getElementById('add-media-button');
-            }
-            
-            console.log("Bouton Add Media trouvé:", addMediaButton);
-            
-            if (addMediaButton) {
+            // Fonction pour positionner et mettre en évidence le bouton
+            const positionAndHighlightButton = (button: Element) => {
               // Positionner le placeholder juste au-dessus du bouton pour un meilleur ciblage
-              const rect = addMediaButton.getBoundingClientRect();
+              const rect = button.getBoundingClientRect();
               console.log("Rectangle du bouton:", rect);
               addMediaPlaceholder.style.position = 'absolute';
               addMediaPlaceholder.style.top = (rect.top + window.pageYOffset) + 'px';
@@ -1253,17 +1294,25 @@ export default function DynamicSurveyCreation() {
               intro.refresh();
               
               // Mettre en évidence visuellement le bouton d'ajout de média
-              (addMediaButton as HTMLElement).style.transition = 'all 0.3s';
-              (addMediaButton as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              (button as HTMLElement).style.transition = 'all 0.3s';
+              (button as HTMLElement).style.boxShadow = '0 0 10px 3px rgba(102, 126, 234, 0.8)';
+              
+              // Attribuer temporairement un ID et une classe au bouton s'il n'en a pas
+              if (!button.id) button.id = 'add-media-button-temp';
+              button.classList.add('add-media-button-temp-class');
               
               // Réinitialiser après quelques secondes
               setTimeout(() => {
-                (addMediaButton as HTMLElement).style.boxShadow = '';
+                (button as HTMLElement).style.boxShadow = '';
               }, 2000);
-            } else {
-              console.error("Bouton Add Media non trouvé malgré les multiples tentatives!");
+            };
+            
+            // Lancer la recherche
+            const addMediaButton = findAddMediaButton();
+            if (addMediaButton) {
+              positionAndHighlightButton(addMediaButton);
             }
-          }, 100);
+          }, 500); // Délai augmenté pour s'assurer que le DOM est complètement chargé
         }
         
         // Gestion de l'étape pour les points de connexion
