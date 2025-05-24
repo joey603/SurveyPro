@@ -782,22 +782,77 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
       e.stopPropagation();
       // Sélectionner la carte
       selectCard();
-      // Ajouter un retour visuel immédiat pour le feedback utilisateur
+      
+      // Spécifiquement pour iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      // Ajouter un retour visuel immédiat
       button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
       button.style.transform = 'scale(0.95)';
       
-      // Sur iOS, utiliser directement l'input natif existant au lieu d'en créer un nouveau
-      const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-      if (input) {
-        // Restaurer l'apparence
+      // Utiliser l'input existant
+      const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+      
+      // Pour iOS, ajouter une classe temporaire au corps pour gérer l'accès au système de fichiers
+      if (isIOS) {
+        document.body.classList.add('ios-file-select-active');
+        
+        // Pour iOS, créer un nouvel input à chaque fois peut aider
+        const tempInput = document.createElement('input');
+        tempInput.type = 'file';
+        tempInput.accept = 'image/*,video/*';
+        tempInput.style.position = 'absolute';
+        tempInput.style.top = '-1000px';
+        tempInput.style.opacity = '0';
+        
+        // S'assurer que l'input est bien visible dans le DOM
+        document.body.appendChild(tempInput);
+        
+        // Configurer le gestionnaire d'événements
+        tempInput.onchange = (evt) => {
+          if (tempInput.files && tempInput.files.length > 0) {
+            // Créer un faux événement pour notre gestionnaire
+            const fakeEvent = {
+              target: {
+                files: tempInput.files
+              }
+            } as unknown as React.ChangeEvent<HTMLInputElement>;
+            
+            // Appeler notre gestionnaire
+            handleMediaUpload(fakeEvent);
+            
+            // Nettoyer après utilisation
+            setTimeout(() => {
+              document.body.removeChild(tempInput);
+            }, 500);
+          }
+        };
+        
+        // Restaurer l'apparence du bouton avec un délai
         setTimeout(() => {
           button.style.backgroundColor = '';
           button.style.transform = '';
           
-          // Sur iOS, un petit délai avant d'ouvrir le sélecteur fonctionne mieux
+          // Avec un petit délai, déclencher le clic sur l'input temporaire
           setTimeout(() => {
-            input.click();
-          }, 50);
+            tempInput.click();
+            
+            // Nettoyer la classe du body après un délai
+            setTimeout(() => {
+              document.body.classList.remove('ios-file-select-active');
+            }, 1000);
+          }, 150);
+        }, 150);
+      } else {
+        // Pour les autres navigateurs, utiliser l'input existant
+        setTimeout(() => {
+          button.style.backgroundColor = '';
+          button.style.transform = '';
+          
+          // Utiliser l'input existant
+          if (fileInput) {
+            fileInput.click();
+          }
         }, 150);
       }
     };
@@ -809,7 +864,7 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
     return () => {
       button.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [selectCard, handleMediaUpload]);
+  }, [selectCard, handleMediaUpload, id]);
 
   // Gestionnaire d'événements tactiles natif pour iOS - pour le bouton de suppression de média
   useEffect(() => {
@@ -1245,18 +1300,88 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
                 accept="image/*,video/*"
                 style={{ display: 'none' }}
                 onChange={handleMediaUpload}
+                multiple={false}
               />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', position: 'relative' }}>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
                     // Sélectionner la carte
                     selectCard();
-                    // Utiliser l'input existant au lieu d'en créer un nouveau
-                    const input = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
-                    if (input) {
-                      input.click();
+                    
+                    // Spécifiquement pour iOS
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    
+                    // Ajouter un retour visuel immédiat
+                    const button = e.currentTarget;
+                    button.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+                    button.style.transform = 'scale(0.95)';
+                    
+                    // Utiliser l'input existant
+                    const fileInput = document.getElementById(`media-upload-${id}`) as HTMLInputElement;
+                    
+                    // Pour iOS, ajouter une classe temporaire au corps pour gérer l'accès au système de fichiers
+                    if (isIOS) {
+                      document.body.classList.add('ios-file-select-active');
+                      
+                      // Pour iOS, créer un nouvel input à chaque fois peut aider
+                      const tempInput = document.createElement('input');
+                      tempInput.type = 'file';
+                      tempInput.accept = 'image/*,video/*';
+                      tempInput.style.position = 'absolute';
+                      tempInput.style.top = '-1000px';
+                      tempInput.style.opacity = '0';
+                      
+                      // S'assurer que l'input est bien visible dans le DOM
+                      document.body.appendChild(tempInput);
+                      
+                      // Configurer le gestionnaire d'événements
+                      tempInput.onchange = (evt) => {
+                        if (tempInput.files && tempInput.files.length > 0) {
+                          // Créer un faux événement pour notre gestionnaire
+                          const fakeEvent = {
+                            target: {
+                              files: tempInput.files
+                            }
+                          } as unknown as React.ChangeEvent<HTMLInputElement>;
+                          
+                          // Appeler notre gestionnaire
+                          handleMediaUpload(fakeEvent);
+                          
+                          // Nettoyer après utilisation
+                          setTimeout(() => {
+                            document.body.removeChild(tempInput);
+                          }, 500);
+                        }
+                      };
+                      
+                      // Restaurer l'apparence du bouton avec un délai
+                      setTimeout(() => {
+                        button.style.backgroundColor = '';
+                        button.style.transform = '';
+                        
+                        // Avec un petit délai, déclencher le clic sur l'input temporaire
+                        setTimeout(() => {
+                          tempInput.click();
+                          
+                          // Nettoyer la classe du body après un délai
+                          setTimeout(() => {
+                            document.body.classList.remove('ios-file-select-active');
+                          }, 1000);
+                        }, 150);
+                      }, 150);
+                    } else {
+                      // Pour les autres navigateurs, utiliser l'input existant
+                      setTimeout(() => {
+                        button.style.backgroundColor = '';
+                        button.style.transform = '';
+                        
+                        // Utiliser l'input existant
+                        if (fileInput) {
+                          fileInput.click();
+                        }
+                      }, 150);
                     }
                   }}
                   data-intro="add-media"
@@ -1739,6 +1864,20 @@ const QuestionNode = ({ data, isConnectable, id }: QuestionNodeProps) => {
               padding-left: 12px !important;
               padding-right: 12px !important;
             }
+          }
+        }
+        
+        /* Styles spécifiques pour améliorer la sélection de fichiers sur iOS */
+        body.ios-file-select-active {
+          position: relative;
+          overflow: visible !important;
+          height: auto !important;
+        }
+        
+        /* Styles spécifiques pour les boutons sur iOS */
+        @supports (-webkit-touch-callout: none) {
+          input[type="file"] {
+            font-size: 16px !important; /* iOS ne zoom pas sur les inputs ≥ 16px */
           }
         }
       `}</style>
