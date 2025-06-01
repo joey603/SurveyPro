@@ -2250,6 +2250,7 @@ const SurveyAnswerPage: React.FC = () => {
                       borderRadius: 2,
                       overflow: 'hidden',
                       height: '100%',
+                      minHeight: '420px',
                       display: 'flex',
                       flexDirection: 'column',
                       transition: 'all 0.3s ease-in-out',
