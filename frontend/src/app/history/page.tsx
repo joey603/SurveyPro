@@ -1246,6 +1246,57 @@ const SurveyHistoryPage: React.FC = () => {
                           }
                         }}
                       >
+                        {/* Badge Public/Private en haut à droite */}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 8, 
+                          right: 8, 
+                          zIndex: 3
+                        }}>
+                          {/* @ts-ignore */}
+                          {response.isPrivate ? (
+                            <Chip 
+                              icon={<LockIcon fontSize="small" />}
+                              label="Private"
+                              size="small" 
+                              color="primary"
+                              variant="outlined" 
+                            />
+                          ) : (
+                            <Chip 
+                              icon={<PublicIcon fontSize="small" />}
+                              label="Public"
+                              size="small" 
+                              color="primary"
+                              variant="outlined" 
+                            />
+                          )}
+                        </Box>
+
+                        {/* Badge Dynamic/Static en haut à gauche */}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 8, 
+                          left: 8, 
+                          zIndex: 3
+                        }}>
+                          {response.isDynamic ? (
+                            <Chip 
+                              icon={<AutoGraphIcon fontSize="small" />}
+                              label="Dynamic"
+                              size="small"
+                              color="secondary"
+                            />
+                          ) : (
+                            <Chip 
+                              icon={<ListAltIcon fontSize="small" />}
+                              label="Static"
+                              size="small"
+                              color="secondary"
+                            />
+                          )}
+                        </Box>
+
                         <Box sx={{ 
                           p: 3,
                           flex: 1,
@@ -1410,68 +1461,6 @@ const SurveyHistoryPage: React.FC = () => {
                                   }
                                 }}
                               />
-                              {response.isDynamic && (
-                                <Chip
-                                  size="small"
-                                  icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-                                  label="Dynamic"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {!response.isDynamic && (
-                                <Chip
-                                  size="small"
-                                  icon={<ListAltIcon sx={{ fontSize: 16 }} />}
-                                  label="Static"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {/* @ts-ignore */}
-                              {response.isPrivate && (
-                                <Chip
-                                  size="small"
-                                  icon={<LockIcon sx={{ fontSize: 16 }} />}
-                                  label="Private"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {/* @ts-ignore */}
-                              {response.isPrivate === false && (
-                                <Chip
-                                  size="small"
-                                  icon={<PublicIcon sx={{ fontSize: 16 }} />}
-                                  label="Public"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
                             </Stack>
                           </Stack>
                         </Box>
@@ -1560,13 +1549,63 @@ const SurveyHistoryPage: React.FC = () => {
                           }
                         }}
                       >
+                        {/* Badge Public/Private en haut à droite */}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 8, 
+                          right: 8, 
+                          zIndex: 3
+                        }}>
+                          {/* @ts-ignore */}
+                          {survey.isPrivate ? (
+                            <Chip 
+                              icon={<LockIcon fontSize="small" />}
+                              label="Private"
+                              size="small" 
+                              color="primary"
+                              variant="outlined" 
+                            />
+                          ) : (
+                            <Chip 
+                              icon={<PublicIcon fontSize="small" />}
+                              label="Public"
+                              size="small" 
+                              color="primary"
+                              variant="outlined" 
+                            />
+                          )}
+                        </Box>
+
+                        {/* Badge Dynamic/Static en haut à gauche */}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 8, 
+                          left: 8, 
+                          zIndex: 3
+                        }}>
+                          {survey.isDynamic ? (
+                            <Chip 
+                              icon={<AutoGraphIcon fontSize="small" />}
+                              label="Dynamic"
+                              size="small"
+                              color="secondary"
+                            />
+                          ) : (
+                            <Chip 
+                              icon={<ListAltIcon fontSize="small" />}
+                              label="Static"
+                              size="small"
+                              color="secondary"
+                            />
+                          )}
+                        </Box>
+
                         <Box sx={{ 
                           p: 3,
                           flex: 1,
                           display: 'flex',
                           flexDirection: 'column',
-                          position: 'relative',
-                          minHeight: '180px'
+                          position: 'relative'
                         }}>
                           <Typography 
                             variant="h6" 
@@ -1699,68 +1738,6 @@ const SurveyHistoryPage: React.FC = () => {
                                 }
                               }}
                             />
-                            {survey.isDynamic && (
-                              <Chip
-                                size="small"
-                                icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
-                                label="Dynamic"
-                                sx={{
-                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                  color: '#667eea',
-                                  height: '24px',
-                                  '& .MuiChip-icon': {
-                                    color: '#667eea'
-                                  }
-                                }}
-                              />
-                            )}
-                            {!survey.isDynamic && (
-                              <Chip
-                                size="small"
-                                icon={<ListAltIcon sx={{ fontSize: 16 }} />}
-                                label="Static"
-                                sx={{
-                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                  color: '#667eea',
-                                  height: '24px',
-                                  '& .MuiChip-icon': {
-                                    color: '#667eea'
-                                  }
-                                }}
-                              />
-                            )}
-                            {/* @ts-ignore */}
-                            {survey.isPrivate && (
-                              <Chip
-                                size="small"
-                                icon={<LockIcon sx={{ fontSize: 16 }} />}
-                                label="Private"
-                                sx={{
-                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                  color: '#667eea',
-                                  height: '24px',
-                                  '& .MuiChip-icon': {
-                                    color: '#667eea'
-                                  }
-                                }}
-                              />
-                            )}
-                            {/* @ts-ignore */}
-                            {survey.isPrivate === false && (
-                              <Chip
-                                size="small"
-                                icon={<PublicIcon sx={{ fontSize: 16 }} />}
-                                label="Public"
-                                sx={{
-                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                  color: '#667eea',
-                                  height: '24px',
-                                  '& .MuiChip-icon': {
-                                    color: '#667eea'
-                                  }
-                                }}
-                              />
-                            )}
                           </Stack>
                         </Box>
                         
