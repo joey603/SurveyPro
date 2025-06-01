@@ -223,22 +223,58 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'primary.main',
-              fontWeight: 500,
-              mb: 1,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              lineHeight: 1.3,
-              height: '2.6em',
-            }}
-          >
-            {survey.title || "Untitled"}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 500,
+                flexGrow: 1,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                lineHeight: 1.3,
+                height: '2.6em',
+              }}
+            >
+              {survey.title || "Untitled"}
+            </Typography>
+            {isDynamicSurvey && (
+              <Chip
+                icon={<AutoGraphIcon />}
+                label="Dynamic"
+                size="small"
+                sx={{
+                  ml: 1,
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  color: '#667eea',
+                  '& .MuiChip-icon': {
+                    color: '#667eea'
+                  },
+                  height: '24px',
+                  fontWeight: 500
+                }}
+              />
+            )}
+            {!isDynamicSurvey && (
+              <Chip
+                icon={<ListAltIcon />}
+                label="Static"
+                size="small"
+                sx={{
+                  ml: 1,
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  color: '#667eea',
+                  '& .MuiChip-icon': {
+                    color: '#667eea'
+                  },
+                  height: '24px',
+                  fontWeight: 500
+                }}
+              />
+            )}
+          </Box>
 
           <Typography
             variant="body2"
@@ -353,19 +389,6 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
                 size="small"
                 icon={<QuizIcon sx={{ fontSize: 16 }} />}
                 label={`${survey.questions?.length || survey.nodes?.length || 0} Questions`}
-                sx={{
-                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                  color: '#667eea',
-                  height: '24px',
-                  '& .MuiChip-icon': {
-                    color: '#667eea'
-                  },
-                }}
-              />
-              <Chip
-                size="small"
-                icon={isDynamicSurvey ? <AutoGraphIcon sx={{ fontSize: 16 }} /> : <ListAltIcon sx={{ fontSize: 16 }} />}
-                label={isDynamicSurvey ? "Dynamic" : "Static"}
                 sx={{
                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                   color: '#667eea',
