@@ -1131,30 +1131,6 @@ const SurveyHistoryPage: React.FC = () => {
                   }}
                 />
                 <Chip
-                  icon={<FilterListIcon />}
-                  label={`Sort by ${sortBy === 'date' ? 'Date' : 'Popular'}`}
-                  onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
-                  color={sortBy === 'popular' ? "primary" : "default"}
-                  variant={sortBy === 'popular' ? "filled" : "outlined"}
-                  sx={{
-                    '&.MuiChip-filled': {
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    }
-                  }}
-                />
-                <Chip
-                  icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
-                  label={`${viewType === 'responses' ? 'Responses' : 'Created'}`}
-                  onClick={() => handleViewTypeChange(viewType === 'responses' ? 'created' : 'responses')}
-                  color={viewType === 'created' ? "primary" : "default"}
-                  variant={viewType === 'created' ? "filled" : "outlined"}
-                  sx={{
-                    '&.MuiChip-filled': {
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    }
-                  }}
-                />
-                <Chip
                   icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
                   label={`${surveyTypeFilter === 'all' ? 'All Types' : surveyTypeFilter === 'dynamic' ? 'Dynamic' : 'Static'}`}
                   onClick={() => {
