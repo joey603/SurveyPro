@@ -1246,7 +1246,6 @@ const SurveyHistoryPage: React.FC = () => {
                           }
                         }}
                       >
-                        {/* Badge Public/Private en haut à droite */}
                         <Box sx={{ 
                           position: 'absolute', 
                           top: 8, 
@@ -1273,30 +1272,6 @@ const SurveyHistoryPage: React.FC = () => {
                           )}
                         </Box>
 
-                        {/* Badge Dynamic/Static en haut à gauche */}
-                        <Box sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          left: 8, 
-                          zIndex: 3
-                        }}>
-                          {response.isDynamic ? (
-                            <Chip 
-                              icon={<AutoGraphIcon fontSize="small" />}
-                              label="Dynamic"
-                              size="small"
-                              color="secondary"
-                            />
-                          ) : (
-                            <Chip 
-                              icon={<ListAltIcon fontSize="small" />}
-                              label="Static"
-                              size="small"
-                              color="secondary"
-                            />
-                          )}
-                        </Box>
-
                         <Box sx={{ 
                           p: 3,
                           flex: 1,
@@ -1304,22 +1279,58 @@ const SurveyHistoryPage: React.FC = () => {
                           flexDirection: 'column',
                           position: 'relative'
                         }}>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              mb: 2,
-                              color: 'primary.main',
-                              fontWeight: 500,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              lineHeight: 1.3,
-                              height: '2.6em'
-                            }}
-                          >
-                            {response.surveyTitle}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                color: 'primary.main',
+                                fontWeight: 500,
+                                flexGrow: 1,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: 1.3,
+                                height: '2.6em'
+                              }}
+                            >
+                              {response.surveyTitle}
+                            </Typography>
+                            {response.isDynamic && (
+                              <Chip
+                                icon={<AutoGraphIcon />}
+                                label="Dynamic"
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  },
+                                  height: '24px',
+                                  fontWeight: 500
+                                }}
+                              />
+                            )}
+                            {!response.isDynamic && (
+                              <Chip
+                                icon={<ListAltIcon />}
+                                label="Static"
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  },
+                                  height: '24px',
+                                  fontWeight: 500
+                                }}
+                              />
+                            )}
+                          </Box>
 
                           <Typography 
                             variant="body2" 
@@ -1549,7 +1560,6 @@ const SurveyHistoryPage: React.FC = () => {
                           }
                         }}
                       >
-                        {/* Badge Public/Private en haut à droite */}
                         <Box sx={{ 
                           position: 'absolute', 
                           top: 8, 
@@ -1576,30 +1586,6 @@ const SurveyHistoryPage: React.FC = () => {
                           )}
                         </Box>
 
-                        {/* Badge Dynamic/Static en haut à gauche */}
-                        <Box sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          left: 8, 
-                          zIndex: 3
-                        }}>
-                          {survey.isDynamic ? (
-                            <Chip 
-                              icon={<AutoGraphIcon fontSize="small" />}
-                              label="Dynamic"
-                              size="small"
-                              color="secondary"
-                            />
-                          ) : (
-                            <Chip 
-                              icon={<ListAltIcon fontSize="small" />}
-                              label="Static"
-                              size="small"
-                              color="secondary"
-                            />
-                          )}
-                        </Box>
-
                         <Box sx={{ 
                           p: 3,
                           flex: 1,
@@ -1607,22 +1593,58 @@ const SurveyHistoryPage: React.FC = () => {
                           flexDirection: 'column',
                           position: 'relative'
                         }}>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              mb: 2,
-                              color: 'primary.main',
-                              fontWeight: 500,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              lineHeight: 1.3,
-                              height: '2.6em'
-                            }}
-                          >
-                            {survey.title}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                color: 'primary.main',
+                                fontWeight: 500,
+                                flexGrow: 1,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: 1.3,
+                                height: '2.6em'
+                              }}
+                            >
+                              {survey.title}
+                            </Typography>
+                            {survey.isDynamic && (
+                              <Chip
+                                icon={<AutoGraphIcon />}
+                                label="Dynamic"
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  },
+                                  height: '24px',
+                                  fontWeight: 500
+                                }}
+                              />
+                            )}
+                            {!survey.isDynamic && (
+                              <Chip
+                                icon={<ListAltIcon />}
+                                label="Static"
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  },
+                                  height: '24px',
+                                  fontWeight: 500
+                                }}
+                              />
+                            )}
+                          </Box>
 
                           <Typography 
                             variant="body2" 
