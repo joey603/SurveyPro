@@ -42,6 +42,8 @@ import 'intro.js/introjs.css';
 import introJs from 'intro.js';
 import Lottie from 'lottie-react';
 import loadingCardAnimation from '@/assets/Animation loading card survey.json';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 
 const DEFAULT_IMAGE = '/placeholder-image.jpg';
 
@@ -122,6 +124,7 @@ const SurveyHistoryPage: React.FC = () => {
   const [createdSurveys, setCreatedSurveys] = useState<Survey[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [datePickerKey, setDatePickerKey] = useState(0);
+  const [surveyTypeFilter, setSurveyTypeFilter] = useState<'all' | 'dynamic' | 'static'>('all');
 
   useEffect(() => {
     const fetchSurveyResponses = async () => {
@@ -575,15 +578,19 @@ const SurveyHistoryPage: React.FC = () => {
   const filteredResponses = responses
     .filter(response => {
       const matchesSearch = (response.surveyTitle?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      
+      const matchesType = surveyTypeFilter === 'all' || 
+                         (surveyTypeFilter === 'dynamic' && response.isDynamic) ||
+                         (surveyTypeFilter === 'static' && !response.isDynamic);
 
       if (dateRange.start && dateRange.end) {
         const responseDate = new Date(response.completedAt);
         const isInDateRange = responseDate >= dateRange.start && 
                            responseDate <= new Date(dateRange.end.setHours(23, 59, 59));
-        return matchesSearch && isInDateRange;
+        return matchesSearch && isInDateRange && matchesType;
       }
 
-      return matchesSearch;
+      return matchesSearch && matchesType;
     })
     .sort((a, b) => {
       return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
@@ -592,6 +599,7 @@ const SurveyHistoryPage: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setDateRange({ start: null, end: null });
+    setSurveyTypeFilter('all');
   };
 
   // Ajoutons une fonction de chargement pour Suspense
@@ -1093,13 +1101,73 @@ const SurveyHistoryPage: React.FC = () => {
                 }}
               />
 
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack 
+                direction="row" 
+                spacing={2} 
+                alignItems="center"
+                sx={{
+                  flexWrap: 'wrap',
+                  gap: 1,
+                  '& .MuiChip-root': {
+                    margin: '0 !important',
+                    '@media (max-width: 600px)': {
+                      width: '100%',
+                      justifyContent: 'center',
+                      marginBottom: '8px !important'
+                    }
+                  }
+                }}
+              >
                 <Chip
                   icon={<FilterListIcon />}
                   label="Date Filter"
                   onClick={() => setShowDateFilter(!showDateFilter)}
                   color={showDateFilter ? "primary" : "default"}
                   variant={showDateFilter ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={`Sort by ${sortBy === 'date' ? 'Date' : 'Popular'}`}
+                  onClick={() => setSortBy(sortBy === 'date' ? 'popular' : 'date')}
+                  color={sortBy === 'popular' ? "primary" : "default"}
+                  variant={sortBy === 'popular' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
+                  label={`${viewType === 'responses' ? 'Responses' : 'Created'}`}
+                  onClick={() => handleViewTypeChange(viewType === 'responses' ? 'created' : 'responses')}
+                  color={viewType === 'created' ? "primary" : "default"}
+                  variant={viewType === 'created' ? "filled" : "outlined"}
+                  sx={{
+                    '&.MuiChip-filled': {
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }
+                  }}
+                />
+                <Chip
+                  icon={surveyTypeFilter === 'dynamic' ? <AutoGraphIcon /> : <ListAltIcon />}
+                  label={`${surveyTypeFilter === 'all' ? 'All Types' : surveyTypeFilter === 'dynamic' ? 'Dynamic' : 'Static'}`}
+                  onClick={() => {
+                    setSurveyTypeFilter(current => {
+                      switch (current) {
+                        case 'all': return 'dynamic';
+                        case 'dynamic': return 'static';
+                        case 'static': return 'all';
+                      }
+                    });
+                  }}
+                  color={surveyTypeFilter !== 'all' ? "primary" : "default"}
+                  variant={surveyTypeFilter !== 'all' ? "filled" : "outlined"}
                   sx={{
                     '&.MuiChip-filled': {
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1420,8 +1488,11 @@ const SurveyHistoryPage: React.FC = () => {
                 ) : (
                   createdSurveys
                     .filter(survey => 
-                      survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (survey.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+                      (survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (survey.description || '').toLowerCase().includes(searchQuery.toLowerCase())) &&
+                      (surveyTypeFilter === 'all' || 
+                      (surveyTypeFilter === 'dynamic' && survey.isDynamic) ||
+                      (surveyTypeFilter === 'static' && !survey.isDynamic))
                     )
                     .sort((a, b) => {
                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
