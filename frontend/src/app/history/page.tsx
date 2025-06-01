@@ -44,6 +44,10 @@ import Lottie from 'lottie-react';
 import loadingCardAnimation from '@/assets/Animation loading card survey.json';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import QuizIcon from '@mui/icons-material/Quiz';
+import PeopleIcon from '@mui/icons-material/People';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
 
 const DEFAULT_IMAGE = '/placeholder-image.jpg';
 
@@ -1378,6 +1382,7 @@ const SurveyHistoryPage: React.FC = () => {
                             >
                               <Chip
                                 size="small"
+                                icon={<QuizIcon sx={{ fontSize: 16 }} />}
                                 label={`${response.answers?.length || 0} questions`}
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1390,6 +1395,7 @@ const SurveyHistoryPage: React.FC = () => {
                               />
                               <Chip
                                 size="small"
+                                icon={<PeopleIcon sx={{ fontSize: 16 }} />}
                                 label={response.demographic && Object.keys(response.demographic).some(key => 
                                   response.demographic && response.demographic[key as keyof Demographic]) 
                                   ? ' Demographics' 
@@ -1407,6 +1413,7 @@ const SurveyHistoryPage: React.FC = () => {
                               {response.isDynamic && (
                                 <Chip
                                   size="small"
+                                  icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
                                   label="Dynamic"
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1421,6 +1428,7 @@ const SurveyHistoryPage: React.FC = () => {
                               {!response.isDynamic && (
                                 <Chip
                                   size="small"
+                                  icon={<ListAltIcon sx={{ fontSize: 16 }} />}
                                   label="Static"
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1436,6 +1444,7 @@ const SurveyHistoryPage: React.FC = () => {
                               {response.isPrivate && (
                                 <Chip
                                   size="small"
+                                  icon={<LockIcon sx={{ fontSize: 16 }} />}
                                   label="Private"
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1451,6 +1460,7 @@ const SurveyHistoryPage: React.FC = () => {
                               {response.isPrivate === false && (
                                 <Chip
                                   size="small"
+                                  icon={<PublicIcon sx={{ fontSize: 16 }} />}
                                   label="Public"
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1665,6 +1675,7 @@ const SurveyHistoryPage: React.FC = () => {
                           >
                             <Chip
                               size="small"
+                              icon={<QuizIcon sx={{ fontSize: 16 }} />}
                               label={`${survey.questions?.length || 0} questions`}
                               sx={{
                                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1677,6 +1688,7 @@ const SurveyHistoryPage: React.FC = () => {
                             />
                             <Chip
                               size="small"
+                              icon={<PeopleIcon sx={{ fontSize: 16 }} />}
                               label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
                               sx={{
                                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1690,6 +1702,7 @@ const SurveyHistoryPage: React.FC = () => {
                             {survey.isDynamic && (
                               <Chip
                                 size="small"
+                                icon={<AutoGraphIcon sx={{ fontSize: 16 }} />}
                                 label="Dynamic"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1704,6 +1717,7 @@ const SurveyHistoryPage: React.FC = () => {
                             {!survey.isDynamic && (
                               <Chip
                                 size="small"
+                                icon={<ListAltIcon sx={{ fontSize: 16 }} />}
                                 label="Static"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1719,6 +1733,7 @@ const SurveyHistoryPage: React.FC = () => {
                             {survey.isPrivate && (
                               <Chip
                                 size="small"
+                                icon={<LockIcon sx={{ fontSize: 16 }} />}
                                 label="Private"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -1734,6 +1749,7 @@ const SurveyHistoryPage: React.FC = () => {
                             {survey.isPrivate === false && (
                               <Chip
                                 size="small"
+                                icon={<PublicIcon sx={{ fontSize: 16 }} />}
                                 label="Public"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
