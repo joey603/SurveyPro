@@ -351,7 +351,7 @@ export default function DynamicSurveyCreation() {
     const questionContainerStyle = {
       p: 3,
       backgroundColor: 'white',
-      borderRadius: 2,
+      borderRadius: 3,
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       mb: 3
     };
@@ -448,7 +448,7 @@ export default function DynamicSurveyCreation() {
           p: 3,
           backgroundColor: '#fff',
           border: '1px solid #ddd',
-          borderRadius: '8px',
+          borderRadius: '16px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
           position: 'relative',
         }}
@@ -1529,6 +1529,11 @@ export default function DynamicSurveyCreation() {
           }}
           maxWidth="sm"
           fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3
+            }
+          }}
         >
           <DialogContent>
             {notification.link ? (
@@ -1542,7 +1547,8 @@ export default function DynamicSurveyCreation() {
                     backgroundColor: '#f5f5f5',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1
+                    gap: 1,
+                    borderRadius: 2
                   }}
                 >
                   <TextField
@@ -1658,7 +1664,7 @@ export default function DynamicSurveyCreation() {
       `}</style>
       
       {/* Paper principal contenant tous les éléments */}
-      <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
+      <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden', borderRadius: 4 }}>
         {/* Entête en anglais avec titre et sous-titre centrés */}
         <Box 
           data-intro="header"
@@ -1912,6 +1918,11 @@ export default function DynamicSurveyCreation() {
         onClose={handleClosePreview}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3
+          }
+        }}
       >
         <DialogTitle
           sx={{
@@ -1989,6 +2000,11 @@ export default function DynamicSurveyCreation() {
         onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            borderRadius: 3
+          }
+        }}
       >
         <DialogTitle id="alert-dialog-title" sx={{ 
           bgcolor: 'primary.main', 

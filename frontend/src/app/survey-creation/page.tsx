@@ -743,7 +743,7 @@ const SurveyCreationPage = () => {
           mt: 2,
           p: 3,
           border: '1px solid #ddd',
-          borderRadius: '8px',
+          borderRadius: '16px',
           backgroundColor: '#fff',
         }}
       >
@@ -816,7 +816,7 @@ const SurveyCreationPage = () => {
           p: 3,
           backgroundColor: '#fff',
           border: '1px solid #ddd',
-          borderRadius: '8px',
+          borderRadius: '16px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
           position: 'relative',
         }}
@@ -1501,7 +1501,7 @@ const SurveyCreationPage = () => {
         data-testid="survey-creation-container"
         elevation={3}
         sx={{
-          borderRadius: 3,
+          borderRadius: 4,
           overflow: 'visible', // Changer de 'hidden' à 'visible' pour permettre aux tooltips de déborder
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           width: '100%',
@@ -1723,7 +1723,7 @@ const SurveyCreationPage = () => {
                             elevation={1}
                             sx={{ 
                               p: 3, 
-                              borderRadius: 2,
+                              borderRadius: 3,
                               position: 'relative',
                               pb: 5, // Espace supplémentaire pour la poignée de glissement
                             }}
@@ -2300,7 +2300,8 @@ const SurveyCreationPage = () => {
                     backgroundColor: '#f5f5f5',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1
+                    gap: 1,
+                    borderRadius: 2
                   }}
                 >
                   <TextField
