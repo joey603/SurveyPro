@@ -1194,7 +1194,17 @@ const SurveyHistoryPage: React.FC = () => {
                 />
               </Box>
             ) : (
-              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              <Box sx={{ 
+                display: 'grid', 
+                gap: 3, 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                '& .history-survey-card': {
+                  height: '100%',
+                  minHeight: '420px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }
+              }}>
                 {viewType === 'responses' ? (
                   loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4, width: '100%', gridColumn: '1 / -1' }}>
@@ -1222,6 +1232,7 @@ const SurveyHistoryPage: React.FC = () => {
                           flexDirection: 'column',
                           transition: 'all 0.3s ease-in-out',
                           position: 'relative',
+                          minHeight: '420px',
                           '&:hover': {
                             boxShadow: 3,
                             zIndex: 1,
@@ -1357,7 +1368,10 @@ const SurveyHistoryPage: React.FC = () => {
                               spacing={1} 
                               sx={{
                                 flexWrap: 'wrap',
-                                gap: 1
+                                gap: 1,
+                                '& .MuiChip-root': {
+                                  margin: '0 !important'
+                                }
                               }}
                             >
                               <Chip
@@ -1366,7 +1380,10 @@ const SurveyHistoryPage: React.FC = () => {
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
-                                  height: '24px'
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
                                 }}
                               />
                               <Chip
@@ -1379,7 +1396,10 @@ const SurveyHistoryPage: React.FC = () => {
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
-                                  height: '24px'
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
                                 }}
                               />
                               {response.isDynamic && (
@@ -1389,7 +1409,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1400,7 +1423,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1412,7 +1438,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1424,7 +1453,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1436,12 +1468,29 @@ const SurveyHistoryPage: React.FC = () => {
                           p: 2, 
                           borderTop: 1, 
                           borderColor: 'divider',
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          backgroundColor: 'action.hover',
                           display: 'flex',
-                          justifyContent: 'flex-end',
+                          justifyContent: 'space-between',
                           position: 'relative',
                           zIndex: 1
                         }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="primary"
+                            onClick={() => {}} // Placeholder pour maintenir la cohérence visuelle
+                            sx={{
+                              visibility: 'hidden', // Caché mais préserve l'espace
+                              borderColor: '#667eea',
+                              color: '#667eea',
+                              '&:hover': {
+                                borderColor: '#764ba2',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              },
+                            }}
+                          >
+                            Placeholder
+                          </Button>
                           <Button
                             onClick={() => handleExpandClick(response._id)}
                             variant="contained"
@@ -1449,6 +1498,7 @@ const SurveyHistoryPage: React.FC = () => {
                             className="view-details-button"
                             data-tutorial="view-details-button"
                             sx={{
+                              ml: 'auto',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
                                 background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
@@ -1482,7 +1532,7 @@ const SurveyHistoryPage: React.FC = () => {
                           borderRadius: 2,
                           overflow: 'hidden',
                           height: '100%',
-                          minHeight: '250px',
+                          minHeight: '420px',
                           display: 'flex',
                           flexDirection: 'column',
                           transition: 'all 0.3s ease-in-out',
@@ -1623,7 +1673,10 @@ const SurveyHistoryPage: React.FC = () => {
                               spacing={1} 
                               sx={{
                                 flexWrap: 'wrap',
-                                gap: 1
+                                gap: 1,
+                                '& .MuiChip-root': {
+                                  margin: '0 !important'
+                                }
                               }}
                             >
                               <Chip
@@ -1632,7 +1685,10 @@ const SurveyHistoryPage: React.FC = () => {
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
-                                  height: '24px'
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
                                 }}
                               />
                               <Chip
@@ -1641,7 +1697,10 @@ const SurveyHistoryPage: React.FC = () => {
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
-                                  height: '24px'
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
                                 }}
                               />
                               {survey.isDynamic && (
@@ -1651,7 +1710,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1662,7 +1724,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1674,7 +1739,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1686,7 +1754,10 @@ const SurveyHistoryPage: React.FC = () => {
                                   sx={{
                                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                     color: '#667eea',
-                                    height: '24px'
+                                    height: '24px',
+                                    '& .MuiChip-icon': {
+                                      color: '#667eea'
+                                    }
                                   }}
                                 />
                               )}
@@ -1700,10 +1771,27 @@ const SurveyHistoryPage: React.FC = () => {
                           borderColor: 'divider',
                           backgroundColor: 'action.hover',
                           display: 'flex',
-                          justifyContent: 'flex-end',
+                          justifyContent: 'space-between',
                           position: 'relative',
                           zIndex: 1
                         }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="primary"
+                            onClick={() => {}} // Placeholder pour maintenir la cohérence visuelle
+                            sx={{
+                              visibility: 'hidden', // Caché mais préserve l'espace
+                              borderColor: '#667eea',
+                              color: '#667eea',
+                              '&:hover': {
+                                borderColor: '#764ba2',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              },
+                            }}
+                          >
+                            Placeholder
+                          </Button>
                           <Button
                             onClick={() => handleExpandClick(survey._id)}
                             variant="contained"
@@ -1711,6 +1799,7 @@ const SurveyHistoryPage: React.FC = () => {
                             className="view-details-button"
                             data-tutorial="view-details-button"
                             sx={{
+                              ml: 'auto',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                               '&:hover': {
                                 background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
