@@ -1102,19 +1102,17 @@ const SurveyHistoryPage: React.FC = () => {
               />
 
               <Stack 
-                direction="row" 
-                spacing={2} 
-                alignItems="center"
+                direction="row"
+                spacing={1}
                 sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
                   flexWrap: 'wrap',
-                  gap: 1,
+                  gap: '8px',
+                  minHeight: '56px',
+                  mb: 2,
                   '& .MuiChip-root': {
-                    margin: '0 !important',
-                    '@media (max-width: 600px)': {
-                      width: '100%',
-                      justifyContent: 'center',
-                      marginBottom: '8px !important'
-                    }
+                    margin: '0 !important'
                   }
                 }}
               >
@@ -1364,11 +1362,15 @@ const SurveyHistoryPage: React.FC = () => {
                             </Typography>
                             
                             <Stack 
-                              direction="row" 
-                              spacing={1} 
+                              direction="row"
+                              spacing={1}
                               sx={{
+                                display: 'flex',
+                                flexDirection: 'row',
                                 flexWrap: 'wrap',
-                                gap: 1,
+                                gap: '8px',
+                                minHeight: '56px',
+                                mb: 2,
                                 '& .MuiChip-root': {
                                   margin: '0 !important'
                                 }
@@ -1647,41 +1649,48 @@ const SurveyHistoryPage: React.FC = () => {
                           </Box>
 
                           <Stack 
-                            direction="column" 
-                            spacing={1} 
-                            sx={{ 
-                              mt: 'auto',
-                              position: 'relative',
-                              zIndex: 1,
-                              minHeight: '60px'
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'row',
+                              flexWrap: 'wrap',
+                              gap: '8px',
+                              minHeight: '56px',
+                              mb: 2,
+                              '& .MuiChip-root': {
+                                margin: '0 !important'
+                              }
                             }}
                           >
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
+                            <Chip
+                              size="small"
+                              label={`${survey.questions?.length || 0} questions`}
                               sx={{
-                                display: 'block',
-                                mb: 1,
-                                fontSize: '0.75rem'
-                              }}
-                            >
-                              Created on {formatDate(survey.createdAt)}
-                            </Typography>
-                            
-                            <Stack 
-                              direction="row" 
-                              spacing={1} 
-                              sx={{
-                                flexWrap: 'wrap',
-                                gap: 1,
-                                '& .MuiChip-root': {
-                                  margin: '0 !important'
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                color: '#667eea',
+                                height: '24px',
+                                '& .MuiChip-icon': {
+                                  color: '#667eea'
                                 }
                               }}
-                            >
+                            />
+                            <Chip
+                              size="small"
+                              label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                              sx={{
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                color: '#667eea',
+                                height: '24px',
+                                '& .MuiChip-icon': {
+                                  color: '#667eea'
+                                }
+                              }}
+                            />
+                            {survey.isDynamic && (
                               <Chip
                                 size="small"
-                                label={`${survey.questions?.length || 0} questions`}
+                                label="Dynamic"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
@@ -1691,9 +1700,11 @@ const SurveyHistoryPage: React.FC = () => {
                                   }
                                 }}
                               />
+                            )}
+                            {!survey.isDynamic && (
                               <Chip
                                 size="small"
-                                label={survey.demographicEnabled ? 'Demographics' : 'No Demographics'}
+                                label="Static"
                                 sx={{
                                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                   color: '#667eea',
@@ -1703,65 +1714,37 @@ const SurveyHistoryPage: React.FC = () => {
                                   }
                                 }}
                               />
-                              {survey.isDynamic && (
-                                <Chip
-                                  size="small"
-                                  label="Dynamic"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {!survey.isDynamic && (
-                                <Chip
-                                  size="small"
-                                  label="Static"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {/* @ts-ignore */}
-                              {survey.isPrivate && (
-                                <Chip
-                                  size="small"
-                                  label="Private"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                              {/* @ts-ignore */}
-                              {survey.isPrivate === false && (
-                                <Chip
-                                  size="small"
-                                  label="Public"
-                                  sx={{
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    color: '#667eea',
-                                    height: '24px',
-                                    '& .MuiChip-icon': {
-                                      color: '#667eea'
-                                    }
-                                  }}
-                                />
-                              )}
-                            </Stack>
+                            )}
+                            {/* @ts-ignore */}
+                            {survey.isPrivate && (
+                              <Chip
+                                size="small"
+                                label="Private"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
+                                }}
+                              />
+                            )}
+                            {/* @ts-ignore */}
+                            {survey.isPrivate === false && (
+                              <Chip
+                                size="small"
+                                label="Public"
+                                sx={{
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  color: '#667eea',
+                                  height: '24px',
+                                  '& .MuiChip-icon': {
+                                    color: '#667eea'
+                                  }
+                                }}
+                              />
+                            )}
                           </Stack>
                         </Box>
                         
