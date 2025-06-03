@@ -991,7 +991,6 @@ const SurveyAnswerPage: React.FC = () => {
 
         return (
           <Box sx={{ width: '100%' }}>
-            {question.media && renderQuestionMedia(question.media)}
             {component}
             {isCriticalQuestion(question.id) && (
               <Chip 
