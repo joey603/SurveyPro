@@ -646,14 +646,14 @@ router.post('/forgot-password', async (req, res) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <img src="https://surveyflow.co/logo.png" alt="SurveyFlow Logo" style="max-width: 150px; height: auto;">
+            <h1 style="background: linear-gradient(90deg, #6C3BFE 0%, #A259FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-size: 32px; font-weight: bold;">SurveyFlow</h1>
           </div>
           <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
           <p style="color: #666; line-height: 1.5;">Hello,</p>
           <p style="color: #666; line-height: 1.5;">We received a request to reset your password for your SurveyFlow account. If you didn't make this request, you can safely ignore this email.</p>
           <p style="color: #666; line-height: 1.5;">To reset your password, click the button below:</p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${resetUrl}" style="background-color: #4a90e2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Your Password</a>
+            <a href="${resetUrl}" style="background: linear-gradient(90deg, #6C3BFE 0%, #A259FF 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Your Password</a>
           </div>
           <p style="color: #666; line-height: 1.5;">This link will expire in 1 hour for security reasons.</p>
           <p style="color: #666; line-height: 1.5;">If the button above doesn't work, copy and paste the following link into your browser:</p>
@@ -663,7 +663,25 @@ router.post('/forgot-password', async (req, res) => {
             <p>This is an automated message, please do not reply.</p>
           </div>
         </div>
-      `
+      `,
+      trackingSettings: {
+        clickTracking: { enable: false },
+        openTracking: { enable: false },
+        subscriptionTracking: { enable: false }
+      },
+      headers: {
+        'X-SurveyFlow-Authentication': 'true',
+        'List-Unsubscribe': `<mailto:unsubscribe@surveyflow.co?subject=unsubscribe>, <https://surveyflow.co/unsubscribe?email=${email}>`,
+        'Precedence': 'Bulk'
+      },
+      mailSettings: {
+        sandboxMode: {
+          enable: false
+        },
+        bypassListManagement: {
+          enable: true
+        }
+      }
     };
 
     await sgMail.send(msg);
@@ -728,13 +746,13 @@ const sendVerificationEmail = async (email, verificationCode) => {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://surveyflow.co/logo.png" alt="SurveyFlow Logo" style="max-width: 150px; height: auto;">
+          <h1 style="background: linear-gradient(90deg, #6C3BFE 0%, #A259FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-size: 32px; font-weight: bold;">SurveyFlow</h1>
         </div>
         <h2 style="color: #333; text-align: center;">Verify Your Email Address</h2>
         <p style="color: #666; line-height: 1.5;">Hello,</p>
         <p style="color: #666; line-height: 1.5;">Welcome to SurveyFlow! To complete your registration, please use the verification code below:</p>
         <div style="text-align: center; margin: 25px 0;">
-          <h1 style="color: #4a90e2; font-size: 36px; letter-spacing: 5px; background-color: #f5f5f5; padding: 15px; border-radius: 5px; display: inline-block;">${verificationCode}</h1>
+          <h1 style="color: #6C3BFE; font-size: 36px; letter-spacing: 5px; background-color: #f5f5f5; padding: 15px; border-radius: 5px; display: inline-block;">${verificationCode}</h1>
         </div>
         <p style="color: #666; line-height: 1.5;">This code will expire in 24 hours.</p>
         <p style="color: #666; line-height: 1.5;">If you did not create an account on SurveyFlow, you can safely ignore this email.</p>
@@ -743,18 +761,32 @@ const sendVerificationEmail = async (email, verificationCode) => {
           <p>This is an automated message, please do not reply.</p>
         </div>
       </div>
-    `
+    `,
+    trackingSettings: {
+      clickTracking: { enable: false },
+      openTracking: { enable: false },
+      subscriptionTracking: { enable: false }
+    },
+    headers: {
+      'X-SurveyFlow-Verification': 'true',
+      'List-Unsubscribe': `<mailto:unsubscribe@surveyflow.co?subject=unsubscribe>, <https://surveyflow.co/unsubscribe?email=${email}>`,
+      'Precedence': 'Bulk',
+      'X-Auto-Response-Suppress': 'OOF, AutoReply'
+    },
+    mailSettings: {
+      sandboxMode: {
+        enable: false
+      },
+      bypassListManagement: {
+        enable: true
+      }
+    },
+    categories: ['verification']
   };
 
   try {
     console.log('Configuring SendGrid with API key...');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    
-    // Ajout d'en-têtes DKIM et SPF pour améliorer la délivrabilité
-    msg.headers = {
-      'X-SurveyFlow-Verification': 'true',
-      'List-Unsubscribe': `<mailto:unsubscribe@surveyflow.co?subject=unsubscribe>, <https://surveyflow.co/unsubscribe?email=${email}>`
-    };
     
     console.log('Sending email...');
     const response = await sgMail.send(msg);
