@@ -391,10 +391,39 @@ const SurveyAnswerPage: React.FC = () => {
     };
 
     if (selectedSurvey?.demographicEnabled) {
-      fetchLastDemographicData();
+      // Fonction asynchrone pour charger les données démographiques
+      const loadDemographicData = async () => {
+        try {
+          // Essayer d'abord de charger depuis le backend
+          const backendSuccess = await fetchLastDemographicData();
+          
+          // Si aucune donnée n'est trouvée dans le backend, essayer le localStorage
+          if (!backendSuccess) {
+            const savedDemographicData = localStorage.getItem('lastDemographicData');
+            if (savedDemographicData) {
+              try {
+                const data = JSON.parse(savedDemographicData);
+                setValue('demographic.gender', data.gender || '');
+                setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+                setValue('demographic.educationLevel', data.educationLevel || '');
+                setValue('demographic.city', data.city || '');
+                
+                // Mettre à jour l'état local pour afficher le badge "Auto"
+                setLastDemographicData(data);
+              } catch (error) {
+                console.error('Error loading demographic data from localStorage:', error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading demographic data:', error);
+        }
+      };
+      
+      loadDemographicData();
       loadCities();
     }
-  }, [selectedSurvey]);
+  }, [selectedSurvey, setValue]);
 
   const filteredSurveys = surveys
     .filter(survey => {
@@ -1219,28 +1248,31 @@ const SurveyAnswerPage: React.FC = () => {
     console.log("Current answered surveys:", answeredSurveys);
   }, [answeredSurveys]);
 
-  // Charger les données démographiques sauvegardées lors du premier rendu
+  // Charger les données démographiques sauvegardées lors du premier rendu (seulement s'il n'y a pas de sondage sélectionné)
   useEffect(() => {
-    // D'abord essayer de charger depuis le backend
-    fetchLastDemographicData();
-    
-    // Ensuite, vérifier si des données sont présentes dans le localStorage
-    const savedDemographicData = localStorage.getItem('lastDemographicData');
-    if (savedDemographicData) {
-      try {
-        const data = JSON.parse(savedDemographicData);
-        setValue('demographic.gender', data.gender || '');
-        setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
-        setValue('demographic.educationLevel', data.educationLevel || '');
-        setValue('demographic.city', data.city || '');
-        
-        // Mettre à jour l'état local pour afficher le badge "Auto"
-        setLastDemographicData(data);
-      } catch (error) {
-        console.error('Error loading demographic data from local storage:', error);
+    // Charger uniquement si aucun sondage n'est sélectionné (pour éviter les doublons)
+    if (!selectedSurvey) {
+      // D'abord essayer de charger depuis le backend
+      fetchLastDemographicData();
+      
+      // Ensuite, vérifier si des données sont présentes dans le localStorage
+      const savedDemographicData = localStorage.getItem('lastDemographicData');
+      if (savedDemographicData) {
+        try {
+          const data = JSON.parse(savedDemographicData);
+          setValue('demographic.gender', data.gender || '');
+          setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
+          setValue('demographic.educationLevel', data.educationLevel || '');
+          setValue('demographic.city', data.city || '');
+          
+          // Mettre à jour l'état local pour afficher le badge "Auto"
+          setLastDemographicData(data);
+        } catch (error) {
+          console.error('Error loading demographic data from local storage:', error);
+        }
       }
     }
-  }, [setValue]);
+  }, [setValue, selectedSurvey]);
 
   const fetchSurveyResponses = async () => {
     try {
@@ -1345,8 +1377,9 @@ const SurveyAnswerPage: React.FC = () => {
   const fetchLastDemographicData = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) return false;
 
+      console.log('Fetching demographic data from backend...');
       const response = await fetch(`${BASE_URL}/survey-answers/last-demographic`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1373,15 +1406,16 @@ const SurveyAnswerPage: React.FC = () => {
           
           return true;
         }
+        return false;
       } else if (response.status === 404) {
         console.log('No demographic data found in the backend');
         return false;
       } else {
-        console.error('Error retrieving demographic data:', await response.text());
+        console.error('Error retrieving demographic data from backend:', await response.text());
         return false;
       }
     } catch (error) {
-      console.error('Error retrieving demographic data:', error);
+      console.error('Error retrieving demographic data from backend:', error);
       return false;
     }
   };
