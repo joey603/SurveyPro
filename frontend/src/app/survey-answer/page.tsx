@@ -161,6 +161,28 @@ const SurveyAnswerPage: React.FC = () => {
       answers: {}
     }
   });
+  
+  // Fonction pour obtenir l'ID utilisateur à partir du token JWT
+  const getUserIDFromToken = (token: string): string | null => {
+    try {
+      // Décoder le token JWT (structure simple sans validation)
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      
+      const payload = JSON.parse(jsonPayload);
+      return payload.id || payload.userId || null;
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  };
+  
   const [dateRange, setDateRange] = useState<{
     start: Date | null;
     end: Date | null;
@@ -680,7 +702,18 @@ const SurveyAnswerPage: React.FC = () => {
         open: true
       });
 
+      // Mettre à jour la liste des sondages répondus dans le state
       setAnsweredSurveys(prev => [...prev, selectedSurvey._id]);
+      
+      // Stocker également l'ID du sondage dans le localStorage
+      const userID = getUserIDFromToken(token);
+      if (userID) {
+        const localStorageKey = `answeredSurveys_${userID}`;
+        const existingAnswers = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        const updatedAnswers = [...existingAnswers, selectedSurvey._id];
+        localStorage.setItem(localStorageKey, JSON.stringify(updatedAnswers));
+      }
+      
       clearSavedAnswers();
       reset();
       setSelectedSurvey(null);
@@ -1522,8 +1555,23 @@ const SurveyAnswerPage: React.FC = () => {
   };
 
   // Modifier la fonction hasAnswered pour gérer les deux types de sondages
-  const hasAnswered = (surveyId: string) => {
-    return answeredSurveys.includes(surveyId);
+  const hasAnswered = (surveyId: string): boolean => {
+    // Vérifier d'abord dans le state
+    if (answeredSurveys.includes(surveyId)) {
+      return true;
+    }
+    
+    // Vérifier ensuite dans le localStorage
+    const token = localStorage.getItem('accessToken');
+    if (!token) return false;
+    
+    const userID = getUserIDFromToken(token);
+    if (!userID) return false;
+    
+    const localStorageKey = `answeredSurveys_${userID}`;
+    const localAnswers = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+    
+    return localAnswers.includes(surveyId);
   };
 
   // Fonction pour ordonner les nœuds selon le flux
