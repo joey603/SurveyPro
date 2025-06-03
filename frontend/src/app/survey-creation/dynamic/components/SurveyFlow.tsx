@@ -29,6 +29,8 @@ import { IconButton, Fab, Button, Tooltip } from '@mui/material';
 interface SurveyFlowProps {
   onAddNode: () => void;
   onEdgesChange: (edges: Edge[]) => void;
+  hasAttemptedSubmit?: boolean;
+  onNodesChange?: () => void;
 }
 
 const nodeTypes = {
@@ -55,7 +57,7 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
-const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEdgesChange }, ref) => {
+const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEdgesChange, hasAttemptedSubmit = false, onNodesChange }, ref) => {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
@@ -622,7 +624,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
 
   }, [nodes, handleNodeChange, reactFlowInstance]);
 
-  const onNodesChange = useCallback(
+  const onNodesChangeCallback = useCallback(
     (changes: NodeChange[]) => {
       // Détecter si un nœud est en cours de déplacement
       changes.forEach(change => {
@@ -632,9 +634,16 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
           setMovingNodeId(null);
         }
       });
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      setNodes((nds) => {
+        const updatedNodes = applyNodeChanges(changes, nds);
+        // Notifier le parent des changements de nœuds
+        if (onNodesChange) {
+          onNodesChange();
+        }
+        return updatedNodes;
+      });
     },
-    []
+    [onNodesChange]
   );
 
   const onEdgesChangeCallback = useCallback(
@@ -1048,6 +1057,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
     const isChildOfCritical = parentNode?.data?.isCritical;
     const isNodeInEditMode = node.data && node.data._editingState;
     const isMoving = node.id === movingNodeId;
+    const isEmptyQuestion = !node.data.text?.trim();
+    // Ne montrer les contours rouges que si l'utilisateur a tenté de soumettre
+    const shouldShowError = hasAttemptedSubmit && isEmptyQuestion;
 
     return {
       ...node,
@@ -1059,7 +1071,9 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
       },
       style: {
         ...node.style,
-        border: node.id === selectedNode ? '2px solid #ff4444' : undefined,
+        border: node.id === selectedNode 
+          ? '2px solid #7e57c2' // Couleur violette (deep purple)
+          : (shouldShowError ? '2px solid rgba(255, 119, 119, 0.6)' : undefined),
         width: 450,
         // Gérer les priorités de z-index:
         // 1. Nœuds en déplacement (z-index: 2000) - priorité absolue
@@ -1070,7 +1084,11 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
         // Ajouter une ombre plus prononcée pour les nœuds en mode édition ou en déplacement
         boxShadow: isMoving 
           ? '0 12px 30px rgba(0, 0, 0, 0.35)' 
-          : (isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : undefined),
+          : (isNodeInEditMode ? '0 8px 20px rgba(0, 0, 0, 0.25)' : 
+             node.id === selectedNode
+               ? '0 0 10px rgba(126, 87, 194, 0.4)' // Ombre violette pour les nœuds sélectionnés
+               : (shouldShowError ? '0 0 6px rgba(255, 0, 0, 0.15)' : undefined)),
+        backgroundColor: shouldShowError ? 'rgba(255, 245, 245, 0.5)' : undefined
       }
     };
   });
@@ -1934,7 +1952,7 @@ const SurveyFlow = forwardRef<SurveyFlowRef, SurveyFlowProps>(({ onAddNode, onEd
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
+            onNodesChange={onNodesChangeCallback}
             onEdgesChange={onEdgesChangeCallback}
             onConnect={onConnect}
             onEdgeUpdate={onEdgeUpdate}

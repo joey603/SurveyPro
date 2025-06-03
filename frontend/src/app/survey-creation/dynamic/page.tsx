@@ -108,6 +108,12 @@ export default function DynamicSurveyCreation() {
   const [previewNodes, setPreviewNodes] = useState<any[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [cities, setCities] = useState<string[]>([]);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [completionStats, setCompletionStats] = useState({ 
+    completed: 0, 
+    total: 0, 
+    percentage: 0 
+  });
   const flowRef = useRef<SurveyFlowRef | null>(null);
   
   const { control, handleSubmit, setValue, watch, reset } = useForm<FormData>({
@@ -221,6 +227,7 @@ export default function DynamicSurveyCreation() {
   };
 
   const onSubmit = async (data: FormData) => {
+    setHasAttemptedSubmit(true);
     setIsSubmitting(true);
     try {
       // Validation côté client
@@ -230,6 +237,7 @@ export default function DynamicSurveyCreation() {
           message: 'Le titre du sondage est requis',
           type: 'error'
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -240,15 +248,31 @@ export default function DynamicSurveyCreation() {
           message: 'Token d\'authentification non trouvé',
           type: 'error'
         });
+        setIsSubmitting(false);
         return;
       }
 
       if (!flowRef.current) {
         setNotification({
           show: true,
-          message: 'Erreur de référence au flow',
+          message: 'Error referencing flow',
           type: 'error'
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Vérifier que toutes les questions ont un texte
+      const allNodes = flowRef.current.getNodes();
+      const emptyQuestions = allNodes.filter(node => !node.data.text?.trim());
+      
+      if (emptyQuestions.length > 0) {
+        setNotification({
+          show: true,
+          message: `Please fill the text of all questions. ${emptyQuestions.length} question(s) empty.`,
+          type: 'error'
+        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -256,7 +280,6 @@ export default function DynamicSurveyCreation() {
       flowRef.current.reorganizeFlow();
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const allNodes = flowRef.current.getNodes();
       const cleanedNodes = allNodes.map(node => ({
         ...node,
         data: {
@@ -312,10 +335,10 @@ export default function DynamicSurveyCreation() {
       }
 
     } catch (error: any) {
-      console.error('Erreur lors de la création du sondage:', error);
+      console.error('Error creating survey:', error);
       setNotification({
         show: true,
-        message: error.message || 'Erreur lors de la création du sondage',
+        message: error.message || 'Error creating survey',
         type: 'error'
       });
     } finally {
@@ -326,6 +349,9 @@ export default function DynamicSurveyCreation() {
   const handleOpenPreview = () => {
     if (flowRef.current) {
       const nodes = flowRef.current.getNodes();
+      
+      // Vérification des champs vides supprimée pour le preview
+      
       const orderedNodes = getOrderedNodesFromFlow(nodes);
       setPreviewNodes(orderedNodes);
       // Réinitialiser tous les états liés au preview
@@ -1518,6 +1544,37 @@ export default function DynamicSurveyCreation() {
     intro.start();
   };
 
+  // Fonction pour mettre à jour les statistiques de complétion
+  const updateCompletionStats = useCallback(() => {
+    if (flowRef.current) {
+      const nodes = flowRef.current.getNodes();
+      const total = nodes.length;
+      const completed = nodes.filter(node => node.data.text?.trim()).length;
+      const percentage = Math.round((completed / total) * 100);
+      
+      setCompletionStats({
+        completed,
+        total,
+        percentage
+      });
+    }
+  }, []);
+
+  // Mettre à jour les statistiques chaque fois que les nœuds changent
+  useEffect(() => {
+    updateCompletionStats();
+    
+    // Créer un intervalle pour vérifier périodiquement les changements
+    const interval = setInterval(updateCompletionStats, 1000);
+    
+    return () => clearInterval(interval);
+  }, [updateCompletionStats]);
+
+  // Écouter les changements aux nœuds via SurveyFlow
+  const handleNodesChange = useCallback(() => {
+    updateCompletionStats();
+  }, [updateCompletionStats]);
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       {/* Notification */}
@@ -1820,9 +1877,12 @@ export default function DynamicSurveyCreation() {
               if (flowRef.current) {
                 const nodes = flowRef.current.getNodes();
                 setPreviewNodes(nodes);
+                updateCompletionStats();
               }
             }} 
             onEdgesChange={handleEdgesChange}
+            hasAttemptedSubmit={hasAttemptedSubmit}
+            onNodesChange={handleNodesChange}
           />
           
           <Tooltip title="Add Question" placement="left">
@@ -1851,6 +1911,53 @@ export default function DynamicSurveyCreation() {
           </Box>
         </Box>
       </Paper>
+
+      {/* Indicateur de complétion des questions */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          alignItems: 'center', 
+          mt: 2, 
+          mb: 2, 
+          gap: 2 
+        }}
+      >
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            color: hasAttemptedSubmit && completionStats.completed < completionStats.total 
+              ? 'rgba(211, 47, 47, 0.7)' 
+              : completionStats.completed === completionStats.total 
+                ? 'success.main' 
+                : 'text.secondary'
+          }}
+        >
+          Questions complétées: {completionStats.completed}/{completionStats.total} ({completionStats.percentage}%)
+        </Typography>
+        <Box 
+          sx={{ 
+            width: '200px', 
+            height: '8px', 
+            bgcolor: 'grey.200', 
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}
+        >
+          <Box 
+            sx={{ 
+              width: `${completionStats.percentage}%`, 
+              height: '100%', 
+              bgcolor: hasAttemptedSubmit && completionStats.completed < completionStats.total 
+                ? 'rgba(211, 47, 47, 0.6)' 
+                : completionStats.completed === completionStats.total 
+                  ? 'success.main' 
+                  : 'primary.main',
+              transition: 'width 0.3s ease, background-color 0.3s ease'
+            }} 
+          />
+        </Box>
+      </Box>
 
       {/* Boutons d'action en dehors du Paper principal */}
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 3 }}>
