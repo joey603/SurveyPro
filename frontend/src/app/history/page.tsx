@@ -864,15 +864,17 @@ const SurveyHistoryPage: React.FC = () => {
                           );
 
                         case 'yes-no':
+                          // Normaliser la réponse en minuscules pour éviter les problèmes de casse
+                          const normalizedAnswer = userAnswer?.toLowerCase?.() || '';
                           return (
                             <Stack direction="row" spacing={2}>
                               <Chip
                                 label="Yes"
-                                color={userAnswer === 'yes' ? "primary" : "default"}
-                                variant={userAnswer === 'yes' ? "filled" : "outlined"}
+                                color={normalizedAnswer === 'yes' || normalizedAnswer === 'oui' ? "primary" : "default"}
+                                variant={normalizedAnswer === 'yes' || normalizedAnswer === 'oui' ? "filled" : "outlined"}
                                 sx={{
                                   '&.MuiChip-filled': {
-                                    background: userAnswer === 'yes' ? 
+                                    background: normalizedAnswer === 'yes' || normalizedAnswer === 'oui' ? 
                                       'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
                                       'inherit'
                                   }
@@ -880,11 +882,11 @@ const SurveyHistoryPage: React.FC = () => {
                               />
                               <Chip
                                 label="No"
-                                color={userAnswer === 'no' ? "primary" : "default"}
-                                variant={userAnswer === 'no' ? "filled" : "outlined"}
+                                color={normalizedAnswer === 'no' || normalizedAnswer === 'non' ? "primary" : "default"}
+                                variant={normalizedAnswer === 'no' || normalizedAnswer === 'non' ? "filled" : "outlined"}
                                 sx={{
                                   '&.MuiChip-filled': {
-                                    background: userAnswer === 'no' ? 
+                                    background: normalizedAnswer === 'no' || normalizedAnswer === 'non' ? 
                                       'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
                                       'inherit'
                                   }
