@@ -748,7 +748,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
         <div style="text-align: center; margin-bottom: 20px;">
           <h1 style="background: linear-gradient(90deg, #6C3BFE 0%, #A259FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-size: 32px; font-weight: bold;">SurveyFlow</h1>
         </div>
-        <h2 style="color: #333; text-align: center;">Verify Your Email Address (see the Spam )</h2>
+        <h2 style="color: #333; text-align: center;">Verify Your Email Address </h2>
         <p style="color: #666; line-height: 1.5;">Hello,</p>
         <p style="color: #666; line-height: 1.5;">Welcome to SurveyFlow! To complete your registration, please use the verification code below:</p>
         <div style="text-align: center; margin: 25px 0;">
