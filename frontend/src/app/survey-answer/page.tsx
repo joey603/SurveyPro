@@ -1715,6 +1715,9 @@ const SurveyAnswerPage: React.FC = () => {
                   <Typography variant="h6" gutterBottom>
                     {node.data.text || node.data.label || 'Question without text'}
                   </Typography>
+                  
+                  {/* Afficher le média s'il existe */}
+                  {(node.data.mediaUrl || node.data.media) && renderQuestionMedia(node.data.mediaUrl || node.data.media)}
 
                   <Box sx={{ mt: 2 }}>
                     {renderQuestionInput({
