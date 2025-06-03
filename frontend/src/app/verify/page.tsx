@@ -63,7 +63,7 @@ const VerifyPage = () => {
         },
         withCredentials: true
       });
-      setMessage("A new code has been sent to your email.");
+      setMessage("A new code has been sent to your email (See in Spam folder if you don't see it).");
       setResendCooldown(60);
       const timer = setInterval(() => {
         setResendCooldown((prev) => {
