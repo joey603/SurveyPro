@@ -638,24 +638,30 @@ router.post('/forgot-password', async (req, res) => {
     
     const msg = {
       to: email,
-      from: process.env.EMAIL_FROM,
-      subject: "Password reset request",
+      from: {
+        email: process.env.EMAIL_FROM,
+        name: 'SurveyFlow'
+      },
+      subject: "SurveyFlow - Password Reset Request",
       html: `
-        <div style="text-align: center; font-family: Arial, sans-serif;">
-          <h2>Password reset request</h2>
-          <p>You have requested to reset your password.</p>
-          <p>Click the button below to set a new password:</p>
-          <a href="${resetUrl}" style="
-            background-color: #4a90e2;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            display: inline-block;
-            margin: 20px 0;
-          ">Reset password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you did not request this reset, ignore this email.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://surveyflow.co/logo.png" alt="SurveyFlow Logo" style="max-width: 150px; height: auto;">
+          </div>
+          <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
+          <p style="color: #666; line-height: 1.5;">Hello,</p>
+          <p style="color: #666; line-height: 1.5;">We received a request to reset your password for your SurveyFlow account. If you didn't make this request, you can safely ignore this email.</p>
+          <p style="color: #666; line-height: 1.5;">To reset your password, click the button below:</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${resetUrl}" style="background-color: #4a90e2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Your Password</a>
+          </div>
+          <p style="color: #666; line-height: 1.5;">This link will expire in 1 hour for security reasons.</p>
+          <p style="color: #666; line-height: 1.5;">If the button above doesn't work, copy and paste the following link into your browser:</p>
+          <p style="background-color: #f5f5f5; padding: 10px; border-radius: 3px; word-break: break-all; font-size: 14px;">${resetUrl}</p>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #999; font-size: 12px; text-align: center;">
+            <p>© ${new Date().getFullYear()} SurveyFlow. All rights reserved.</p>
+            <p>This is an automated message, please do not reply.</p>
+          </div>
         </div>
       `
     };
@@ -706,7 +712,7 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-// Ajouter cette fonction avant les routes
+// Mise à jour de la fonction d'envoi d'email de vérification
 const sendVerificationEmail = async (email, verificationCode) => {
   console.log('Attempting to send verification email to:', email);
   console.log('Verification code:', verificationCode);
@@ -714,20 +720,28 @@ const sendVerificationEmail = async (email, verificationCode) => {
   
   const msg = {
     to: email,
-    from: process.env.EMAIL_FROM,
-    subject: 'Verification of your SurveyPro account',
+    from: {
+      email: process.env.EMAIL_FROM,
+      name: 'SurveyFlow'
+    },
+    subject: 'SurveyFlow - Verify Your Email Address',
     html: `
-      <div style="text-align: center; font-family: Arial, sans-serif;">
-        <h2>Welcome to SurveyPro !</h2>
-        <p>Your verification code is :</p>
-        <h1 style="
-          color: #4a90e2;
-          font-size: 36px;
-          margin: 20px 0;
-          letter-spacing: 5px;
-        ">${verificationCode}</h1>
-        <p>This code will expire in 24 hours.</p>
-        <p>If you did not create an account on SurveyFlow, you can ignore this email.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://surveyflow.co/logo.png" alt="SurveyFlow Logo" style="max-width: 150px; height: auto;">
+        </div>
+        <h2 style="color: #333; text-align: center;">Verify Your Email Address</h2>
+        <p style="color: #666; line-height: 1.5;">Hello,</p>
+        <p style="color: #666; line-height: 1.5;">Welcome to SurveyFlow! To complete your registration, please use the verification code below:</p>
+        <div style="text-align: center; margin: 25px 0;">
+          <h1 style="color: #4a90e2; font-size: 36px; letter-spacing: 5px; background-color: #f5f5f5; padding: 15px; border-radius: 5px; display: inline-block;">${verificationCode}</h1>
+        </div>
+        <p style="color: #666; line-height: 1.5;">This code will expire in 24 hours.</p>
+        <p style="color: #666; line-height: 1.5;">If you did not create an account on SurveyFlow, you can safely ignore this email.</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #999; font-size: 12px; text-align: center;">
+          <p>© ${new Date().getFullYear()} SurveyFlow. All rights reserved.</p>
+          <p>This is an automated message, please do not reply.</p>
+        </div>
       </div>
     `
   };
@@ -735,6 +749,13 @@ const sendVerificationEmail = async (email, verificationCode) => {
   try {
     console.log('Configuring SendGrid with API key...');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    
+    // Ajout d'en-têtes DKIM et SPF pour améliorer la délivrabilité
+    msg.headers = {
+      'X-SurveyFlow-Verification': 'true',
+      'List-Unsubscribe': `<mailto:unsubscribe@surveyflow.co?subject=unsubscribe>, <https://surveyflow.co/unsubscribe?email=${email}>`
+    };
+    
     console.log('Sending email...');
     const response = await sgMail.send(msg);
     console.log('Email sent successfully:', response);
