@@ -1233,6 +1233,9 @@ const SurveyAnswerPage: React.FC = () => {
         setValue('demographic.dateOfBirth', data.dateOfBirth ? new Date(data.dateOfBirth) : null);
         setValue('demographic.educationLevel', data.educationLevel || '');
         setValue('demographic.city', data.city || '');
+        
+        // Mettre à jour l'état local pour afficher le badge "Auto"
+        setLastDemographicData(data);
       } catch (error) {
         console.error('Error loading demographic data from local storage:', error);
       }
