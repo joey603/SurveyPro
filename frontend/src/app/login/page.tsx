@@ -376,7 +376,29 @@ const LoginPage: React.FC = () => {
       console.error('Connection error:', err);
       
       if (err.response?.data?.message) {
-        setError(err.response.data.message);
+        // Vérifier si l'erreur est due à un compte non vérifié
+        if (err.response.data.isVerified === false) {
+          console.log('Compte non vérifié, redirection vers la page de vérification');
+          setError('Compte non vérifié. Vous allez être redirigé vers la page de vérification.');
+          // Stocker l'email dans le localStorage pour la page de vérification
+          localStorage.setItem('email', email.toLowerCase());
+          // Rediriger vers la page de vérification après un court délai
+          setTimeout(() => {
+            router.push('/verify');
+          }, 1500);
+        } else {
+          // Traduire les messages d'erreur courants
+          const errorMsg = err.response.data.message;
+          if (errorMsg === "Account not found") {
+            setError("Compte introuvable");
+          } else if (errorMsg === "Incorrect password") {
+            setError("Mot de passe incorrect");
+          } else if (errorMsg.includes("account already exists with this email")) {
+            setError("Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.");
+          } else {
+            setError(errorMsg);
+          }
+        }
       } else {
         setError('Error during connection. Please try again.');
       }
