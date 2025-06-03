@@ -730,17 +730,26 @@ const SurveyAnswerPage: React.FC = () => {
   };
 
   const renderQuestionMedia = (media: string) => {
-    console.log('Rendering media:', media);
+    console.log('Rendering media (detailed):', media);
+    console.log('Media type:', typeof media);
+    console.log('Media length:', media ? media.length : 0);
 
-    if (!media) return null;
+    if (!media) {
+      console.log('Media is empty or null, returning null');
+      return null;
+    }
 
     // Utiliser directement l'URL Cloudinary
     const fullUrl = media;
     console.log('Full media URL:', fullUrl);
+    console.log('URL valide?', Boolean(fullUrl.match(/^https?:\/\//)));
 
     // Déterminer le type de média basé sur l'extension du fichier
     const isVideo = fullUrl.match(/\.(mp4|mov|webm)$/i);
     const isImage = fullUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    
+    console.log('Is video?', Boolean(isVideo));
+    console.log('Is image?', Boolean(isImage));
 
     if (isVideo) {
       return (
@@ -793,7 +802,32 @@ const SurveyAnswerPage: React.FC = () => {
       );
     }
 
-    return null;
+    // Si ce n'est ni une image ni une vidéo, essayer de l'afficher comme une image
+    console.log('Media is not recognized as image or video, trying as image');
+    return (
+      <Box sx={{ width: '100%', maxWidth: '500px', margin: '0 auto', mb: 2 }}>
+        <Box
+          component="img"
+          src={fullUrl}
+          alt="Question media"
+          sx={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: '8px',
+            objectFit: 'contain',
+            maxHeight: '400px',
+            backgroundColor: 'background.paper',
+            boxShadow: 1
+          }}
+          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+            console.error('Error loading unrecognized media as image:', e);
+            console.log('URL that failed:', fullUrl);
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+          onLoad={() => console.log('Unrecognized media loaded successfully as image')}
+        />
+      </Box>
+    );
   };
 
   const clearError = (fieldPath: string) => {
@@ -1716,7 +1750,11 @@ const SurveyAnswerPage: React.FC = () => {
                     {node.data.text || node.data.label || 'Question without text'}
                   </Typography>
                   
-                  {/* Afficher le média s'il existe */}
+                  {/* Inspection et debugging des médias */}
+                  {console.log('Node data:', node.data)}
+                  {console.log('Media info - mediaUrl:', node.data.mediaUrl, 'media:', node.data.media)}
+                  
+                  {/* Afficher le média s'il existe - avec priorité sur mediaUrl */}
                   {(node.data.mediaUrl || node.data.media) && renderQuestionMedia(node.data.mediaUrl || node.data.media)}
 
                   <Box sx={{ mt: 2 }}>
