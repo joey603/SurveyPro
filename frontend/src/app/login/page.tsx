@@ -390,9 +390,9 @@ const LoginPage: React.FC = () => {
           // Traduire les messages d'erreur courants
           const errorMsg = err.response.data.message;
           if (errorMsg === "Account not found") {
-            setError("Compte introuvable");
+            setError("Account not found");
           } else if (errorMsg === "Incorrect password") {
-            setError("Mot de passe incorrect");
+            setError("Incorrect password");
           } else if (errorMsg.includes("account already exists with this email")) {
             setError("An account already exists with this email. Please use your usual connection method.");
           } else {
