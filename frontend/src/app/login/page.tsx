@@ -294,8 +294,8 @@ const LoginPage: React.FC = () => {
     if (!value) {
       return "The password is required";
     }
-    if (value.length < 4) {
-      return "The password must contain at least 4 characters";
+    if (value.length < 8 || !/[A-Z]/.test(value) || !/[0-9]/.test(value)) {
+      return "Password must be at least 8 characters with 1 uppercase and 1 number";
     }
     return "";
   };
@@ -378,8 +378,8 @@ const LoginPage: React.FC = () => {
       if (err.response?.data?.message) {
         // Vérifier si l'erreur est due à un compte non vérifié
         if (err.response.data.isVerified === false) {
-          console.log('Compte non vérifié, redirection vers la page de vérification');
-          setError('Compte non vérifié. Vous allez être redirigé vers la page de vérification.');
+          console.log('Account not verified, redirecting to verification page');
+          setError('Account not verified. You will be redirected to the verification page.');
           // Stocker l'email dans le localStorage pour la page de vérification
           localStorage.setItem('email', email.toLowerCase());
           // Rediriger vers la page de vérification après un court délai
@@ -394,7 +394,7 @@ const LoginPage: React.FC = () => {
           } else if (errorMsg === "Incorrect password") {
             setError("Mot de passe incorrect");
           } else if (errorMsg.includes("account already exists with this email")) {
-            setError("Un compte existe déjà avec cet email. Veuillez utiliser votre méthode de connexion habituelle.");
+            setError("An account already exists with this email. Please use your usual connection method.");
           } else {
             setError(errorMsg);
           }

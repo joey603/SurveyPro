@@ -95,8 +95,11 @@ const SettingsContent = () => {
     if (!newPassword) {
       errors.newPassword = 'New password is required';
       isValid = false;
-    } else if (newPassword.length < 6) {
-      errors.newPassword = 'Password must be at least 6 characters';
+    } else if (newPassword.length < 8) {
+      errors.newPassword = 'Password must be at least 8 characters with 1 uppercase and 1 number';
+      isValid = false;
+    } else if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      errors.newPassword = 'Password must be at least 8 characters with 1 uppercase and 1 number';
       isValid = false;
     }
 
