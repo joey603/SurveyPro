@@ -642,6 +642,67 @@ const Home = () => {
           </Fade>
         </Container>
       </Box>
+
+      {/* Copyright Footer */}
+      <Box
+        sx={{
+          backgroundColor: '#f5f5f5',
+          py: 4,
+          borderTop: '1px solid #e0e0e0',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              gap: 2,
+              mb: 2
+            }}
+          >
+            <Typography 
+              variant="body1" 
+              align="center" 
+              sx={{ 
+                fontSize: '1rem',
+                fontWeight: 500,
+                color: '#333',
+                mb: 1
+              }}
+            >
+              Love SurveyFlow? Support our project!
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.open('https://www.buymeacoffee.com/SurveyFlow_SCE', '_blank')}
+              sx={{
+                background: '#FFDD00',
+                color: '#000000',
+                fontWeight: 600,
+                '&:hover': {
+                  background: '#FFDD00',
+                  opacity: 0.9,
+                },
+                px: 3,
+                py: 1,
+                borderRadius: '20px',
+              }}
+            >
+              ☕  Buy me a coffee
+            </Button>
+          </Box>
+          <Typography 
+            variant="body2" 
+            align="center" 
+            color="textSecondary"
+            sx={{ fontSize: '0.85rem' }}
+          >
+            © {new Date().getFullYear()} SurveyFlow. All rights reserved. 
+          </Typography>
+        </Container>
+      </Box>
     </Box>
   );
 };
