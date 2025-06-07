@@ -1422,6 +1422,16 @@ const SurveyAnswerPage: React.FC = () => {
       }
     },
     {
+      name: 'Email',
+      icon: <EmailIcon />,
+      action: (survey: Survey) => {
+        const url = getShareUrl(survey);
+        const subject = encodeURIComponent(`Invitation to participate in "${survey.title}" survey`);
+        const body = encodeURIComponent(`Hello,\n\nI'd like to invite you to participate in this survey: "${survey.title}"\n\nYour feedback is important and will only take a few minutes of your time.\n\nSurvey link: ${url}\n\nThank you for your participation!\n\nBest regards,`);
+        window.open(`mailto:?subject=${subject}&body=${body}`);
+      }
+    },
+    {
       name: 'Copy Link',
       icon: <ContentCopyIcon />,
       action: (survey: Survey) => {
@@ -1441,17 +1451,8 @@ const SurveyAnswerPage: React.FC = () => {
             });
           });
       }
-    },
-    {
-      name: 'Email',
-      icon: <EmailIcon />,
-      action: (survey: Survey) => {
-        const url = getShareUrl(survey);
-        const subject = encodeURIComponent(`Invitation to participate in "${survey.title}" survey`);
-        const body = encodeURIComponent(`Hello,\n\nI'd like to invite you to participate in this survey: "${survey.title}"\n\nYour feedback is important and will only take a few minutes of your time.\n\nSurvey link: ${url}\n\nThank you for your participation!\n\nBest regards,`);
-        window.open(`mailto:?subject=${subject}&body=${body}`);
-      }
     }
+    
   ];
 
   const fetchLastDemographicData = async () => {
