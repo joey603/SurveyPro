@@ -515,6 +515,28 @@ interface ColorItem {
   borderColor: string;
 }
 
+// Fonction pour formater les dates
+const formatDate = (dateString: string): string => {
+  // Vérifier si la chaîne est au format ISO 8601 (comme 2025-06-09T21:00:00.000Z)
+  const isoDatePattern = /^\d{4}-\d{2}-\d{2}T/;
+  
+  if (isoDatePattern.test(dateString)) {
+    try {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      // Les mois sont indexés à partir de 0, donc on ajoute 1
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    } catch (error) {
+      // En cas d'erreur de parsing, retourner la date originale
+      return dateString;
+    }
+  }
+  
+  return dateString;
+};
+
 // Désactiver le comportement des légendes au clic
 const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
   e.stopPropagation();
@@ -726,37 +748,48 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
 
   const getChartData = useCallback((questionId: string, customColors?: ColorItem[]) => {
     const { answerCounts } = analyzeResponses(questionId);
-    const labels = Object.keys(answerCounts);
+    
+    // Vérifier le type de question pour déterminer si c'est une date
+    const question = survey.questions.find(q => q.id === questionId);
+    const isDateType = question?.type === 'date';
+    
+    // Formatter les labels de date si nécessaire
+    const formattedLabels = Object.keys(answerCounts).map(label => 
+      isDateType || /^\d{4}-\d{2}-\d{2}T/.test(label) ? formatDate(label) : label
+    );
+    
+    // Créer un tableau de valeurs correspondant aux labels formatés
+    const dataValues = Object.values(answerCounts);
     
     // Utiliser des couleurs personnalisées si fournies, sinon utiliser les couleurs par défaut
-    let backgroundColors, borderColors;
+    let backgroundColorsArray, borderColorsArray;
     
     if (customColors && customColors.length > 0) {
       // Utiliser les couleurs personnalisées
-      backgroundColors = labels.map((_, i) => 
+      backgroundColorsArray = formattedLabels.map((_, i) => 
         customColors[i % customColors.length].backgroundColor
       );
-      borderColors = labels.map((_, i) => 
+      borderColorsArray = formattedLabels.map((_, i) => 
         customColors[i % customColors.length].borderColor
       );
     } else {
       // Utiliser les couleurs par défaut ou générer des couleurs distinctes
-      const colors = generateDistinctColors(labels.length);
-      backgroundColors = colors.map(color => color.backgroundColor);
-      borderColors = colors.map(color => color.borderColor);
+      const colors = generateDistinctColors(formattedLabels.length);
+      backgroundColorsArray = colors.map(color => color.backgroundColor);
+      borderColorsArray = colors.map(color => color.borderColor);
     }
     
     return {
-      labels: labels,
+      labels: formattedLabels,
       datasets: [{
-        label: 'Réponses',
-        data: Object.values(answerCounts),
-        backgroundColor: backgroundColors,
-        borderColor: borderColors,
+        label: 'Responses',
+        data: dataValues,
+        backgroundColor: backgroundColorsArray,
+        borderColor: borderColorsArray,
         borderWidth: 1,
       }],
     };
-  }, [analyzeResponses]);
+  }, [analyzeResponses, survey.questions]);
 
   // Fonction pour obtenir les types de graphiques disponibles pour un type de question
   const getAvailableChartTypes = (questionType: string): ChartType[] => {
