@@ -1398,7 +1398,8 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <FacebookIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://www.facebook.com/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+        const text = encodeURIComponent(`I'd like to share this survey "${survey.title}" with you. Your opinion matters! Check it out and share your thoughts.`);
+        window.open(`https://www.facebook.com/sharer.php?u=${url}&quote=${text}`, '_blank', 'width=600,height=400');
       }
     },
     {
@@ -1406,7 +1407,7 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <TwitterIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        const text = encodeURIComponent(`${survey.title}`);
+        const text = encodeURIComponent(`I just discovered this survey "${survey.title}"! 📊 Your opinion matters - take a few minutes to participate and share your thoughts! #Survey #Feedback`);
         window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400');
       }
     },
@@ -1415,7 +1416,9 @@ const SurveyAnswerPage: React.FC = () => {
       icon: <LinkedInIcon />,
       action: (survey: Survey) => {
         const url = encodeURIComponent(getShareUrl(survey));
-        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
+        const title = encodeURIComponent(`Participate in "${survey.title}" Survey`);
+        const summary = encodeURIComponent(`I'd like to share this survey that collects valuable insights. Your professional opinion would be greatly appreciated!`);
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}&summary=${summary}`, '_blank', 'width=600,height=400');
       }
     },
     {
@@ -1437,6 +1440,16 @@ const SurveyAnswerPage: React.FC = () => {
               open: true
             });
           });
+      }
+    },
+    {
+      name: 'Email',
+      icon: <EmailIcon />,
+      action: (survey: Survey) => {
+        const url = getShareUrl(survey);
+        const subject = encodeURIComponent(`Invitation to participate in "${survey.title}" survey`);
+        const body = encodeURIComponent(`Hello,\n\nI'd like to invite you to participate in this survey: "${survey.title}"\n\nYour feedback is important and will only take a few minutes of your time.\n\nSurvey link: ${url}\n\nThank you for your participation!\n\nBest regards,`);
+        window.open(`mailto:?subject=${subject}&body=${body}`);
       }
     }
   ];
