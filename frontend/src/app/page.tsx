@@ -11,6 +11,8 @@ import {
   Fade,
   Slide,
   Divider,
+  Link,
+  IconButton,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../utils/AuthContext';
@@ -652,47 +654,62 @@ const Home = () => {
         }}
       >
         <Container maxWidth="lg">
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center',
-              gap: 2,
-              mb: 2
-            }}
-          >
-            <Typography 
-              variant="body1" 
-              align="center" 
-              sx={{ 
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: '#333',
-                mb: 1
-              }}
-            >
-              Love SurveyFlow? Support our project!
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.open('https://www.buymeacoffee.com/SurveyFlow_SCE', '_blank')}
-              sx={{
-                background: '#FFDD00',
-                color: '#000000',
-                fontWeight: 600,
-                '&:hover': {
-                  background: '#FFDD00',
-                  opacity: 0.9,
-                },
-                px: 3,
-                py: 1,
-                borderRadius: '20px',
-              }}
-            >
-              ☕  Buy me a coffee
-            </Button>
+          {/* Navigation Links */}
+          <Box sx={{ mb: 4 }}>
+            <Grid container spacing={4} justifyContent="center">
+              <Grid item xs={12} sm={6} md={4}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#1a237e', textAlign: 'center' }}>
+                  Support Us
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    align="center" 
+                    sx={{ 
+                      fontSize: '0.9rem',
+                      color: 'text.secondary',
+                      mb: 1
+                    }}
+                  >
+                    Love SurveyFlow? Support our project!
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => window.open('https://www.buymeacoffee.com/SurveyFlow_SCE', '_blank')}
+                    sx={{
+                      background: '#FFDD00',
+                      color: '#000000',
+                      fontWeight: 600,
+                      '&:hover': {
+                        background: '#FFDD00',
+                        opacity: 0.9,
+                      },
+                      px: 3,
+                      py: 1,
+                      borderRadius: '20px',
+                    }}
+                  >
+                    ☕  Buy me a coffee
+                  </Button>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#1a237e', textAlign: 'center' }}>
+                  Contact
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Link href="mailto:info@surveyflow.com" color="textSecondary" underline="hover" sx={{ fontSize: '0.9rem' }}>info@sce.ac.il</Link>
+                  <Link href="tel:+972123456789" color="textSecondary" underline="hover" sx={{ fontSize: '0.9rem' }}>+1-800-207-777</Link>
+                  <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.9rem' }}>Ashdod, Israel</Typography>
+                </Box>
+              </Grid>
+            </Grid>
           </Box>
+          
+          {/* Copyright */}
+          <Divider sx={{ mb: 3 }} />
           <Typography 
             variant="body2" 
             align="center" 
@@ -700,6 +717,14 @@ const Home = () => {
             sx={{ fontSize: '0.85rem' }}
           >
             © {new Date().getFullYear()} SurveyFlow. All rights reserved. 
+          </Typography>
+          <Typography 
+            variant="body2" 
+            align="center" 
+            color="textSecondary"
+            sx={{ fontSize: '0.75rem', mt: 1 }}
+          >
+            Version 1.0.0
           </Typography>
         </Container>
       </Box>
