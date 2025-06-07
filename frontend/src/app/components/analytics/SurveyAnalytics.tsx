@@ -521,31 +521,6 @@ const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
   return false; // Empêche l'action par défaut
 };
 
-// Fonction pour formater les dates
-const formatDate = (value: string): string => {
-  // Vérifier si la valeur est une date au format ISO
-  const isISODate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*Z$/.test(value);
-  
-  if (isISODate) {
-    try {
-      const date = new Date(value);
-      // Vérifier si la date est valide
-      if (!isNaN(date.getTime())) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}/${month}/${day}`;
-      }
-    } catch (e) {
-      // En cas d'erreur, retourner la valeur originale
-      console.warn("Erreur lors du formatage de la date:", e);
-    }
-  }
-  
-  // Si ce n'est pas une date ou si une erreur se produit, retourner la valeur originale
-  return value;
-};
-
 // Fonction utilitaire pour générer des couleurs distinctes
 const generateDistinctColors = (count: number): ColorItem[] => {
   const colors: ColorItem[] = [];
@@ -738,22 +713,16 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // Utiliser les réponses filtrées si elles existent, sinon utiliser toutes les réponses
     const responsesToAnalyze = filteredResponses.length > 0 ? filteredResponses : surveyAnswers;
     
-    // Trouver le type de question
-    const question = survey.questions.find(q => q.id === questionId);
-    const isDateQuestion = question?.type === 'date';
-    
     responsesToAnalyze.forEach(response => {
       const answer = response.answers.find(a => a.questionId === questionId);
       if (answer) {
-        // Formater la date si c'est une question de type date
-        const formattedAnswer = isDateQuestion ? formatDate(answer.answer) : answer.answer;
-        answerCounts[formattedAnswer] = (answerCounts[formattedAnswer] || 0) + 1;
+        answerCounts[answer.answer] = (answerCounts[answer.answer] || 0) + 1;
         total++;
       }
     });
     
     return { answerCounts, total };
-  }, [filteredResponses, surveyAnswers, survey.questions]);
+  }, [filteredResponses, surveyAnswers]);
 
   const getChartData = useCallback((questionId: string, customColors?: ColorItem[]) => {
     const { answerCounts } = analyzeResponses(questionId);
