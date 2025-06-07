@@ -1121,6 +1121,15 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       }
     });
     
+    // Vérifier le type de question pour déterminer si c'est une date
+    const question = survey.questions.find(q => q.id === questionId);
+    const isDateType = question?.type === 'date';
+    
+    // Formater la réponse la plus fréquente si c'est une date
+    if (isDateType || /^\d{4}-\d{2}-\d{2}T/.test(mostCommonAnswer)) {
+      mostCommonAnswer = formatDate(mostCommonAnswer);
+    }
+    
     const percentages = Object.entries(answerCounts).reduce((acc, [answer, count]) => {
       acc[answer] = Math.round((count / total) * 100);
       return acc;
@@ -1133,7 +1142,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       mostCommonAnswer,
       maxCount
     };
-  }, [analyzeResponses]);
+  }, [analyzeResponses, survey.questions]);
 
   // Fonction pour afficher un résumé de la question
   const renderQuestionSummary = (question: Question) => {
@@ -1153,6 +1162,12 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       );
     }
     
+    // Fonction pour formater les dates dans les réponses si nécessaire
+    const formatAnswerIfDate = (answer: string) => {
+      const isDateType = question.type === 'date';
+      return isDateType || /^\d{4}-\d{2}-\d{2}T/.test(answer) ? formatDate(answer) : answer;
+    };
+    
     switch (question.type) {
       case 'multiple-choice':
       case 'dropdown':
@@ -1166,7 +1181,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               {Object.entries(stats.answerCounts || {}).map(([answer, count]) => (
                 <Box key={answer} sx={{ mb: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">{answer}</Typography>
+                    <Typography variant="body2">{formatAnswerIfDate(answer)}</Typography>
                     <Typography variant="body2">{count} ({stats.percentages[answer]}%)</Typography>
                   </Box>
                   <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
@@ -1185,7 +1200,9 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           </Box>
         );
       case 'text':
-        const entries = Object.entries(stats.answerCounts || {});
+        const entries = Object.entries(stats.answerCounts || {}).map(([answer, count]) => 
+          [formatAnswerIfDate(answer), count] as [string, number]
+        );
         const initialDisplayCount = 3;
         const hasMoreResponses = entries.length > initialDisplayCount;
         const displayedEntries = showAllResponses[question.id] 
@@ -1208,6 +1225,40 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
                 </Typography>
               )}
+              
+              {/* Afficher les réponses textuelles */}
+              <Box sx={{ mt: 2 }}>
+                {displayedEntries.map(([answer, count], idx) => (
+                  <Box key={idx} sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ mr: 2, fontWeight: idx === 0 ? 'bold' : 'normal' }}>
+                      {answer}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {count} {count > 1 ? 'responses' : 'response'}
+                    </Typography>
+                  </Box>
+                ))}
+                
+                {hasMoreResponses && !showAllResponses[question.id] && (
+                  <Button 
+                    size="small" 
+                    onClick={() => setShowAllResponses({...showAllResponses, [question.id]: true})}
+                    sx={{ mt: 1, color: '#667eea' }}
+                  >
+                    Show all {entries.length} responses
+                  </Button>
+                )}
+                
+                {hasMoreResponses && showAllResponses[question.id] && (
+                  <Button 
+                    size="small" 
+                    onClick={() => setShowAllResponses({...showAllResponses, [question.id]: false})}
+                    sx={{ mt: 1, color: '#667eea' }}
+                  >
+                    Show less
+                  </Button>
+                )}
+              </Box>
             </Box>
           </Box>
         );
