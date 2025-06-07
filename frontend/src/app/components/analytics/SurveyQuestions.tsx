@@ -57,6 +57,12 @@ interface QuestionDetails {
   type: string;
 }
 
+// Interface pour les couleurs
+interface ColorItem {
+  backgroundColor: string;
+  borderColor: string;
+}
+
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
 interface PathSegment {
@@ -72,7 +78,7 @@ interface SurveyQuestionsProps {
     questions: Question[];
   };
   responses: SurveyResponse[];
-  renderChart: (questionId: string, chartType: ChartType) => JSX.Element;
+  renderChart: (questionId: string, chartType: ChartType, colors?: ColorItem[]) => JSX.Element;
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
   selectedPaths: PathSegment[][];

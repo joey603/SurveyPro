@@ -509,6 +509,62 @@ const getPathColor = (pathIndex: number): string => {
   return PATH_COLORS[pathLetter] || '#667eea';
 };
 
+// Interface pour les couleurs
+interface ColorItem {
+  backgroundColor: string;
+  borderColor: string;
+}
+
+// Désactiver le comportement des légendes au clic
+const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
+  e.stopPropagation();
+  return false; // Empêche l'action par défaut
+};
+
+// Fonction utilitaire pour générer des couleurs distinctes
+const generateDistinctColors = (count: number): ColorItem[] => {
+  const colors: ColorItem[] = [];
+  
+  // Palette de couleurs de base
+  const baseColors = [
+    { h: 234, s: 60, l: 60 }, // Bleu (#667eea)
+    { h: 271, s: 60, l: 60 }, // Violet (#764ba2)
+    { h: 142, s: 60, l: 60 }, // Vert (#4caf50)
+    { h: 24, s: 60, l: 60 },  // Orange (#ff9800)
+    { h: 340, s: 60, l: 60 }, // Rose (#e91e63)
+    { h: 187, s: 60, l: 60 }, // Cyan (#00bcd4)
+    { h: 45, s: 60, l: 60 },  // Jaune (#ffc107)
+    { h: 326, s: 60, l: 60 }, // Magenta (#e91e63)
+    { h: 162, s: 60, l: 60 }, // Turquoise (#009688)
+    { h: 355, s: 60, l: 60 }, // Rouge (#f44336)
+  ];
+  
+  // Si nous avons besoin de plus de couleurs que la palette de base
+  if (count > baseColors.length) {
+    // Générer des couleurs supplémentaires en variant la teinte
+    for (let i = 0; i < count; i++) {
+      const hue = (i * 360 / count) % 360;
+      const saturation = 60 + (i % 10); // Légère variation de saturation
+      const lightness = 60 + (i % 10);  // Légère variation de luminosité
+      
+      colors.push({
+        backgroundColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 0.6)`,
+        borderColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 1)`
+      });
+    }
+  } else {
+    // Utiliser la palette de base
+    baseColors.slice(0, count).forEach(color => {
+      colors.push({
+        backgroundColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.6)`,
+        borderColor: `hsla(${color.h}, ${color.s}%, ${color.l}%, 1)`
+      });
+    });
+  }
+  
+  return colors;
+};
+
 export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   open,
   onClose,
@@ -668,25 +724,35 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return { answerCounts, total };
   }, [filteredResponses, surveyAnswers]);
 
-  const getChartData = useCallback((questionId: string) => {
+  const getChartData = useCallback((questionId: string, customColors?: ColorItem[]) => {
     const { answerCounts } = analyzeResponses(questionId);
+    const labels = Object.keys(answerCounts);
+    
+    // Utiliser des couleurs personnalisées si fournies, sinon utiliser les couleurs par défaut
+    let backgroundColors, borderColors;
+    
+    if (customColors && customColors.length > 0) {
+      // Utiliser les couleurs personnalisées
+      backgroundColors = labels.map((_, i) => 
+        customColors[i % customColors.length].backgroundColor
+      );
+      borderColors = labels.map((_, i) => 
+        customColors[i % customColors.length].borderColor
+      );
+    } else {
+      // Utiliser les couleurs par défaut ou générer des couleurs distinctes
+      const colors = generateDistinctColors(labels.length);
+      backgroundColors = colors.map(color => color.backgroundColor);
+      borderColors = colors.map(color => color.borderColor);
+    }
+    
     return {
-      labels: Object.keys(answerCounts),
+      labels: labels,
       datasets: [{
         label: 'Réponses',
         data: Object.values(answerCounts),
-        backgroundColor: [
-          'rgba(102, 126, 234, 0.6)',
-          'rgba(118, 75, 162, 0.6)',
-          'rgba(79, 99, 196, 0.6)',
-          'rgba(142, 94, 189, 0.6)',
-        ],
-        borderColor: [
-          'rgba(102, 126, 234, 1)',
-          'rgba(118, 75, 162, 1)',
-          'rgba(79, 99, 196, 1)',
-          'rgba(142, 94, 189, 1)',
-        ],
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
         borderWidth: 1,
       }],
     };
@@ -729,8 +795,8 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   };
 
   // Fonction pour rendre un graphique
-  const renderChart = (questionId: string, chartType: ChartType) => {
-    const data = getChartData(questionId);
+  const renderChart = (questionId: string, chartType: ChartType, colors?: ColorItem[]) => {
+    const data = getChartData(questionId, colors);
     const options = ['pie', 'doughnut'].includes(chartType) ? pieOptions : commonChartOptions;
 
     // Ajuster les options pour maintenir une taille cohérente
@@ -738,6 +804,13 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       ...options,
       maintainAspectRatio: true,
       responsive: true,
+      plugins: {
+        ...options.plugins,
+        legend: {
+          ...options.plugins.legend,
+          onClick: preventLegendClickBehavior
+        }
+      }
     };
 
     // Pour les graphiques circulaires, centrer les données

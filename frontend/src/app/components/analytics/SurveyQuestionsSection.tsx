@@ -20,7 +20,7 @@ import StarIcon from '@mui/icons-material/Star';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import LinearScaleIcon from '@mui/icons-material/LinearScale';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
-import { QuestionDetailsDialog } from './QuestionDetailsDialog';
+import { QuestionDetailsDialog, QuestionDetails as DialogQuestionDetails } from './QuestionDetailsDialog';
 
 // Types
 interface Question {
@@ -50,10 +50,17 @@ interface SurveyResponse {
   };
 }
 
-interface QuestionDetails {
+// Interface locale pour la question sélectionnée
+interface QuestionDetailsSurvey {
   questionId: string;
   question: Question;
   answers: SurveyResponse[];
+}
+
+// Interface pour les couleurs
+interface ColorItem {
+  backgroundColor: string;
+  borderColor: string;
 }
 
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
@@ -65,7 +72,7 @@ interface SurveyQuestionsProps {
     questions: Question[];
   };
   responses: SurveyResponse[];
-  renderChart: (questionId: string, chartType: ChartType) => JSX.Element;
+  renderChart: (questionId: string, chartType: ChartType, colors?: ColorItem[]) => JSX.Element;
   getAvailableChartTypes: (questionType: string) => ChartType[];
   getChartIcon: (type: ChartType) => JSX.Element;
 }
@@ -77,8 +84,23 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
   getAvailableChartTypes,
   getChartIcon
 }) => {
-  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetails | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDetailsSurvey | null>(null);
   const [chartTypes, setChartTypes] = useState<{ [key: string]: ChartType }>({});
+
+  // Fonction pour convertir QuestionDetailsSurvey en DialogQuestionDetails
+  const convertToDialogFormat = (question: QuestionDetailsSurvey | null): DialogQuestionDetails | null => {
+    if (!question) return null;
+    
+    return {
+      questionId: question.questionId,
+      question: question.question.text,
+      answers: question.answers.map(response => {
+        const answer = response.answers.find(a => a.questionId === question.questionId);
+        return answer ? answer.answer : '';
+      }).filter(answer => answer !== ''),
+      type: question.question.type
+    };
+  };
 
   const handleQuestionClick = (questionId: string) => {
     const question = survey.questions.find(q => q.id === questionId);
@@ -128,6 +150,9 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
       response.answers.some(answer => answer.questionId === questionId)
     ).length;
   };
+
+  // Convertir la question sélectionnée au format du dialogue
+  const dialogQuestion = convertToDialogFormat(selectedQuestion);
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -214,9 +239,9 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
       </Paper>
 
       <QuestionDetailsDialog 
-        open={selectedQuestion !== null}
+        open={dialogQuestion !== null}
         onClose={() => setSelectedQuestion(null)}
-        question={selectedQuestion}
+        question={dialogQuestion}
         chartTypes={chartTypes}
         setChartTypes={setChartTypes}
         renderChart={renderChart}
