@@ -515,32 +515,35 @@ interface ColorItem {
   borderColor: string;
 }
 
-// Fonction pour formater les dates
-const formatDate = (dateString: string): string => {
-  // Vérifier si la chaîne est au format ISO 8601 (comme 2025-06-09T21:00:00.000Z)
-  const isoDatePattern = /^\d{4}-\d{2}-\d{2}T/;
-  
-  if (isoDatePattern.test(dateString)) {
-    try {
-      const date = new Date(dateString);
-      const year = date.getFullYear();
-      // Les mois sont indexés à partir de 0, donc on ajoute 1
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}/${month}/${day}`;
-    } catch (error) {
-      // En cas d'erreur de parsing, retourner la date originale
-      return dateString;
-    }
-  }
-  
-  return dateString;
-};
-
 // Désactiver le comportement des légendes au clic
 const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
   e.stopPropagation();
   return false; // Empêche l'action par défaut
+};
+
+// Fonction pour formater les dates
+const formatDate = (value: string): string => {
+  // Vérifier si la valeur est une date au format ISO
+  const isISODate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*Z$/.test(value);
+  
+  if (isISODate) {
+    try {
+      const date = new Date(value);
+      // Vérifier si la date est valide
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      }
+    } catch (e) {
+      // En cas d'erreur, retourner la valeur originale
+      console.warn("Erreur lors du formatage de la date:", e);
+    }
+  }
+  
+  // Si ce n'est pas une date ou si une erreur se produit, retourner la valeur originale
+  return value;
 };
 
 // Fonction utilitaire pour générer des couleurs distinctes
@@ -735,61 +738,56 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // Utiliser les réponses filtrées si elles existent, sinon utiliser toutes les réponses
     const responsesToAnalyze = filteredResponses.length > 0 ? filteredResponses : surveyAnswers;
     
+    // Trouver le type de question
+    const question = survey.questions.find(q => q.id === questionId);
+    const isDateQuestion = question?.type === 'date';
+    
     responsesToAnalyze.forEach(response => {
       const answer = response.answers.find(a => a.questionId === questionId);
       if (answer) {
-        answerCounts[answer.answer] = (answerCounts[answer.answer] || 0) + 1;
+        // Formater la date si c'est une question de type date
+        const formattedAnswer = isDateQuestion ? formatDate(answer.answer) : answer.answer;
+        answerCounts[formattedAnswer] = (answerCounts[formattedAnswer] || 0) + 1;
         total++;
       }
     });
     
     return { answerCounts, total };
-  }, [filteredResponses, surveyAnswers]);
+  }, [filteredResponses, surveyAnswers, survey.questions]);
 
   const getChartData = useCallback((questionId: string, customColors?: ColorItem[]) => {
     const { answerCounts } = analyzeResponses(questionId);
-    
-    // Vérifier le type de question pour déterminer si c'est une date
-    const question = survey.questions.find(q => q.id === questionId);
-    const isDateType = question?.type === 'date';
-    
-    // Formatter les labels de date si nécessaire
-    const formattedLabels = Object.keys(answerCounts).map(label => 
-      isDateType || /^\d{4}-\d{2}-\d{2}T/.test(label) ? formatDate(label) : label
-    );
-    
-    // Créer un tableau de valeurs correspondant aux labels formatés
-    const dataValues = Object.values(answerCounts);
+    const labels = Object.keys(answerCounts);
     
     // Utiliser des couleurs personnalisées si fournies, sinon utiliser les couleurs par défaut
-    let backgroundColorsArray, borderColorsArray;
+    let backgroundColors, borderColors;
     
     if (customColors && customColors.length > 0) {
       // Utiliser les couleurs personnalisées
-      backgroundColorsArray = formattedLabels.map((_, i) => 
+      backgroundColors = labels.map((_, i) => 
         customColors[i % customColors.length].backgroundColor
       );
-      borderColorsArray = formattedLabels.map((_, i) => 
+      borderColors = labels.map((_, i) => 
         customColors[i % customColors.length].borderColor
       );
     } else {
       // Utiliser les couleurs par défaut ou générer des couleurs distinctes
-      const colors = generateDistinctColors(formattedLabels.length);
-      backgroundColorsArray = colors.map(color => color.backgroundColor);
-      borderColorsArray = colors.map(color => color.borderColor);
+      const colors = generateDistinctColors(labels.length);
+      backgroundColors = colors.map(color => color.backgroundColor);
+      borderColors = colors.map(color => color.borderColor);
     }
     
     return {
-      labels: formattedLabels,
+      labels: labels,
       datasets: [{
-        label: 'Responses',
-        data: dataValues,
-        backgroundColor: backgroundColorsArray,
-        borderColor: borderColorsArray,
+        label: 'Réponses',
+        data: Object.values(answerCounts),
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
         borderWidth: 1,
       }],
     };
-  }, [analyzeResponses, survey.questions]);
+  }, [analyzeResponses]);
 
   // Fonction pour obtenir les types de graphiques disponibles pour un type de question
   const getAvailableChartTypes = (questionType: string): ChartType[] => {
@@ -1121,15 +1119,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       }
     });
     
-    // Vérifier le type de question pour déterminer si c'est une date
-    const question = survey.questions.find(q => q.id === questionId);
-    const isDateType = question?.type === 'date';
-    
-    // Formater la réponse la plus fréquente si c'est une date
-    if (isDateType || /^\d{4}-\d{2}-\d{2}T/.test(mostCommonAnswer)) {
-      mostCommonAnswer = formatDate(mostCommonAnswer);
-    }
-    
     const percentages = Object.entries(answerCounts).reduce((acc, [answer, count]) => {
       acc[answer] = Math.round((count / total) * 100);
       return acc;
@@ -1142,7 +1131,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       mostCommonAnswer,
       maxCount
     };
-  }, [analyzeResponses, survey.questions]);
+  }, [analyzeResponses]);
 
   // Fonction pour afficher un résumé de la question
   const renderQuestionSummary = (question: Question) => {
@@ -1162,12 +1151,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       );
     }
     
-    // Fonction pour formater les dates dans les réponses si nécessaire
-    const formatAnswerIfDate = (answer: string) => {
-      const isDateType = question.type === 'date';
-      return isDateType || /^\d{4}-\d{2}-\d{2}T/.test(answer) ? formatDate(answer) : answer;
-    };
-    
     switch (question.type) {
       case 'multiple-choice':
       case 'dropdown':
@@ -1181,7 +1164,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
               {Object.entries(stats.answerCounts || {}).map(([answer, count]) => (
                 <Box key={answer} sx={{ mb: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">{formatAnswerIfDate(answer)}</Typography>
+                    <Typography variant="body2">{answer}</Typography>
                     <Typography variant="body2">{count} ({stats.percentages[answer]}%)</Typography>
                   </Box>
                   <Box sx={{ width: '100%', bgcolor: 'rgba(102, 126, 234, 0.1)', borderRadius: 1, height: 8 }}>
@@ -1200,9 +1183,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
           </Box>
         );
       case 'text':
-        const entries = Object.entries(stats.answerCounts || {}).map(([answer, count]) => 
-          [formatAnswerIfDate(answer), count] as [string, number]
-        );
+        const entries = Object.entries(stats.answerCounts || {});
         const initialDisplayCount = 3;
         const hasMoreResponses = entries.length > initialDisplayCount;
         const displayedEntries = showAllResponses[question.id] 
@@ -1225,40 +1206,6 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
                 </Typography>
               )}
-              
-              {/* Afficher les réponses textuelles */}
-              <Box sx={{ mt: 2 }}>
-                {displayedEntries.map(([answer, count], idx) => (
-                  <Box key={idx} sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" sx={{ mr: 2, fontWeight: idx === 0 ? 'bold' : 'normal' }}>
-                      {answer}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {count} {count > 1 ? 'responses' : 'response'}
-                    </Typography>
-                  </Box>
-                ))}
-                
-                {hasMoreResponses && !showAllResponses[question.id] && (
-                  <Button 
-                    size="small" 
-                    onClick={() => setShowAllResponses({...showAllResponses, [question.id]: true})}
-                    sx={{ mt: 1, color: '#667eea' }}
-                  >
-                    Show all {entries.length} responses
-                  </Button>
-                )}
-                
-                {hasMoreResponses && showAllResponses[question.id] && (
-                  <Button 
-                    size="small" 
-                    onClick={() => setShowAllResponses({...showAllResponses, [question.id]: false})}
-                    sx={{ mt: 1, color: '#667eea' }}
-                  >
-                    Show less
-                  </Button>
-                )}
-              </Box>
             </Box>
           </Box>
         );

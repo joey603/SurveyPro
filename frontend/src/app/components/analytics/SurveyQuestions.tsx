@@ -63,6 +63,31 @@ interface ColorItem {
   borderColor: string;
 }
 
+// Fonction pour formater les dates
+const formatDate = (value: string): string => {
+  // Vérifier si la valeur est une date au format ISO
+  const isISODate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*Z$/.test(value);
+  
+  if (isISODate) {
+    try {
+      const date = new Date(value);
+      // Vérifier si la date est valide
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      }
+    } catch (e) {
+      // En cas d'erreur, retourner la valeur originale
+      console.warn("Erreur lors du formatage de la date:", e);
+    }
+  }
+  
+  // Si ce n'est pas une date ou si une erreur se produit, retourner la valeur originale
+  return value;
+};
+
 type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
 interface PathSegment {
@@ -189,11 +214,16 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
     const question = survey.questions.find(q => q.id === questionId);
     if (!question) return;
 
+    const isDateQuestion = question.type === 'date';
+
     const questionAnswers = responses
       .filter(response => response.answers.some(answer => answer.questionId === questionId))
       .map(response => {
         const answer = response.answers.find(a => a.questionId === questionId);
-        return answer ? answer.answer : '';
+        if (!answer) return '';
+        
+        // Formater la date si c'est une question de type date
+        return isDateQuestion ? formatDate(answer.answer) : answer.answer;
       })
       .filter(answer => answer !== '');
 

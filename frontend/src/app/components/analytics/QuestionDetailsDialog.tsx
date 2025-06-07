@@ -64,28 +64,6 @@ interface ColorItem {
   borderColor: string;
 }
 
-// Fonction pour formater les dates
-const formatDate = (dateString: string): string => {
-  // Vérifier si la chaîne est au format ISO 8601 (comme 2025-06-09T21:00:00.000Z)
-  const isoDatePattern = /^\d{4}-\d{2}-\d{2}T/;
-  
-  if (isoDatePattern.test(dateString)) {
-    try {
-      const date = new Date(dateString);
-      const year = date.getFullYear();
-      // Les mois sont indexés à partir de 0, donc on ajoute 1
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}/${month}/${day}`;
-    } catch (error) {
-      // En cas d'erreur de parsing, retourner la date originale
-      return dateString;
-    }
-  }
-  
-  return dateString;
-};
-
 // Fonction utilitaire pour générer des couleurs distinctes
 const generateDistinctColors = (count: number): ColorItem[] => {
   const colors: ColorItem[] = [];
@@ -136,6 +114,31 @@ const preventLegendClickBehavior = (e: any, legendItem: any, legend: any) => {
   return false; // Empêche l'action par défaut
 };
 
+// Fonction pour formater les dates
+const formatDate = (value: string): string => {
+  // Vérifier si la valeur est une date au format ISO
+  const isISODate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*Z$/.test(value);
+  
+  if (isISODate) {
+    try {
+      const date = new Date(value);
+      // Vérifier si la date est valide
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      }
+    } catch (e) {
+      // En cas d'erreur, retourner la valeur originale
+      console.warn("Erreur lors du formatage de la date:", e);
+    }
+  }
+  
+  // Si ce n'est pas une date ou si une erreur se produit, retourner la valeur originale
+  return value;
+};
+
 // Component props
 interface QuestionDetailsDialogProps {
   open: boolean;
@@ -165,19 +168,6 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
     // Obtenir les réponses uniques
     const uniqueAnswers = Array.from(new Set(question.answers)).filter(answer => answer);
     return generateDistinctColors(uniqueAnswers.length);
-  }, [question]);
-
-  // Formatter les réponses pour convertir les dates au format YYYY/MM/DD
-  const formattedAnswers = useMemo(() => {
-    if (!question || !question.answers) return [];
-    
-    return question.answers.map(answer => {
-      // Si la question est de type date ou si la réponse ressemble à une date ISO
-      if (question.type === 'date' || /^\d{4}-\d{2}-\d{2}T/.test(answer)) {
-        return formatDate(answer);
-      }
-      return answer;
-    });
   }, [question]);
 
   return (
@@ -282,10 +272,8 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                   ? colors[answerIndex].borderColor 
                   : undefined;
                 
-                // Formater la réponse si c'est une date
-                const displayAnswer = question.type === 'date' || /^\d{4}-\d{2}-\d{2}T/.test(answer)
-                  ? formatDate(answer)
-                  : answer;
+                // Formater la date si c'est une date
+                const formattedAnswer = question.type === 'date' ? formatDate(answer) : answer;
                 
                 return (
                   <Paper 
@@ -303,7 +291,7 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                       </Typography>
                     </Box>
                     <Typography variant="body1" sx={{ mt: 1 }}>
-                      {displayAnswer || 'No response'}
+                      {formattedAnswer || 'No response'}
                     </Typography>
                   </Paper>
                 );
