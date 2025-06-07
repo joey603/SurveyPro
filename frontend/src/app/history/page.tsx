@@ -1511,6 +1511,7 @@ const SurveyHistoryPage: React.FC = () => {
                             size="small"
                             className="view-details-button"
                             data-tutorial="view-details-button"
+                            disabled={loadingDetails === response._id}
                             sx={{
                               ml: 'auto',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1519,7 +1520,11 @@ const SurveyHistoryPage: React.FC = () => {
                               }
                             }}
                           >
-                            View Details
+                            {loadingDetails === response._id ? (
+                              <CircularProgress size={20} color="inherit" />
+                            ) : (
+                              "View Details"
+                            )}
                           </Button>
                         </Box>
                       </Paper>
@@ -1798,6 +1803,7 @@ const SurveyHistoryPage: React.FC = () => {
                             size="small"
                             className="view-details-button"
                             data-tutorial="view-details-button"
+                            disabled={loadingDetails === survey._id}
                             sx={{
                               ml: 'auto',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1806,7 +1812,11 @@ const SurveyHistoryPage: React.FC = () => {
                               }
                             }}
                           >
-                            View Details
+                            {loadingDetails === survey._id ? (
+                              <CircularProgress size={20} color="inherit" />
+                            ) : (
+                              "View Details"
+                            )}
                           </Button>
                         </Box>
                       </Paper>
