@@ -1933,7 +1933,7 @@ export default function DynamicSurveyCreation() {
                 : 'text.secondary'
           }}
         >
-          Questions complétées: {completionStats.completed}/{completionStats.total} ({completionStats.percentage}%)
+          Questions completed: {completionStats.completed}/{completionStats.total} ({completionStats.percentage}%)
         </Typography>
         <Box 
           sx={{ 
