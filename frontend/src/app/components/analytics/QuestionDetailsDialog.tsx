@@ -183,7 +183,8 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              minHeight: '350px'
+              minHeight: '350px',
+              maxHeight: '350px'
             }}>
               <Box sx={{ 
                 width: '90%', 
