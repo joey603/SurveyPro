@@ -813,6 +813,47 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       }
     };
 
+    // Pour les graphiques à barres ou linéaires, ajouter des options pour tronquer les étiquettes
+    if (chartType === 'bar') {
+      return <Bar 
+        data={data} 
+        options={{
+          ...chartOptions,
+          scales: {
+            x: {
+              ticks: {
+                callback: function(value: any, index: number, values: any[]) {
+                  // Tronquer les étiquettes de l'axe X
+                  const label = this.getLabelForValue(value as number);
+                  return typeof label === 'string' && label.length > 15 ? label.substring(0, 15) + '...' : label;
+                }
+              }
+            }
+          }
+        }} 
+      />;
+    }
+    
+    if (chartType === 'line') {
+      return <Line 
+        data={data} 
+        options={{
+          ...chartOptions,
+          scales: {
+            x: {
+              ticks: {
+                callback: function(value: any, index: number, values: any[]) {
+                  // Tronquer les étiquettes de l'axe X
+                  const label = this.getLabelForValue(value as number);
+                  return typeof label === 'string' && label.length > 15 ? label.substring(0, 15) + '...' : label;
+                }
+              }
+            }
+          }
+        }} 
+      />;
+    }
+
     // Pour les graphiques circulaires, centrer les données
     if (chartType === 'pie' || chartType === 'doughnut') {
       return (
