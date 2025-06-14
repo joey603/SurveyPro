@@ -182,7 +182,8 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
               width: '100%',
               display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center'
+              alignItems: 'center',
+              minHeight: '350px'
             }}>
               <Box sx={{ 
                 width: '90%', 
@@ -269,9 +270,10 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         display: '-webkit-box',
-                        WebkitLineClamp: 1,
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical'
                       }}
+                      title={answer || 'No response'}
                     >
                       {answer || 'No response'}
                     </Typography>
