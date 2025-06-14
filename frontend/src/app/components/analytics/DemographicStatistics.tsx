@@ -689,7 +689,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
                       const value = truncatedAges[age] || 0;
                       const total = values.reduce((a, b) => a + b, 0);
                       const percentage = Math.round((value / total) * 100);
-                      return `${value} participant${value > 1 ? 's' : ''} de ${age} ans (${percentage}%)`;
+                      return `${value} participant${value > 1 ? 's' : ''} of ${age} years old (${percentage}%)`;
                     }
                   }
                 }
@@ -735,7 +735,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
       default:
         // Préparer les données pour le graphique en barres avec légendes individuelles
         const barDatasets = labels.map((age, index) => ({
-          label: `${age} ans`,
+          label: `${age} years old`,
           data: labels.map(a => a === age ? truncatedAges[age] : null),
           backgroundColor: backgroundColors[index],
           borderColor: borderColors[index],

@@ -666,10 +666,10 @@ const generateRandomAnswers = async (users, surveys) => {
           respondent: {
             userId: user._id,
             demographic: {
-              gender: Math.random() > 0.5 ? 'Male' : 'Female',
+              gender: Math.random() > 0.5 ? 'male' : 'female',
               dateOfBirth: generateRandomBirthDate(),
-              educationLevel: ['Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 3)],
-              city: ['Paris', 'London', 'New York', 'Tokyo'][Math.floor(Math.random() * 4)]
+              educationLevel: ['High School', 'Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 4)],
+              city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa', 'Netanya', 'Beer Sheva'][Math.floor(Math.random() * 6)]
             }
           },
           answers,
@@ -775,10 +775,10 @@ const generateRandomAnswers = async (users, surveys) => {
             respondent: {
               userId: user._id,
               demographic: {
-                gender: Math.random() > 0.5 ? 'Male' : 'Female',
+                gender: Math.random() > 0.5 ? 'male' : 'female',
                 dateOfBirth: generateRandomBirthDate(),
-                educationLevel: ['Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 3)],
-                city: ['Paris', 'London', 'New York', 'Tokyo'][Math.floor(Math.random() * 4)]
+                educationLevel: ['High School', 'Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 4)],
+                city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa', 'Netanya', 'Beer Sheva'][Math.floor(Math.random() * 6)]
               }
             },
             answers,
@@ -1009,10 +1009,10 @@ const generateRandomAnswers = async (users, surveys) => {
               respondent: {
                 userId: user._id,
                 demographic: {
-                  gender: Math.random() > 0.5 ? 'Male' : 'Female',
+                  gender: Math.random() > 0.5 ? 'male' : 'female',
                 dateOfBirth: generateRandomBirthDate(),
-                  educationLevel: ['Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 3)],
-                  city: ['Paris', 'London', 'New York', 'Tokyo'][Math.floor(Math.random() * 4)]
+                  educationLevel: ['High School', 'Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 4)],
+                  city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa', 'Netanya', 'Beer Sheva'][Math.floor(Math.random() * 6)]
                 }
               },
               answers,
@@ -1161,10 +1161,10 @@ const generateRandomAnswers = async (users, surveys) => {
           respondent: {
             userId: user._id,
             demographic: {
-              gender: Math.random() > 0.5 ? 'Male' : 'Female',
+              gender: Math.random() > 0.5 ? 'male' : 'female',
               dateOfBirth: generateRandomBirthDate(),
-              educationLevel: ['Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 3)],
-              city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa'][Math.floor(Math.random() * 4)]
+              educationLevel: ['High School', 'Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 4)],
+              city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa', 'Netanya', 'Beer Sheva'][Math.floor(Math.random() * 6)]
             }
           },
           answers,
