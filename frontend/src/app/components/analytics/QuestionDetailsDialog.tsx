@@ -262,7 +262,17 @@ export const QuestionDetailsDialog: React.FC<QuestionDetailsDialogProps> = ({
                         Response #{index + 1}
                       </Typography>
                     </Box>
-                    <Typography variant="body1" sx={{ mt: 1 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        mt: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 1,
+                        WebkitBoxOrient: 'vertical'
+                      }}
+                    >
                       {answer || 'No response'}
                     </Typography>
                   </Paper>
