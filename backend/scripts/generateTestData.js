@@ -633,7 +633,22 @@ const generateRandomAnswers = async (users, surveys) => {
               answer = Math.floor(Math.random() * 5) + 1;
               break;
             case 'slider':
-              answer = Math.floor(Math.random() * 10) + 1;
+              // Pour les questions avec échelle de 1 à 10
+              if (question.text.includes("technical expertise") || 
+                  question.text.includes("satisfaction level")) {
+                // Générer un nombre entier entre 1 et 10
+                answer = Math.floor(Math.random() * 10) + 1;
+                // Convertir en chaîne pour être sûr
+                answer = answer.toString();
+                
+                if (question.text.includes("technical expertise")) {
+                  console.log(`Question statique d'expertise technique: réponse = ${answer}`);
+                } else if (question.text.includes("satisfaction level")) {
+                  console.log(`Question statique de satisfaction: réponse = ${answer}`);
+                }
+              } else {
+                answer = Math.floor(Math.random() * 10) + 1;
+              }
               break;
             case 'date':
               const date = new Date();
@@ -806,14 +821,26 @@ const generateRandomAnswers = async (users, surveys) => {
             if (currentNode.data.type === 'yes-no') {
               answer = isCriticalAnswerYes ? 'Yes' : 'No';
             } else if (currentNode.data.options && currentNode.data.options.length > 0) {
-              // Pour les dropdowns, prendre la première option
-              answer = currentNode.data.options[0];
+              // Pour les dropdowns, si c'est la question du domaine de travail, toujours choisir "Technology"
+              if (currentNode.data.text.includes("field do you work")) {
+                answer = "Technology";
+                console.log("Réponse forcée à 'Technology' pour la question du domaine de travail");
+              } else {
+                // Pour les autres dropdowns, prendre la première option
+                answer = currentNode.data.options[0];
+              }
             } else {
               answer = 'Default option';
             }
             
             // Trouver l'arête correspondant à la réponse
             nextEdge = outgoingEdges.find(edge => edge.label === answer);
+            
+            // Pour le nœud 3 (domaine de travail), forcer l'arête "Technology"
+            if (currentNodeId === "3" && answer === "Technology") {
+              nextEdge = outgoingEdges.find(edge => edge.label === "Technology");
+              console.log("Arête forcée à 'Technology' pour le nœud 3");
+            }
             
             // Si pas d'arête correspondante, prendre la première
             if (!nextEdge && outgoingEdges.length > 0) {
@@ -847,7 +874,16 @@ const generateRandomAnswers = async (users, surveys) => {
                 answer = Math.floor(Math.random() * 5) + 1;
                 break;
               case 'slider':
-                answer = Math.floor(Math.random() * 10) + 1;
+                // Pour les questions d'expertise technique, générer un nombre entre 1 et 10
+                if (currentNode.data.text.includes("technical expertise")) {
+                  // Générer un nombre entier entre 1 et 10
+                  answer = Math.floor(Math.random() * 10) + 1;
+                  // Convertir en chaîne pour être sûr
+                  answer = answer.toString();
+                  console.log(`Réponse d'expertise technique générée: ${answer} (nœud ${currentNode.id})`);
+                } else {
+                  answer = Math.floor(Math.random() * 10) + 1;
+                }
                 break;
               case 'date':
                 const date = new Date();
@@ -882,11 +918,30 @@ const generateRandomAnswers = async (users, surveys) => {
           const answerTimestamp = new Date(initialTimestamp);
           answerTimestamp.setSeconds(answerTimestamp.getSeconds() + 30 * answers.length);
           
-          answers.push({
-            nodeId: nextNode.id,
-            answer: answer,
-            answeredAt: new Date(answerTimestamp)
-          });
+                     // Pour les questions avec échelle de 1 à 10
+           if (nextNode.data.text && (nextNode.data.text.includes("technical expertise") || 
+               nextNode.data.text.includes("satisfaction level"))) {
+             // Générer un nombre entre 1 et 10
+             const numAnswer = Math.floor(Math.random() * 10) + 1;
+             
+             if (nextNode.data.text.includes("technical expertise")) {
+               console.log(`Question d'expertise technique: réponse générée = ${numAnswer} (pour les answers)`);
+             } else if (nextNode.data.text.includes("satisfaction level")) {
+               console.log(`Question de satisfaction: réponse générée = ${numAnswer} (pour les answers)`);
+             }
+             
+             answers.push({
+               nodeId: nextNode.id,
+               answer: numAnswer.toString(),
+               answeredAt: new Date(answerTimestamp)
+             });
+           } else {
+             answers.push({
+               nodeId: nextNode.id,
+               answer: answer,
+               answeredAt: new Date(answerTimestamp)
+             });
+           }
           
           // Ajouter le nœud au chemin
           const pathTimestamp = new Date(initialTimestamp);
@@ -898,11 +953,29 @@ const generateRandomAnswers = async (users, surveys) => {
           });
           
           // Ajouter le segment au chemin complet
-          fullPath.push({
-            questionId: nextNode.id,
-            questionText: nextNode.data.text,
-            answer: answer
-          });
+          if (nextNode.data.text && (nextNode.data.text.includes("technical expertise") || 
+              nextNode.data.text.includes("satisfaction level"))) {
+            // Générer un nombre entre 1 et 10 pour les questions avec échelle
+            const numAnswer = Math.floor(Math.random() * 10) + 1;
+            
+            if (nextNode.data.text.includes("technical expertise")) {
+              console.log(`Question d'expertise technique: réponse générée = ${numAnswer}`);
+            } else if (nextNode.data.text.includes("satisfaction level")) {
+              console.log(`Question de satisfaction: réponse générée = ${numAnswer}`);
+            }
+            
+            fullPath.push({
+              questionId: nextNode.id,
+              questionText: nextNode.data.text,
+              answer: numAnswer.toString()
+            });
+          } else {
+            fullPath.push({
+              questionId: nextNode.id,
+              questionText: nextNode.data.text,
+              answer: answer
+            });
+          }
           
           // Continuer récursivement avec le nœud suivant
           return followPath(nextNode.id, depth + 1);
@@ -988,7 +1061,22 @@ const generateRandomAnswers = async (users, surveys) => {
             secondNodeAnswer = Math.floor(Math.random() * 5) + 1;
             break;
           case 'slider':
-            secondNodeAnswer = Math.floor(Math.random() * 10) + 1;
+            // Pour les questions avec échelle de 1 à 10
+            if (secondNode.data.text && (secondNode.data.text.includes("technical expertise") || 
+                secondNode.data.text.includes("satisfaction level"))) {
+              // Générer un nombre entier entre 1 et 10
+              secondNodeAnswer = Math.floor(Math.random() * 10) + 1;
+              // Convertir en chaîne pour être sûr
+              secondNodeAnswer = secondNodeAnswer.toString();
+              
+              if (secondNode.data.text.includes("technical expertise")) {
+                console.log(`Réponse d'expertise technique générée (secondNode): ${secondNodeAnswer}`);
+              } else if (secondNode.data.text.includes("satisfaction level")) {
+                console.log(`Réponse de satisfaction générée (secondNode): ${secondNodeAnswer}`);
+              }
+            } else {
+              secondNodeAnswer = Math.floor(Math.random() * 10) + 1;
+            }
             break;
           case 'date':
             const date = new Date();
@@ -1003,11 +1091,29 @@ const generateRandomAnswers = async (users, surveys) => {
         const secondAnswerTimestamp = new Date(initialTimestamp);
         secondAnswerTimestamp.setSeconds(secondAnswerTimestamp.getSeconds() + 30);
         
-        answers.push({
-          nodeId: secondNode.id,
-          answer: secondNodeAnswer,
-          answeredAt: new Date(secondAnswerTimestamp)
-        });
+        if (secondNode.data.text && (secondNode.data.text.includes("technical expertise") || 
+            secondNode.data.text.includes("satisfaction level"))) {
+          // Pour les questions avec échelle de 1 à 10
+          const numAnswer = Math.floor(Math.random() * 10) + 1;
+          
+          if (secondNode.data.text.includes("technical expertise")) {
+            console.log(`Question d'expertise technique (answers): réponse finale = ${numAnswer}`);
+          } else if (secondNode.data.text.includes("satisfaction level")) {
+            console.log(`Question de satisfaction (answers): réponse finale = ${numAnswer}`);
+          }
+          
+          answers.push({
+            nodeId: secondNode.id,
+            answer: numAnswer.toString(),
+            answeredAt: new Date(secondAnswerTimestamp)
+          });
+        } else {
+          answers.push({
+            nodeId: secondNode.id,
+            answer: secondNodeAnswer,
+            answeredAt: new Date(secondAnswerTimestamp)
+          });
+        }
         
         // Ajouter le deuxième nœud au chemin
         const secondPathTimestamp = new Date(initialTimestamp);
@@ -1019,11 +1125,29 @@ const generateRandomAnswers = async (users, surveys) => {
         });
         
         // Ajouter le deuxième segment au chemin complet
-        fullPath.push({
-          questionId: secondNode.id,
-          questionText: secondNode.data.text,
-          answer: secondNodeAnswer
-        });
+        if (secondNode.data.text && (secondNode.data.text.includes("technical expertise") || 
+            secondNode.data.text.includes("satisfaction level"))) {
+          // Pour les questions avec échelle de 1 à 10
+          const numAnswer = Math.floor(Math.random() * 10) + 1;
+          
+          if (secondNode.data.text.includes("technical expertise")) {
+            console.log(`Question d'expertise technique (fullPath): réponse finale = ${numAnswer}`);
+          } else if (secondNode.data.text.includes("satisfaction level")) {
+            console.log(`Question de satisfaction (fullPath): réponse finale = ${numAnswer}`);
+          }
+          
+          fullPath.push({
+            questionId: secondNode.id,
+            questionText: secondNode.data.text,
+            answer: numAnswer.toString()
+          });
+        } else {
+          fullPath.push({
+            questionId: secondNode.id,
+            questionText: secondNode.data.text,
+            answer: secondNodeAnswer
+          });
+        }
         
         // Continuer le chemin à partir du deuxième nœud
         const pathComplete = followPath(secondNode.id, 1);
@@ -1040,7 +1164,7 @@ const generateRandomAnswers = async (users, surveys) => {
               gender: Math.random() > 0.5 ? 'Male' : 'Female',
               dateOfBirth: generateRandomBirthDate(),
               educationLevel: ['Bachelor', 'Master', 'Doctorate'][Math.floor(Math.random() * 3)],
-              city: ['Paris', 'London', 'New York', 'Tokyo'][Math.floor(Math.random() * 4)]
+              city: ['Ashdod', 'Tel Aviv', 'Jerusalem', 'Haifa'][Math.floor(Math.random() * 4)]
             }
           },
           answers,
@@ -1055,6 +1179,15 @@ const generateRandomAnswers = async (users, surveys) => {
         // Afficher le chemin pour débogage
         console.log(`Path generated for the user ${user.username}, survey ${survey.title}:`);
         console.log(JSON.stringify(fullPath, null, 2));
+        
+        // Vérifier si le chemin contient la question d'expertise technique
+        const expertiseQuestion = fullPath.find(item => item.questionText && item.questionText.includes("technical expertise"));
+        if (expertiseQuestion) {
+          console.log(`Question d'expertise technique trouvée dans le chemin: ${expertiseQuestion.questionId}`);
+          console.log(`Réponse: ${expertiseQuestion.answer}`);
+        } else {
+          console.log("Aucune question d'expertise technique dans ce chemin");
+        }
       }
     }
   }

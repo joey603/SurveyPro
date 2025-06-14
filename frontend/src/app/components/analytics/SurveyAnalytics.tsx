@@ -749,7 +749,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     return {
       labels: labels,
       datasets: [{
-        label: 'Réponses',
+        label: 'Responses',
         data: Object.values(answerCounts),
         backgroundColor: backgroundColors,
         borderColor: borderColors,

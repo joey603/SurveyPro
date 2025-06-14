@@ -207,7 +207,7 @@ export const SurveyQuestions: React.FC<SurveyQuestionsProps> = ({
                         
                         <Chip 
                           size="small"
-                          label={`${getResponseCount(question.id)} réponses`}
+                          label={`${getResponseCount(question.id)} responses`}
                           sx={{ 
                             bgcolor: 'rgba(102, 126, 234, 0.1)',
                             color: '#667eea',
