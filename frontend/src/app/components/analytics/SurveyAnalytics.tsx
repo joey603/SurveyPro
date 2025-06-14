@@ -1253,8 +1253,11 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const prepareExportData = useCallback(() => {
     if (!survey || filteredResponses.length === 0) return [];
 
+    // Utiliser getQuestionsToDisplay() au lieu de survey.questions directement
+    const questions = getQuestionsToDisplay();
+
     return filteredResponses.map(response => {
-      const questionAnswers = survey.questions.reduce((acc: any, question) => {
+      const questionAnswers = questions.reduce((acc: any, question) => {
         const questionAnswer = response.answers.find(a => a.questionId === question.id);
         acc[question.text] = questionAnswer?.answer || 'Pas de réponse';
         return acc;
@@ -1289,7 +1292,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       'Date of birth',
       'Education level',
       'City',
-      ...survey.questions.map(q => q.text)
+      ...getQuestionsToDisplay().map(q => q.text)
     ];
 
     const csvContent = [
@@ -1301,7 +1304,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
         item.demographic?.dateOfBirth || '',
         item.demographic?.educationLevel || '',
         item.demographic?.city || '',
-        ...survey.questions.map(q => `"${item[q.text]}"`)
+        ...getQuestionsToDisplay().map(q => `"${item[q.text]}"`)
       ].join(','))
     ].join('\n');
 
