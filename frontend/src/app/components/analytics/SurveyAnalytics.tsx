@@ -1165,6 +1165,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       case 'multiple-choice':
       case 'dropdown':
       case 'yes-no':
+        case 'date-picker'
         return (
           <Box>
             <Typography variant="body2" sx={{ mb: 1 }}>
@@ -1211,11 +1212,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                   (Filtered from {surveyAnswers.length} total responses)
                 </Typography>
               )}
-              {stats.total > 0 && stats.mostCommonAnswer && (
-                <Typography variant="body2">
-                  Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
-                </Typography>
-              )}
+              
             </Box>
           </Box>
         );
@@ -1917,11 +1914,7 @@ export const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                               (Filtered from {responses.length} total responses)
                             </Typography>
                           )}
-                          {stats.total > 0 && stats.mostCommonAnswer && (
-                            <Typography variant="body2">
-                              Most frequent answer: <strong>{stats.mostCommonAnswer}</strong>
-                            </Typography>
-                          )}
+                            
                         </Box>
                           
                           <Button
