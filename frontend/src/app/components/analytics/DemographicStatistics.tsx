@@ -646,7 +646,7 @@ export const DemographicStatistics: React.FC<DemographicStatisticsProps> = ({
         // Préparer les données pour un graphique en ligne avec légendes individuelles par âge
         const sortedAges = labels.sort((a, b) => parseInt(a) - parseInt(b));
         const lineDatasets = sortedAges.map((age, index) => ({
-          label: `${age} ans`,
+          label: `${age} years old`,
           data: sortedAges.map(a => a === age ? truncatedAges[age] : null),
           backgroundColor: backgroundColors[index % backgroundColors.length],
           borderColor: borderColors[index % borderColors.length],

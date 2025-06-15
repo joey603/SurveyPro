@@ -41,7 +41,7 @@ const createPublicStaticSurvey = async (userId) => {
     questions: [
       {
         id: "q1",
-        type: "multiple-choice",
+        type: "dropdown",
         text: "What is your favorite color ?",
         options: ["Red", "Blue", "Green", "Yellow"]
       },
@@ -75,11 +75,6 @@ const createPublicStaticSurvey = async (userId) => {
         id: "q7",
         type: "date",
         text: "What is your date of birth ?"
-      },
-      {
-        id: "q8",
-        type: "color-picker",
-        text: "Choose your favorite color"
       }
     ],
     userId
@@ -98,7 +93,7 @@ const createPrivateStaticSurvey = async (userId) => {
     questions: [
       {
         id: "q1",
-        type: "multiple-choice",
+        type: "dropdown",
         text: "What is your favorite food ?",
         options: ["Pizza", "Sushi", "Pasta", "Salad"]
       },
@@ -132,11 +127,6 @@ const createPrivateStaticSurvey = async (userId) => {
         id: "q7",
         type: "date",
         text: "When did you start practicing sport ?"
-      },
-      {
-        id: "q8",
-        type: "color-picker",
-        text: "What color represents your energy best ?"
       }
     ],
     userId
@@ -204,7 +194,7 @@ const createPublicDynamicSurvey = async (userId) => {
         data: { 
           id: "4",
           questionNumber: 4,
-        type: "multiple-choice",
+        type: "dropdown",
           text: "Where do you practice this activity ?",
           options: ["At home", "Outside", "In a club"],
           media: "",
@@ -426,7 +416,7 @@ const createPrivateDynamicSurvey = async (userId) => {
         data: { 
           id: "4",
           questionNumber: 4,
-        type: "multiple-choice",
+        type: "dropdown",
           text: "What motivates you in your work ?",
           options: ["Salary", "Colleagues", "Management", "Tasks"],
           media: "",
@@ -610,6 +600,21 @@ const generateRandomBirthDate = () => {
   return birthDate;
 };
 
+// Fonction pour générer une date de soumission aléatoire dans les 30 derniers jours
+const generateRandomSubmissionDate = () => {
+  const now = new Date();
+  const daysAgo = Math.floor(Math.random() * 30); // 0 à 29 jours dans le passé
+  const hoursAgo = Math.floor(Math.random() * 24); // 0 à 23 heures
+  const minutesAgo = Math.floor(Math.random() * 60); // 0 à 59 minutes
+  
+  const submissionDate = new Date(now);
+  submissionDate.setDate(submissionDate.getDate() - daysAgo);
+  submissionDate.setHours(submissionDate.getHours() - hoursAgo);
+  submissionDate.setMinutes(submissionDate.getMinutes() - minutesAgo);
+  
+  return submissionDate;
+};
+
 // Fonction pour générer des réponses aléatoires
 const generateRandomAnswers = async (users, surveys) => {
   for (const user of users) {
@@ -619,7 +624,6 @@ const generateRandomAnswers = async (users, surveys) => {
         const answers = survey.questions.map(question => {
           let answer;
           switch (question.type) {
-            case 'multiple-choice':
             case 'dropdown':
               answer = question.options[Math.floor(Math.random() * question.options.length)];
               break;
@@ -673,7 +677,7 @@ const generateRandomAnswers = async (users, surveys) => {
             }
           },
           answers,
-          submittedAt: new Date()
+          submittedAt: generateRandomSubmissionDate()
         });
 
         await surveyAnswer.save();
@@ -719,7 +723,7 @@ const generateRandomAnswers = async (users, surveys) => {
         const fullPath = [];
         
         // Commencer par le premier nœud
-        const initialTimestamp = new Date();
+        const initialTimestamp = generateRandomSubmissionDate();
         
         // Répondre à la première question
         let firstNodeAnswer;
@@ -727,7 +731,6 @@ const generateRandomAnswers = async (users, surveys) => {
           case 'text':
             firstNodeAnswer = `Response from ${user.username} to "${firstNode.data.text}"`;
             break;
-          case 'multiple-choice':
           case 'dropdown':
             firstNodeAnswer = firstNode.data.options[Math.floor(Math.random() * firstNode.data.options.length)];
             break;
@@ -783,7 +786,7 @@ const generateRandomAnswers = async (users, surveys) => {
             },
             answers,
             path,
-            submittedAt: new Date(initialTimestamp),
+            submittedAt: initialTimestamp,
             completionStatus: isComplete ? 'completed' : 'partial'
           });
           
@@ -859,7 +862,6 @@ const generateRandomAnswers = async (users, surveys) => {
               case 'text':
                 answer = `Response from ${user.username} to "${currentNode.data.text}"`;
                 break;
-              case 'multiple-choice':
               case 'dropdown':
                 if (currentNode.data.options && currentNode.data.options.length > 0) {
                   answer = currentNode.data.options[Math.floor(Math.random() * currentNode.data.options.length)];
@@ -1017,7 +1019,7 @@ const generateRandomAnswers = async (users, surveys) => {
               },
               answers,
               path,
-            submittedAt: new Date(initialTimestamp),
+            submittedAt: initialTimestamp,
             completionStatus: isComplete ? 'completed' : 'partial'
             });
 
@@ -1046,7 +1048,6 @@ const generateRandomAnswers = async (users, surveys) => {
           case 'text':
             secondNodeAnswer = `Response from ${user.username} to "${secondNode.data.text}"`;
             break;
-          case 'multiple-choice':
           case 'dropdown':
             if (secondNode.data.options && secondNode.data.options.length > 0) {
               secondNodeAnswer = secondNode.data.options[Math.floor(Math.random() * secondNode.data.options.length)];
@@ -1169,7 +1170,7 @@ const generateRandomAnswers = async (users, surveys) => {
           },
           answers,
           path,
-          submittedAt: new Date(submittedTimestamp),
+          submittedAt: submittedTimestamp,
           completionStatus: pathComplete ? 'completed' : 'partial'
         });
         
@@ -1200,9 +1201,9 @@ const generateTestData = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
 
-    // Générer 10 utilisateurs
+    // Générer 100 utilisateurs
     console.log('Generating users...');
-    const users = await generateRandomUsers(10);
+    const users = await generateRandomUsers(100);
     console.log(`${users.length} users generated`);
 
     // Créer un utilisateur admin pour les sondages
