@@ -911,7 +911,7 @@ const SurveyCreationPage = () => {
               ))}
             </Select>
           )}
-          {question.type === 'slider' && <Slider valueLabelDisplay="auto" />}
+          {question.type === 'slider' && <Slider valueLabelDisplay="auto" min={0} max={10} />}
           {question.type === 'rating' && <Rating />}
           {question.type === 'yes-no' && (
             <RadioGroup>

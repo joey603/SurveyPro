@@ -600,6 +600,8 @@ export default function DynamicSurveyCreation() {
           {currentQuestion.data?.type === 'slider' && (
             <Slider 
               valueLabelDisplay="auto"
+              min={0}
+              max={10}
               sx={{ width: '100%', maxWidth: 400 }}
             />
           )}
