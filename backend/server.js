@@ -136,11 +136,6 @@ app.use("/api/dynamic-survey-answers", dynamicSurveyAnswerRoutes);
 // Ajouter une route directe pour le partage de sondage
 app.post('/api/share-survey', authMiddleware, shareSurvey);
 
-// Connexion à MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connecté à MongoDB'))
-  .catch(err => console.error('Erreur de connexion à MongoDB:', err));
-
 // Gestion des erreurs globale
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -151,11 +146,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Configuration du port pour Render
-// Render définit automatiquement PORT, donc cette configuration fonctionnera
-// à la fois en local et sur Render
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
-  console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
-});
+const isMain = require.main === module;
+
+function startHttpServer() {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+// Ne pas accepter de requêtes HTTP tant que MongoDB n'est pas prêt (évite le buffering Mongoose)
+mongoose
+  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
+  .then(() => {
+    console.log('Connecté à MongoDB');
+    if (isMain) startHttpServer();
+  })
+  .catch((err) => {
+    console.error('Erreur de connexion à MongoDB:', err);
+    if (isMain) process.exit(1);
+  });
+
+module.exports = app;

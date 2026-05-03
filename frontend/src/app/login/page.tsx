@@ -233,12 +233,19 @@ const LoginPage: React.FC = () => {
           console.log('URL saved in redirectAfterLogin standard for login:', redirectUrl);
         }
 
-        // Vérifier l'authentification via le backend
-        const response = await fetch('https://surveypro-ir3u.onrender.com/api/auth/verify', {
+        // Vérifier l'authentification via le backend (JWT en header, pas seulement les cookies)
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041';
+        const accessToken =
+          typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`;
+        }
+        const response = await fetch(`${apiBase}/api/auth/verify`, {
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers
         });
 
         if (response.ok) {

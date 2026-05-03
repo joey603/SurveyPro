@@ -468,6 +468,33 @@ router.post('/verify-email', async (req, res) => {
   }
 });
 
+// Vérifie un JWT (utilisé par le frontend au chargement, ex. après OAuth / stockage local)
+router.get('/verify', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(200).json({ valid: false });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(200).json({ valid: false, clearTokens: true });
+    }
+    return res.status(200).json({
+      valid: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        isVerified: user.isVerified,
+        authMethod: user.authMethod
+      }
+    });
+  } catch {
+    return res.status(200).json({ valid: false });
+  }
+});
+
 router.post('/login', async (req, res) => {
   console.log('Login route hit:', req.body);
   try {
