@@ -20,38 +20,6 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Link from 'next/link';
 
-// Fonction pour tester l'existence des endpoints d'authentification
-const testAuthEndpoints = async () => {
-  try {
-    console.log('Testing authentication endpoints...');
-    
-    // URL de l'API backend
-    const backendUrl = 'https://surveypro-ir3u.onrender.com';
-    
-    // Tester l'endpoint Google
-    console.log('Testing Google endpoint:', `${backendUrl}/api/auth/google`);
-    
-    // Tester l'endpoint GitHub
-    console.log('Testing GitHub endpoint:', `${backendUrl}/api/auth/github`);
-    
-    // Essayer d'atteindre les endpoints sans effectuer de redirection
-    try {
-      const googleResponse = await fetch(`${backendUrl}/api/auth/google`, { method: 'HEAD' });
-      console.log('Google endpoint response:', googleResponse.status, googleResponse.statusText);
-    } catch (err) {
-      console.error('Error testing Google endpoint:', err);
-    }
-    
-    try {
-      const githubResponse = await fetch(`${backendUrl}/api/auth/github`, { method: 'HEAD' });
-      console.log('GitHub endpoint response:', githubResponse.status, githubResponse.statusText);
-    } catch (err) {
-      console.error('Error testing GitHub endpoint:', err);
-    }
-  } catch (error) {
-    console.error('Error testing endpoints:', error);
-  }
-};
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -280,11 +248,6 @@ const LoginPage: React.FC = () => {
 
     checkAuth();
   }, [router]);
-
-  // Exécuter le test des endpoints au chargement de la page
-  useEffect(() => {
-    testAuthEndpoints();
-  }, []);
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

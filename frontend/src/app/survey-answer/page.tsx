@@ -71,7 +71,9 @@ import introJs from 'intro.js';
 import Lottie from 'lottie-react';
 import loadingCardAnimation from '@/assets/Animation loading card survey.json';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041/api';
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? '/api'
+  : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5041'}/api`;
 
 const DEFAULT_CITIES = [
   "Tel Aviv",
@@ -207,7 +209,6 @@ const SurveyAnswerPage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [answeredSurveys, setAnsweredSurveys] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date' | 'popular'>('date');
-  const [surveyResponses, setSurveyResponses] = useState<{ [key: string]: number }>({});
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
   const [currentSurveyToShare, setCurrentSurveyToShare] = useState<Survey | null>(null);
   const [lastDemographicData, setLastDemographicData] = useState<DemographicData | null>(null);
@@ -1340,30 +1341,6 @@ const SurveyAnswerPage: React.FC = () => {
       }
     }
   }, [setValue, selectedSurvey]);
-
-  const fetchSurveyResponses = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch('https://surveypro-ir3u.onrender.com/api/survey-answers/count', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSurveyResponses(data);
-      }
-    } catch (error) {
-      console.error('Error fetching survey responses:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchSurveyResponses();
-  }, []);
 
   const handleShareClick = (event: React.MouseEvent<HTMLButtonElement>, survey: Survey) => {
     console.log('Share button clicked', event.currentTarget); // Debug log

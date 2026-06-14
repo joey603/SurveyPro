@@ -2,7 +2,7 @@
   "version": 2,
   "framework": "nextjs",
   "buildCommand": "chmod +x build-vercel.sh && ./build-vercel.sh",
-  "installCommand": "echo 'Installation gérée par le script build-vercel.sh'",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://surveypro-ir3u.onrender.com",
