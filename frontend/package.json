@@ -40,7 +40,7 @@
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
     "lottie-react": "^2.4.1",
-    "next": "15.0.3",
+    "next": "15.3.9",
     "nodemailer": "^6.9.16",
     "papaparse": "^5.4.1",
     "postcss": "^8.4.49",
@@ -65,6 +65,6 @@
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18",
     "eslint": "^8",
-    "eslint-config-next": "15.0.3"
+    "eslint-config-next": "15.3.9"
   }
 }
