@@ -2,7 +2,7 @@
 const express = require("express");
 const { createSurvey, getSurveys, getSurveyById, uploadMedia, getAllSurveysForAnswering, deleteMedia, deleteSurvey } = require("../controllers/surveyController");
 
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/auth");
 const multer = require("multer"); // For handling file uploads
 const { uploadFileToCloudinary } = require("../cloudinaryConfig");
 const { deleteFileFromCloudinary } = require("../cloudinaryConfig");

@@ -39,7 +39,7 @@ passport.use(new GoogleStrategy({
       let user = await User.findOne({ email: profile.emails[0].value });
       
       if (user) {
-        console.log('Existing user found with Google authentication:', user);
+        console.log('Existing user found with Google authentication:', user._id);
         
         // Si l'utilisateur existe mais utilise une méthode d'authentification différente
         if (user.authMethod !== 'google') {
@@ -145,10 +145,9 @@ passport.use(new GitHubStrategy({
       console.log('Primary email found:', primaryEmail);
 
       let user = await User.findOne({ email: primaryEmail });
-      console.log('Existing user:', user);
-      
+
       if (user) {
-        console.log('Existing user found with GitHub authentication:', user);
+        console.log('Existing user found with GitHub authentication:', user._id);
         
         // Si l'utilisateur existe mais utilise une méthode d'authentification différente
         if (user.authMethod !== 'github') {
@@ -272,7 +271,6 @@ router.get('/google/callback',
   async (req, res) => {
     try {
       console.log('Google Callback - Starting response handling');
-      console.log('Google Callback - User:', req.user);
       
       // Récupérer l'URL d'origine avec la nouvelle fonction
       const originUrl = getRedirectUrl(req);
@@ -314,11 +312,8 @@ router.get('/google/callback',
         }
       };
 
-      console.log('Redirecting with tokens:', tokenData);
-
       const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
-      console.log('Redirect URL:', redirectUrl);
-      
+
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google Callback Error:', error);
@@ -359,7 +354,6 @@ router.get('/github/callback',
   async (req, res) => {
     try {
       console.log('GitHub Callback - Starting response handling');
-      console.log('GitHub Callback - User:', req.user);
       
       // Récupérer l'URL d'origine avec la nouvelle fonction
       const originUrl = getRedirectUrl(req);
@@ -401,10 +395,7 @@ router.get('/github/callback',
         }
       };
 
-      console.log('Redirecting with tokens:', tokenData);
-
       const redirectUrl = `${originUrl}/oauth-callback?tokens=${encodeURIComponent(JSON.stringify(tokenData))}`;
-      console.log('Redirect URL:', redirectUrl);
       
       res.redirect(redirectUrl);
     } catch (error) {

@@ -13,7 +13,7 @@ const surveyShareRoutes = require("./routes/surveyShares");
 const dynamicSurveyRoutes = require("./routes/dynamicSurveys");
 const dynamicSurveyAnswerRoutes = require("./routes/dynamicSurveyAnswers");
 const { shareSurvey } = require('./controllers/surveyShareController');
-const authMiddleware = require('./middleware/authMiddleware');
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
 
@@ -58,21 +58,27 @@ const allowedOrigins = [
 ];
 
 // Middleware CORS configuré pour gérer correctement les requêtes preflight
-app.use(cors({
+const isOriginAllowed = (origin) => {
+  if (allowedOrigins.indexOf(origin) !== -1) return true;
+  // Autoriser les domaines de prévisualisation Vercel et le développement local
+  if (origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.vercel.app')) {
+    return true;
+  }
+  return false;
+};
+
+const corsOptions = {
   origin: function(origin, callback) {
-    // Permettre les requêtes sans origine (ex: applications mobiles, curl, etc.)
+    // Permettre les requêtes sans origine (ex: applications mobiles, curl, health checks)
     if (!origin) return callback(null, true);
-    
-    // Autoriser toutes les origines listées, toutes les origines Vercel et localhost
-    if (allowedOrigins.indexOf(origin) !== -1 || 
-        origin.includes('localhost') || 
-        origin.includes('vercel.app') ||
-        origin.includes('127.0.0.1')) {
-      console.log('Origine acceptée par CORS:', origin);
+
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      console.log('Origine inconnue:', origin);
-      callback(null, true); // Autoriser quand même toutes les origines pour le développement
+      console.warn('Origine refusée par CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -82,22 +88,12 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204,
   maxAge: 86400 // 24 heures en secondes
-}));
+};
 
-// Middleware pour gérer les requêtes OPTIONS
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.status(204).end();
-  }
-  next();
-});
+app.use(cors(corsOptions));
 
-// Gérer les requêtes OPTIONS explicitement
-app.options('*', cors());
+// Gérer les requêtes preflight OPTIONS avec la même configuration CORS
+app.options('*', cors(corsOptions));
 
 // Route racine pour les health checks de Render
 app.get('/', (req, res) => {
